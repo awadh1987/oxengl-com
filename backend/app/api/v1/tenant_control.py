@@ -192,6 +192,19 @@ def invite_team_member(
         header_company=x_company_id,
         db=db,
     )
+    # Enforce plan seat quota
+    from backend.app.services.billing_service import verify_tenant_seat_limit, increment_tenant_seat_usage
+    seat_ok, seat_msg = verify_tenant_seat_limit(db, target_uuid)
+    if not seat_ok:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=seat_msg,
+            headers={
+                "X-Quota-Type": "max_seats",
+                "X-Upgrade-URL": "/api/v1/tenant/billing/checkout",
+            },
+        )
+
     norm_email = payload.email.strip().lower()
 
     existing = db.query(ResUser).filter(
@@ -204,6 +217,19 @@ def invite_team_member(
             detail=f"User '{norm_email}' already belongs to this workspace.",
         )
 
+    role_mapping = {
+        "admin": "Admin",
+        "super_admin": "Super_Admin",
+        "coo": "COO",
+        "ceo": "CEO",
+        "accountant": "Accountant",
+        "data_entry": "Data_Entry",
+        "user": "Data_Entry",
+        "guest": "Guest",
+    }
+    raw_role = (payload.role or "user").strip().lower()
+    assigned_role = role_mapping.get(raw_role, "Data_Entry")
+
     new_id = uuid.uuid4()
     user = ResUser(
         id=new_id,
@@ -211,13 +237,15 @@ def invite_team_member(
         email=norm_email,
         full_name=payload.full_name,
         company_id=target_uuid,
-        role=payload.role.capitalize() if payload.role else "User",
+        role=assigned_role,
         is_active=True,
         password_hash=hash_password(uuid.uuid4().hex[:12]),
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    increment_tenant_seat_usage(db, target_uuid)
 
     member_data = {
         "id": str(user.id),
@@ -422,6 +450,10 @@ def register_custom_domain(
         header_company=x_company_id,
         db=db,
     )
+    # Enforce custom domain architectural entitlement
+    from backend.app.services.billing_service import enforce_tenant_entitlement
+    enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
+
     clean_domain = payload.domain_name.strip().lower()
 
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
@@ -545,18 +577,16 @@ def verify_custom_domain(
     Cryptographic & DNS Pre-flight Verification of CNAME, A-record, and SSL status.
     """
     from backend.app.services import ssl_service
+    from backend.app.services.billing_service import enforce_tenant_entitlement
 
-    target_uuid = None
-    try:
-        target_uuid = resolve_control_tenant_id(
-            query_tenant=tenant_id,
-            header_tenant=x_tenant_id,
-            header_slug=x_tenant_slug,
-            header_company=x_company_id,
-            db=db,
-        )
-    except Exception:
-        pass
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
 
     target_domain = domain_id
     if target_uuid:
@@ -597,21 +627,21 @@ def get_domain_ssl_status(
 ):
     """Inspects live TLS certificate details and expiration for custom domain."""
     from backend.app.services import ssl_service
+    from backend.app.services.billing_service import enforce_tenant_entitlement
+
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
 
     target_domain = domain_id
-    try:
-        target_uuid = resolve_control_tenant_id(
-            query_tenant=tenant_id,
-            header_tenant=x_tenant_id,
-            header_slug=x_tenant_slug,
-            header_company=x_company_id,
-            db=db,
-        )
-        master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
-        if master and master.custom_domain:
-            target_domain = master.custom_domain
-    except Exception:
-        pass
+    master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
+    if master and master.custom_domain:
+        target_domain = master.custom_domain
 
     clean_domain = ssl_service.normalize_domain(target_domain)
     cert_info = ssl_service.probe_ssl_certificate(clean_domain)
@@ -656,6 +686,16 @@ def test_tenant_database_connection(
     db: Session = Depends(get_db),
 ):
     """Tests connectivity, TLS/SSL handshake, and permissions for a target external PostgreSQL instance."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    from backend.app.services.billing_service import enforce_tenant_entitlement
+    enforce_tenant_entitlement(db, target_uuid, "allow_external_database")
+
     ok, msg, meta = migration_service.test_target_connection(
         host=payload.host,
         port=payload.port,
@@ -692,6 +732,9 @@ def trigger_database_migration(
         header_company=x_company_id,
         db=db,
     )
+    # Enforce external database architectural entitlement
+    from backend.app.services.billing_service import enforce_tenant_entitlement
+    enforce_tenant_entitlement(db, target_uuid, "allow_external_database")
 
     migration_id = uuid.uuid4()
     target_host = payload.host or "external_host"
@@ -776,5 +819,9 @@ def switch_back_to_shared_database(
         header_company=x_company_id,
         db=db,
     )
+    # Enforce external database architectural entitlement
+    from backend.app.services.billing_service import enforce_tenant_entitlement
+    enforce_tenant_entitlement(db, target_uuid, "allow_external_database")
+
     return migration_service.revert_to_shared_database(target_uuid, db)
 

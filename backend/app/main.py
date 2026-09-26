@@ -330,7 +330,53 @@ def verify_migration_managed_schema() -> None:
 					END IF;
 				END $$;
 			"""))
+			# SaaS Billing & Subscription Schema Self-Healing
+			db.execute(text("ALTER TABLE subscription_plans ALTER COLUMN stripe_price_id DROP NOT NULL;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_name VARCHAR(100) DEFAULT 'Standard Plan';"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS annual_price NUMERIC(10, 2) DEFAULT 0.00;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_product_id VARCHAR(255);"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_storage_gb INTEGER DEFAULT 10;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_monthly_transactions INTEGER DEFAULT 1000;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_external_database BOOLEAN DEFAULT FALSE;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_custom_domain BOOLEAN DEFAULT FALSE;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_dedicated_ssl BOOLEAN DEFAULT FALSE;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features JSON DEFAULT '[]'::json;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ALTER COLUMN stripe_customer_id DROP NOT NULL;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(32) DEFAULT 'monthly';"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(64) DEFAULT 'card';"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_storage_mb_used INTEGER DEFAULT 0;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMPTZ;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS custom_limits JSON;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS notes TEXT;"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subscription_id UUID REFERENCES tenant_subscriptions(id) ON DELETE SET NULL;"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES subscription_plans(id) ON DELETE SET NULL;"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(64) DEFAULT 'stripe_card';"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS po_number VARCHAR(100);"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subtotal_sar NUMERIC(18, 4) DEFAULT 0;"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS tax_sar NUMERIC(18, 4) DEFAULT 0;"))
+			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS notes TEXT;"))
+			db.execute(text("ALTER TABLE saas_invoices DROP CONSTRAINT IF EXISTS ck_saas_invoice_cycle;"))
+			db.execute(text("ALTER TABLE saas_invoices ADD CONSTRAINT ck_saas_invoice_cycle CHECK (billing_cycle IN ('monthly', 'yearly', 'annual', 'quarterly', 'contract'));"))
+			db.execute(text("ALTER TABLE master_tenants DROP CONSTRAINT IF EXISTS ck_master_tenant_tier;"))
+			db.execute(text("ALTER TABLE master_tenants ADD CONSTRAINT ck_master_tenant_tier CHECK (subscription_tier IN ('starter', 'standard', 'growth', 'enterprise', 'free', 'professional'));"))
 			db.commit()
+
+			# Auto-seed the 3-tier subscription plans (Free, Professional, Enterprise)
+			from backend.app.services.billing_service import seed_default_subscription_plans
+			seed_default_subscription_plans(db)
 	except Exception as exc:
 		logging.getLogger("uvicorn.error").warning(f"Schema self-healing check warning: {exc}")
 	return None
@@ -394,6 +440,16 @@ from backend.app.api.v1 import system as system_api
 app.include_router(system_api.router)
 from backend.api.routes.platform_billing import router as platform_billing_router
 app.include_router(platform_billing_router)
+from backend.app.api.v1.billing import (
+    tenant_billing_router,
+    superadmin_billing_router,
+    stripe_webhook_router,
+)
+app.include_router(tenant_billing_router, prefix="/api/v1/tenant/billing")
+app.include_router(tenant_billing_router, prefix="/api/tenant/billing")
+app.include_router(superadmin_billing_router)
+app.include_router(stripe_webhook_router, prefix="/api/v1/platform/webhooks")
+app.include_router(stripe_webhook_router, prefix="/api/platform/webhooks")
 from backend.api.routes.finance_payments import router as finance_payments_router
 app.include_router(finance_payments_router)
 from backend.api.routes.hrms_ledger import router as hrms_ledger_router
@@ -1439,20 +1495,29 @@ def get_tenant_billing_summary(
 	) or 0
 	storage_gb = round(users_count * 0.15 + 1.25, 2)
 
+	sub = master_tenant.subscription if (master_tenant and hasattr(master_tenant, "subscription")) else None
+	plan = sub.plan if (sub and hasattr(sub, "plan")) else None
+	billing_cycle = sub.billing_cycle if sub else "monthly"
+	sub_status = sub.status if sub else (master_tenant.status if master_tenant else "active")
+	monthly_rate = plan.monthly_price if plan else defaults["monthly_rate_sar"]
+	max_users = sub.max_seats if sub else (master_tenant.max_users if master_tenant else defaults["max_users"])
+	max_storage = plan.max_storage_gb if plan else (master_tenant.max_storage_gb if master_tenant else defaults["max_storage_gb"])
+	next_bill = sub.current_period_end if (sub and sub.current_period_end) else (datetime.now(timezone.utc) + timedelta(days=23))
+
 	return TenantBillingSummaryRead(
 		tenant_id=master_tenant.id if master_tenant else company.id,
 		tenant_name=company.name,
 		tenant_slug=company.slug,
 		subscription_tier=tier_key,
-		max_users=master_tenant.max_users if master_tenant else defaults["max_users"],
-		max_storage_gb=master_tenant.max_storage_gb if master_tenant else defaults["max_storage_gb"],
+		max_users=max_users,
+		max_storage_gb=max_storage,
 		current_users_count=users_count,
 		current_storage_gb=storage_gb,
 		current_cost_centers_count=cost_centers_count,
-		billing_cycle="monthly",
-		status=master_tenant.status if master_tenant else "active",
-		monthly_rate_sar=defaults["monthly_rate_sar"],
-		next_billing_date=datetime.now(timezone.utc) + timedelta(days=23),
+		billing_cycle=billing_cycle,
+		status=sub_status,
+		monthly_rate_sar=monthly_rate,
+		next_billing_date=next_bill,
 	)
 
 

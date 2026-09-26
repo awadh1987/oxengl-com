@@ -83,8 +83,117 @@ export interface IsolationAudit {
 
 export interface CompanyBrandingPayload {
   ui_logo_url?: string | null;
-  ui_primary_color: string;
-  ui_secondary_color: string;
+  ui_primary_color?: string;
+  ui_secondary_color?: string;
+}
+
+export interface SubscriptionPlanDto {
+  id: string;
+  name: 'FREE' | 'PROFESSIONAL' | 'ENTERPRISE' | string;
+  display_name: string;
+  monthly_price: number;
+  annual_price: number;
+  max_seats: number;
+  max_vehicles: number;
+  max_storage_gb: number;
+  monthly_invoices_limit: number;
+  allow_external_database: boolean;
+  allow_custom_domain: boolean;
+  allow_dedicated_ssl: boolean;
+  description: string;
+  features?: string[];
+}
+
+export interface TenantSubscriptionDto {
+  tenant_id: string;
+  tenant_name?: string | null;
+  tenant_slug?: string | null;
+  subscription_id: string;
+  status: string;
+  billing_cycle: 'monthly' | 'annual' | string;
+  payment_method_type: string;
+  plan: SubscriptionPlanDto;
+  meters: {
+    current_seats_used: number;
+    max_seats: number;
+    current_vehicles_used: number;
+    max_vehicles: number;
+    current_storage_mb_used: number;
+    max_storage_gb: number;
+  };
+  entitlements: {
+    allow_external_database: boolean;
+    allow_custom_domain: boolean;
+    allow_dedicated_ssl: boolean;
+  };
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  trial_ends_at?: string | null;
+  cancel_at_period_end?: boolean;
+}
+
+export interface SaaSInvoiceDto {
+  id: string;
+  invoice_number: string;
+  tenant_id: string;
+  tenant_name?: string | null;
+  tenant_slug?: string | null;
+  plan_id?: string | null;
+  plan_name?: string | null;
+  plan_display_name?: string | null;
+  billing_cycle: string;
+  amount_sar: number;
+  vat_amount_sar: number;
+  grand_total_sar: number;
+  currency: string;
+  payment_method: string;
+  status: 'pending' | 'paid' | 'failed' | 'canceled' | string;
+  issued_date: string;
+  due_date?: string | null;
+  paid_at?: string | null;
+  po_number?: string | null;
+  payment_reference?: string | null;
+  receipt_url?: string | null;
+  notes?: string | null;
+}
+
+export interface SuperAdminBillingSummaryDto {
+  mrr_sar: number;
+  arr_sar: number;
+  total_active_subscriptions: number;
+  subscribers_by_tier: {
+    FREE: number;
+    PROFESSIONAL: number;
+    ENTERPRISE: number;
+  };
+  pending_wire_invoices_count: number;
+  pending_wire_volume_sar: number;
+  bank_details: {
+    bank_name: string;
+    account_name: string;
+    iban: string;
+    swift: string;
+  };
+}
+
+export interface EnterpriseQuoteResponse {
+  invoice_id: string;
+  invoice_number: string;
+  status: string;
+  currency: string;
+  amount_sar: number;
+  vat_amount_sar: number;
+  grand_total_sar: number;
+  due_date: string;
+  bank_details: {
+    bank_name: string;
+    account_name: string;
+    iban: string;
+    swift: string;
+    payment_reference: string;
+    vat_note: string;
+  };
+  next_steps: string;
 }
 
 export interface CompanyUpdatePayload {
@@ -1024,12 +1133,60 @@ export const erpApi = {
       }
     ),
   
-  // Phase 5: SaaS Subscription & Billing
-  getSubscriptionPlans: () => request<any[]>('/api/master/subscriptions/plans'),
+  // Multi-Grade SaaS Subscription & Billing (Phase 4)
+  getSubscriptionPlans: () => request<SubscriptionPlanDto[]>('/api/v1/tenant/billing/plans'),
+  getTenantSubscription: (companyId?: string) => request<TenantSubscriptionDto>('/api/v1/tenant/billing/subscription', companyId),
+  createStripeCheckout: (
+    payload: { plan_name: string; billing_cycle: string; success_url?: string; cancel_url?: string },
+    companyId?: string
+  ) => request<{ checkout_url: string; session_id: string }>('/api/v1/tenant/billing/checkout', companyId, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  createEnterpriseQuote: (
+    payload: {
+      plan_name: string;
+      billing_cycle: string;
+      po_number?: string;
+      company_tax_id?: string;
+      billing_address?: string;
+      contact_email?: string;
+      notes?: string;
+    },
+    companyId?: string
+  ) => request<EnterpriseQuoteResponse>('/api/v1/tenant/billing/enterprise-quote', companyId, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  }),
+  getTenantInvoices: (companyId?: string) => request<SaaSInvoiceDto[]>('/api/v1/tenant/billing/invoices', companyId),
+  getInvoiceDetail: (invoiceId: string) => request<SaaSInvoiceDto>(`/api/v1/tenant/billing/invoices/${invoiceId}`),
   updateTenantSubscription: (tenantId: string, payload: { tier: string; max_users?: number; max_storage_gb?: number }) =>
     request<any>(`/api/master/tenants/${tenantId}/subscription`, undefined, { method: 'PUT', body: JSON.stringify(payload) }),
-  getTenantBillingSummary: () => request<any>('/api/tenant/billing/summary'),
-  getTenantSaaSInvoices: () => request<any[]>('/api/tenant/billing/invoices'),
+  getTenantBillingSummary: () => request<any>('/api/v1/tenant/billing/subscription'),
+  getTenantSaaSInvoices: () => request<SaaSInvoiceDto[]>('/api/v1/tenant/billing/invoices'),
+
+  // SuperAdmin Financial Control Center (Phase 4)
+  getSuperAdminBillingSummary: () => request<SuperAdminBillingSummaryDto>('/api/v1/superadmin/billing/summary'),
+  getSuperAdminInvoices: (params?: { status?: string; payment_method?: string; tenant_id?: string; limit?: number; offset?: number }) => {
+    const qs = new URLSearchParams();
+    if (params?.status) qs.set('status', params.status);
+    if (params?.payment_method) qs.set('payment_method', params.payment_method);
+    if (params?.tenant_id) qs.set('tenant_id', params.tenant_id);
+    if (params?.limit) qs.set('limit', String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    const queryStr = qs.toString() ? `?${qs.toString()}` : '';
+    return request<SaaSInvoiceDto[]>(`/api/v1/superadmin/billing/invoices${queryStr}`);
+  },
+  verifyAndSettleInvoice: (invoiceId: string, payload: { payment_reference: string; notes?: string }) =>
+    request<any>(`/api/v1/superadmin/billing/invoices/${invoiceId}/verify`, undefined, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  updateTenantCustomLimits: (tenantId: string, customLimits: Record<string, any>) =>
+    request<any>(`/api/v1/superadmin/billing/tenants/${tenantId}/custom-limits`, undefined, {
+      method: 'PUT',
+      body: JSON.stringify({ custom_limits: customLimits }),
+    }),
   
   // Phase 5: Mobile Fleet Operations & Driver Proof of Delivery
   getMobileTrips: (companyId: string) => request<any[]>('/api/mobile/trips', companyId),

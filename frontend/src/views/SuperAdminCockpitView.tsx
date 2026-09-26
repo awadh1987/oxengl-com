@@ -10,8 +10,9 @@ import { Company } from '../types';
 import { LicenseProvisionerView, PanoramicCockpit, PlatformSettingsView, PricingPlansView, SystemAuditView, TenantsRegistryView } from '../components/platform/PlatformModules';
 import { MasterControlPanel } from '../components/platform/MasterControlPanel';
 import { SuperAdminAnalyticsView } from './SuperAdminAnalyticsView';
+import { SuperAdminFinancialHubView } from './SuperAdminFinancialHubView';
 
-type PlatformTab = 'cockpit' | 'tenants' | 'analytics' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
+type PlatformTab = 'cockpit' | 'financial-hub' | 'tenants' | 'analytics' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
 
 interface SuperAdminCockpitViewProps {
   onOpenTenantOnboarding: () => void;
@@ -21,6 +22,7 @@ interface SuperAdminCockpitViewProps {
 
 const navigation: { id: PlatformTab; label: string; description: string; badge?: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'cockpit', label: 'Global Mission Cockpit', description: 'Panoramic MRR, volume & telemetry', badge: 'LIVE', icon: LayoutDashboard },
+  { id: 'financial-hub', label: 'Financial Hub & Invoicing', description: 'MRR, ARR, PO wire verification & custom limits', badge: 'FINANCE', icon: CreditCard },
   { id: 'master-devops', label: 'DevOps & RLS HUD', description: 'Domain routing, RLS isolation & Cmd+K', badge: 'LIVE', icon: Server },
   { id: 'tenants', label: 'Tenants Registry', description: 'Client accounts & tenant entities', icon: Building2 },
   { id: 'analytics', label: 'Cross-Tenant Velocity', description: 'Transaction density & sparklines', badge: '7-DAY', icon: TrendingUp },
@@ -52,6 +54,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
 
   const renderModule = () => {
     switch (activeTab) {
+      case 'financial-hub': return <div className="h-full overflow-y-auto"><SuperAdminFinancialHubView /></div>;
       case 'master-devops': return <div className="h-full overflow-y-auto"><MasterControlPanel /></div>;
       case 'tenants': return <TenantsRegistryView onInspect={inspect} />;
       case 'analytics': return <div className="h-full overflow-y-auto"><SuperAdminAnalyticsView /></div>;

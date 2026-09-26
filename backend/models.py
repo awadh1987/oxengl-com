@@ -1894,13 +1894,16 @@ class MasterTenant(TimestampMixin, Base):
     database_config: Mapped["TenantDatabase"] = relationship(
         "TenantDatabase", back_populates="tenant", uselist=False, cascade="all, delete-orphan"
     )
+    subscription: Mapped[Optional["TenantSubscription"]] = relationship(
+        "TenantSubscription", back_populates="tenant", uselist=False, cascade="all, delete-orphan", foreign_keys="TenantSubscription.tenant_id"
+    )
     saas_invoices: Mapped[list["SaaSInvoice"]] = relationship(
         "SaaSInvoice", back_populates="tenant", cascade="all, delete-orphan"
     )
 
     __table_args__ = (
         CheckConstraint("status IN ('provisioning', 'active', 'suspended', 'deprovisioned')", name="ck_master_tenant_status"),
-        CheckConstraint("subscription_tier IN ('starter', 'standard', 'growth', 'enterprise')", name="ck_master_tenant_tier"),
+        CheckConstraint("subscription_tier IN ('starter', 'standard', 'growth', 'enterprise', 'free', 'professional')", name="ck_master_tenant_tier"),
     )
 
 
@@ -2066,22 +2069,57 @@ class SaaSInvoice(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("master_tenants.id", ondelete="CASCADE"), nullable=False, index=True)
+    subscription_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("tenant_subscriptions.id", ondelete="SET NULL"), nullable=True, index=True)
+    plan_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("subscription_plans.id", ondelete="SET NULL"), nullable=True, index=True)
     invoice_number: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     billing_cycle: Mapped[str] = mapped_column(String(32), nullable=False, default="monthly")
     tier: Mapped[str] = mapped_column(String(32), nullable=False, default="standard")
     amount_sar: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
+    subtotal_sar: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"), server_default=text("0"))
+    tax_sar: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"), server_default=text("0"))
+    currency: Mapped[str] = mapped_column(String(10), nullable=False, default="SAR", server_default=text("'SAR'"))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="paid")
+    payment_method: Mapped[str] = mapped_column(String(64), nullable=False, default="stripe_card", server_default=text("'stripe_card'"))
+    payment_reference: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    po_number: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     issued_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     pdf_url: Mapped[Optional[str]] = mapped_column(String(255))
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     tenant: Mapped["MasterTenant"] = relationship(back_populates="saas_invoices")
+    subscription: Mapped[Optional["TenantSubscription"]] = relationship("TenantSubscription", back_populates="invoices")
+    plan: Mapped[Optional["SubscriptionPlan"]] = relationship("SubscriptionPlan")
 
     __table_args__ = (
         CheckConstraint("status IN ('paid', 'pending', 'overdue', 'cancelled')", name="ck_saas_invoice_status"),
-        CheckConstraint("billing_cycle IN ('monthly', 'yearly', 'quarterly')", name="ck_saas_invoice_cycle"),
+        CheckConstraint("billing_cycle IN ('monthly', 'yearly', 'annual', 'quarterly', 'contract')", name="ck_saas_invoice_cycle"),
     )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": str(self.id),
+            "tenant_id": str(self.tenant_id),
+            "subscription_id": str(self.subscription_id) if self.subscription_id else None,
+            "plan_id": str(self.plan_id) if self.plan_id else None,
+            "invoice_number": self.invoice_number,
+            "billing_cycle": self.billing_cycle,
+            "tier": self.tier,
+            "amount_sar": float(self.amount_sar) if self.amount_sar is not None else 0.0,
+            "subtotal_sar": float(self.subtotal_sar) if self.subtotal_sar is not None else 0.0,
+            "tax_sar": float(self.tax_sar) if self.tax_sar is not None else 0.0,
+            "currency": self.currency,
+            "status": self.status,
+            "payment_method": self.payment_method,
+            "payment_reference": self.payment_reference,
+            "po_number": self.po_number,
+            "issued_date": self.issued_date.isoformat() if self.issued_date else None,
+            "due_date": self.due_date.isoformat() if self.due_date else None,
+            "paid_at": self.paid_at.isoformat() if self.paid_at else None,
+            "pdf_url": self.pdf_url,
+            "notes": self.notes,
+        }
 
 
 class FleetTrip(TimestampMixin, Base):
@@ -2301,5 +2339,13 @@ from backend.app.domains.procurement.models import (  # noqa: E402
     TenderRFQ,
     TenderBid,
     TenderBidLine,
+)
+
+# ==============================================================================
+# Phase 1: SaaS Multi-Grade Subscription & Billing Domain Models
+# ==============================================================================
+from backend.app.domains.saas.models import (  # noqa: E402
+    SubscriptionPlan,
+    TenantSubscription,
 )
 

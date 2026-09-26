@@ -15,7 +15,7 @@ from backend.database import (
     encrypt_connection_url,
 )
 from backend.app.main import app
-from backend.models import TenantDatabaseConfig, TenantDatabaseMigration, ResCompany
+from backend.models import TenantDatabaseConfig, TenantDatabaseMigration, ResCompany, MasterTenant
 from backend.app.database import SessionLocal
 from backend.app.services.migration_service import (
     build_connection_url,
@@ -198,9 +198,20 @@ def test_tenant_control_api_database_endpoints():
             id=test_company_id,
             name=f"API Test Tenant Corp {random_str}",
             domain_slug=f"api-test-{random_str}",
+            subscription_tier="enterprise",
             is_active=True,
         )
-        db.add(company)
+        tenant = MasterTenant(
+            id=test_company_id,
+            name=f"API Test Tenant Corp {random_str}",
+            slug=f"api-test-{random_str}",
+            owner_full_name="API Admin",
+            owner_email=f"admin@{random_str}.com",
+            owner_mobile="+966555111222",
+            status="active",
+            subscription_tier="enterprise",
+        )
+        db.add_all([company, tenant])
         db.commit()
 
         token = create_access_token(data={"sub": f"admin@{random_str}.com", "company_id": str(test_company_id), "role": "admin"})
@@ -260,6 +271,7 @@ def test_tenant_control_api_database_endpoints():
     finally:
         db.query(TenantDatabaseMigration).filter(TenantDatabaseMigration.company_id == test_company_id).delete()
         db.query(ResCompany).filter(ResCompany.id == test_company_id).delete()
+        db.query(MasterTenant).filter(MasterTenant.id == test_company_id).delete()
         db.commit()
         db.close()
 

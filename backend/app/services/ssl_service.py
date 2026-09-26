@@ -135,6 +135,19 @@ def verify_caddy_ask(domain: str, db: Optional[Session] = None) -> Dict[str, Any
         )
 
         if tenant:
+            # Check architectural entitlement for SSL provisioning
+            from backend.app.services.billing_service import verify_tenant_entitlement
+            entitled_ssl, msg_ssl = verify_tenant_entitlement(db, tenant.id, "allow_dedicated_ssl")
+            if not entitled_ssl:
+                entitled_dom, _ = verify_tenant_entitlement(db, tenant.id, "allow_custom_domain")
+                if not entitled_dom:
+                    return {
+                        "allowed": False,
+                        "domain": clean_domain,
+                        "tenant_id": str(tenant.id),
+                        "reason": f"Plan tier '{tenant.subscription_tier}' does not entitle dedicated SSL: {msg_ssl}",
+                    }
+
             # Populate domain cache
             with _DOMAIN_CACHE_LOCK:
                 _DOMAIN_CACHE[clean_domain] = {
@@ -165,6 +178,18 @@ def verify_caddy_ask(domain: str, db: Optional[Session] = None) -> Dict[str, Any
             .first()
         )
         if company:
+            from backend.app.services.billing_service import verify_tenant_entitlement
+            entitled_ssl, msg_ssl = verify_tenant_entitlement(db, company.id, "allow_dedicated_ssl")
+            if not entitled_ssl:
+                entitled_dom, _ = verify_tenant_entitlement(db, company.id, "allow_custom_domain")
+                if not entitled_dom:
+                    return {
+                        "allowed": False,
+                        "domain": clean_domain,
+                        "tenant_id": str(company.id),
+                        "reason": f"Company tier does not entitle dedicated SSL: {msg_ssl}",
+                    }
+
             with _DOMAIN_CACHE_LOCK:
                 _DOMAIN_CACHE[clean_domain] = {
                     "tenant_id": str(company.id),
@@ -173,7 +198,7 @@ def verify_caddy_ask(domain: str, db: Optional[Session] = None) -> Dict[str, Any
                     "name": company.name,
                     "custom_domain": company.custom_domain,
                     "is_custom_domain": True,
-                    "subscription_tier": "enterprise",
+                    "subscription_tier": getattr(company, "subscription_tier", "enterprise"),
                     "status": "active",
                 }
             return {
