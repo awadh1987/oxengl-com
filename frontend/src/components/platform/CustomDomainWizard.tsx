@@ -280,12 +280,26 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
               </p>
             </div>
             {verificationResult && (
-              <div className="inline-flex items-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2 rounded-lg text-xs font-mono text-slate-300">
-                <span>DNS: {verificationResult.dns_check}</span>
-                <span>•</span>
-                <span className="text-emerald-400">SSL: {verificationResult.ssl_status}</span>
-                <span>•</span>
-                <span className="text-indigo-400">Router: {verificationResult.routing}</span>
+              <div className="space-y-2">
+                <div className="inline-flex flex-wrap items-center justify-center gap-3 bg-slate-900 border border-slate-800 px-4 py-2.5 rounded-lg text-xs font-mono text-slate-300">
+                  <span>DNS: <strong className="text-white">{verificationResult.dns_check}</strong></span>
+                  <span>•</span>
+                  <span className="text-emerald-400">SSL: <strong>{verificationResult.ssl_status}</strong></span>
+                  <span>•</span>
+                  <span className="text-indigo-400">Router: <strong>{verificationResult.routing}</strong></span>
+                  {verificationResult.certificate?.issuer && (
+                    <>
+                      <span>•</span>
+                      <span className="text-amber-400">Issuer: <strong>{verificationResult.certificate.issuer}</strong></span>
+                    </>
+                  )}
+                  {verificationResult.certificate?.days_remaining !== undefined && verificationResult.certificate?.days_remaining !== null && (
+                    <>
+                      <span>•</span>
+                      <span className="text-sky-400">Validity: <strong>{verificationResult.certificate.days_remaining}d remaining</strong></span>
+                    </>
+                  )}
+                </div>
               </div>
             )}
             <div className="pt-2">

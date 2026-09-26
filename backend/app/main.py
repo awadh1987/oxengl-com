@@ -91,7 +91,7 @@ try:
 	from .services.ai_parser import ai_document_parser
 	from .services.ai_forecasting import ai_forecasting_service
 	from .two_tier_auth import router as two_tier_auth_router
-	from .core.middleware import CorrelationIdMiddleware
+	from .core.middleware import CorrelationIdMiddleware, HostHeaderMiddleware
 	from .domains.iam.routes import router as iam_auth_router
 	from backend.app.api.v1.procurement import router as procurement_router
 	from backend.app.api.v1.inventory import router as inventory_router
@@ -177,7 +177,7 @@ except ImportError:
 	from .services.ai_parser import ai_document_parser  # type: ignore[no-redef]
 	from .services.ai_forecasting import ai_forecasting_service  # type: ignore[no-redef]
 	from .two_tier_auth import router as two_tier_auth_router  # type: ignore[no-redef]
-	from backend.app.core.middleware import CorrelationIdMiddleware  # type: ignore[no-redef]
+	from backend.app.core.middleware import CorrelationIdMiddleware, HostHeaderMiddleware  # type: ignore[no-redef]
 	from backend.app.domains.iam.routes import router as iam_auth_router  # type: ignore[no-redef]
 	from backend.app.api.v1.procurement import router as procurement_router  # type: ignore[no-redef]
 	from backend.app.api.v1.inventory import router as inventory_router  # type: ignore[no-redef]
@@ -316,6 +316,8 @@ def verify_migration_managed_schema() -> None:
 	try:
 		with SessionLocal() as db:
 			db.execute(text("ALTER TABLE weighbridge_tickets ADD COLUMN IF NOT EXISTS uom VARCHAR(32) DEFAULT 'MT';"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;"))
+			db.execute(text("CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);"))
 			db.execute(text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;"))
 			db.execute(text("ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_code_key;"))
 			db.execute(text("""
@@ -345,13 +347,14 @@ app.add_middleware(
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 	],
-	allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)$|^http://(localhost|127\.0\.0\.1):(3000|5173)$",
+	allow_origin_regex=r"^https?://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)$|^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+(:\d+)?$",
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],
 )
 
 app.add_middleware(CorrelationIdMiddleware)
+app.add_middleware(HostHeaderMiddleware)
 
 from backend.app.domains.auth import onboard_tenant
 app.include_router(onboard_tenant.router)
@@ -408,15 +411,19 @@ from backend.app.api.routers.corporate_cv import router as corporate_cv_router
 app.include_router(corporate_cv_router, prefix="/api/v1")
 app.include_router(corporate_cv_router, prefix="/api")
 
+# Phase 3: Enterprise SSL & Caddy Dynamic Reverse Proxy Gatekeeper
+from backend.app.api.v1 import ssl as ssl_api
+app.include_router(ssl_api.router, prefix="/api/v1")
+app.include_router(ssl_api.router, prefix="/api")
+app.include_router(ssl_api.router)
 
 
 
-def get_db() -> Generator[Session, None, None]:
-	database = SessionLocal()
-	try:
-		yield database
-	finally:
-		database.close()
+
+def get_db(request: Request = None) -> Generator[Session, None, None]:
+	from backend.database import get_db as _core_get_db
+	yield from _core_get_db(request)
+
 
 
 def resolve_client_ip(request: Request) -> str | None:
@@ -902,6 +909,45 @@ def list_available_public_tenants(database: Session = Depends(get_db)):
 			""")
 		).mappings().all()
 		return [dict(c) for c in companies]
+
+
+@app.get("/api/v1/tenant/resolve-domain", tags=["Tenants"])
+@app.get("/api/tenant/resolve-domain", tags=["Tenants"])
+@app.get("/api/v1/auth/resolve-domain", tags=["Tenants"])
+def resolve_tenant_domain_public(
+	request: Request,
+	host: Optional[str] = Query(None),
+	database: Session = Depends(get_db),
+):
+	"""Public Zero-Slug domain resolution endpoint for custom domains and subdomains."""
+	from backend.app.core.middleware import resolve_tenant_from_host
+	target_host = host or request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+	clean_host = target_host.split(":")[0].strip().lower()
+
+	if not clean_host:
+		return {"resolved": False, "message": "Host is required"}
+
+	meta = resolve_tenant_from_host(clean_host, db=database)
+	if not meta:
+		return {
+			"resolved": False,
+			"host": clean_host,
+			"message": f"No active tenant mapped to domain '{clean_host}'",
+		}
+
+	return {
+		"resolved": True,
+		"tenant_id": meta["tenant_id"],
+		"company_id": meta["company_id"],
+		"tenant_slug": meta["tenant_slug"],
+		"name": meta["name"],
+		"custom_domain": meta["custom_domain"],
+		"is_custom_domain": meta.get("is_custom_domain", False),
+		"logo_url": meta.get("logo_url"),
+		"primary_color": meta.get("primary_color"),
+		"subscription_tier": meta.get("subscription_tier"),
+		"status": meta.get("status"),
+	}
 
 
 @app.get("/api/companies/{company_id}", response_model=ResCompanyRead, tags=["Companies"])

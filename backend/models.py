@@ -34,6 +34,7 @@ class ResCompany(TimestampMixin, Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     slug: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
     domain_slug: Mapped[Optional[str]] = mapped_column(String(100), unique=True, index=True, nullable=True)
+    custom_domain: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True, nullable=True)
     tax_id: Mapped[Optional[str]] = mapped_column(String(64), unique=True)
     commercial_registration: Mapped[Optional[str]] = mapped_column(String(10), unique=True)
     currency: Mapped[str] = mapped_column(String(3), nullable=False, default="SAR")
@@ -1640,6 +1641,34 @@ class TenantDatabaseConfig(TimestampMixin, Base):
         CheckConstraint("isolation_level IN ('dedicated', 'shared', 'isolated')", name="ck_tenant_db_isolation"),
         Index("ix_tenant_db_active", "company_id", "is_active"),
     )
+
+
+class TenantDatabaseMigration(TimestampMixin, Base):
+    """Tracks live database migration jobs from local/shared container to external private databases."""
+    __tablename__ = "tenant_database_migrations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(64), nullable=False, default="shared_postgres")
+    target_host: Mapped[str] = mapped_column(String(255), nullable=False)
+    target_port: Mapped[int] = mapped_column(Integer, nullable=False, default=5432)
+    target_database: Mapped[str] = mapped_column(String(128), nullable=False)
+    ssl_mode: Mapped[str] = mapped_column(String(32), nullable=False, default="prefer")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="PENDING")
+    progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    current_step: Mapped[str] = mapped_column(String(255), nullable=False, default="Queued")
+    records_transferred: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    company: Mapped[ResCompany] = relationship(foreign_keys=[company_id])
+
+    __table_args__ = (
+        CheckConstraint("status IN ('PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED')", name="ck_tenant_migration_status"),
+        Index("ix_tenant_migration_company", "company_id", "status"),
+    )
+
 
 
 # ==============================================================================

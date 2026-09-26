@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Building2,
   Lock,
@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { redirectToTenantSubdomain } from '../utils/subdomain';
+import { redirectToTenantSubdomain, isCustomDomain } from '../utils/subdomain';
 import { useNavigate } from '../hooks/useNavigate';
 
 interface TenantLoginViewProps {
@@ -49,6 +49,14 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const isAuthenticatingRef = useRef(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (forcedSlug) {
+      setTenantSlug(forcedSlug);
+      setSlugValidated(true);
+      setStep(2);
+    }
+  }, [forcedSlug]);
 
   const navigateTo = (path: string) => {
     if (onNavigate) {
@@ -174,7 +182,8 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
 
         const effectiveSlug = res.tenant_slug || tenantSlug;
         const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-        if (!isLocal && effectiveSlug) {
+        const isCustom = isCustomDomain();
+        if (!isLocal && !isCustom && effectiveSlug) {
           const parts = window.location.hostname.split('.');
           const rootDomain = parts.slice(-2).join('.'); // 'oxengl.me'
           const targetHost = `${effectiveSlug}.${rootDomain}`;

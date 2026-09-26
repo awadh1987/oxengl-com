@@ -320,10 +320,12 @@ class TenantLoginRequest(BaseModel):
     def resolve_slug(cls, data: Any) -> Any:
         if isinstance(data, dict):
             slug = data.get("workspace_slug") or data.get("tenant_slug") or data.get("slug")
-            if not slug:
-                raise ValueError("workspace_slug or tenant_slug is required")
-            data["workspace_slug"] = slug
-            data["tenant_slug"] = slug
+            if slug:
+                data["workspace_slug"] = slug
+                data["tenant_slug"] = slug
+            else:
+                data["workspace_slug"] = None
+                data["tenant_slug"] = None
             ident = data.get("identity") or data.get("email") or data.get("username")
             if not ident:
                 raise ValueError("identity or email is required")
@@ -554,6 +556,23 @@ def master_login(payload: MasterLoginRequest, request: Request, db: Session = De
 def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Session = Depends(get_db)):
     """Resolves Tenant Plane database via slug and authenticates tenant user."""
     slug = (payload.workspace_slug or payload.tenant_slug or "").lower().strip()
+    if not slug:
+        # Zero-Slug Resolution: Extract from request.state or inspect Host / X-Forwarded-Host header
+        if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
+            slug = str(request.state.tenant_slug).lower().strip()
+        else:
+            raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+            from backend.app.core.middleware import resolve_tenant_from_host
+            meta = resolve_tenant_from_host(raw_host, db=master_db)
+            if meta and meta.get("tenant_slug"):
+                slug = str(meta["tenant_slug"]).lower().strip()
+
+    if not slug:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="workspace_slug is required when logging in from generic hub. For zero-slug login, access via your custom domain or tenant subdomain."
+        )
+
     slug_variants = list(dict.fromkeys([slug, slug.replace("-", "_"), slug.replace("_", "-")])) if slug else []
     tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug.in_(slug_variants))) if slug_variants else None
     
@@ -891,7 +910,7 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
 
 
 @router.post("/recover-password")
-def recover_password(payload: PasswordRecoveryInitiateRequest, master_db: Session = Depends(get_db)):
+def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest, master_db: Session = Depends(get_db)):
     """Dispatches a secure 6-digit OTP and reset token via SMS or Email."""
     normalized_val, id_type = normalize_identifier(payload.identity)
     otp_code = "".join(secrets.choice(string.digits) for _ in range(6))
@@ -919,9 +938,20 @@ def recover_password(payload: PasswordRecoveryInitiateRequest, master_db: Sessio
         master_db.add(reset_entry)
         master_db.commit()
     else:
-        if not payload.workspace_slug:
+        slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "") or "").lower().strip()
+        if not slug:
+            if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
+                slug = str(request.state.tenant_slug).lower().strip()
+            else:
+                raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+                from backend.app.core.middleware import resolve_tenant_from_host
+                meta = resolve_tenant_from_host(raw_host, db=master_db)
+                if meta and meta.get("tenant_slug"):
+                    slug = str(meta["tenant_slug"]).lower().strip()
+
+        if not slug:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_slug is required for tenant password recovery.")
-        tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug == payload.workspace_slug.lower()))
+        tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
         if not tenant:
             return {"message": "If the account exists, a recovery code has been sent.", "delivery_channel": id_type.upper()}
 
@@ -955,7 +985,7 @@ def recover_password(payload: PasswordRecoveryInitiateRequest, master_db: Sessio
 
 
 @router.post("/reset-password")
-def reset_password(payload: PasswordResetCompleteRequest, master_db: Session = Depends(get_db)):
+def reset_password(request: Request, payload: PasswordResetCompleteRequest, master_db: Session = Depends(get_db)):
     """Verifies OTP & token and securely rotates password to Argon2id hash."""
     now = datetime.now(timezone.utc)
     new_hash = pwd_context.hash(payload.new_password)
@@ -999,9 +1029,19 @@ def reset_password(payload: PasswordResetCompleteRequest, master_db: Session = D
             reset.is_used = True
             master_db.commit()
     else:
-        if not (payload.workspace_slug or getattr(payload, "tenant_slug", None)):
+        slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "") or "").lower().strip()
+        if not slug:
+            if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
+                slug = str(request.state.tenant_slug).lower().strip()
+            else:
+                raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+                from backend.app.core.middleware import resolve_tenant_from_host
+                meta = resolve_tenant_from_host(raw_host, db=master_db)
+                if meta and meta.get("tenant_slug"):
+                    slug = str(meta["tenant_slug"]).lower().strip()
+
+        if not slug:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_slug is required for tenant password reset.")
-        slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "")).lower()
         tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
         if not tenant:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant workspace not found.")

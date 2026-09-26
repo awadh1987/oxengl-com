@@ -89,29 +89,54 @@ class AsyncCompatibleSession(Session):
 SessionLocal = sessionmaker(bind=engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False)
 
 
-def get_db(request: Any = None):
-    """Generator yielding a transactional database session with tenant/RLS context awareness."""
-    db = SessionLocal()
+from starlette.requests import Request
+
+
+def get_db(request: Request = None):
+    """Generator yielding a transactional database session with tenant/RLS context awareness
+    and dynamic routing to dedicated physical databases for enterprise tenants."""
     tenant_id = None
+    company_uuid = None
     is_master = False
 
-    if request is not None and hasattr(request, "headers"):
+    if request is not None:
         try:
-            headers = request.headers
-            tenant_id = (
-                headers.get("X-Tenant-ID")
-                or headers.get("x-tenant-id")
-                or headers.get("X-Company-ID")
-                or headers.get("x-company-id")
-                or getattr(request.state, "tenant_id", None)
-                or getattr(request.state, "company_id", None)
-            )
-            role = getattr(request.state, "role", None) or headers.get("x-role")
-            if role and str(role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
-                is_master = True
+            # 1. Check request headers
+            if hasattr(request, "headers"):
+                headers = request.headers
+                tenant_id = (
+                    headers.get("X-Tenant-ID")
+                    or headers.get("x-tenant-id")
+                    or headers.get("X-Company-ID")
+                    or headers.get("x-company-id")
+                    or headers.get("X-Tenant-Slug")
+                    or headers.get("x-tenant-slug")
+                )
+                role = headers.get("x-role")
+                if role and str(role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
+                    is_master = True
 
+            # 2. Check request.state
+            if hasattr(request, "state"):
+                if not tenant_id:
+                    tenant_id = (
+                        getattr(request.state, "tenant_id", None)
+                        or getattr(request.state, "company_id", None)
+                    )
+                role = getattr(request.state, "role", None)
+                if role and str(role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
+                    is_master = True
+
+            # 3. Check query and path params
             if not tenant_id:
-                auth = headers.get("Authorization") or headers.get("authorization")
+                if hasattr(request, "path_params") and request.path_params:
+                    tenant_id = request.path_params.get("tenant_id") or request.path_params.get("company_id")
+                if not tenant_id and hasattr(request, "query_params") and request.query_params:
+                    tenant_id = request.query_params.get("tenant_id") or request.query_params.get("company_id")
+
+            # 4. Check Authorization Bearer JWT token
+            if not tenant_id and hasattr(request, "headers"):
+                auth = request.headers.get("Authorization") or request.headers.get("authorization")
                 if auth and auth.startswith("Bearer "):
                     token = auth.split(" ", 1)[1].strip()
                     try:
@@ -123,16 +148,51 @@ def get_db(request: Any = None):
                             is_master = True
                     except Exception:
                         pass
-
-            if tenant_id:
-                db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
-                db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})
-            if is_master:
-                db.execute(text("SET LOCAL app.is_master_admin = 'true'"))
         except Exception:
             pass
 
+    # Resolve company_uuid
+    if tenant_id:
+        try:
+            company_uuid = uuid.UUID(str(tenant_id))
+        except (ValueError, TypeError):
+            pass
+
+    # Dynamic Connection Resolution: resolve dedicated engine or fallback to platform shared pool
+    is_control_plane = False
+    if request is not None and hasattr(request, "url") and hasattr(request.url, "path"):
+        path = request.url.path
+        if path.startswith((
+            "/api/v1/tenant/control",
+            "/api/tenant/control",
+            "/api/v1/superadmin",
+            "/api/superadmin",
+            "/api/v1/auth",
+            "/api/auth",
+            "/api/v1/ssl",
+            "/api/ssl",
+            "/ssl",
+        )):
+            is_control_plane = True
+
+    if company_uuid and not is_control_plane:
+        db = tenant_connection_manager.get_session(company_uuid)
+    else:
+        db = SessionLocal()
+
+    # Apply tenant RLS session variables
     try:
+        if tenant_id:
+            try:
+                db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
+                db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})
+            except Exception:
+                pass
+        if is_master:
+            try:
+                db.execute(text("SET LOCAL app.is_master_admin = 'true'"))
+            except Exception:
+                pass
         yield db
     finally:
         if tenant_id or is_master:
@@ -143,6 +203,7 @@ def get_db(request: Any = None):
             except Exception:
                 pass
         db.close()
+
 
 
 @contextmanager
@@ -217,11 +278,17 @@ class TenantConnectionManager:
         self._default_sessionmaker = SessionLocal
         self._engine_cache: dict[uuid.UUID, Engine] = {}
         self._sessionmaker_cache: dict[uuid.UUID, sessionmaker] = {}
+        self._no_dedicated_cache: set[uuid.UUID] = set()
         self._lock = threading.Lock()
 
     @property
     def default_engine(self) -> Engine:
         return self._default_engine
+
+    def has_dedicated_engine(self, company_id: uuid.UUID) -> bool:
+        """Checks if a tenant currently has a dedicated engine cached."""
+        with self._lock:
+            return company_id in self._engine_cache
 
     def get_engine(self, company_id: uuid.UUID | None = None, db: Session | None = None) -> Engine:
         """
@@ -234,6 +301,8 @@ class TenantConnectionManager:
         with self._lock:
             if company_id in self._engine_cache:
                 return self._engine_cache[company_id]
+            if company_id in self._no_dedicated_cache:
+                return self._default_engine
 
         dedicated_url = self._resolve_dedicated_url(company_id, db=db)
         if dedicated_url:
@@ -251,10 +320,13 @@ class TenantConnectionManager:
                 new_engine = create_engine(dedicated_url, **engine_kwargs)
                 self._engine_cache[company_id] = new_engine
                 self._sessionmaker_cache[company_id] = sessionmaker(
-                    bind=new_engine, autoflush=False, autocommit=False
+                    bind=new_engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False
                 )
+                self._no_dedicated_cache.discard(company_id)
                 return new_engine
 
+        with self._lock:
+            self._no_dedicated_cache.add(company_id)
         return self._default_engine
 
     def get_sessionmaker(self, company_id: uuid.UUID | None = None, db: Session | None = None) -> sessionmaker:
@@ -327,23 +399,46 @@ class TenantConnectionManager:
 
             self._engine_cache[company_id] = eng
             self._sessionmaker_cache[company_id] = sessionmaker(
-                bind=eng, autoflush=False, autocommit=False
+                bind=eng, class_=AsyncCompatibleSession, autoflush=False, autocommit=False
             )
+            self._no_dedicated_cache.discard(company_id)
             return eng
+
+    register_engine = register_tenant_engine
 
     def reset_cache(self, company_id: uuid.UUID | None = None) -> None:
         """Disposes and removes cached tenant engines."""
         with self._lock:
             if company_id is not None:
+                self._no_dedicated_cache.discard(company_id)
                 if company_id in self._engine_cache:
                     eng = self._engine_cache.pop(company_id)
-                    eng.dispose()
+                    if eng is not self._default_engine:
+                        eng.dispose()
                 self._sessionmaker_cache.pop(company_id, None)
             else:
+                self._no_dedicated_cache.clear()
                 for eng in self._engine_cache.values():
-                    eng.dispose()
+                    if eng is not self._default_engine:
+                        eng.dispose()
                 self._engine_cache.clear()
                 self._sessionmaker_cache.clear()
+
+    @staticmethod
+    def test_connection(connection_url: str, timeout: int = 5) -> tuple[bool, Optional[str]]:
+        """Tests connectivity and credentials for an external database."""
+        try:
+            is_sqlite = connection_url.startswith("sqlite")
+            kwargs: dict = {}
+            if not is_sqlite:
+                kwargs["connect_args"] = {"connect_timeout": timeout}
+            test_eng = create_engine(connection_url, **kwargs)
+            with test_eng.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            test_eng.dispose()
+            return True, None
+        except Exception as e:
+            return False, str(e)
 
 
 tenant_connection_manager = TenantConnectionManager(engine)

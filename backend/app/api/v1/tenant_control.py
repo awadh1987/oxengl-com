@@ -9,14 +9,24 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import MasterTenant, ResCompany, ResUser, TenantUser, User
+from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration, TenantUser, User
 from backend.two_tier_auth import hash_password
+from backend.schemas import (
+    TenantDatabaseInfoResponse,
+    TenantDatabaseMigrationRequest,
+    TenantDatabaseMigrationResponse,
+    TenantDatabaseMigrationStatus,
+    TenantDatabaseTestConnectionRequest,
+    TenantDatabaseTestConnectionResponse,
+)
+from backend.app.services import migration_service
+
 
 router = APIRouter(tags=["Tenant Control Panel"])
 
@@ -26,14 +36,57 @@ def resolve_control_tenant_id(
     header_tenant: Optional[str] = None,
     header_slug: Optional[str] = None,
     header_company: Optional[str] = None,
+    authorization: Optional[str] = None,
+    request: Optional[Request] = None,
     db: Optional[Session] = None,
 ) -> uuid.UUID:
-    raw = (header_tenant or header_company or query_tenant or header_slug or "").strip()
-    
+    raw = ""
+
+    # 1. Authoritative: Inspect JWT Authorization token first (anti-spoofing guarantee)
+    if not authorization and request is not None and hasattr(request, "headers"):
+        authorization = request.headers.get("Authorization") or request.headers.get("authorization")
+
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        try:
+            from backend.two_tier_auth import verify_two_tier_jwt
+            try:
+                claims = verify_two_tier_jwt(token, expected_tier="tenant")
+            except Exception:
+                claims = verify_two_tier_jwt(token, expected_tier="master")
+            raw = str(claims.get("tenant_id") or claims.get("company_id") or claims.get("tenant_slug") or "")
+        except Exception:
+            pass
+
+    # 2. Host-header / request state resolution (zero-slug custom domain)
+    if not raw and request is not None:
+        raw = (
+            getattr(request.state, "tenant_id", None)
+            or getattr(request.state, "company_id", None)
+            or getattr(request.state, "tenant_slug", None)
+            or ""
+        )
+
+    # 3. Explicit headers & query params fallback (for internal or service calls)
+    if not raw:
+        raw = (header_tenant or header_company or query_tenant or header_slug or "").strip()
+
+    # 4. Host header DB lookup fallback
+    if not raw and request is not None and db is not None and hasattr(request, "headers"):
+        host = request.headers.get("Host") or request.headers.get("x-forwarded-host") or ""
+        clean_host = host.split(":")[0].strip().lower()
+        if clean_host and clean_host not in {"localhost", "127.0.0.1", "testserver", "oxengl.me"}:
+            m = db.query(MasterTenant).filter(MasterTenant.custom_domain == clean_host).first()
+            if m:
+                return m.id
+            c = db.query(ResCompany).filter(ResCompany.custom_domain == clean_host).first()
+            if c:
+                return c.id
+
     # 1. Try UUID parse directly
     if raw:
         try:
-            return uuid.UUID(raw)
+            return uuid.UUID(str(raw))
         except Exception:
             pass
 
@@ -41,13 +94,13 @@ def resolve_control_tenant_id(
     if db and raw:
         # Check by slug in ResCompany
         comp = db.query(ResCompany).filter(
-            (ResCompany.domain_slug == raw.lower()) | (ResCompany.slug == raw.lower())
+            (ResCompany.domain_slug == str(raw).lower()) | (ResCompany.slug == str(raw).lower())
         ).first()
         if comp:
             return comp.id
 
         # Check by slug in MasterTenant
-        m_tenant = db.query(MasterTenant).filter(MasterTenant.slug == raw.lower()).first()
+        m_tenant = db.query(MasterTenant).filter(MasterTenant.slug == str(raw).lower()).first()
         if m_tenant:
             return m_tenant.id
 
@@ -225,6 +278,7 @@ def delete_team_member(
 
 @router.get("/settings", status_code=status.HTTP_200_OK)
 def get_tenant_settings(
+    request: Request,
     tenant_id: Optional[str] = Query(None),
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
@@ -237,6 +291,7 @@ def get_tenant_settings(
         header_tenant=x_tenant_id,
         header_slug=x_tenant_slug,
         header_company=x_company_id,
+        request=request,
         db=db,
     )
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
@@ -316,6 +371,7 @@ def update_tenant_settings(
 
 @router.get("/domains", status_code=status.HTTP_200_OK)
 def list_custom_domains(
+    request: Request,
     tenant_id: Optional[str] = Query(None),
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
@@ -328,6 +384,7 @@ def list_custom_domains(
         header_tenant=x_tenant_id,
         header_slug=x_tenant_slug,
         header_company=x_company_id,
+        request=request,
         db=db,
     )
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
@@ -374,8 +431,13 @@ def register_custom_domain(
 
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
     if company:
+        company.custom_domain = clean_domain
         company.domain_slug = clean_domain.replace(".", "-")
         db.commit()
+
+    # Invalidate domain resolution cache so new domain resolves immediately
+    from backend.app.core.middleware import invalidate_domain_cache
+    invalidate_domain_cache(clean_domain)
 
     record = {
         "id": f"dom-{uuid.uuid4().hex[:6]}",
@@ -390,7 +452,329 @@ def register_custom_domain(
     return {"success": True, "domain": record}
 
 
+@router.delete("/domains/{domain_id}", status_code=status.HTTP_200_OK)
+def remove_custom_domain(
+    domain_id: str,
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Removes a registered custom domain and clears routing cache."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    old_domain = None
+    master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
+    if master and master.custom_domain:
+        old_domain = master.custom_domain
+        master.custom_domain = None
+        db.commit()
+
+    company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
+    if company and company.custom_domain:
+        old_domain = old_domain or company.custom_domain
+        company.custom_domain = None
+        db.commit()
+
+    if old_domain:
+        from backend.app.core.middleware import invalidate_domain_cache
+        invalidate_domain_cache(old_domain)
+
+    return {"success": True, "message": f"Custom domain '{domain_id}' removed successfully"}
+
+
+@router.get("/domains/resolve", status_code=status.HTTP_200_OK)
+@router.get("/resolve-domain", status_code=status.HTTP_200_OK)
+def resolve_domain_endpoint(
+    request: Request,
+    host: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Public zero-slug domain resolution endpoint.
+    Translates an incoming Host header or ?host= query parameter into the corresponding
+    tenant workspace partition for Zero-Slug Routing and tenant white-label branding.
+    """
+    target_host = host or request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    clean_host = target_host.split(":")[0].strip().lower()
+
+    if not clean_host:
+        return {"resolved": False, "message": "Host header or host parameter is required"}
+
+    from backend.app.core.middleware import resolve_tenant_from_host
+    tenant_meta = resolve_tenant_from_host(clean_host, db=db)
+
+    if not tenant_meta:
+        return {
+            "resolved": False,
+            "host": clean_host,
+            "message": f"No active tenant mapped to domain '{clean_host}'",
+        }
+
+    return {
+        "resolved": True,
+        "tenant_id": tenant_meta["tenant_id"],
+        "company_id": tenant_meta["company_id"],
+        "tenant_slug": tenant_meta["tenant_slug"],
+        "name": tenant_meta["name"],
+        "custom_domain": tenant_meta["custom_domain"],
+        "is_custom_domain": tenant_meta.get("is_custom_domain", False),
+        "logo_url": tenant_meta.get("logo_url"),
+        "primary_color": tenant_meta.get("primary_color"),
+        "subscription_tier": tenant_meta.get("subscription_tier"),
+        "status": tenant_meta.get("status"),
+    }
+
+
 @router.post("/domains/{domain_id}/verify", status_code=status.HTTP_200_OK)
-def verify_custom_domain(domain_id: str):
-    """Simulates/confirms cryptographic verification of CNAME & SSL."""
-    return {"success": True, "is_verified": True, "ssl_status": "active"}
+def verify_custom_domain(
+    domain_id: str,
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """
+    Cryptographic & DNS Pre-flight Verification of CNAME, A-record, and SSL status.
+    """
+    from backend.app.services import ssl_service
+
+    target_uuid = None
+    try:
+        target_uuid = resolve_control_tenant_id(
+            query_tenant=tenant_id,
+            header_tenant=x_tenant_id,
+            header_slug=x_tenant_slug,
+            header_company=x_company_id,
+            db=db,
+        )
+    except Exception:
+        pass
+
+    target_domain = domain_id
+    if target_uuid:
+        master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
+        if master and master.custom_domain:
+            target_domain = master.custom_domain
+
+    clean_domain = ssl_service.normalize_domain(target_domain)
+    dns_info = ssl_service.verify_domain_dns(clean_domain)
+    caddy_check = ssl_service.verify_caddy_ask(clean_domain, db=db)
+    cert_info = ssl_service.probe_ssl_certificate(clean_domain)
+
+    # Determine verification status
+    is_verified = caddy_check.get("allowed", False)
+    ssl_status = "active" if cert_info.get("has_ssl") else ("issuing" if is_verified else "pending")
+
+    return {
+        "success": True,
+        "domain_name": clean_domain,
+        "is_verified": is_verified,
+        "ssl_status": ssl_status,
+        "dns_check": "CNAME_RESOLVED" if dns_info.get("cname_matched") else ("A_RECORD_RESOLVED" if dns_info.get("a_records") else "PENDING_PROPAGATION"),
+        "routing": "Zero-Slug Ready" if is_verified else "Pending Authorization",
+        "dns_details": dns_info,
+        "certificate": cert_info,
+        "caddy_gatekeeper": caddy_check,
+    }
+
+
+@router.get("/domains/{domain_id}/ssl-status", status_code=status.HTTP_200_OK)
+def get_domain_ssl_status(
+    domain_id: str,
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Inspects live TLS certificate details and expiration for custom domain."""
+    from backend.app.services import ssl_service
+
+    target_domain = domain_id
+    try:
+        target_uuid = resolve_control_tenant_id(
+            query_tenant=tenant_id,
+            header_tenant=x_tenant_id,
+            header_slug=x_tenant_slug,
+            header_company=x_company_id,
+            db=db,
+        )
+        master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
+        if master and master.custom_domain:
+            target_domain = master.custom_domain
+    except Exception:
+        pass
+
+    clean_domain = ssl_service.normalize_domain(target_domain)
+    cert_info = ssl_service.probe_ssl_certificate(clean_domain)
+    caddy_check = ssl_service.verify_caddy_ask(clean_domain, db=db)
+    return {
+        "domain": clean_domain,
+        "certificate": cert_info,
+        "caddy_ask_allowed": caddy_check.get("allowed", False),
+    }
+
+
+# ==============================================================================
+# Phase 1: Enterprise External Database & In-App Migration Endpoints
+# ==============================================================================
+
+@router.get("/database/config", response_model=TenantDatabaseInfoResponse)
+def get_tenant_database_config(
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Retrieves current database hosting configuration for this tenant (Shared container vs Private External)."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    return migration_service.get_tenant_database_info(target_uuid, db)
+
+
+@router.post("/database/test-connection", response_model=TenantDatabaseTestConnectionResponse)
+def test_tenant_database_connection(
+    payload: TenantDatabaseTestConnectionRequest,
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Tests connectivity, TLS/SSL handshake, and permissions for a target external PostgreSQL instance."""
+    ok, msg, meta = migration_service.test_target_connection(
+        host=payload.host,
+        port=payload.port,
+        database_name=payload.database_name,
+        username=payload.username,
+        password=payload.password,
+        ssl_mode=payload.ssl_mode,
+        raw_url=payload.raw_url,
+    )
+    return {
+        "success": ok,
+        "message": msg,
+        "host": meta.get("host"),
+        "database": meta.get("database_name"),
+        "ssl_mode": meta.get("ssl_mode"),
+    }
+
+
+@router.post("/database/migrate", response_model=TenantDatabaseMigrationResponse)
+def trigger_database_migration(
+    payload: TenantDatabaseMigrationRequest,
+    background_tasks: BackgroundTasks,
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Triggers an in-app live background migration to copy tenant data to a private external PostgreSQL instance."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+
+    migration_id = uuid.uuid4()
+    target_host = payload.host or "external_host"
+    target_db = payload.database_name or "external_db"
+
+    # Persist initial migration job
+    job = TenantDatabaseMigration(
+        id=migration_id,
+        company_id=target_uuid,
+        source_type="shared_postgres",
+        target_host=target_host,
+        target_port=payload.port or 5432,
+        target_database=target_db,
+        ssl_mode=payload.ssl_mode or "prefer",
+        status="PENDING",
+        progress_pct=0,
+        current_step="Migration job initialized. Spawning worker...",
+        records_transferred=0,
+    )
+    db.add(job)
+    db.commit()
+
+    # Launch background worker
+    background_tasks.add_task(
+        migration_service.run_migration_worker,
+        migration_id=migration_id,
+        company_id=target_uuid,
+        target_params=payload.model_dump(),
+    )
+
+    return {
+        "success": True,
+        "migration_id": migration_id,
+        "status": "PENDING",
+        "message": "Database migration job started successfully in the background.",
+        "target_database": target_db,
+        "target_host": target_host,
+    }
+
+
+@router.get("/database/migration-status")
+def get_database_migration_status(
+    migration_id: Optional[uuid.UUID] = Query(None),
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Polls live progress and status for an active or recent database migration."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    status_data = migration_service.get_migration_status_data(
+        company_id=target_uuid, migration_id=migration_id, db=db
+    )
+    if not status_data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No database migration jobs found for this tenant.",
+        )
+    return status_data
+
+
+@router.post("/database/switch-back")
+def switch_back_to_shared_database(
+    tenant_id: Optional[str] = Query(None),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
+    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    db: Session = Depends(get_db),
+):
+    """Reverts a dedicated external database tenant back to the platform's shared multi-tenant database."""
+    target_uuid = resolve_control_tenant_id(
+        query_tenant=tenant_id,
+        header_tenant=x_tenant_id,
+        header_slug=x_tenant_slug,
+        header_company=x_company_id,
+        db=db,
+    )
+    return migration_service.revert_to_shared_database(target_uuid, db)
+

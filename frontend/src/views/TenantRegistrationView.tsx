@@ -13,6 +13,13 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   };
   const [formData, setFormData] = useState({ nameAr: '', nameEn: '', slug: '', email: '' });
   const [adminPassword, setAdminPassword] = useState('');
+  const [useExternalDb, setUseExternalDb] = useState(false);
+  const [externalDbHost, setExternalDbHost] = useState('');
+  const [externalDbPort, setExternalDbPort] = useState('5432');
+  const [externalDbName, setExternalDbName] = useState('');
+  const [externalDbUser, setExternalDbUser] = useState('');
+  const [externalDbPassword, setExternalDbPassword] = useState('');
+  const [externalDbSslMode, setExternalDbSslMode] = useState('prefer');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
@@ -33,6 +40,13 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           admin_email: formData.email,
           admin_password: adminPassword,
           password: adminPassword,
+          use_external_db: useExternalDb,
+          external_db_host: useExternalDb ? externalDbHost.trim() : undefined,
+          external_db_port: useExternalDb ? parseInt(externalDbPort, 10) || 5432 : undefined,
+          external_db_name: useExternalDb ? externalDbName.trim() : undefined,
+          external_db_user: useExternalDb ? externalDbUser.trim() : undefined,
+          external_db_password: useExternalDb ? externalDbPassword : undefined,
+          external_db_sslmode: useExternalDb ? externalDbSslMode : undefined,
         }),
       });
 
@@ -65,6 +79,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
     }
   };
 
+
   if (successData) {
     const slug = (successData.workspace_slug || formData.slug).toLowerCase().trim();
     const targetWorkspaceUrl = !isLocalhost() && slug
@@ -89,7 +104,13 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               {targetWorkspaceUrl}
             </a>
             <div className="text-[10px] text-emerald-500/70 pt-1">✓ Seeded Default 5-Deep General Ledger Hierarchy</div>
+            {successData.storage_mode === "DEDICATED_EXTERNAL" && (
+              <div className="text-[10px] text-cyan-400 font-bold pt-1">
+                🔒 Provisioned on Private Dedicated PostgreSQL ({successData.external_db_host || 'External Host'})
+              </div>
+            )}
           </div>
+
 
           <button
             onClick={() => {
@@ -157,9 +178,113 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             <input type="password" value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} placeholder="••••••••••••" className="w-full px-4 py-2.5 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-200 outline-none font-mono" required />
           </div>
 
+          {/* Enterprise External Database Option */}
+          <div className="pt-2 border-t border-slate-800/80">
+            <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800">
+              <div>
+                <span className="text-xs font-bold text-slate-200 block">External Database Hosting</span>
+                <span className="text-[10px] text-slate-400">Bring your own PostgreSQL instance (Dedicated Data Residency)</span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useExternalDb}
+                  onChange={(e) => setUseExternalDb(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
+              </label>
+            </div>
+
+            {useExternalDb && (
+              <div className="mt-3 p-3 bg-[#030712] border border-cyan-500/20 rounded-xl space-y-3">
+                <div className="text-[11px] font-semibold text-cyan-400 flex items-center gap-1.5">
+                  <span>🔒</span> External PostgreSQL Credentials (TLS Encrypted)
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Host / Endpoint</label>
+                    <input
+                      type="text"
+                      value={externalDbHost}
+                      onChange={(e) => setExternalDbHost(e.target.value)}
+                      placeholder="db.company.internal or 10.0.0.5"
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none font-mono"
+                      required={useExternalDb}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Port</label>
+                    <input
+                      type="number"
+                      value={externalDbPort}
+                      onChange={(e) => setExternalDbPort(e.target.value)}
+                      placeholder="5432"
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none font-mono"
+                      required={useExternalDb}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Database Name</label>
+                  <input
+                    type="text"
+                    value={externalDbName}
+                    onChange={(e) => setExternalDbName(e.target.value)}
+                    placeholder="oxengl_enterprise"
+                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none font-mono"
+                    required={useExternalDb}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Username</label>
+                    <input
+                      type="text"
+                      value={externalDbUser}
+                      onChange={(e) => setExternalDbUser(e.target.value)}
+                      placeholder="pg_admin"
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none font-mono"
+                      required={useExternalDb}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+                    <input
+                      type="password"
+                      value={externalDbPassword}
+                      onChange={(e) => setExternalDbPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none font-mono"
+                      required={useExternalDb}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">SSL / TLS Mode</label>
+                  <select
+                    value={externalDbSslMode}
+                    onChange={(e) => setExternalDbSslMode(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none"
+                  >
+                    <option value="prefer">prefer (Attempt SSL, fallback to plain)</option>
+                    <option value="require">require (Enforce TLS / SSL)</option>
+                    <option value="verify-full">verify-full (Strict CA Verification)</option>
+                    <option value="disable">disable (Plaintext - Not Recommended)</option>
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl py-3 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50">
             {loading ? 'Provisioning Cloud Framework Matrix...' : 'Deploy Secure Workspace Infrastructure'}
           </button>
+
         </form>
       </div>
     </div>

@@ -39,6 +39,14 @@ class TenantRegistrationPayload(BaseModel):
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
     phone_number: Optional[str] = Field(None, max_length=30)
+    use_external_db: Optional[bool] = Field(default=False)
+    external_db_host: Optional[str] = Field(default=None, max_length=255)
+    external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
+    external_db_name: Optional[str] = Field(default=None, max_length=128)
+    external_db_user: Optional[str] = Field(default=None, max_length=128)
+    external_db_password: Optional[str] = Field(default=None, max_length=255)
+    external_db_sslmode: Optional[str] = Field(default="prefer", max_length=32)
+    external_db_url: Optional[str] = Field(default=None)
 
 class RegisterInitRequest(BaseModel):
     company_name_en: str = Field(..., min_length=3, max_length=150)
@@ -50,6 +58,14 @@ class RegisterInitRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
+    use_external_db: Optional[bool] = Field(default=False)
+    external_db_host: Optional[str] = Field(default=None, max_length=255)
+    external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
+    external_db_name: Optional[str] = Field(default=None, max_length=128)
+    external_db_user: Optional[str] = Field(default=None, max_length=128)
+    external_db_password: Optional[str] = Field(default=None, max_length=255)
+    external_db_sslmode: Optional[str] = Field(default="prefer", max_length=32)
+    external_db_url: Optional[str] = Field(default=None)
 
     @property
     def resolved_email(self) -> str:
@@ -72,6 +88,15 @@ class RegisterVerifyRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
+    use_external_db: Optional[bool] = Field(default=False)
+    external_db_host: Optional[str] = Field(default=None, max_length=255)
+    external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
+    external_db_name: Optional[str] = Field(default=None, max_length=128)
+    external_db_user: Optional[str] = Field(default=None, max_length=128)
+    external_db_password: Optional[str] = Field(default=None, max_length=255)
+    external_db_sslmode: Optional[str] = Field(default="prefer", max_length=32)
+    external_db_url: Optional[str] = Field(default=None)
+
 
     @property
     def resolved_email(self) -> str:
@@ -574,6 +599,82 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
         except Exception:
             pass
 
+        # 4e. Dedicated Private External Database Provisioning (Phase 1)
+        use_external_db = bool(payload_data.get("use_external_db"))
+        ext_db_host = payload_data.get("external_db_host")
+        ext_db_port = payload_data.get("external_db_port") or 5432
+        ext_db_name = payload_data.get("external_db_name")
+        ext_db_user = payload_data.get("external_db_user")
+        ext_db_password = payload_data.get("external_db_password")
+        ext_db_sslmode = payload_data.get("external_db_sslmode") or "prefer"
+        ext_db_url = payload_data.get("external_db_url")
+
+        if use_external_db:
+            try:
+                from backend.app.services.migration_service import build_connection_url, test_target_connection
+                from backend.database import encrypt_connection_url, tenant_connection_manager
+                from backend.models import TenantDatabaseConfig
+
+                target_url = build_connection_url(
+                    host=ext_db_host,
+                    port=ext_db_port,
+                    database_name=ext_db_name,
+                    username=ext_db_user,
+                    password=ext_db_password,
+                    ssl_mode=ext_db_sslmode,
+                    raw_url=ext_db_url,
+                )
+
+                test_ok, test_err, meta = test_target_connection(raw_url=target_url, timeout=10)
+                if not test_ok:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"External database connection test failed: {test_err}",
+                    )
+
+                # Provision tables on external database
+                ext_engine = tenant_connection_manager.register_tenant_engine(company_uuid, target_url)
+                Base.metadata.create_all(bind=ext_engine)
+
+                # Seed base tenant record into external database
+                ext_session = tenant_connection_manager.get_session(company_uuid)
+                try:
+                    ext_company = ResCompany(
+                        id=company_uuid,
+                        name=company_name_en,
+                        slug=slug_cleaned,
+                        domain_slug=slug_cleaned,
+                        email=norm_email,
+                    )
+                    ext_session.merge(ext_company)
+                    ext_session.commit()
+                except Exception as ext_seed_err:
+                    logger.warning(f"External database company record seeding warning: {ext_seed_err}")
+                finally:
+                    ext_session.close()
+
+                # Register encrypted configuration in master catalog
+                enc_url = encrypt_connection_url(target_url)
+                tenant_db_config = TenantDatabaseConfig(
+                    id=uuid.uuid4(),
+                    company_id=company_uuid,
+                    database_name=meta.get("database_name") or ext_db_name or "external_db",
+                    encrypted_connection_url=enc_url,
+                    residency_region="external-private",
+                    isolation_level="dedicated",
+                    is_active=True,
+                )
+                db.add(tenant_db_config)
+                logger.info(f"Provisioned dedicated external database for tenant {company_uuid} on {ext_db_host}")
+            except Exception as ext_err:
+                if isinstance(ext_err, HTTPException):
+                    raise ext_err
+                logger.error(f"Failed to provision external database: {ext_err}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"External database provisioning error: {str(ext_err)}",
+                )
+
         db.commit()
 
         # Generate session token if available
@@ -599,9 +700,14 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
             "admin_user_id": str(admin_user_id),
             "primary_color": primary_color,
             "secondary_color": secondary_color,
+            "storage_mode": "DEDICATED_EXTERNAL" if use_external_db else "LOCAL_SHARED",
+            "is_external_db": use_external_db,
+            "external_db_host": ext_db_host if use_external_db else None,
+            "database_name": ext_db_name if use_external_db else "erp_db",
             "access_token": session_token,
             "token_type": "bearer" if session_token else None,
         }
+
     except Exception as e:
         db.rollback()
         if isinstance(e, HTTPException):
@@ -662,7 +768,16 @@ async def initiate_tenant_registration(req: RegisterInitRequest, background_task
         "admin_email": norm_email,
         "phone_number": req.resolved_phone,
         "admin_password": req.admin_password or req.password or "OxenGL2026!Secure",
+        "use_external_db": req.use_external_db,
+        "external_db_host": req.external_db_host,
+        "external_db_port": req.external_db_port,
+        "external_db_name": req.external_db_name,
+        "external_db_user": req.external_db_user,
+        "external_db_password": req.external_db_password,
+        "external_db_sslmode": req.external_db_sslmode,
+        "external_db_url": req.external_db_url,
     }
+
     await VerificationService.store_registration_payload(norm_email, reg_data)
 
     # Asynchronously dispatch notifications without blocking API response

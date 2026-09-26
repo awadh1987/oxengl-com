@@ -50,7 +50,32 @@ def get_isolated_db_session(request: Request) -> Generator[Session, None, None]:
                 detail="Tenant identity header missing or unverified (X-Tenant-ID required).",
             )
 
-    db: Session = SessionLocal()
+    company_uuid = None
+    try:
+        company_uuid = uuid.UUID(str(tenant_id))
+    except (ValueError, TypeError):
+        pass
+
+    is_control_plane = False
+    if hasattr(request, "url") and hasattr(request.url, "path"):
+        path = request.url.path
+        if path.startswith((
+            "/api/v1/tenant/control",
+            "/api/tenant/control",
+            "/api/v1/superadmin",
+            "/api/superadmin",
+            "/api/v1/auth",
+            "/api/auth",
+            "/api/v1/ssl",
+            "/api/ssl",
+            "/ssl",
+        )):
+            is_control_plane = True
+
+    if company_uuid and not is_control_plane:
+        db: Session = tenant_connection_manager.get_session(company_uuid)
+    else:
+        db: Session = SessionLocal()
     try:
         db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
         db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})

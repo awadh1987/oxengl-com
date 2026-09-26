@@ -481,12 +481,62 @@ interface Product {
   sale_price?: number;
 }
 
-import { setAuthCookie, getAuthCookie, clearAuthCookie, getSubdomain } from '../utils/subdomain';
+import { setAuthCookie, getAuthCookie, clearAuthCookie, getSubdomain, isCustomDomain, getCustomDomain, getEffectiveDomainIdentifier } from '../utils/subdomain';
 
 export const OXENGL_AUTH_TOKEN_KEY = 'oxengl_auth_jwt';
 export const OXENGL_AUTH_TIER_KEY = 'oxengl_auth_tier';
 export const OXENGL_TENANT_SLUG_KEY = 'oxengl_tenant_slug';
 export const OXENGL_TENANT_ID_KEY = 'oxengl_tenant_id';
+
+export interface ResolvedDomainResponse {
+  resolved: boolean;
+  tenant_id?: string;
+  company_id?: string;
+  tenant_slug?: string;
+  name?: string;
+  custom_domain?: string;
+  is_custom_domain?: boolean;
+  logo_url?: string | null;
+  primary_color?: string | null;
+  subscription_tier?: string;
+  status?: string;
+  message?: string;
+}
+
+export async function resolveDomain(host?: string): Promise<ResolvedDomainResponse> {
+  const query = host ? `?host=${encodeURIComponent(host)}` : '';
+  try {
+    const res = await fetch(`/api/v1/tenant/resolve-domain${query}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) {
+      return { resolved: false, message: `Failed to resolve domain: ${res.statusText}` };
+    }
+    return await res.json();
+  } catch (err: any) {
+    return { resolved: false, message: err?.message || 'Network error resolving domain' };
+  }
+}
+
+export async function checkDomainSslStatus(domain: string, port: number = 443): Promise<any> {
+  try {
+    const res = await fetch(`/api/v1/ssl/status?domain=${encodeURIComponent(domain)}&port=${port}`);
+    return await res.json();
+  } catch (err: any) {
+    return { has_ssl: false, ssl_status: 'unreachable', error: err?.message };
+  }
+}
+
+export async function verifyDomainDns(domain: string, expectedCname: string = 'domains.oxengl.me', token?: string): Promise<any> {
+  const query = token ? `&token=${encodeURIComponent(token)}` : '';
+  try {
+    const res = await fetch(`/api/v1/ssl/check-dns?domain=${encodeURIComponent(domain)}&expected_cname=${encodeURIComponent(expectedCname)}${query}`);
+    return await res.json();
+  } catch (err: any) {
+    return { is_valid: false, message: err?.message };
+  }
+}
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -505,7 +555,7 @@ export function getAuthTier(): 'master' | 'tenant' | null {
   if (typeof window === 'undefined') return null;
   const tier = (localStorage.getItem(OXENGL_AUTH_TIER_KEY) as 'master' | 'tenant');
   if (tier) return tier;
-  if (getSubdomain() || localStorage.getItem('tenant_slug') || localStorage.getItem(OXENGL_TENANT_SLUG_KEY)) return 'tenant';
+  if (getSubdomain() || isCustomDomain() || localStorage.getItem('tenant_slug') || localStorage.getItem(OXENGL_TENANT_SLUG_KEY)) return 'tenant';
   if (localStorage.getItem('role') === 'Super_Admin') return 'master';
   return null;
 }
@@ -803,6 +853,9 @@ async function findOrCreate<T extends { id: string }>(path: string, companyId: s
 }
 
 export const erpApi = {
+  resolveDomain: (host?: string) => resolveDomain(host),
+  checkDomainSslStatus: (domain: string, port?: number) => checkDomainSslStatus(domain, port),
+  verifyDomainDns: (domain: string, expectedCname?: string, token?: string) => verifyDomainDns(domain, expectedCname, token),
   // Two-Tier Identity & Auth Endpoints
   masterLogin: (payload: MasterLoginPayload) =>
     request<TwoTierAuthResponse>('/api/auth/master/login', undefined, { method: 'POST', body: JSON.stringify(payload) }),
@@ -1073,6 +1126,89 @@ export const erpApi = {
     request<any>(`/api/v1/tenant/control/domains/${domainId}/verify`, companyId, {
       method: 'POST',
     }),
+
+  // Enterprise Database & Migration (Phase 1)
+  getTenantDatabaseConfig: (companyId?: string) =>
+    request<{
+      company_id: string;
+      storage_mode: 'LOCAL_SHARED' | 'DEDICATED_EXTERNAL';
+      is_external_db: boolean;
+      database_name: string;
+      residency_region: string;
+      target_host?: string;
+      ssl_mode?: string;
+      created_at?: string;
+      updated_at?: string;
+    }>('/api/v1/tenant/control/database/config', companyId),
+
+  testTenantDatabaseConnection: (payload: {
+    host?: string;
+    port?: number;
+    database_name?: string;
+    username?: string;
+    password?: string;
+    ssl_mode?: string;
+    raw_url?: string;
+  }, companyId?: string) =>
+    request<{
+      success: boolean;
+      message: string;
+      host?: string;
+      database?: string;
+      ssl_mode?: string;
+    }>('/api/v1/tenant/control/database/test-connection', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  triggerTenantDatabaseMigration: (payload: {
+    host?: string;
+    port?: number;
+    database_name?: string;
+    username?: string;
+    password?: string;
+    ssl_mode?: string;
+    raw_url?: string;
+  }, companyId?: string) =>
+    request<{
+      success: boolean;
+      migration_id: string;
+      status: string;
+      message: string;
+      target_database: string;
+      target_host: string;
+    }>('/api/v1/tenant/control/database/migrate', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTenantDatabaseMigrationStatus: (migrationId?: string, companyId?: string) => {
+    const qs = migrationId ? `?migration_id=${encodeURIComponent(migrationId)}` : '';
+    return request<{
+      id?: string;
+      company_id: string;
+      status: string;
+      progress_pct: number;
+      current_step?: string;
+      records_transferred: number;
+      error_message?: string;
+      target_host?: string;
+      target_database?: string;
+      ssl_mode?: string;
+      completed_at?: string;
+      updated_at?: string;
+    }>(`/api/v1/tenant/control/database/migration-status${qs}`, companyId);
+  },
+
+  revertTenantToSharedDatabase: (companyId?: string) =>
+    request<{
+      success: boolean;
+      message: string;
+      storage_mode: string;
+    }>('/api/v1/tenant/control/database/switch-back', companyId, {
+      method: 'POST',
+    }),
+
 
   // Tenant User Management API (Live Backend Integration)
   getUsers: () =>

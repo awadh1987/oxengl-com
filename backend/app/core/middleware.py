@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextvars
 import logging
+import threading
 import uuid
 from typing import Any, Callable, Dict, Optional
 
@@ -98,3 +99,176 @@ def dispatch_async_audit(
             )
         except Exception as inner_e:
             logger.error("Failed synchronous fallback audit logging: %s", inner_e)
+
+
+# ==============================================================================
+# Host-Header Interception & Zero-Slug Routing Subsystem
+# ==============================================================================
+
+PLATFORM_BASE_HOSTS = {
+    "localhost",
+    "127.0.0.1",
+    "0.0.0.0",
+    "testserver",
+    "oxengl.me",
+    "app.oxengl.me",
+    "oxengl.com",
+    "api.oxengl.me",
+    "admin.oxengl.me",
+    "domains.oxengl.me",
+    "www.oxengl.me",
+    "www.oxengl.com",
+}
+
+_DOMAIN_CACHE: dict[str, Optional[dict[str, Any]]] = {}
+_DOMAIN_CACHE_LOCK = threading.Lock()
+
+
+def invalidate_domain_cache(domain: Optional[str] = None) -> None:
+    """Evicts cached domain mappings across the platform."""
+    with _DOMAIN_CACHE_LOCK:
+        if domain:
+            _DOMAIN_CACHE.pop(domain.lower().strip(), None)
+        else:
+            _DOMAIN_CACHE.clear()
+
+
+def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optional[dict[str, Any]]:
+    """
+    Resolves tenant configuration and company metadata from an incoming Host/X-Forwarded-Host header.
+    Supports both custom enterprise domains (e.g. 'myon-contract.cloud')
+    and tenant subdomains (e.g. 'tenant-a.oxengl.me').
+    """
+    if not raw_host:
+        return None
+
+    clean_host = raw_host.split(":")[0].strip().lower()
+    if clean_host in PLATFORM_BASE_HOSTS:
+        return None
+
+    with _DOMAIN_CACHE_LOCK:
+        if clean_host in _DOMAIN_CACHE:
+            return _DOMAIN_CACHE[clean_host]
+
+    should_close_db = False
+    if db is None:
+        try:
+            from backend.database import SessionLocal
+            db = SessionLocal()
+            should_close_db = True
+        except Exception as init_err:
+            logger.warning(f"Could not initialize DB session for domain resolution: {init_err}")
+            return None
+
+    try:
+        from backend.models import MasterTenant, ResCompany
+
+        # 1. Custom Domain Match on MasterTenant
+        master = db.query(MasterTenant).filter(MasterTenant.custom_domain == clean_host).first()
+        company = None
+
+        # 2. Custom Domain Match on ResCompany
+        if not master:
+            company = db.query(ResCompany).filter(ResCompany.custom_domain == clean_host).first()
+
+        # 3. Subdomain extraction for *.oxengl.me / *.oxengl.com
+        if not master and not company and (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")):
+            subdomain = clean_host.split(".")[0]
+            if subdomain not in {"www", "app", "api", "admin", "domains"}:
+                master = db.query(MasterTenant).filter(MasterTenant.slug == subdomain).first()
+                if not master:
+                    company = db.query(ResCompany).filter(
+                        (ResCompany.slug == subdomain) | (ResCompany.domain_slug == subdomain)
+                    ).first()
+
+        if master:
+            if not company:
+                company = db.query(ResCompany).filter(
+                    (ResCompany.id == master.id) | (ResCompany.slug == master.slug)
+                ).first()
+
+            result = {
+                "tenant_id": str(master.id),
+                "company_id": str(company.id if company else master.id),
+                "tenant_slug": master.slug,
+                "name": master.name,
+                "custom_domain": clean_host,
+                "is_custom_domain": not (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")),
+                "logo_url": company.ui_logo_url or company.logo_url if company else None,
+                "primary_color": company.ui_primary_color or company.primary_color if company else None,
+                "subscription_tier": master.subscription_tier or (company.subscription_tier if company else "ENTERPRISE"),
+                "status": master.status,
+            }
+            with _DOMAIN_CACHE_LOCK:
+                _DOMAIN_CACHE[clean_host] = result
+            return result
+
+        if company:
+            result = {
+                "tenant_id": str(company.id),
+                "company_id": str(company.id),
+                "tenant_slug": company.slug,
+                "name": company.name,
+                "custom_domain": clean_host,
+                "is_custom_domain": not (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")),
+                "logo_url": company.ui_logo_url or company.logo_url,
+                "primary_color": company.ui_primary_color or company.primary_color,
+                "subscription_tier": company.subscription_tier,
+                "status": getattr(company, "status", "active"),
+            }
+            with _DOMAIN_CACHE_LOCK:
+                _DOMAIN_CACHE[clean_host] = result
+            return result
+
+        # Negative cache
+        with _DOMAIN_CACHE_LOCK:
+            _DOMAIN_CACHE[clean_host] = None
+        return None
+
+    except Exception as exc:
+        logger.warning(f"Error resolving tenant from host '{clean_host}': {exc}")
+        return None
+    finally:
+        if should_close_db and db:
+            db.close()
+
+
+class HostHeaderMiddleware(BaseHTTPMiddleware):
+    """
+    Interception middleware that inspects incoming Host and X-Forwarded-Host headers.
+    When a request matches a custom domain or tenant subdomain, it resolves the tenant partition
+    and binds tenant_company_id, company_id, and tenant_slug to request.state.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+        clean_host = raw_host.split(":")[0].strip().lower()
+
+        # Initialize defaults
+        request.state.tenant_company_id = getattr(request.state, "tenant_company_id", None)
+        request.state.company_id = getattr(request.state, "company_id", None)
+        request.state.tenant_slug = getattr(request.state, "tenant_slug", None)
+        request.state.custom_domain = None
+        request.state.is_custom_domain = False
+
+        tenant_meta = resolve_tenant_from_host(clean_host) if clean_host else None
+
+        if tenant_meta:
+            tenant_uuid = uuid.UUID(tenant_meta["tenant_id"])
+            request.state.tenant_id = str(tenant_uuid)
+            request.state.tenant_company_id = tenant_uuid
+            request.state.company_id = tenant_uuid
+            request.state.tenant_slug = tenant_meta["tenant_slug"]
+            request.state.tenant_name = tenant_meta["name"]
+            request.state.custom_domain = clean_host
+            request.state.is_custom_domain = tenant_meta.get("is_custom_domain", False)
+
+        response = await call_next(request)
+
+        if tenant_meta:
+            response.headers["X-Resolved-Tenant"] = tenant_meta["tenant_slug"]
+            if tenant_meta.get("is_custom_domain"):
+                response.headers["X-Custom-Domain"] = clean_host
+
+        return response
+

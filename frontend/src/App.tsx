@@ -8,7 +8,8 @@ import { AIAssistantWidget } from './components/AIAssistantWidget';
 import type { ExportDocType } from './components/ExportPrintModal';
 import { Building2, Cpu, CreditCard, Layers, FileSpreadsheet, Landmark, LayoutDashboard, Menu, Palette, Receipt, Scale, Sparkles, Truck, Users, Wrench, X, Globe, Radio, TrendingUp } from 'lucide-react';
 import { UserRole } from './types';
-import { getSubdomain, isApexDomain } from './utils/subdomain';
+import { getSubdomain, isApexDomain, isCustomDomain, getCustomDomain } from './utils/subdomain';
+import { resolveDomain } from './services/api';
 import { useNavigate } from './hooks/useNavigate';
 
 // Code-split dynamic view imports
@@ -253,6 +254,25 @@ function AppContent() {
       setIsLoggedIn(false);
     }
   }, [isTwoTierAuthenticated, currentUser]);
+
+  const [resolvedCustomSlug, setResolvedCustomSlug] = useState<string | null>(null);
+  const [isResolvingDomain, setIsResolvingDomain] = useState<boolean>(() => isCustomDomain());
+
+  useEffect(() => {
+    if (isCustomDomain()) {
+      resolveDomain()
+        .then((res) => {
+          if (res?.resolved && res.tenant_slug) {
+            setResolvedCustomSlug(res.tenant_slug);
+            localStorage.setItem('oxengl_tenant_slug', res.tenant_slug);
+            localStorage.setItem('tenant_slug', res.tenant_slug);
+          }
+        })
+        .finally(() => {
+          setIsResolvingDomain(false);
+        });
+    }
+  }, []);
 
   const [inspectingWorkspace, setInspectingWorkspace] = useState(false);
   const [currentPath, setCurrentPath] = useState<string>(() => {
@@ -652,9 +672,14 @@ function AppContent() {
     );
   }
 
-  const activeSubdomain = getSubdomain();
+  if (isResolvingDomain) {
+    return <ViewLoadingFallback />;
+  }
 
-  if (currentPath === '/' && !activeSubdomain) {
+  const activeSubdomain = getSubdomain();
+  const effectiveTenantSlug = activeSubdomain || resolvedCustomSlug || (isCustomDomain() ? getCustomDomain() : null);
+
+  if (currentPath === '/' && !effectiveTenantSlug) {
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
         <Route path="/" element={<LandingPageView onLoginSuccess={() => {
@@ -667,7 +692,7 @@ function AppContent() {
     );
   }
 
-  if (currentPath === '/login' || (!isLoggedIn && activeSubdomain && currentPath !== '/')) {
+  if (currentPath === '/login' || (!isLoggedIn && effectiveTenantSlug && currentPath !== '/')) {
     if (isLoggedIn) {
       if (typeof window !== 'undefined') {
         window.history.replaceState({}, '', '/operations/daily');
@@ -676,7 +701,7 @@ function AppContent() {
     } else {
       return (
         <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/login" element={<TenantLoginView forcedSlug={activeSubdomain || undefined} onNavigate={(to) => {
+          <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
             setCurrentPath(to);
             navigate(to);
           }} onLoginSuccess={() => {
@@ -691,6 +716,21 @@ function AppContent() {
   }
 
   if (currentPath === '/' && !isLoggedIn) {
+    if (effectiveTenantSlug) {
+      return (
+        <Suspense fallback={<ViewLoadingFallback />}>
+          <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug} onNavigate={(to) => {
+            setCurrentPath(to);
+            navigate(to);
+          }} onLoginSuccess={() => {
+            setIsLoggedIn(true);
+            if (typeof window !== 'undefined') {
+              window.location.href = '/operations/daily';
+            }
+          }} />} />
+        </Suspense>
+      );
+    }
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
         <Route path="/" element={<LandingPageView onLoginSuccess={() => {
@@ -706,7 +746,7 @@ function AppContent() {
   if (!isLoggedIn) {
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
-        <Route path="/login" element={<TenantLoginView forcedSlug={activeSubdomain || undefined} onNavigate={(to) => {
+        <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
           setCurrentPath(to);
           navigate(to);
         }} onLoginSuccess={() => {

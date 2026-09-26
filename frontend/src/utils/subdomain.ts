@@ -38,8 +38,34 @@ export function getSubdomain(): string | null {
   return null;
 }
 
+export function isPlatformDomain(): boolean {
+  if (typeof window === 'undefined') return true;
+  const hostname = window.location.hostname.toLowerCase();
+  if (isLocalhost()) return true;
+  return (
+    hostname === 'oxengl.me' ||
+    hostname.endsWith('.oxengl.me') ||
+    hostname === 'oxengl.com' ||
+    hostname.endsWith('.oxengl.com')
+  );
+}
+
+export function getCustomDomain(): string | null {
+  if (typeof window === 'undefined') return null;
+  if (isLocalhost() || isPlatformDomain()) return null;
+  return window.location.hostname.toLowerCase().trim();
+}
+
+export function isCustomDomain(): boolean {
+  return getCustomDomain() !== null;
+}
+
+export function getEffectiveDomainIdentifier(): string | null {
+  return getCustomDomain() || getSubdomain();
+}
+
 export function isApexDomain(): boolean {
-  return getSubdomain() === null;
+  return getSubdomain() === null && !isCustomDomain();
 }
 
 export function redirectToTenantSubdomain(tenantSlug: string, path = '/'): boolean {

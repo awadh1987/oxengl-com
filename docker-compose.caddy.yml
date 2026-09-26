@@ -1,0 +1,38 @@
+# ==============================================================================
+# OxenGL Dynamic Reverse Proxy Gateway with Automated On-Demand SSL (Caddy)
+# Enables zero-touch Let's Encrypt / ZeroSSL automated certificate provisioning
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.caddy.yml up -d caddy
+# ==============================================================================
+
+services:
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: oxengl_caddy_container
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+    mem_limit: 128m
+    mem_reservation: 32m
+    networks:
+      - oxengl_internal_network
+
+volumes:
+  caddy_data:
+    name: oxengl_caddy_data
+  caddy_config:
+    name: oxengl_caddy_config

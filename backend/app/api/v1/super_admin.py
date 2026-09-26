@@ -48,6 +48,15 @@ class TenantDeploymentRegistrationPayload(BaseModel):
     admin_email: str
     admin_password: Optional[str] = None
     password: Optional[str] = None
+    use_external_db: Optional[bool] = False
+    external_db_host: Optional[str] = None
+    external_db_port: Optional[int] = 5432
+    external_db_name: Optional[str] = None
+    external_db_user: Optional[str] = None
+    external_db_password: Optional[str] = None
+    external_db_sslmode: Optional[str] = "prefer"
+    external_db_url: Optional[str] = None
+
 
 
 @router.post("/tenants/register", status_code=status.HTTP_201_CREATED)
@@ -245,6 +254,53 @@ def deploy_register_new_tenant(
     except Exception as sync_err:
         logging.getLogger("oxengl.super_admin").warning(f"Master tenant sync error: {sync_err}")
 
+    # 6. Dedicated Private External Database Provisioning (Phase 1)
+    if payload.use_external_db:
+        try:
+            from backend.app.services.migration_service import build_connection_url, test_target_connection
+            from backend.database import encrypt_connection_url, tenant_connection_manager
+            from backend.models import Base, TenantDatabaseConfig
+
+            target_url = build_connection_url(
+                host=payload.external_db_host,
+                port=payload.external_db_port or 5432,
+                database_name=payload.external_db_name,
+                username=payload.external_db_user,
+                password=payload.external_db_password,
+                ssl_mode=payload.external_db_sslmode or "prefer",
+                raw_url=payload.external_db_url,
+            )
+
+            test_ok, test_err, meta = test_target_connection(raw_url=target_url, timeout=10)
+            if not test_ok:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"External database connection test failed: {test_err}",
+                )
+
+            ext_engine = tenant_connection_manager.register_tenant_engine(company_uuid, target_url)
+            Base.metadata.create_all(bind=ext_engine)
+
+            enc_url = encrypt_connection_url(target_url)
+            tenant_db_config = TenantDatabaseConfig(
+                id=uuid.uuid4(),
+                company_id=company_uuid,
+                database_name=meta.get("database_name") or payload.external_db_name or "external_db",
+                encrypted_connection_url=enc_url,
+                residency_region="external-private",
+                isolation_level="dedicated",
+                is_active=True,
+            )
+            db.add(tenant_db_config)
+        except Exception as ext_err:
+            if isinstance(ext_err, HTTPException):
+                raise ext_err
+            logging.getLogger("oxengl.super_admin").error(f"Failed to provision external database: {ext_err}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"External database provisioning error: {str(ext_err)}",
+            )
+
     # Audit log
     audit_entry = TenantAuditLog(
         id=str(uuid.uuid4()),
@@ -264,7 +320,10 @@ def deploy_register_new_tenant(
         "workspace_url": f"https://{slug_cleaned}.oxengl.me",
         "tenant_id": str(company_uuid),
         "admin_user_id": str(admin_user_id),
+        "storage_mode": "DEDICATED_EXTERNAL" if payload.use_external_db else "LOCAL_SHARED",
+        "is_external_db": bool(payload.use_external_db),
     }
+
 
 
 class TenantStatusUpdate(BaseModel):

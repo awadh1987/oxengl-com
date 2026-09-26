@@ -15,6 +15,9 @@ import {
   EyeOff,
   Copy,
   RefreshCw,
+  Database,
+  Server,
+  ArrowRightLeft,
 } from 'lucide-react';
 import { CustomDomainWizard } from './CustomDomainWizard';
 import { erpApi } from '../../services/api';
@@ -25,13 +28,30 @@ interface TenantSettingsPanelProps {
 }
 
 export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenantId, tenantSlug }) => {
-  const [activeTab, setActiveTab] = useState<'general' | 'team' | 'domains' | 'webhooks' | 'api_keys' | 'sso'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'team' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
   const [settings, setSettings] = useState<any>(null);
   const [team, setTeam] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
+
+  // Database & In-App Migration (Phase 1)
+  const [dbConfig, setDbConfig] = useState<any>(null);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbActionLoading, setDbActionLoading] = useState(false);
+  const [dbTestResult, setDbTestResult] = useState<{ success: boolean; message: string; host?: string } | null>(null);
+  const [migrationStatus, setMigrationStatus] = useState<any>(null);
+  const [targetDbForm, setTargetDbForm] = useState({
+    host: '',
+    port: '5432',
+    database_name: '',
+    username: '',
+    password: '',
+    ssl_mode: 'prefer',
+  });
+  const [showDbPassword, setShowDbPassword] = useState(false);
+  const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
 
   // Invite member modal
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -41,6 +61,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
     role: 'accountant',
     department: 'Operations',
   });
+
 
   useEffect(() => {
     loadSettings();
@@ -170,7 +191,118 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
     }
   };
 
+  const loadDatabaseConfig = async () => {
+    setDbLoading(true);
+    try {
+      const config = await erpApi.getTenantDatabaseConfig(tenantId);
+      if (config) setDbConfig(config);
+      try {
+        const mig = await erpApi.getTenantDatabaseMigrationStatus(undefined, tenantId);
+        if (mig) setMigrationStatus(mig);
+      } catch (_) {}
+    } catch (err) {
+      console.warn('Error loading database configuration:', err);
+    } finally {
+      setDbLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'database') {
+      loadDatabaseConfig();
+    }
+  }, [activeTab, tenantId]);
+
+  // Polling for live migration progress
+  useEffect(() => {
+    let interval: any = null;
+    if (migrationStatus && (migrationStatus.status === 'PENDING' || migrationStatus.status === 'RUNNING')) {
+      interval = setInterval(async () => {
+        try {
+          const updated = await erpApi.getTenantDatabaseMigrationStatus(migrationStatus.id, tenantId);
+          if (updated) {
+            setMigrationStatus(updated);
+            if (updated.status === 'COMPLETED' || updated.status === 'FAILED') {
+              loadDatabaseConfig();
+              clearInterval(interval);
+            }
+          }
+        } catch (_) {}
+      }, 2500);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [migrationStatus?.status, migrationStatus?.id, tenantId]);
+
+  const handleTestDatabaseConnection = async () => {
+    setDbActionLoading(true);
+    setDbTestResult(null);
+    try {
+      const res = await erpApi.testTenantDatabaseConnection({
+        host: targetDbForm.host.trim(),
+        port: parseInt(targetDbForm.port, 10) || 5432,
+        database_name: targetDbForm.database_name.trim(),
+        username: targetDbForm.username.trim(),
+        password: targetDbForm.password,
+        ssl_mode: targetDbForm.ssl_mode,
+      }, tenantId);
+      setDbTestResult(res);
+    } catch (err: any) {
+      setDbTestResult({ success: false, message: err?.message || 'Connection test failed.' });
+    } finally {
+      setDbActionLoading(false);
+    }
+  };
+
+  const handleTriggerMigration = async () => {
+    if (!targetDbForm.host || !targetDbForm.database_name || !targetDbForm.username) {
+      alert('الرجاء إدخال بيانات الاتصال بقاعدة البيانات كاملة.');
+      return;
+    }
+    setDbActionLoading(true);
+    try {
+      const res = await erpApi.triggerTenantDatabaseMigration({
+        host: targetDbForm.host.trim(),
+        port: parseInt(targetDbForm.port, 10) || 5432,
+        database_name: targetDbForm.database_name.trim(),
+        username: targetDbForm.username.trim(),
+        password: targetDbForm.password,
+        ssl_mode: targetDbForm.ssl_mode,
+      }, tenantId);
+      if (res?.migration_id) {
+        setMigrationStatus({
+          id: res.migration_id,
+          status: 'PENDING',
+          progress_pct: 0,
+          current_step: 'Migration queued. Contacting worker...',
+          records_transferred: 0,
+          target_host: res.target_host,
+          target_database: res.target_database,
+        });
+      }
+    } catch (err: any) {
+      alert(err?.message || 'فشل في بدء عملية الترحيل.');
+    } finally {
+      setDbActionLoading(false);
+    }
+  };
+
+  const handleRevertToShared = async () => {
+    setDbActionLoading(true);
+    try {
+      await erpApi.revertTenantToSharedDatabase(tenantId);
+      setRevertConfirmOpen(false);
+      await loadDatabaseConfig();
+    } catch (err: any) {
+      alert(err?.message || 'فشل الرجوع لقاعدة البيانات المشتركة.');
+    } finally {
+      setDbActionLoading(false);
+    }
+  };
+
   if (loading) {
+
     return <div className="p-8 text-center text-slate-500 font-mono">جاري تحميل إعدادات المنشأة...</div>;
   }
 
@@ -222,12 +354,21 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         </button>
 
         <button
+          onClick={() => setActiveTab('database')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'database' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+        >
+          <Database className="w-4 h-4" />
+          <span>قاعدة البيانات والترحيل (External DB)</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('webhooks')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
           <Webhook className="w-4 h-4" />
           <span>الخطافات البرمجية (Webhooks)</span>
         </button>
+
 
         <button
           onClick={() => setActiveTab('api_keys')}
@@ -370,8 +511,302 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         <CustomDomainWizard tenantId={tenantId} tenantSlug={tenantSlug} />
       )}
 
+      {/* 3b. Enterprise Database & In-App Migration Tab (Phase 1) */}
+      {activeTab === 'database' && (
+        <div className="space-y-6 max-w-4xl animate-in fade-in duration-150 text-xs">
+          {/* Current Database Hosting Architecture Card */}
+          <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl shadow-lg space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${dbConfig?.is_external_db ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'}`}>
+                  {dbConfig?.is_external_db ? <Database className="w-5 h-5" /> : <Server className="w-5 h-5" />}
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>استضافة قاعدة البيانات الحالية (Database Architecture)</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase ${dbConfig?.is_external_db ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
+                      {dbConfig?.storage_mode === 'DEDICATED_EXTERNAL' ? 'Dedicated External' : 'Shared PostgreSQL'}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {dbConfig?.is_external_db
+                      ? 'يتم تخزين بيانات هذه المنشأة في قاعدة بيانات PostgreSQL خاصة ومستقلة تماماً (Enterprise Isolated Database Engine).'
+                      : 'يتم تخزين بيانات المنشأة ضمن الكتلة السحابية المشتركة مع عزل منطقي كامل عبر سياسات Row-Level Security (RLS).'}
+                  </p>
+                </div>
+              </div>
+
+              {dbConfig?.is_external_db && (
+                <button
+                  onClick={() => setRevertConfirmOpen(true)}
+                  disabled={dbActionLoading}
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <span>الرجوع للمستودع المشترك</span>
+                </button>
+              )}
+            </div>
+
+            {/* Revert confirmation modal inline */}
+            {revertConfirmOpen && (
+              <div className="p-4 bg-rose-950/20 border border-rose-500/30 rounded-xl space-y-3 animate-in fade-in">
+                <div className="flex items-center gap-2 text-rose-400 font-semibold text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>تأكيد الرجوع إلى قاعدة البيانات المشتركة (Local Shared Engine)</span>
+                </div>
+                <p className="text-[11px] text-slate-300">
+                  هل أنت متأكد من رغبتك في تحويل مسار اتصالات المنشأة إلى قاعدة البيانات المحلية المشتركة؟ سيتم فك ارتباط المحرك الخارجي المخصص فوراً دون فقدان البيانات المخزنة.
+                </p>
+                <div className="flex items-center gap-2 justify-end">
+                  <button
+                    onClick={() => setRevertConfirmOpen(false)}
+                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    onClick={handleRevertToShared}
+                    disabled={dbActionLoading}
+                    className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5"
+                  >
+                    {dbActionLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+                    <span>تأكيد التحويل الآن</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {dbLoading ? (
+              <div className="text-center py-4 text-slate-500 font-mono">جاري فحص حالة قاعدة البيانات...</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+                <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">وضع التخزين (Storage Mode)</span>
+                  <span className="font-bold text-white text-xs mt-1 block">
+                    {dbConfig?.storage_mode || 'LOCAL_SHARED'}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">اسم قاعدة البيانات (Catalog)</span>
+                  <span className="font-bold text-white text-xs mt-1 block font-mono">
+                    {dbConfig?.database_name || 'erp_db'}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">مضيف الاتصال (Host Endpoint)</span>
+                  <span className="font-bold text-cyan-300 text-xs mt-1 block font-mono truncate">
+                    {dbConfig?.target_host || 'PostgreSQL Local Cluster'}
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                  <span className="text-[10px] text-slate-400 font-mono block uppercase">تشفير القناة (SSL Mode)</span>
+                  <span className="font-bold text-emerald-400 text-xs mt-1 block font-mono">
+                    {dbConfig?.ssl_mode || 'prefer'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Active / Recent Migration Progress Tracker Card */}
+          {migrationStatus && (
+            <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+                  <span className="text-sm font-bold text-white">حالة ترحيل البيانات المباشر (Live Migration Tracker)</span>
+                </div>
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 ${
+                  migrationStatus.status === 'COMPLETED'
+                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                    : migrationStatus.status === 'FAILED'
+                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
+                    : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                }`}>
+                  {migrationStatus.status === 'RUNNING' && <RefreshCw className="w-3 h-3 animate-spin" />}
+                  {migrationStatus.status === 'COMPLETED' && <CheckCircle2 className="w-3 h-3" />}
+                  {migrationStatus.status === 'FAILED' && <AlertCircle className="w-3 h-3" />}
+                  <span>{migrationStatus.status}</span>
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[11px] font-mono text-slate-400">
+                  <span>{migrationStatus.current_step || 'جاري معالجة المهام...'}</span>
+                  <span className="font-bold text-white">{migrationStatus.progress_pct}%</span>
+                </div>
+                <div className="w-full bg-slate-900 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      migrationStatus.status === 'COMPLETED'
+                        ? 'bg-emerald-500'
+                        : migrationStatus.status === 'FAILED'
+                        ? 'bg-rose-500'
+                        : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                    }`}
+                    style={{ width: `${Math.max(5, migrationStatus.progress_pct)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 font-mono">
+                <div>
+                  <span className="text-slate-500">السجلات المنقولة: </span>
+                  <span className="text-white font-bold">{migrationStatus.records_transferred || 0}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500">الوجهة: </span>
+                  <span className="text-cyan-400">{migrationStatus.target_host || 'External Host'}</span>
+                </div>
+              </div>
+
+              {migrationStatus.error_message && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 font-mono text-xs">
+                  ⚠️ خطأ في الترحيل: {migrationStatus.error_message}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* In-App Live Migration Engine Card */}
+          <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl shadow-lg space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <span>ترحيل البيانات المباشر إلى قاعدة بيانات خارجية (In-App Live Migration)</span>
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-1">
+                تتيح هذه الأداة نقل كامل بيانات وسجلات المنشأة تلقائياً من المستودع المشترك إلى خادم PostgreSQL خارجي مخصص بدون توقف للخدمة (Zero-Downtime Hot Cutover).
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-2">
+                  <label className="block text-slate-400 font-semibold mb-1">عنوان خادم PostgreSQL (Host / IP)</label>
+                  <input
+                    type="text"
+                    placeholder="db.enterprise.sa or 10.0.1.50"
+                    value={targetDbForm.host}
+                    onChange={(e) => setTargetDbForm({ ...targetDbForm, host: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">المنفذ (Port)</label>
+                  <input
+                    type="number"
+                    placeholder="5432"
+                    value={targetDbForm.port}
+                    onChange={(e) => setTargetDbForm({ ...targetDbForm, port: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">اسم قاعدة البيانات (Database Name)</label>
+                  <input
+                    type="text"
+                    placeholder="oxengl_tenant_db"
+                    value={targetDbForm.database_name}
+                    onChange={(e) => setTargetDbForm({ ...targetDbForm, database_name: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">نمط أمان التشفير (SSL Mode)</label>
+                  <select
+                    value={targetDbForm.ssl_mode}
+                    onChange={(e) => setTargetDbForm({ ...targetDbForm, ssl_mode: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="prefer">prefer (محاولة التشفير مع السماح بالاتصال العادي)</option>
+                    <option value="require">require (فرض تشفير TLS / SSL إلزامي)</option>
+                    <option value="verify-full">verify-full (تحقق صارم من شهادة CA المعتمدة)</option>
+                    <option value="disable">disable (تعطيل التشفير - غير موصى به)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">اسم المستخدم (Username)</label>
+                  <input
+                    type="text"
+                    placeholder="postgres or db_user"
+                    value={targetDbForm.username}
+                    onChange={(e) => setTargetDbForm({ ...targetDbForm, username: e.target.value })}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 font-semibold mb-1">كلمة المرور (Password)</label>
+                  <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">
+                    <input
+                      type={showDbPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••"
+                      value={targetDbForm.password}
+                      onChange={(e) => setTargetDbForm({ ...targetDbForm, password: e.target.value })}
+                      className="flex-1 bg-transparent text-white font-mono focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowDbPassword(!showDbPassword)}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      {showDbPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Feedback test message */}
+              {dbTestResult && (
+                <div className={`p-3 rounded-xl border flex items-center gap-2 text-xs font-mono animate-in fade-in ${
+                  dbTestResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                }`}>
+                  {dbTestResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                  <span>{dbTestResult.message}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleTestDatabaseConnection}
+                  disabled={dbActionLoading || !targetDbForm.host}
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-slate-200 border border-slate-800 rounded-xl font-semibold flex items-center gap-2 transition-all cursor-pointer"
+                >
+                  {dbActionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4 text-cyan-400" />}
+                  <span>فحص الاتصال وشهادة SSL</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleTriggerMigration}
+                  disabled={dbActionLoading || migrationStatus?.status === 'RUNNING' || !targetDbForm.host}
+                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg shadow-cyan-600/20 cursor-pointer"
+                >
+                  {dbActionLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />}
+                  <span>بدء الترحيل المباشر (Launch Migration)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 4. Webhooks Tab */}
       {activeTab === 'webhooks' && settings && (
+
         <div className="space-y-6 max-w-2xl animate-in fade-in duration-150">
           <div className="p-4 bg-slate-950 border border-slate-800 rounded-xl space-y-4 text-xs">
             <div className="flex items-center justify-between">

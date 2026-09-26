@@ -2249,6 +2249,72 @@ class TenantDatabaseConfigRead(ORMReadModel):
     updated_at: datetime
 
 
+class TenantDatabaseTestConnectionRequest(BaseModel):
+    host: Optional[str] = Field(default=None, max_length=255)
+    port: Optional[int] = Field(default=5432, ge=1, le=65535)
+    database_name: Optional[str] = Field(default=None, max_length=128)
+    username: Optional[str] = Field(default=None, max_length=128)
+    password: Optional[str] = Field(default=None, max_length=255)
+    ssl_mode: Optional[str] = Field(default="prefer", max_length=32)
+    raw_url: Optional[str] = Field(default=None)
+
+
+class TenantDatabaseTestConnectionResponse(BaseModel):
+    success: bool
+    message: str
+    host: Optional[str] = None
+    database: Optional[str] = None
+    ssl_mode: Optional[str] = None
+
+
+class TenantDatabaseMigrationRequest(BaseModel):
+    host: Optional[str] = Field(default=None, max_length=255)
+    port: Optional[int] = Field(default=5432, ge=1, le=65535)
+    database_name: Optional[str] = Field(default=None, max_length=128)
+    username: Optional[str] = Field(default=None, max_length=128)
+    password: Optional[str] = Field(default=None, max_length=255)
+    ssl_mode: Optional[str] = Field(default="prefer", max_length=32)
+    raw_url: Optional[str] = Field(default=None)
+
+
+class TenantDatabaseMigrationResponse(BaseModel):
+    success: bool
+    migration_id: UUID
+    status: str
+    message: str
+    target_database: str
+    target_host: str
+
+
+class TenantDatabaseMigrationStatus(BaseModel):
+    migration_id: UUID
+    company_id: UUID
+    status: str
+    progress_pct: int
+    current_step: str
+    records_transferred: int
+    target_host: str
+    target_database: str
+    error_message: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class TenantDatabaseInfoResponse(BaseModel):
+    storage_mode: str
+    is_external: bool
+    database_name: str
+    host: Optional[str] = None
+    port: Optional[int] = None
+    username: Optional[str] = None
+    ssl_mode: Optional[str] = None
+    residency_region: str
+    isolation_level: str
+    is_active: bool
+    active_since: Optional[datetime] = None
+
+
+
 # ==============================================================================
 # Phase 8 (Part 2): Enterprise Single Sign-On (ADR-008) Schemas
 # ==============================================================================
