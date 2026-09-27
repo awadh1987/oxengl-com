@@ -151,3 +151,4 @@ __pycache__/
 
 # AutoClaw KDream data
 .autoclaw/
+logs/
