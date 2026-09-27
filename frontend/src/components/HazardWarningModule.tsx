@@ -108,37 +108,37 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden bg-black/75 backdrop-blur-sm animate-fade-in flex justify-end">
-      <div className="bg-slate-900 border-l border-slate-800 w-full max-w-2xl h-full shadow-2xl flex flex-col">
+      <div className="bg-slate-900 border-l border-slate-800 w-full max-w-full sm:max-w-2xl h-full h-dvh shadow-2xl flex flex-col">
         {/* Header */}
         <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold rounded-md uppercase">
+            <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+              <span className="px-2.5 py-0.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-bold rounded-md uppercase whitespace-nowrap shrink-0">
                 {t('planning.tier3RiskTracker', 'Tier 3 Risk Tracker')}
               </span>
               <span className="text-xs text-slate-400">
                 {targetTask ? `Linked: ${targetTask.task_name}` : 'Platform Scope'}
               </span>
             </div>
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-amber-400" />
-              {t('planning.cockpitTitle', 'Strategic Hazards & Mitigation Cockpit')}
+            <h3 className="text-base sm:text-lg font-black text-white flex flex-wrap items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+              <span>{t('planning.cockpitTitle', 'Strategic Hazards & Mitigation Cockpit')}</span>
             </h3>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Action Banner / Filter Tabs */}
-        <div className="p-4 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between gap-3">
-          <div className="flex gap-2">
+        <div className="p-4 bg-slate-900/80 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
             <button
               onClick={() => setActiveTab('ACTIVE')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'ACTIVE'
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
                   : 'text-slate-400 hover:text-slate-200'
@@ -148,7 +148,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('MITIGATED')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'MITIGATED'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'text-slate-400 hover:text-slate-200'
@@ -158,7 +158,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === 'ALL'
                   ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                   : 'text-slate-400 hover:text-slate-200'
@@ -171,7 +171,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
           {targetTask && (
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-blue-600/20 flex items-center gap-1.5"
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-md shadow-blue-600/20 flex items-center gap-1.5 whitespace-nowrap shrink-0"
             >
               <Plus className="w-3.5 h-3.5" /> {t('planning.logHazard', 'Log Hazard')}
             </button>

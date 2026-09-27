@@ -223,9 +223,9 @@ export const InventoryView: React.FC = () => {
               <Boxes className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-                {isAr ? 'إدارة المخزون والتقييم المالي' : 'Inventory Management & Valuation'}
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium">
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex flex-wrap items-center gap-1.5 md:gap-2">
+                <span>{isAr ? 'إدارة المخزون والتقييم المالي' : 'Inventory Management & Valuation'}</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium whitespace-nowrap shrink-0">
                   {isAr ? 'المرحلة 8: دفتر الأستاذ' : 'Phase 8: Double-Entry GL'}
                 </span>
               </h1>
@@ -238,7 +238,7 @@ export const InventoryView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={fetchData}
             disabled={loading}

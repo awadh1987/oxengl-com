@@ -346,7 +346,7 @@ export const CrusherLedgerView: React.FC = () => {
                       <td className="px-4 py-3 text-slate-500 dark:text-slate-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{move.ref || '-'}</span></td>
                       <td className="px-4 py-3">
                         <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                             move.state === 'posted'
                               ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
                               : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'

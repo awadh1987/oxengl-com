@@ -509,25 +509,25 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
         </div>
 
         {/* Global Connection & FPS Badges */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
           <div
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-mono font-bold ${
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-mono font-bold whitespace-nowrap shrink-0 ${
               wsConnected
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                 : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
             }`}
           >
-            {wsConnected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
+            {wsConnected ? <Wifi className="h-3.5 w-3.5 shrink-0" /> : <WifiOff className="h-3.5 w-3.5 shrink-0" />}
             <span>{wsConnected ? (isAr ? 'متصل بالموجّه' : 'PIPELINE LIVE') : (isAr ? 'إعادة الاتصال' : 'RECONNECTING')}</span>
           </div>
 
-          <div className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs font-mono text-slate-300">
-            <Activity className="h-3.5 w-3.5 text-cyan-400" />
-            <span>{fps} FPS</span>
+          <div className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs font-mono text-slate-300 whitespace-nowrap shrink-0">
+            <Activity className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+            <span dir="ltr" className="inline-block unicode-bidi-isolate">{fps} FPS</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs font-mono text-slate-400">
-            <span>{packetCount} PKTS</span>
+          <div className="hidden sm:flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-900/60 px-2.5 py-1 text-xs font-mono text-slate-400 whitespace-nowrap shrink-0">
+            <span dir="ltr" className="inline-block unicode-bidi-isolate">{packetCount} PKTS</span>
           </div>
         </div>
       </div>
@@ -554,7 +554,7 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
           <p className="mt-2 text-2xl font-black text-rose-400">{metrics.deviations}</p>
           <div className="mt-1 flex items-center gap-1 text-[11px] text-rose-400">
             <ShieldAlert className="h-3 w-3" />
-            <span>{metrics.maxDeviation} km {isAr ? 'أقصى انحراف' : 'Max Offset'}</span>
+            <span><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{metrics.maxDeviation} km</span> {isAr ? 'أقصى انحراف' : 'Max Offset'}</span>
           </div>
         </div>
 
@@ -577,7 +577,7 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
           </div>
           <p className="mt-2 text-2xl font-black text-cyan-400">99.8%</p>
           <div className="mt-1 text-[11px] text-slate-500 font-mono">
-            {isAr ? 'عتبة التنبيه: 15.0 كم' : 'Alert Limit: 15.0 km'}
+            {isAr ? <span>عتبة التنبيه: <span dir="ltr" className="inline-block unicode-bidi-isolate">15.0 km</span></span> : 'Alert Limit: 15.0 km'}
           </div>
         </div>
       </div>
@@ -658,13 +658,15 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
                   <Truck className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-100">{selectedVehicle?.vehicle_id}</h3>
+                  <h3 className="text-sm font-bold text-slate-100">
+                    <span dir="ltr" className="inline-block unicode-bidi-isolate">{selectedVehicle?.vehicle_id}</span>
+                  </h3>
                   <p className="text-[11px] text-slate-400">{selectedVehicle?.driver_name}</p>
                 </div>
               </div>
 
               <span
-                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase whitespace-nowrap shrink-0 ${
                   selectedVehicle?.routing_status === 'VECTOR_DEVIATION_ALERT'
                     ? 'border border-rose-500/30 bg-rose-500/10 text-rose-400'
                     : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
@@ -677,7 +679,9 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-2.5">
                 <span className="text-[10px] text-slate-500 font-medium uppercase">{isAr ? 'السرعة الحالية' : 'Velocity'}</span>
-                <p className="text-base font-bold text-slate-200 mt-0.5">{selectedVehicle?.speed_kmh} km/h</p>
+                <p className="text-base font-bold text-slate-200 mt-0.5">
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{selectedVehicle?.speed_kmh} km/h</span>
+                </p>
               </div>
 
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-2.5">
@@ -687,18 +691,22 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
                     (selectedVehicle?.deviation_magnitude_km || 0) > 15.0 ? 'text-rose-400' : 'text-slate-200'
                   }`}
                 >
-                  {selectedVehicle?.deviation_magnitude_km?.toFixed(1) || '0.0'} km
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">
+                    {selectedVehicle?.deviation_magnitude_km?.toFixed(1) || '0.0'} km
+                  </span>
                 </p>
               </div>
 
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-2.5">
                 <span className="text-[10px] text-slate-500 font-medium uppercase">{isAr ? 'الوقت المتوقع (ETA)' : 'Transit ETA'}</span>
-                <p className="text-base font-bold text-slate-200 mt-0.5">{selectedVehicle?.eta_hours?.toFixed(2)} hrs</p>
+                <p className="text-base font-bold text-slate-200 mt-0.5">
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{selectedVehicle?.eta_hours?.toFixed(2)} hrs</span>
+                </p>
               </div>
 
               <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-2.5">
                 <span className="text-[10px] text-slate-500 font-medium uppercase">{isAr ? 'مؤشر التكلفة' : 'Cost Weight'}</span>
-                <p className="text-base font-bold text-amber-400 mt-0.5">{selectedVehicle?.weighted_cost_index?.toFixed(1)}</p>
+                <p className="text-base font-bold text-amber-400 mt-0.5 font-mono">{selectedVehicle?.weighted_cost_index?.toFixed(1)}</p>
               </div>
             </div>
 
@@ -732,21 +740,31 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
                   >
                     <div className="flex items-center gap-2">
                       <div
-                        className={`h-2 w-2 rounded-full ${
+                        className={`h-2 w-2 rounded-full shrink-0 ${
                           isDev ? 'bg-rose-500 animate-pulse' : 'bg-emerald-400'
                         }`}
                       />
                       <div>
-                        <p className="text-xs font-bold text-slate-200">{v.vehicle_id}</p>
-                        <p className="text-[10px] text-slate-400">{v.license_plate}</p>
+                        <p className="text-xs font-bold text-slate-200">
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{v.vehicle_id}</span>
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{v.license_plate}</span>
+                        </p>
                       </div>
                     </div>
 
-                    <div className="text-right text-[11px]">
+                    <div className="text-right text-[11px] shrink-0">
                       <p className={`font-bold ${isDev ? 'text-rose-400' : 'text-slate-300'}`}>
-                        {isDev ? `⚠️ +${v.deviation_magnitude_km?.toFixed(1)}km` : `${v.speed_kmh} km/h`}
+                        {isDev ? (
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">⚠️ +{v.deviation_magnitude_km?.toFixed(1)} km</span>
+                        ) : (
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{v.speed_kmh} km/h</span>
+                        )}
                       </p>
-                      <p className="text-[10px] text-slate-500 font-mono">{v.eta_hours?.toFixed(2)}h ETA</p>
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{v.eta_hours?.toFixed(2)}h ETA</span>
+                      </p>
                     </div>
                   </div>
                 );

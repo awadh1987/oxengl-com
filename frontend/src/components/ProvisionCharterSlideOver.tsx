@@ -150,22 +150,22 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Slide-over panel */}
-      <div className="relative w-full max-w-2xl bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between h-full z-10 overflow-hidden">
+      <div className="relative w-full max-w-full sm:max-w-2xl bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col justify-between h-full h-dvh z-10 overflow-hidden">
         {/* Accent top gradient line */}
         <div className="h-1.5 w-full bg-linear-to-r from-blue-500 via-indigo-500 to-cyan-500 shrink-0" />
 
         {/* Slide-Over Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-950/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="h-11 w-11 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
+            <div className="h-11 w-11 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shrink-0">
               <Layers className="h-6 w-6" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
                 <h2 className="text-lg font-black text-white">
                   {isAr ? 'إضافة ميثاق جديد +' : 'Provision New Charter +'}
                 </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 whitespace-nowrap shrink-0">
                   Tier 1 Strategic
                 </span>
               </div>

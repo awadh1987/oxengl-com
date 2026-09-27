@@ -1350,38 +1350,53 @@ def list_partners(
 
 
 TIER_LIMITS = {
+	"free": {
+		"max_users": 2,
+		"max_storage_gb": 5,
+		"max_cost_centers": 2,
+		"monthly_rate_sar": Decimal("0"),
+		"yearly_rate_sar": Decimal("0"),
+	},
 	"starter": {
 		"max_users": 5,
 		"max_storage_gb": 5,
 		"max_cost_centers": 5,
-		"monthly_rate_sar": Decimal("2500"),
-		"yearly_rate_sar": Decimal("25500"),
+		"monthly_rate_sar": Decimal("0"),
+		"yearly_rate_sar": Decimal("0"),
+	},
+	"professional": {
+		"max_users": 20,
+		"max_storage_gb": 50,
+		"max_cost_centers": 25,
+		"monthly_rate_sar": Decimal("185"),
+		"yearly_rate_sar": Decimal("1850"),
 	},
 	"standard": {
-		"max_users": 15,
-		"max_storage_gb": 25,
+		"max_users": 20,
+		"max_storage_gb": 50,
 		"max_cost_centers": 25,
-		"monthly_rate_sar": Decimal("6500"),
-		"yearly_rate_sar": Decimal("66300"),
+		"monthly_rate_sar": Decimal("185"),
+		"yearly_rate_sar": Decimal("1850"),
 	},
 	"growth": {
-		"max_users": 30,
+		"max_users": 50,
 		"max_storage_gb": 50,
 		"max_cost_centers": 50,
-		"monthly_rate_sar": Decimal("9500"),
-		"yearly_rate_sar": Decimal("96900"),
+		"monthly_rate_sar": Decimal("185"),
+		"yearly_rate_sar": Decimal("1850"),
 	},
 	"enterprise": {
 		"max_users": 999999,
-		"max_storage_gb": 999999,
+		"max_storage_gb": 1000,
 		"max_cost_centers": 999999,
-		"monthly_rate_sar": Decimal("14000"),
-		"yearly_rate_sar": Decimal("142800"),
+		"monthly_rate_sar": Decimal("3750"),
+		"yearly_rate_sar": Decimal("37500"),
 	},
 }
 
 
 @app.put("/api/master/tenants/{tenant_id}/subscription", tags=["SaaS Billing"])
+@app.put("/api/tenant/billing/subscription/{tenant_id}", tags=["SaaS Billing"])
 def update_tenant_subscription(
 	tenant_id: uuid.UUID,
 	payload: TenantSubscriptionUpdate,
@@ -1394,8 +1409,9 @@ def update_tenant_subscription(
 	if tenant is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Master tenant not found")
 
-	tier_key = payload.subscription_tier.lower()
-	defaults = TIER_LIMITS.get(tier_key, TIER_LIMITS["standard"])
+	raw_tier = payload.subscription_tier or payload.tier or "standard"
+	tier_key = raw_tier.lower()
+	defaults = TIER_LIMITS.get(tier_key, TIER_LIMITS.get("professional", TIER_LIMITS["standard"]))
 	tenant.subscription_tier = tier_key
 	tenant.max_users = payload.max_users or defaults["max_users"]
 	tenant.max_storage_gb = payload.max_storage_gb or defaults["max_storage_gb"]
@@ -1405,6 +1421,20 @@ def update_tenant_subscription(
 	if company is not None:
 		company.subscription_tier = tier_key.upper()
 		company.max_cost_centers = defaults["max_cost_centers"]
+
+	# Sync with Phase 1-3 TenantSubscription model
+	try:
+		from backend.app.services.billing_service import activate_tenant_subscription
+		activate_tenant_subscription(
+			db=database,
+			tenant_id=tenant.id,
+			plan_name=tier_key,
+			billing_cycle="monthly",
+			payment_method="contract",
+			extend_period=True,
+		)
+	except Exception as exc:
+		logging.getLogger("uvicorn.error").warning("Could not sync TenantSubscription domain model: %s", exc)
 
 	# Generate SaaS invoice for plan update
 	inv_num = f"SAAS-{datetime.now(timezone.utc):%Y%m}-{uuid.uuid4().hex[:6].upper()}"

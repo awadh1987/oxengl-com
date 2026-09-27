@@ -708,6 +708,7 @@ def handle_stripe_checkout_completed(
         status="paid",
         notes=f"Automated Stripe card payment (Session: {session_id})",
     )
+    logger.info("Stripe checkout completed for tenant %s. Plan: %s, Invoice: %s", tenant_id, plan.name, invoice.invoice_number)
     return invoice
 
 
@@ -756,6 +757,7 @@ def handle_stripe_invoice_paid(
         status="paid",
         notes=f"Stripe recurring invoice payment succeeded: {inv_id}",
     )
+    logger.info("Stripe invoice paid for tenant %s. Sub: %s, Invoice: %s", sub.tenant_id, sub_id, invoice.invoice_number)
     return invoice
 
 
@@ -772,11 +774,25 @@ def handle_stripe_invoice_failed(
     if sub_id:
         sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
 
+    if not sub:
+        cust_id = invoice_data.get("customer")
+        if cust_id:
+            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
+
+    if not sub:
+        metadata = invoice_data.get("metadata", {})
+        tenant_id_str = metadata.get("tenant_id")
+        if tenant_id_str:
+            try:
+                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
+            except Exception:
+                pass
+
     if sub:
         sub.status = "past_due"
         db.commit()
         db.refresh(sub)
-        logger.warning("Tenant %s subscription transitioned to 'past_due' following payment failure.", sub.tenant_id)
+        logger.warning("Tenant %s subscription transitioned to 'past_due' following payment failure (Invoice: %s).", sub.tenant_id, invoice_data.get('id'))
     return sub
 
 
@@ -793,6 +809,20 @@ def handle_stripe_subscription_deleted(
     if sub_id:
         sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
 
+    if not sub:
+        cust_id = sub_data.get("customer")
+        if cust_id:
+            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
+
+    if not sub:
+        metadata = sub_data.get("metadata", {})
+        tenant_id_str = metadata.get("tenant_id")
+        if tenant_id_str:
+            try:
+                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
+            except Exception:
+                pass
+
     if sub:
         free_plan = get_plan_by_name(db, "FREE")
         sub.status = "canceled"
@@ -804,7 +834,67 @@ def handle_stripe_subscription_deleted(
             tenant.subscription_tier = "free"
         db.commit()
         db.refresh(sub)
-        logger.info("Tenant %s subscription canceled and reverted to FREE grade.", sub.tenant_id)
+        logger.info("Tenant %s subscription canceled and reverted to FREE grade (Sub: %s).", sub.tenant_id, sub_id)
+    return sub
+
+
+def handle_stripe_subscription_updated(
+    db: Session,
+    sub_data: dict[str, Any],
+) -> Optional[TenantSubscription]:
+    """
+    Processes Stripe 'customer.subscription.updated' and 'customer.subscription.created' events:
+    Updates subscription status, current period, renewal flags, and plan tier.
+    """
+    sub_id = sub_data.get("id")
+    sub = None
+    if sub_id:
+        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
+
+    if not sub:
+        cust_id = sub_data.get("customer")
+        if cust_id:
+            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
+
+    if not sub:
+        metadata = sub_data.get("metadata", {})
+        tenant_id_str = metadata.get("tenant_id")
+        if tenant_id_str:
+            try:
+                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
+            except Exception:
+                pass
+
+    if sub:
+        stripe_status = sub_data.get("status")
+        if stripe_status:
+            sub.status = stripe_status
+
+        cancel_at_period_end = sub_data.get("cancel_at_period_end")
+        if cancel_at_period_end is not None:
+            sub.cancel_at_period_end = bool(cancel_at_period_end)
+
+        period_end = sub_data.get("current_period_end")
+        if period_end:
+            sub.current_period_end = datetime.fromtimestamp(period_end, tz=timezone.utc)
+
+        period_start = sub_data.get("current_period_start")
+        if period_start:
+            sub.current_period_start = datetime.fromtimestamp(period_start, tz=timezone.utc)
+
+        metadata = sub_data.get("metadata", {})
+        plan_name = metadata.get("plan_name")
+        if plan_name:
+            plan = get_plan_by_name(db, plan_name)
+            if plan:
+                sub.plan_id = plan.id
+                tenant = db.get(MasterTenant, sub.tenant_id)
+                if tenant:
+                    tenant.subscription_tier = plan.name.lower()
+
+        db.commit()
+        db.refresh(sub)
+        logger.info("Stripe subscription %s updated for tenant %s. Status: %s", sub_id, sub.tenant_id, sub.status)
     return sub
 
 

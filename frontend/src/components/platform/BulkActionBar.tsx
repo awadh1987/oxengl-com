@@ -79,7 +79,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
       {/* Floating Action Dock */}
       <aside
         aria-label="Bulk actions toolbar"
-        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 bg-slate-900/95 border-slate-700/80 text-white shadow-black/60 max-w-[95vw] overflow-x-auto ${className}`}
+        className={`fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-5 bg-slate-900/95 border-slate-700/80 text-white shadow-black/60 max-w-[95vw] overflow-x-auto ${className}`}
       >
         {/* Selection Count Badge */}
         <div className="flex items-center gap-2 pr-3 border-r border-slate-700/80 shrink-0">
@@ -123,7 +123,7 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                 type="button"
                 onClick={() => handleActionClick(action)}
                 disabled={action.disabled || isProcessing}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${btnClass}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0 ${btnClass}`}
               >
                 {React.isValidElement(action.icon) ? (
                   action.icon

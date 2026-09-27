@@ -283,7 +283,7 @@ export const FinancialVouchersView: React.FC = () => {
             >
               <Scale className="h-4 w-4 text-indigo-600" />
               <span>{isAr ? 'مصفوفة قيود اليومية' : 'Balanced Journal'}</span>
-              <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black text-indigo-700">
+              <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black text-indigo-700 whitespace-nowrap shrink-0">
                 Σ Dr = Σ Cr
               </span>
             </button>

@@ -188,16 +188,16 @@ export const OperationsLogView: React.FC = () => {
       {/* Top Header & Actions */}
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
             <h1 className="text-xl font-black text-neutral-900">
               {isAr ? 'قيد العمليات اليومية' : 'Daily Operations Entry Portal'}
             </h1>
-            <span className="rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-bold text-[#F05627]">
+            <span className="rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-bold text-[#F05627] whitespace-nowrap shrink-0">
               {filteredOperations.length} {isAr ? 'رحلة مسجلة' : 'trips'}
             </span>
             {isDriverMode && (
-              <span className="rounded-md bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-black text-amber-900 flex items-center gap-1">
-                <Truck className="h-3.5 w-3.5 text-amber-700" />
+              <span className="rounded-md bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-black text-amber-900 flex items-center gap-1 whitespace-nowrap shrink-0">
+                <Truck className="h-3.5 w-3.5 text-amber-700 shrink-0" />
                 <span>{isAr ? 'وضع السائقين نشط' : 'Driver View Active'}</span>
               </span>
             )}

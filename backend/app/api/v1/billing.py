@@ -35,6 +35,7 @@ from backend.app.services.billing_service import (
     handle_stripe_invoice_failed,
     handle_stripe_invoice_paid,
     handle_stripe_subscription_deleted,
+    handle_stripe_subscription_updated,
     seed_default_subscription_plans,
     update_tenant_custom_limits,
     verify_and_settle_invoice,
@@ -501,6 +502,10 @@ async def handle_stripe_webhook_event(
 
     elif event_type == "customer.subscription.deleted":
         sub = handle_stripe_subscription_deleted(db, event_data)
+        return {"status": "success", "event": event_type, "subscription_status": sub.status if sub else "unknown"}
+
+    elif event_type in ("customer.subscription.updated", "customer.subscription.created"):
+        sub = handle_stripe_subscription_updated(db, event_data)
         return {"status": "success", "event": event_type, "subscription_status": sub.status if sub else "unknown"}
 
     return {"status": "ignored", "event": event_type}

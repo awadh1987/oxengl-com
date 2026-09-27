@@ -269,11 +269,11 @@ export const HRMSView: React.FC = () => {
             <Users className="h-6 w-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
               <h1 className="text-xl font-black text-slate-900 dark:text-white">
                 {isAr ? 'الموارد البشرية والرواتب (HR & Payroll)' : 'Human Resources & Payroll'}
               </h1>
-              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700">
+              <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 whitespace-nowrap shrink-0">
                 WPS Compliant (GOSI)
               </span>
             </div>
@@ -699,8 +699,8 @@ export const HRMSView: React.FC = () => {
                           <span dir="ltr" className="inline-block unicode-bidi-isolate">{log.device_id || 'BIO-SCANNER-01'}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
-                            <Fingerprint className="h-3 w-3 text-blue-600" />
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800 whitespace-nowrap shrink-0">
+                            <Fingerprint className="h-3 w-3 text-blue-600 shrink-0" />
                             {log.verification_mode}
                           </span>
                         </td>

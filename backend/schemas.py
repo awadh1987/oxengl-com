@@ -2701,9 +2701,20 @@ class RestockProposalResponse(BaseModel):
 # ==============================================================================
 
 class TenantSubscriptionUpdate(BaseModel):
-    subscription_tier: Literal["starter", "standard", "growth", "enterprise"]
+    subscription_tier: Optional[str] = None
+    tier: Optional[str] = None
     max_users: int | None = Field(default=None, ge=1)
     max_storage_gb: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_tier(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            tier_val = data.get("subscription_tier") or data.get("tier")
+            if tier_val:
+                data["subscription_tier"] = str(tier_val).lower()
+                data["tier"] = str(tier_val).lower()
+        return data
 
 
 class TenantBillingSummaryRead(BaseModel):

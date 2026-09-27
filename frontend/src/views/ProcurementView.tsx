@@ -696,15 +696,15 @@ export const ProcurementView: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-1.5">
-                          <FileText className="h-3.5 w-3.5 text-slate-400" />
-                          <span>{bill.invoice_number}</span>
+                          <FileText className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{bill.invoice_number}</span>
                         </div>
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
                         {bill.vendor_name || (isAr ? 'مورد معتمد' : 'Authorized Vendor')}
                       </td>
                       <td className="py-3.5 px-4 font-mono text-slate-500">
-                        {bill.purchase_order_number || 'PO-2026-0089'}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{bill.purchase_order_number || 'PO-2026-0089'}</span>
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-700 dark:text-slate-300">
                         {formatCurrency(Number(bill.amount) || 0, language)}
@@ -823,7 +823,7 @@ export const ProcurementView: React.FC = () => {
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                   >
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
-                      {po.poNumber}
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{po.poNumber}</span>
                     </td>
                     <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
                       {po.vendorName}
@@ -832,7 +832,9 @@ export const ProcurementView: React.FC = () => {
                     <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600">
                       {formatCurrency(po.totalAmount, language)}
                     </td>
-                    <td className="py-3.5 px-4 text-center font-mono text-slate-500">{po.issueDate}</td>
+                    <td className="py-3.5 px-4 text-center font-mono text-slate-500">
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{po.issueDate}</span>
+                    </td>
                     <td className="py-3.5 px-4 text-center">
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
@@ -875,7 +877,7 @@ export const ProcurementView: React.FC = () => {
                   : 'Encrypted eSourcing Engine: Sealed quotes remain concealed until the official unsealing ceremony.'}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
               <button
                 type="button"
                 onClick={fetchTenders}
@@ -934,7 +936,7 @@ export const ProcurementView: React.FC = () => {
                     return (
                       <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                         <td className="py-3.5 px-4 font-mono font-bold text-amber-500">
-                          {t.tender_number}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{t.tender_number}</span>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
                           {t.title}

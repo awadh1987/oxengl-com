@@ -689,12 +689,12 @@ Myon Economic Contracting Co. Ltd.`;
       {/* 1. Header & Quick Actions */}
       <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center no-print">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
             <h1 className="text-xl font-black text-slate-900">
               {isAr ? 'محرك الفواتير والمطالبات الشهرية للعملاء' : 'Dynamic Customer Invoicing Engine'}
             </h1>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-[10px] font-black ${
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-black whitespace-nowrap shrink-0 ${
                 currentBackendInvoice?.status === 'Issued' || invoiceStatus === 'Paid'
                   ? 'bg-blue-100 text-blue-900 border border-blue-200'
                   : invoiceStatus === 'Approved'
@@ -912,14 +912,14 @@ Myon Economic Contracting Co. Ltd.`;
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {currentBackendInvoice?.move_id && (
                   <div className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-mono font-bold text-blue-900 shadow-xs">
-                    <BookOpen className="h-3.5 w-3.5 text-blue-600" />
-                    <span>{isAr ? 'معرف القيد المالي:' : 'GL Move ID:'} {currentBackendInvoice.move_id}</span>
+                    <BookOpen className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                    <span>{isAr ? 'معرف القيد المالي:' : 'GL Move ID:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{currentBackendInvoice.move_id}</span></span>
                   </div>
                 )}
                 {currentBackendInvoice?.journal_entry_id && (
                   <div className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50/90 px-2.5 py-1 text-[11px] font-mono font-bold text-violet-900 shadow-xs">
-                    <BookOpen className="h-3.5 w-3.5 text-violet-600" />
-                    <span>{isAr ? 'سند دفتر الأستاذ:' : 'GL Ledger Voucher:'} {String(currentBackendInvoice.journal_entry_id).slice(0, 8)}...</span>
+                    <BookOpen className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                    <span>{isAr ? 'سند دفتر الأستاذ:' : 'GL Ledger Voucher:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{String(currentBackendInvoice.journal_entry_id).slice(0, 8)}...</span></span>
                   </div>
                 )}
                 {currentBackendInvoice?.public_token && (
@@ -929,8 +929,8 @@ Myon Economic Contracting Co. Ltd.`;
                     className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-[11px] font-mono font-bold text-indigo-900 hover:bg-indigo-100 transition-colors shadow-xs"
                     title={isAr ? 'انقر لنسخ الرابط السحري' : 'Click to copy magic link'}
                   >
-                    <Link2 className="h-3.5 w-3.5 text-indigo-600" />
-                    <span>{isAr ? 'الرابط السحري:' : 'Magic Link:'} {currentBackendInvoice.public_token.slice(0, 8)}...</span>
+                    <Link2 className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                    <span>{isAr ? 'الرابط السحري:' : 'Magic Link:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{currentBackendInvoice.public_token.slice(0, 8)}...</span></span>
                   </button>
                 )}
               </div>
@@ -1205,11 +1205,11 @@ Myon Economic Contracting Co. Ltd.`;
           <div className="space-y-1 text-xs">
             <p>
               <span className="text-slate-500">{isAr ? 'الرقم الضريبي للعميل:' : 'Customer VAT:'}</span>{' '}
-              <strong className="font-mono text-slate-900">{selectedCustomer?.taxNumber}</strong>
+              <strong className="font-mono text-slate-900" dir="ltr"><span className="inline-block unicode-bidi-isolate">{selectedCustomer?.taxNumber}</span></strong>
             </p>
             <p>
               <span className="text-slate-500">{isAr ? 'رقم السجل التجاري:' : 'CR Number:'}</span>{' '}
-              <strong className="font-mono text-slate-900">{selectedCustomer?.crNumber || '1010XXXXXX'}</strong>
+              <strong className="font-mono text-slate-900" dir="ltr"><span className="inline-block unicode-bidi-isolate">{selectedCustomer?.crNumber || '1010XXXXXX'}</span></strong>
             </p>
             <p>
               <span className="text-slate-500">{isAr ? 'الشخص المسؤول:' : 'Contact Person:'}</span>{' '}
@@ -1299,7 +1299,7 @@ Myon Economic Contracting Co. Ltd.`;
             <div className="space-y-1 text-[11px] text-slate-700">
               <p className="font-bold text-slate-900">{isAr ? 'الحساب البنكي المعتمد للتحويل:' : 'Approved Bank Account:'}</p>
               <p>{brandConfig.bankNameAr} ({brandConfig.bankNameEn})</p>
-              <p className="font-mono text-orange-950 font-bold">IBAN: {brandConfig.iban}</p>
+              <p className="font-mono text-orange-950 font-bold" dir="ltr"><span className="inline-block unicode-bidi-isolate">IBAN: {brandConfig.iban}</span></p>
               <p className="text-[10px] text-slate-500 pt-1">
                 {isAr
                   ? 'ملاحظة: يرجى تضمين رقم الفاتورة في وصف التحويل البنكي.'
