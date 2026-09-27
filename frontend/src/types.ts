@@ -429,7 +429,8 @@ export interface AuditLogEntry {
     | 'OVERRIDE_DB'
     | 'BRAND_CONFIG'
     | 'ATTACH_FILE'
-    | 'ISSUE';
+    | 'ISSUE'
+    | 'POST_LEDGER';
   entityType:
     | 'Operation'
     | 'Customer'

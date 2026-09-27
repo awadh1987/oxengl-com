@@ -135,6 +135,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
       labelAr: 'مدخل بيانات (Data Entry)',
       labelEn: 'Data Entry Operator',
     },
+    Read_Only: {
+      bg: 'bg-slate-50 dark:bg-slate-900',
+      text: 'text-slate-700 dark:text-slate-400',
+      border: 'border-slate-200 dark:border-slate-800',
+      labelAr: 'للقراءة فقط (Read Only)',
+      labelEn: 'Read Only Viewer',
+    },
     Guest: {
       bg: 'bg-slate-50 dark:bg-slate-900',
       text: 'text-slate-700 dark:text-slate-400',
@@ -253,7 +260,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
   const tenantLogoUrl =
     effectiveCompany?.logo_url ||
     effectiveCompany?.uiLogoUrl ||
-    effectiveCompany?.ui_logo_url ||
+    (effectiveCompany as any)?.ui_logo_url ||
     brandConfig?.customLogoUrl ||
     null;
 

@@ -490,7 +490,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                       <button
                         type="button"
                         onClick={() => {
-                          const user = users.find((u) => u.role === 'COO' || u.role === 'Operations') || users[1] || users[0];
+                          const user = users.find((u) => u.role === 'COO' || (u.role as string) === 'Operations') || users[1] || users[0];
                           if (user) {
                             setCurrentUser(user);
                             onLoginSuccess?.();
@@ -513,7 +513,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                       <button
                         type="button"
                         onClick={() => {
-                          const user = users.find((u) => u.role === 'Finance' || u.role === 'Accountant') || users[2] || users[0];
+                          const user = users.find((u) => (u.role as string) === 'Finance' || u.role === 'Accountant') || users[2] || users[0];
                           if (user) {
                             setCurrentUser(user);
                             onLoginSuccess?.();

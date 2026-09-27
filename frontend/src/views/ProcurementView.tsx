@@ -28,6 +28,7 @@ import {
   Check,
   X,
   Trash2,
+  Download,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
@@ -282,7 +283,7 @@ export const ProcurementView: React.FC = () => {
     );
   });
 
-  const billsBulk = useBulkSelection<ApiProcurementBill>(filteredBills);
+  const billsBulk = useBulkSelection(filteredBills);
 
   const bulkBillActions: BulkActionItem[] = [
     {
@@ -317,6 +318,37 @@ export const ProcurementView: React.FC = () => {
             message: err?.message || (isAr ? 'فشل الترحيل الجماعي' : 'Batch posting failed.'),
           });
           setTimeout(() => setNotification(null), 8000);
+        }
+      },
+    },
+    {
+      id: 'bulk-export-bills',
+      label: isAr ? 'تصدير الفواتير المحددة' : 'Export Selected Bills',
+      icon: <Download className="h-4 w-4" />,
+      variant: 'default',
+      onClick: async (selectedIds) => {
+        try {
+          const selected = procurementBills.filter((b) => selectedIds.includes(b.id));
+          const blob = new Blob([JSON.stringify(selected, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `procurement-bills-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setNotification({
+            type: 'success',
+            message: isAr ? `تم تصدير ${selectedIds.length} فواتير بنجاح` : `Exported ${selectedIds.length} bills successfully.`,
+          });
+          setTimeout(() => setNotification(null), 5000);
+        } catch (err: any) {
+          setNotification({
+            type: 'error',
+            message: isAr ? 'فشل تصدير الفواتير' : 'Export failed.',
+          });
+          setTimeout(() => setNotification(null), 5000);
         }
       },
     },

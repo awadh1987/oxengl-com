@@ -694,7 +694,7 @@ export const VendorPortalView: React.FC = () => {
                                 {isAr ? 'الإجمالي للبند' : 'Line Total'}
                               </label>
                               <div className="px-2.5 py-1.5 text-xs font-mono font-bold rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                {formatCurrency(lineTotal, selectedTender.currency)}
+                                {formatCurrency(lineTotal, isAr ? 'ar' : 'en')}
                               </div>
                             </div>
                           </div>

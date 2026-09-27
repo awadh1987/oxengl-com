@@ -37,7 +37,7 @@ export const MoyasarInvoicePaymentModal: React.FC<MoyasarInvoicePaymentModalProp
           amount: amountInHalalas,
           currency: 'SAR',
           description: `Invoice #${invoiceId} Settlement`,
-          publishable_api_key: import.meta.env.VITE_MOYASAR_PUBLISHABLE_KEY || '',
+          publishable_api_key: (import.meta as any).env?.VITE_MOYASAR_PUBLISHABLE_KEY || '',
           callback_url: window.location.href,
           methods: ['creditcard', 'stcpay'],
           on_completed: async (payment: any) => {

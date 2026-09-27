@@ -393,8 +393,14 @@ export const CorporateVault: React.FC = () => {
 
   // Mandatory Checklist Matrix
   const mandatoryChecklist = cvPayload?.compliance_vault?.mandatory_checklist || {
-    commercial_registration: { verified: Boolean(currentCompany?.commercial_registration), present: Boolean(currentCompany?.commercial_registration) },
-    zatca_tax_vat: { verified: Boolean(currentCompany?.tax_id), present: Boolean(currentCompany?.tax_id) },
+    commercial_registration: {
+      verified: Boolean(currentCompany?.commercialRegistration || (currentCompany as any)?.commercial_registration),
+      present: Boolean(currentCompany?.commercialRegistration || (currentCompany as any)?.commercial_registration),
+    },
+    zatca_tax_vat: {
+      verified: Boolean(currentCompany?.taxId || (currentCompany as any)?.tax_id),
+      present: Boolean(currentCompany?.taxId || (currentCompany as any)?.tax_id),
+    },
     gosi_saudization: { verified: documents.some((d) => d.document_type === 'GOSI' && d.verification_status === 'VERIFIED') },
     iso_certifications: { verified: documents.some((d) => d.document_type.startsWith('ISO') && d.verification_status === 'VERIFIED') },
     chamber_of_commerce: { verified: documents.some((d) => d.document_type === 'CHAMBER_COMMERCE' && d.verification_status === 'VERIFIED') },
@@ -640,7 +646,7 @@ export const CorporateVault: React.FC = () => {
               <Building2 className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.commercial_registration?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
                 <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'السجل التجاري' : 'CR License'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.commercial_registration || (isAr ? 'غير مسجل' : 'None')}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.commercialRegistration || (currentCompany as any)?.commercial_registration || (isAr ? 'غير مسجل' : 'None')}</div>
               </div>
             </div>
             {mandatoryChecklist.commercial_registration?.verified ? (
@@ -664,7 +670,7 @@ export const CorporateVault: React.FC = () => {
               <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.zatca_tax_vat?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
                 <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'الزكاة والضريبة' : 'ZATCA VAT'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.tax_id || (isAr ? 'غير مسجل' : 'None')}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.taxId || (currentCompany as any)?.tax_id || (isAr ? 'غير مسجل' : 'None')}</div>
               </div>
             </div>
             {mandatoryChecklist.zatca_tax_vat?.verified ? (

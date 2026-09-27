@@ -49,6 +49,7 @@ import { OfficialLetterheadHeader } from './OfficialLetterheadHeader';
 import { OfficialLetterheadFooter } from './OfficialLetterheadFooter';
 import { BrandLogo } from './BrandLogo';
 import { PDFDocument } from 'pdf-lib';
+import { BrandConfig } from '../types';
 
 export type ExportDocType =
   | 'vat-invoice'
@@ -98,17 +99,19 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
   const safeCrushers = useMemo(() => (Array.isArray(crushers) ? crushers : []), [crushers]);
   const safeTransporters = useMemo(() => (Array.isArray(transporters) ? transporters : []), [transporters]);
   const safeVouchers = useMemo(() => (Array.isArray(vouchers) ? vouchers : []), [vouchers]);
-  const safeBrandConfig = useMemo(() => brandConfig || {
+  const safeBrandConfig = useMemo(() => (brandConfig || {
     companyNameAr: 'شركة أوكسن للخدمات اللوجستية',
     companyNameEn: 'Oxen General Logistics',
     taxNumber: '300000000000003',
+    crNumber: '1010000000',
     commercialRegistration: '1010000000',
     ceoNameAr: 'الرئيس التنفيذي',
     ceoTitleAr: 'المدير التنفيذي',
     bankNameAr: 'مصرف الراجحي',
     bankAccountNumber: '123456789012345',
     bankIban: 'SA0000000000000000000000',
-  }, [brandConfig]);
+    iban: 'SA0000000000000000000000',
+  }) as BrandConfig, [brandConfig]);
 
   // Document Configuration State
   const [docType, setDocType] = useState<ExportDocType>(initialDocType);

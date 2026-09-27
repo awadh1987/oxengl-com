@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Building2, Search, RefreshCw, AlertTriangle, Trash2, Bell, Upload,
   CheckCircle2, XCircle, ArrowRight, Shield, Layers, HardDrive, Activity,
-  CheckSquare, Check
+  CheckSquare, Check, Download
 } from 'lucide-react';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
@@ -71,6 +71,29 @@ export const SuperAdminTenantsView: React.FC = () => {
           fetchTenants();
         } catch (err: any) {
           setActionMessage(`Bulk suspension failed: ${err.message}`);
+        }
+      },
+    },
+    {
+      id: 'bulk-export',
+      label: 'Export Selected',
+      icon: Download,
+      variant: 'default',
+      onClick: async (selectedIds) => {
+        try {
+          const selectedTenants = tenants.filter((t) => selectedIds.includes(t.id));
+          const blob = new Blob([JSON.stringify(selectedTenants, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `tenants-export-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          setActionMessage(`Exported ${selectedIds.length} tenants successfully.`);
+        } catch (err: any) {
+          setActionMessage(`Bulk export failed: ${err.message}`);
         }
       },
     },
