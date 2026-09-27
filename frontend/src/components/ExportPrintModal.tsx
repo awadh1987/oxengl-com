@@ -46,6 +46,7 @@ import {
   base64DataUrlToUint8Array,
 } from '../utils/pdfGenerator';
 import { OfficialLetterheadHeader } from './OfficialLetterheadHeader';
+import { HoverIcon } from './common/HoverIcon';
 import { OfficialLetterheadFooter } from './OfficialLetterheadFooter';
 import { BrandLogo } from './BrandLogo';
 import { PDFDocument } from 'pdf-lib';
@@ -544,9 +545,11 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             {/* Excel Export */}
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
+              className="group flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 hover:text-white transition-colors"
             >
-              <FileSpreadsheet className="h-4 w-4 text-emerald-400" />
+              <HoverIcon className="h-4 w-4">
+                <FileSpreadsheet className="h-full w-full text-emerald-400" />
+              </HoverIcon>
               <span className="hidden md:inline">{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
             </button>
 
@@ -554,9 +557,11 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             <button
               onClick={handleDownloadPdf}
               disabled={isExportingPdf}
-              className="flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-neutral-950/60 px-3.5 py-2 text-xs font-bold text-orange-200 hover:bg-orange-950 transition-colors disabled:opacity-50"
+              className="group flex items-center gap-1.5 rounded-xl border border-orange-500/40 bg-neutral-950/60 px-3.5 py-2 text-xs font-bold text-orange-200 hover:bg-orange-950 transition-colors disabled:opacity-50"
             >
-              <Download className="h-4 w-4 text-orange-400" />
+              <HoverIcon className="h-4 w-4">
+                <Download className="h-full w-full text-orange-400" />
+              </HoverIcon>
               <span>{isExportingPdf ? (isAr ? 'جاري التحميل...' : 'Generating...') : (isAr ? 'تحميل PDF' : 'Download PDF')}</span>
             </button>
 
@@ -564,18 +569,22 @@ export const ExportPrintModal: React.FC<ExportPrintModalProps> = ({
             <button
               id="export-modal-print-btn"
               onClick={handleSystemPrint}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-emerald-950/50 hover:opacity-95 transition-all"
+              className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-xs font-black text-white shadow-lg shadow-emerald-950/50 hover:opacity-95 transition-all"
             >
-              <Printer className="h-4 w-4" />
+              <HoverIcon className="h-4 w-4">
+                <Printer className="h-full w-full" />
+              </HoverIcon>
               <span>{isAr ? 'إرسال إلى الطابعة (Print)' : 'Send to Printer'}</span>
             </button>
 
             {/* Close */}
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors ml-1"
+              className="group flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-colors ml-1"
             >
-              <X className="h-5 w-5" />
+              <HoverIcon className="h-5 w-5">
+                <X className="h-full w-full" />
+              </HoverIcon>
             </button>
           </div>
         </div>

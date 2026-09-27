@@ -29,6 +29,7 @@ import { ExportPrintModal } from '../components/ExportPrintModal';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { ImportSystemResourceModal } from '../components/ImportSystemResourceModal';
 import { Paperclip, Upload, Database } from 'lucide-react';
+import { HoverIcon } from '../components/common/HoverIcon';
 
 export const OperationsLogView: React.FC = () => {
   const {
@@ -215,10 +216,12 @@ export const OperationsLogView: React.FC = () => {
             id="refresh-operations-btn"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 disabled:opacity-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 disabled:opacity-50 transition-colors"
             title={isAr ? 'تحديث العمليات مباشرة من خادم PostgreSQL' : 'Refresh Operations Live from Server'}
           >
-            <RefreshCw className={`h-4 w-4 text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <HoverIcon className="h-4 w-4">
+              <RefreshCw className={`h-full w-full text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </HoverIcon>
             <span>{isAr ? (isRefreshing ? 'جارِ التحديث...' : 'تحديث السجل') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
 
@@ -226,19 +229,23 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="export-json-snapshot-btn"
             onClick={handleExportJSONSnapshot}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON لعمليات اليوم للتدقيق والمطابقة' : 'Export Today JSON Snapshot for Local Audit'}
           >
-            <Download className="h-4 w-4 text-amber-700" />
+            <HoverIcon className="h-4 w-4">
+              <Download className="h-full w-full text-amber-700" />
+            </HoverIcon>
             <span>{isAr ? 'لقطة بيانات JSON' : 'JSON Snapshot'}</span>
           </button>
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/70 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-300 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/70 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-300 transition-colors"
             title={isAr ? 'معاينة وطباعة سجل العمليات اليومية' : 'Live Print Preview & Export'}
           >
-            <Printer className="h-4 w-4 text-[#F05627]" />
+            <HoverIcon className="h-4 w-4">
+              <Printer className="h-full w-full text-[#F05627]" />
+            </HoverIcon>
             <span>{isAr ? 'معاينة وطباعة (Print)' : 'Export & Print'}</span>
           </button>
 
@@ -246,10 +253,12 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="bulk-import-operations-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
             title={isAr ? 'استيراد عمليات وقاعدة البيانات الشاملة من ملف Excel أو CSV' : 'Bulk Import Operations & Comprehensive Log from Excel/CSV'}
           >
-            <Upload className="h-4 w-4 text-emerald-700" />
+            <HoverIcon className="h-4 w-4">
+              <Upload className="h-full w-full text-emerald-700" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
 
@@ -257,19 +266,23 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="import-system-resource-btn"
             onClick={() => setIsLegacyImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-orange-300 bg-orange-50/90 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-400 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-orange-300 bg-orange-50/90 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-400 transition-colors"
             title={isAr ? 'استيراد وامتصاص ملف قاعدة البيانات التاريخية System Resource.xlsx' : 'Import Legacy System Resource Excel (.xlsx)'}
           >
-            <Database className="h-4 w-4 text-[#F05627]" />
+            <HoverIcon className="h-4 w-4">
+              <Database className="h-full w-full text-[#F05627]" />
+            </HoverIcon>
             <span>{isAr ? 'جسر البيانات التاريخية (System Resource)' : 'Import System Resource (.xlsx)'}</span>
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 transition-colors"
             title={isAr ? 'تصدير جدول العمليات إلى Excel' : 'Export to Excel'}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <HoverIcon className="h-4 w-4">
+              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+            </HoverIcon>
             <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
           </button>
 
@@ -280,9 +293,11 @@ export const OperationsLogView: React.FC = () => {
                 setEditingOperation(null);
                 setIsNewModalOpen(true);
               }}
-              className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:opacity-95 transition-opacity"
+              className="group flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:opacity-95 transition-opacity"
             >
-              <Plus className="h-4 w-4" />
+              <HoverIcon className="h-4 w-4">
+                <Plus className="h-full w-full" />
+              </HoverIcon>
               <span>{isAr ? 'تسجيل رحلة جديدة' : 'Add New Trip'}</span>
             </button>
           )}
@@ -535,10 +550,12 @@ export const OperationsLogView: React.FC = () => {
                           <span className="text-[11px] text-slate-600 font-semibold whitespace-nowrap"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.scale_ticket_no}</span></span>
                           <button
                             onClick={() => setPreviewTicketOperation(op)}
-                            className="rounded-lg p-1 text-orange-600 hover:bg-orange-50 shrink-0"
+                            className="group rounded-lg p-1 text-orange-600 hover:bg-orange-50 shrink-0 transition-colors"
                             title={isAr ? 'عرض تذكرة الميزان الرسمية' : 'View scale ticket'}
                           >
-                            <Eye className="h-3.5 w-3.5" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <Eye className="h-full w-full" />
+                            </HoverIcon>
                           </button>
                         </div>
                       </td>
@@ -546,10 +563,12 @@ export const OperationsLogView: React.FC = () => {
                         <div className="flex flex-wrap items-center justify-center gap-1">
                           <button
                             onClick={() => setAttachmentViewingOp(op)}
-                            className="relative rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600"
+                            className="group relative rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600 transition-colors"
                             title={isAr ? 'إدارة المرفقات والمستندات' : 'Manage attachments'}
                           >
-                            <Paperclip className="h-3.5 w-3.5" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <Paperclip className="h-full w-full" />
+                            </HoverIcon>
                             {op.attachments && op.attachments.length > 0 && (
                               <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-orange-600 text-[9px] font-bold text-white">
                                 {op.attachments.length}
@@ -562,19 +581,23 @@ export const OperationsLogView: React.FC = () => {
                                 setEditingOperation(op);
                                 setIsNewModalOpen(true);
                               }}
-                              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600"
+                              className="group rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600 transition-colors"
                               title={isAr ? 'تعديل' : 'Edit'}
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <HoverIcon className="h-3.5 w-3.5">
+                                <Edit className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
                           {canDeleteRecords && (
                             <button
                               onClick={() => handleDelete(op.id)}
-                              className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                              className="group rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
                               title={isAr ? 'حذف' : 'Delete'}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <HoverIcon className="h-3.5 w-3.5">
+                                <Trash2 className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
                         </div>

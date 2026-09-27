@@ -30,6 +30,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { BulkImportModal } from '../components/BulkImportModal';
+import { HoverIcon } from '../components/common/HoverIcon';
 
 export const FinancialVouchersView: React.FC = () => {
   const {
@@ -294,40 +295,48 @@ export const FinancialVouchersView: React.FC = () => {
             id="refresh-vouchers-btn"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors disabled:opacity-50"
             title={isAr ? 'تحديث السندات' : 'Refresh Vouchers'}
           >
-            <RefreshCw className={`h-3.5 w-3.5 text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <HoverIcon className="h-3.5 w-3.5">
+              <RefreshCw className={`h-full w-full text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </HoverIcon>
             <span>{isAr ? (isRefreshing ? 'تحديث...' : 'تحديث') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
 
           <button
             id="export-vouchers-json-btn"
             onClick={handleExportJSONSnapshot}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON' : 'Export JSON Snapshot'}
           >
-            <Download className="h-3.5 w-3.5 text-amber-700" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Download className="h-full w-full text-amber-700" />
+            </HoverIcon>
             <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
           </button>
 
           <button
             id="export-vouchers-excel-btn"
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
             title={isAr ? 'تصدير كشف Excel' : 'Export to Excel'}
           >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+            </HoverIcon>
             <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
           </button>
 
           <button
             id="print-vouchers-btn"
             onClick={handlePrint}
-            className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
             title={isAr ? 'طباعة كشف السندات' : 'Print Vouchers'}
           >
-            <Printer className="h-3.5 w-3.5" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Printer className="h-full w-full" />
+            </HoverIcon>
             <span>{isAr ? 'معاينة وطباعة' : 'Export & Print'}</span>
           </button>
 
@@ -339,10 +348,12 @@ export const FinancialVouchersView: React.FC = () => {
                   window.dispatchEvent(new Event('popstate'));
                 }
               }}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+              className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
               title={isAr ? 'دليل الحسابات' : 'Chart of Accounts'}
             >
-              <Network className="h-3.5 w-3.5 text-orange-600" />
+              <HoverIcon className="h-3.5 w-3.5">
+                <Network className="h-full w-full text-orange-600" />
+              </HoverIcon>
               <span>{isAr ? 'دليل الحسابات' : 'Chart of Accounts'}</span>
             </button>
           )}
@@ -351,19 +362,23 @@ export const FinancialVouchersView: React.FC = () => {
           <button
             id="bulk-import-vouchers-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
             title={isAr ? 'استيراد سندات وحسابات وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
-            <Upload className="h-3.5 w-3.5 text-emerald-700" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Upload className="h-full w-full text-emerald-700" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
 
           {canAccessFinancials && activeTab === 'vouchers' && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="flex items-center gap-2 rounded-2xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 transition-all hover:bg-orange-700 cursor-pointer"
+              className="group flex items-center gap-2 rounded-2xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 transition-all hover:bg-orange-700 cursor-pointer"
             >
-              <Plus className="h-4 w-4" />
+              <HoverIcon className="h-4 w-4">
+                <Plus className="h-full w-full" />
+              </HoverIcon>
               <span>{isAr ? 'إنشاء سند مالي جديد' : 'New Voucher'}</span>
             </button>
           )}
@@ -673,10 +688,12 @@ export const FinancialVouchersView: React.FC = () => {
                           {/* View & Print Document */}
                           <button
                             onClick={() => setSelectedVoucherForView(vch)}
-                            className="flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 shadow-2xs hover:border-orange-300 hover:bg-orange-50 hover:text-orange-950"
+                            className="group flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 shadow-2xs hover:border-orange-300 hover:bg-orange-50 hover:text-orange-950 transition-colors"
                             title={isAr ? 'معاينة وطباعة رسمية' : 'View & Print'}
                           >
-                            <Printer className="h-3.5 w-3.5 text-slate-500" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <Printer className="h-full w-full text-slate-500" />
+                            </HoverIcon>
                             <span className="hidden sm:inline">{isAr ? 'معاينة' : 'View'}</span>
                           </button>
 
@@ -684,10 +701,12 @@ export const FinancialVouchersView: React.FC = () => {
                           {vch.status !== 'Approved' && canApproveVouchers && (
                             <button
                               onClick={() => approveVoucher(vch.id, 'اعتماد سريع من جدول السندات المالية')}
-                              className="flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700"
+                              className="group flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-2 text-xs font-bold text-white shadow-2xs hover:bg-emerald-700 transition-colors"
                               title={isAr ? 'اعتماد وختم السند فورياً' : 'Approve'}
                             >
-                              <ShieldCheck className="h-3.5 w-3.5" />
+                              <HoverIcon className="h-3.5 w-3.5">
+                                <ShieldCheck className="h-full w-full" />
+                              </HoverIcon>
                               <span className="hidden sm:inline">{isAr ? 'اعتماد' : 'Approve'}</span>
                             </button>
                           )}
@@ -706,10 +725,12 @@ export const FinancialVouchersView: React.FC = () => {
                                   deleteVoucher(vch.id);
                                 }
                               }}
-                              className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              className="group flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
                               title={isAr ? 'حذف السند' : 'Delete'}
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <HoverIcon className="h-3.5 w-3.5">
+                                <Trash2 className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
                         </div>

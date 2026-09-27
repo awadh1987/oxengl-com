@@ -20,6 +20,7 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
+import { HoverIcon } from './common/HoverIcon';
 
 export type NavigationTab =
   | 'dashboard'
@@ -180,10 +181,12 @@ export const Navigation: React.FC<NavigationProps> = ({
               <button
                 type="button"
                 onClick={onCloseMobile}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white md:hidden cursor-pointer"
+                className="group flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white md:hidden cursor-pointer"
                 title={isAr ? 'إغلاق' : 'Close'}
               >
-                <X className="h-4 w-4" />
+                <HoverIcon className="h-4 w-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             )}
           </div>
@@ -232,11 +235,13 @@ export const Navigation: React.FC<NavigationProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon
-                    className={`h-4 w-4 transition-colors ${
-                      isActive ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'
-                    }`}
-                  />
+                  <HoverIcon className="h-4 w-4">
+                    <Icon
+                      className={`h-full w-full transition-colors ${
+                        isActive ? 'text-amber-400' : 'text-slate-500 group-hover:text-slate-300'
+                      }`}
+                    />
+                  </HoverIcon>
                   <span>{isAr ? item.labelAr : item.labelEn}</span>
                 </div>
 

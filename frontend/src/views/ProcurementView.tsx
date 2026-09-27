@@ -34,6 +34,7 @@ import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { NewPurchaseOrderModal, PurchaseOrderRecord } from '../components/NewPurchaseOrderModal';
+import { HoverIcon } from '../components/common/HoverIcon';
 import { erpApi, ApiProcurementBill, ApiProcurementTender, ApiProcurementBid } from '../services/api';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
@@ -451,10 +452,12 @@ export const ProcurementView: React.FC = () => {
             id="bulk-import-procurement-btn"
             type="button"
             onClick={() => setIsBulkImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors"
             title={isAr ? 'استيراد أوامر الشراء وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
-            <Upload className="h-4 w-4 text-emerald-700" />
+            <HoverIcon className="h-4 w-4">
+              <Upload className="h-full w-full text-emerald-700" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import' : 'Bulk Import'}</span>
           </button>
 
@@ -462,9 +465,11 @@ export const ProcurementView: React.FC = () => {
             id="new-po-btn"
             type="button"
             onClick={() => setIsNewPoOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:bg-orange-700 transition-colors"
+            className="group flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:bg-orange-700 transition-colors"
           >
-            <Plus className="h-4 w-4" />
+            <HoverIcon className="h-4 w-4">
+              <Plus className="h-full w-full" />
+            </HoverIcon>
             <span>{isAr ? 'أمر شراء جديد' : 'New Purchase Order'}</span>
           </button>
         </div>
@@ -760,9 +765,11 @@ export const ProcurementView: React.FC = () => {
                             type="button"
                             onClick={() => handlePostToLedger(bill.id)}
                             disabled={postingBillId === bill.id}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-colors disabled:opacity-50"
+                            className="group inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-colors disabled:opacity-50"
                           >
-                            <BookOpen className="h-3.5 w-3.5" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <BookOpen className="h-full w-full" />
+                            </HoverIcon>
                             <span>
                               {postingBillId === bill.id
                                 ? isAr

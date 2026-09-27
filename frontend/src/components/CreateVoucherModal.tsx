@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { FinancialVoucher, VoucherType, VoucherCategory } from '../types';
 import { tafqeetArabic, tafqeetEnglish } from '../utils/tafqeet';
 import { X, CreditCard, Building, FileText, CheckCircle2, DollarSign, Sparkles } from 'lucide-react';
+import { HoverIcon } from './common/HoverIcon';
 
 interface CreateVoucherModalProps {
   isOpen: boolean;
@@ -227,9 +228,11 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
 
           <button
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
+            className="group flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white transition-colors hover:bg-white/20"
           >
-            <X className="h-5 w-5" />
+            <HoverIcon className="h-5 w-5">
+              <X className="h-full w-full" />
+            </HoverIcon>
           </button>
         </div>
 
@@ -597,9 +600,11 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 hover:bg-orange-700"
+              className="group flex items-center gap-2 rounded-xl bg-orange-600 px-6 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 hover:bg-orange-700 transition-colors"
             >
-              <CheckCircle2 className="h-4 w-4" />
+              <HoverIcon className="h-4 w-4">
+                <CheckCircle2 className="h-full w-full" />
+              </HoverIcon>
               <span>
                 {isAr
                   ? type === 'Payment' ? 'إصدار سند الصرف' : 'إصدار سند القبض'

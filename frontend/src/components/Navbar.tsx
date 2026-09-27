@@ -32,6 +32,7 @@ import { TENANT_PALETTES } from '../theme/designTokens';
 import { BrandLogo } from './BrandLogo';
 import { PlatformLogo } from './PlatformLogo';
 import { UserAvatar } from './UserAvatar';
+import { HoverIcon } from './common/HoverIcon';
 import { isApexDomain, getSubdomain } from '../utils/subdomain';
 
 export interface SystemAlert {
@@ -377,7 +378,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               setShowSettings(!showSettings);
               setShowNotifications(false);
             }}
-            className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
+            className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
               showSettings
                 ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400'
                 : isDark
@@ -387,7 +388,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
             title={isAr ? 'إعدادات العرض والمظهر' : 'Display & Theme Settings'}
             aria-label="Settings"
           >
-            <Settings className="h-3.5 w-3.5" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Settings className="h-full w-full" />
+            </HoverIcon>
           </button>
 
           {showSettings && (
@@ -652,7 +655,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               setShowNotifications(!showNotifications);
               setShowSettings(false);
             }}
-            className={`relative flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
+            className={`group relative flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
               showNotifications
                 ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400'
                 : isDark
@@ -661,7 +664,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
             }`}
             title={isAr ? 'التنبيهات والإشعارات' : 'Notifications'}
           >
-            <Bell className="h-3.5 w-3.5" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Bell className="h-full w-full" />
+            </HoverIcon>
             {unreadAlertsCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-xs">
                 <span dir="ltr" className="inline-block unicode-bidi-isolate">{unreadAlertsCount}</span>
@@ -810,14 +815,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
         <button
           id="nav-lang-toggle-btn"
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-          className={`flex h-7.5 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-colors ${
+          className={`group flex h-7.5 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-colors ${
             isDark
               ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white'
               : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
           }`}
           title={isAr ? 'Switch to English' : 'التحويل للغة العربية'}
         >
-          <Globe className="h-3 w-3 text-[#F05627]" />
+          <HoverIcon className="h-3 w-3">
+            <Globe className="h-full w-full text-[#F05627]" />
+          </HoverIcon>
           <span>{language === 'ar' ? 'English' : 'عربي'}</span>
         </button>
 
@@ -851,14 +858,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
                 void signOutAuth();
                 onLogout();
               }}
-              className={`flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-colors ${
+              className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-colors ${
                 isDark
                   ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                   : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700'
               }`}
               title={isAr ? 'تسجيل الخروج' : 'Logout'}
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <HoverIcon className="h-3.5 w-3.5">
+                <LogOut className="h-full w-full" />
+              </HoverIcon>
             </button>
           )}
         </div>

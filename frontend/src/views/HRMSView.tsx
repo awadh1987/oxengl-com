@@ -23,6 +23,7 @@ import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { AddEmployeeModal, EmployeeRecord } from '../components/AddEmployeeModal';
+import { HoverIcon } from '../components/common/HoverIcon';
 import { erpApi, ApiPayrollRun, ApiAttendanceLog, ApiEmployee } from '../services/api';
 
 export const HRMSView: React.FC = () => {
@@ -291,10 +292,12 @@ export const HRMSView: React.FC = () => {
             id="bulk-import-hrms-btn"
             type="button"
             onClick={() => setIsBulkImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors"
             title={isAr ? 'استيراد بيانات الموظفين والرواتب وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
-            <Upload className="h-4 w-4 text-emerald-700" />
+            <HoverIcon className="h-4 w-4">
+              <Upload className="h-full w-full text-emerald-700" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
 
@@ -302,9 +305,11 @@ export const HRMSView: React.FC = () => {
             id="add-employee-btn"
             type="button"
             onClick={() => setIsAddEmployeeOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:bg-orange-700 transition-colors"
+            className="group flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:bg-orange-700 transition-colors"
           >
-            <Plus className="h-4 w-4" />
+            <HoverIcon className="h-4 w-4">
+              <Plus className="h-full w-full" />
+            </HoverIcon>
             <span>{isAr ? 'إضافة موظف جديد' : 'Add Employee'}</span>
           </button>
         </div>
@@ -551,9 +556,11 @@ export const HRMSView: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleGenerateSamplePayrollRun}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-700 transition-colors"
+                        className="group inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-orange-700 transition-colors"
                       >
-                        <Plus className="h-4 w-4" />
+                        <HoverIcon className="h-4 w-4">
+                          <Plus className="h-full w-full" />
+                        </HoverIcon>
                         <span>{isAr ? 'توليد مسودة مسير رواتب تجريبية' : 'Generate Sample Draft Payroll Run'}</span>
                       </button>
                     </td>
@@ -611,14 +618,16 @@ export const HRMSView: React.FC = () => {
                               type="button"
                               disabled={postingPayrollId === run.id}
                               onClick={() => handlePostPayrollToLedger(run.id)}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50 transition-all whitespace-nowrap shrink-0"
+                              className="group inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50 transition-all whitespace-nowrap shrink-0"
                               title={isAr ? 'ترحيل مسير الراتب إلى دفتر الأستاذ العام بقيد متوازن' : 'Post balanced double-entry to General Ledger'}
                             >
-                              {postingPayrollId === run.id ? (
-                                <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
-                              ) : (
-                                <BookOpen className="h-3.5 w-3.5 shrink-0" />
-                              )}
+                              <HoverIcon className="h-3.5 w-3.5">
+                                {postingPayrollId === run.id ? (
+                                  <RefreshCw className="h-full w-full animate-spin shrink-0" />
+                                ) : (
+                                  <BookOpen className="h-full w-full shrink-0" />
+                                )}
+                              </HoverIcon>
                               <span>{isAr ? 'ترحيل لدفتر الأستاذ (Post to GL)' : 'Post to GL'}</span>
                             </button>
                           ) : (

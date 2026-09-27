@@ -1008,6 +1008,64 @@ body,
   text-shadow: none !important;
 }
 
+/* ==========================================================================
+   Platform-Wide Interactive Hover-Lightable Icon Effect
+   ========================================================================== */
+.hover-lightable-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hover-lightable-icon img,
+.hover-lightable-icon svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon .icon-default {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon .icon-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon:hover .icon-default,
+.group:hover .hover-lightable-icon .icon-default,
+.hover-lightable-container:hover .hover-lightable-icon .icon-default,
+button:hover .hover-lightable-icon .icon-default,
+a:hover .hover-lightable-icon .icon-default {
+  opacity: 0;
+}
+
+.hover-lightable-icon:hover .icon-hover,
+.group:hover .hover-lightable-icon .icon-hover,
+.hover-lightable-container:hover .hover-lightable-icon .icon-hover,
+button:hover .hover-lightable-icon .icon-hover,
+a:hover .hover-lightable-icon .icon-hover {
+  opacity: 1;
+}
+
+/* Single-icon illumination enhancement for buttons & controls */
+.hover-lightable-icon.single-icon {
+  transition: filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon.single-icon:hover,
+.group:hover .hover-lightable-icon.single-icon,
+button:hover .hover-lightable-icon.single-icon,
+a:hover .hover-lightable-icon.single-icon {
+  filter: brightness(1.3) drop-shadow(0 0 6px currentColor);
+}
+
 /* Custom Print Styles for Official Saudi Tax Invoices, Scale Tickets, Vouchers & Reports */
 @media print {
   @page {

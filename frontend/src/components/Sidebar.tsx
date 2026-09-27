@@ -33,6 +33,7 @@ import {
   X,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
+import { HoverIcon } from './common/HoverIcon';
 
 export type ActiveTab =
   | 'hub'
@@ -588,7 +589,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       );
     }
     const IconComp = icon;
-    return <IconComp className={className} />;
+    return (
+      <HoverIcon className={className}>
+        <IconComp className="h-full w-full" />
+      </HoverIcon>
+    );
   };
 
   return (
@@ -643,10 +648,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     onClick={onCloseMobile}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-xs md:hidden cursor-pointer"
+                    className="group flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-xs md:hidden cursor-pointer"
                     title={isAr ? 'إغلاق القائمة' : 'Close Menu'}
                   >
-                    <X className="h-4 w-4" />
+                    <HoverIcon className="h-4 w-4">
+                      <X className="h-full w-full" />
+                    </HoverIcon>
                   </button>
                 )}
 
@@ -655,7 +662,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   id="sidebar-collapse-toggle-btn"
                   onClick={toggleCollapsed}
-                  className="hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all shadow-xs cursor-pointer"
+                  className="group hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all shadow-xs cursor-pointer"
                   title={
                     isCollapsed
                       ? isAr
@@ -666,17 +673,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : 'Collapse Sidebar (w-16)'
                   }
                 >
-                  {isCollapsed ? (
-                    isAr ? (
-                      <ChevronLeft className="h-4 w-4" />
+                  <HoverIcon className="h-4 w-4">
+                    {isCollapsed ? (
+                      isAr ? (
+                        <ChevronLeft className="h-full w-full" />
+                      ) : (
+                        <ChevronRight className="h-full w-full" />
+                      )
+                    ) : isAr ? (
+                      <ChevronRight className="h-full w-full" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )
-                  ) : isAr ? (
-                    <ChevronRight className="h-4 w-4" />
-                  ) : (
-                    <ChevronLeft className="h-4 w-4" />
-                  )}
+                      <ChevronLeft className="h-full w-full" />
+                    )}
+                  </HoverIcon>
                 </button>
               </div>
             </div>
@@ -765,7 +774,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleCategory(cat.id)}
-                        className={`flex w-full items-center justify-between px-2.5 py-1.5 text-xs font-bold transition-all ${
+                        className={`group flex w-full items-center justify-between px-2.5 py-1.5 text-xs font-bold transition-all ${
                           hasActiveChild
                             ? 'bg-slate-800/80 text-orange-400'
                             : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
@@ -785,7 +794,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               ? 'neo-icon-hr'
                               : 'neo-icon-governance'
                           }`}>
-                            <CatIcon className="h-3 w-3" />
+                            <HoverIcon className="h-3 w-3">
+                              <CatIcon className="h-full w-full" />
+                            </HoverIcon>
                           </div>
                           <span className="text-[11px] font-black uppercase tracking-wider">
                             {isAr ? cat.labelAr : cat.labelEn}
@@ -830,7 +841,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               <button
                                 key={item.id}
                                 onClick={() => handleNavigate(item)}
-                                className={`flex w-full items-center justify-between rounded px-2 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                                className={`group flex w-full items-center justify-between rounded px-2 py-1 text-xs font-semibold transition-all cursor-pointer ${
                                   isActive
                                     ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs'
                                     : item.highlight
@@ -913,7 +924,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             key={item.id}
                             onClick={() => handleNavigate(item)}
                             title={`${label}${item.badge ? ` [${item.badge}]` : ''}`}
-                            className={`relative flex h-7.5 w-7.5 mx-auto items-center justify-center rounded border transition-all cursor-pointer ${
+                            className={`group relative flex h-7.5 w-7.5 mx-auto items-center justify-center rounded border transition-all cursor-pointer ${
                               isActive
                                 ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md border-orange-400'
                                 : `${railCatIconClass} hover:opacity-90`

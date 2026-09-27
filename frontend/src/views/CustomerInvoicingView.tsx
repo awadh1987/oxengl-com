@@ -43,6 +43,7 @@ import { ExportPrintModal } from '../components/ExportPrintModal';
 import { OfficialLetterheadHeader } from '../components/OfficialLetterheadHeader';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { OfficialLetterheadFooter } from '../components/OfficialLetterheadFooter';
+import { HoverIcon } from '../components/common/HoverIcon';
 
 export const CustomerInvoicingView: React.FC = () => {
   const {
@@ -733,19 +734,23 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             onClick={loadBackendInvoices}
             disabled={isLoadingBackend}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
             title={isAr ? 'تحديث حالة الفاتورة من الخادم' : 'Sync status with backend'}
           >
-            <RefreshCw className={`h-3.5 w-3.5 text-slate-500 ${isLoadingBackend ? 'animate-spin' : ''}`} />
+            <HoverIcon className="h-3.5 w-3.5">
+              <RefreshCw className={`h-full w-full text-slate-500 ${isLoadingBackend ? 'animate-spin' : ''}`} />
+            </HoverIcon>
             <span>{isAr ? 'مزامنة' : 'Sync'}</span>
           </button>
 
           {/* Attachments Trigger */}
           <button
             onClick={() => setIsAttachmentModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
           >
-            <Paperclip className="h-4 w-4 text-orange-600" />
+            <HoverIcon className="h-4 w-4">
+              <Paperclip className="h-full w-full text-orange-600" />
+            </HoverIcon>
             <span>
               {isAr ? 'المرفقات وتذاكر الميزان' : 'Attachments'} ({invoiceAttachments.length})
             </span>
@@ -755,10 +760,12 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="bulk-import-invoicing-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
             title={isAr ? 'استيراد فواتير وعمليات وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
-            <Upload className="h-3.5 w-3.5 text-emerald-700" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Upload className="h-full w-full text-emerald-700" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
 
@@ -766,19 +773,23 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="export-invoice-json-btn"
             onClick={handleExportJSONSnapshot}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON للفاتورة' : 'Export JSON Snapshot'}
           >
-            <Download className="h-3.5 w-3.5 text-amber-700" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Download className="h-full w-full text-amber-700" />
+            </HoverIcon>
             <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
           </button>
 
           {/* Excel Export */}
           <button
             onClick={handleExcelExport}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+            <HoverIcon className="h-4 w-4">
+              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+            </HoverIcon>
             <span>{isAr ? 'تصدير كشف Excel' : 'Export Excel'}</span>
           </button>
 
@@ -786,19 +797,23 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="copy-invoice-magic-link-top-btn"
             onClick={() => copyMagicLink(currentBackendInvoice?.public_token || undefined)}
-            className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-xs font-bold text-indigo-900 shadow-xs hover:bg-indigo-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-xs font-bold text-indigo-900 shadow-xs hover:bg-indigo-100 transition-colors"
             title={isAr ? 'نسخ رابط الدفع المباشر السحري (Magic Link)' : 'Copy Public Magic Link'}
           >
-            <Link2 className="h-3.5 w-3.5 text-indigo-700" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Link2 className="h-full w-full text-indigo-700" />
+            </HoverIcon>
             <span>{isAr ? 'الرابط السحري' : 'Magic Link'}</span>
           </button>
 
           {/* Print / Live Preview Export */}
           <button
             onClick={() => setIsExportPrintModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
           >
-            <Printer className="h-4 w-4" />
+            <HoverIcon className="h-4 w-4">
+              <Printer className="h-full w-full" />
+            </HoverIcon>
             <span>{isAr ? 'معاينة وطباعة (Print Preview)' : 'Print / Export Studio'}</span>
           </button>
         </div>
@@ -945,9 +960,11 @@ Myon Economic Contracting Co. Ltd.`;
                 <button
                   disabled={actionLoading || isUnbalanced}
                   onClick={handleSaveDraft}
-                  className="flex items-center gap-1.5 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  className="group flex items-center gap-1.5 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
                 >
-                  {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin text-slate-600" /> : <Save className="h-4 w-4 text-slate-600" />}
+                  <HoverIcon className="h-4 w-4">
+                    {actionLoading ? <RefreshCw className="h-full w-full animate-spin text-slate-600" /> : <Save className="h-full w-full text-slate-600" />}
+                  </HoverIcon>
                   <span>{isAr ? 'حفظ كمسودة (Save Draft)' : 'Save Draft'}</span>
                 </button>
 
@@ -955,9 +972,11 @@ Myon Economic Contracting Co. Ltd.`;
                   <button
                     disabled={actionLoading || isUnbalanced}
                     onClick={handleCeoApproveAndSign}
-                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
+                    className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-emerald-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
                   >
-                    {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    <HoverIcon className="h-4 w-4">
+                      {actionLoading ? <RefreshCw className="h-full w-full animate-spin" /> : <Check className="h-full w-full" />}
+                    </HoverIcon>
                     <span>{isAr ? 'اعتماد وتوقيع الفاتورة (Approve & Sign)' : 'Approve & Sign (CEO)'}</span>
                   </button>
                 )}
@@ -971,18 +990,22 @@ Myon Economic Contracting Co. Ltd.`;
                   <button
                     disabled={actionLoading || isUnbalanced}
                     onClick={handleIssueToGeneralLedger}
-                    className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-blue-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
+                    className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-blue-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
                   >
-                    {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                    <HoverIcon className="h-4 w-4">
+                      {actionLoading ? <RefreshCw className="h-full w-full animate-spin" /> : <BookOpen className="h-full w-full" />}
+                    </HoverIcon>
                     <span>{isAr ? 'إصدار وترحيل لدفتر الأستاذ (Post to GL)' : 'Issue & Post to GL'}</span>
                   </button>
                 )}
 
                 <button
                   onClick={() => setIsExportShareModalOpen(true)}
-                  className="flex items-center gap-1.5 rounded-2xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 hover:bg-orange-700 transition-colors"
+                  className="group flex items-center gap-1.5 rounded-2xl bg-orange-600 px-4 py-2.5 text-xs font-black text-white shadow-md shadow-orange-600/30 hover:bg-orange-700 transition-colors"
                 >
-                  <Share2 className="h-4 w-4" />
+                  <HoverIcon className="h-4 w-4">
+                    <Share2 className="h-full w-full" />
+                  </HoverIcon>
                   <span>{isAr ? 'تصدير ومشاركة الحزمة' : 'Export & Share Bundle'}</span>
                 </button>
               </>
@@ -994,10 +1017,12 @@ Myon Economic Contracting Co. Ltd.`;
                 id="workflow-post-to-ledger-btn"
                 disabled={actionLoading || isUnbalanced}
                 onClick={handlePostToLedger}
-                className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
+                className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-xs font-black text-white shadow-lg shadow-indigo-600/30 hover:opacity-95 disabled:opacity-50 transition-all"
                 title={isAr ? 'ترحيل قيود المبيعات والذمم المدينة لدفتر الأستاذ العام' : 'Post AR and Sales Revenue to General Ledger'}
               >
-                {actionLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+                <HoverIcon className="h-4 w-4">
+                  {actionLoading ? <RefreshCw className="h-full w-full animate-spin" /> : <BookOpen className="h-full w-full" />}
+                </HoverIcon>
                 <span>{isAr ? 'ترحيل إلى دفتر الأستاذ (Post to Ledger)' : 'Post to Ledger'}</span>
               </button>
             )}
