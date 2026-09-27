@@ -142,7 +142,11 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
     if not raw_host:
         return None
 
-    clean_host = raw_host.split(":")[0].strip().lower()
+    clean_host = raw_host.strip().lower()
+    if "//" in clean_host:
+        clean_host = clean_host.split("//")[-1]
+    clean_host = clean_host.split("/")[0].split(":")[0].strip().lower()
+
     if clean_host in PLATFORM_BASE_HOSTS:
         return None
 
@@ -161,15 +165,21 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
             return None
 
     try:
+        from sqlalchemy import func
         from backend.models import MasterTenant, ResCompany
 
         # 1. Custom Domain Match on MasterTenant
-        master = db.query(MasterTenant).filter(MasterTenant.custom_domain == clean_host).first()
+        master = db.query(MasterTenant).filter(
+            func.lower(func.trim(MasterTenant.custom_domain)) == clean_host
+        ).first()
         company = None
 
         # 2. Custom Domain Match on ResCompany
         if not master:
-            company = db.query(ResCompany).filter(ResCompany.custom_domain == clean_host).first()
+            company = db.query(ResCompany).filter(
+                (func.lower(func.trim(ResCompany.custom_domain)) == clean_host) |
+                (func.lower(func.trim(ResCompany.domain_slug)) == clean_host)
+            ).first()
 
         # 3. Subdomain extraction for *.oxengl.me / *.oxengl.com
         if not master and not company and (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")):
@@ -181,11 +191,47 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                         (ResCompany.slug == subdomain) | (ResCompany.domain_slug == subdomain)
                     ).first()
 
+        # 4. Fallback direct slug match
+        if not master and not company:
+            master = db.query(MasterTenant).filter(MasterTenant.slug == clean_host).first()
+            if not master:
+                company = db.query(ResCompany).filter(
+                    (ResCompany.slug == clean_host) | (ResCompany.domain_slug == clean_host)
+                ).first()
+
+        # 5. Dynamic reconciliation between ResCompany and MasterTenant
+        if company and not master:
+            try:
+                master = MasterTenant(
+                    id=company.id,
+                    name=company.name,
+                    slug=company.slug or company.domain_slug or clean_host.split(".")[0],
+                    custom_domain=company.custom_domain or clean_host,
+                    owner_full_name=company.name,
+                    owner_email=getattr(company, "admin_email", None) or f"admin@{clean_host}",
+                    owner_mobile="+966500000000",
+                    status="active",
+                    subscription_tier=getattr(company, "subscription_tier", "standard") or "standard",
+                    max_users=10,
+                    max_storage_gb=25,
+                )
+                db.add(master)
+                db.commit()
+            except Exception:
+                db.rollback()
+
         if master:
             if not company:
                 company = db.query(ResCompany).filter(
                     (ResCompany.id == master.id) | (ResCompany.slug == master.slug)
                 ).first()
+
+            if company and master.custom_domain and not company.custom_domain:
+                try:
+                    company.custom_domain = master.custom_domain
+                    db.commit()
+                except Exception:
+                    db.rollback()
 
             result = {
                 "tenant_id": str(master.id),
@@ -242,7 +288,10 @@ class HostHeaderMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
-        clean_host = raw_host.split(":")[0].strip().lower()
+        clean_host = raw_host.strip().lower()
+        if "//" in clean_host:
+            clean_host = clean_host.split("//")[-1]
+        clean_host = clean_host.split("/")[0].split(":")[0].strip().lower()
 
         # Initialize defaults
         request.state.tenant_company_id = getattr(request.state, "tenant_company_id", None)

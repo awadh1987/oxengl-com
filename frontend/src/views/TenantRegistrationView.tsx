@@ -12,6 +12,8 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
     }
   };
   const [formData, setFormData] = useState({ nameAr: '', nameEn: '', slug: '', email: '' });
+  const [domainMode, setDomainMode] = useState<'subdomain' | 'custom'>('subdomain');
+  const [customDomain, setCustomDomain] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [useExternalDb, setUseExternalDb] = useState(false);
   const [externalDbHost, setExternalDbHost] = useState('');
@@ -24,10 +26,26 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
 
+  const cleanDomain = (d: string) => {
+    let clean = d.trim().toLowerCase();
+    if (clean.includes('://')) clean = clean.split('://')[1];
+    return clean.split('/')[0].split(':')[0].trim();
+  };
+
   const handleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    const resolvedCustomDomain = domainMode === 'custom' && customDomain.trim()
+      ? cleanDomain(customDomain)
+      : undefined;
+
+    if (domainMode === 'custom' && !resolvedCustomDomain) {
+      setError("Please specify a valid custom domain (e.g. myon-contrac.cloud).");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/v1/auth/register-tenant', {
@@ -37,6 +55,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           company_name_ar: formData.nameAr,
           company_name_en: formData.nameEn,
           domain_slug: formData.slug.toLowerCase().trim(),
+          custom_domain: resolvedCustomDomain,
           admin_email: formData.email,
           admin_password: adminPassword,
           password: adminPassword,
@@ -60,16 +79,23 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
       onSuccess?.();
 
       const createdSlug = (result.workspace_slug || formData.slug).toLowerCase().trim();
+      const finalCustomDomain = result.custom_domain || resolvedCustomDomain;
       const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-      if (!isLocal && createdSlug) {
-        const parts = window.location.hostname.split('.');
-        const rootDomain = parts.slice(-2).join('.'); // 'oxengl.me'
-        const targetHost = `${createdSlug}.${rootDomain}`;
 
-        if (window.location.hostname !== targetHost) {
+      if (!isLocal) {
+        if (finalCustomDomain) {
           setTimeout(() => {
-            window.location.href = `https://${targetHost}/login`;
-          }, 2500);
+            window.location.href = `https://${finalCustomDomain}/login`;
+          }, 3000);
+        } else if (createdSlug) {
+          const parts = window.location.hostname.split('.');
+          const rootDomain = parts.slice(-2).join('.');
+          const targetHost = `${createdSlug}.${rootDomain}`;
+          if (window.location.hostname !== targetHost) {
+            setTimeout(() => {
+              window.location.href = `https://${targetHost}/login`;
+            }, 2500);
+          }
         }
       }
     } catch (err: any) {
@@ -82,9 +108,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
 
   if (successData) {
     const slug = (successData.workspace_slug || formData.slug).toLowerCase().trim();
-    const targetWorkspaceUrl = !isLocalhost() && slug
-      ? `https://${slug}.${getRootDomain()}/login`
-      : (successData.workspace_url || `https://${slug}.oxengl.me`);
+    const hasCustomDomain = !!successData.custom_domain;
+    const targetWorkspaceUrl = hasCustomDomain
+      ? `https://${successData.custom_domain}/login`
+      : (!isLocalhost() && slug
+        ? `https://${slug}.${getRootDomain()}/login`
+        : (successData.workspace_url || `https://${slug}.oxengl.me`));
 
     return (
       <div className="min-h-dvh erp-viewport-root bg-[#030712] flex items-center justify-center p-6 font-sans">
@@ -103,6 +132,22 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             >
               {targetWorkspaceUrl}
             </a>
+
+            {hasCustomDomain && (
+              <div className="mt-3 p-3 bg-slate-900/90 rounded-lg border border-cyan-500/30 text-[11px] text-slate-300 space-y-1.5">
+                <div className="text-cyan-400 font-bold flex items-center gap-1.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Custom Domain: {successData.custom_domain}
+                </div>
+                <div className="text-slate-400 text-[10px] leading-relaxed">
+                  DNS target: Point <span className="text-amber-400 font-mono">CNAME</span> record to <span className="text-amber-400 font-mono">domains.oxengl.me</span>. Automated TLS/SSL is provisioned on first handshake.
+                </div>
+                <div className="text-emerald-400/90 text-[10px] font-medium">
+                  🔒 Zero-Slug Routing & SSL Active
+                </div>
+              </div>
+            )}
+
             <div className="text-[10px] text-emerald-500/70 pt-1">✓ Seeded Default 5-Deep General Ledger Hierarchy</div>
             {successData.storage_mode === "DEDICATED_EXTERNAL" && (
               <div className="text-[10px] text-cyan-400 font-bold pt-1">
@@ -111,17 +156,22 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             )}
           </div>
 
-
           <button
             onClick={() => {
               const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-              if (!isLocal && slug) {
-                const parts = window.location.hostname.split('.');
-                const rootDomain = parts.slice(-2).join('.');
-                const targetHost = `${slug}.${rootDomain}`;
-                if (window.location.hostname !== targetHost) {
-                  window.location.href = `https://${targetHost}/login`;
+              if (!isLocal) {
+                if (hasCustomDomain) {
+                  window.location.href = `https://${successData.custom_domain}/login`;
                   return;
+                }
+                if (slug) {
+                  const parts = window.location.hostname.split('.');
+                  const rootDomain = parts.slice(-2).join('.');
+                  const targetHost = `${slug}.${rootDomain}`;
+                  if (window.location.hostname !== targetHost) {
+                    window.location.href = `https://${targetHost}/login`;
+                    return;
+                  }
                 }
               }
               navigate('/login');
@@ -160,12 +210,75 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             <input type="text" value={formData.nameEn} onChange={(e) => setFormData({...formData, nameEn: e.target.value})} placeholder="MYON ECONOMIC CO LTD." className="w-full px-4 py-2.5 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-200 outline-none font-medium" required />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Requested Domain Workspace Slug</label>
-            <div className="flex rounded-xl bg-[#030712] border border-slate-800 focus-within:border-cyan-500 overflow-hidden">
-              <input type="text" value={formData.slug} onChange={(e) => setFormData({...formData, slug: e.target.value})} placeholder="myon-economic" className="w-full px-4 py-2.5 bg-transparent text-sm text-slate-200 outline-none font-mono" required />
-              <span className="bg-slate-900 border-l border-slate-800 px-3 py-2.5 text-xs font-mono text-slate-500 flex items-center">.oxengl.me</span>
+          {/* Domain Architecture Selection */}
+          <div className="p-3 bg-slate-900/40 border border-slate-800 rounded-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                Domain Architecture
+              </label>
+              <div className="flex bg-[#030712] border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setDomainMode('subdomain')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${domainMode === 'subdomain' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Subdomain
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDomainMode('custom')}
+                  className={`px-2.5 py-1 rounded-md transition-colors ${domainMode === 'custom' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  Custom Domain
+                </button>
+              </div>
             </div>
+
+            <div>
+              <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Workspace Internal Slug
+              </label>
+              <div className="flex rounded-xl bg-[#030712] border border-slate-800 focus-within:border-cyan-500 overflow-hidden">
+                <input
+                  type="text"
+                  value={formData.slug}
+                  onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                  placeholder="myon-economic"
+                  className="w-full px-4 py-2 bg-transparent text-sm text-slate-200 outline-none font-mono"
+                  required
+                />
+                <span className="bg-slate-900 border-l border-slate-800 px-3 py-2 text-xs font-mono text-slate-500 flex items-center">
+                  .oxengl.me
+                </span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">Unique identifier used for tenant isolation and backend routing.</p>
+            </div>
+
+            {domainMode === 'custom' && (
+              <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                <div>
+                  <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                    <span>🌐</span> Dedicated Custom Domain
+                  </label>
+                  <input
+                    type="text"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value)}
+                    placeholder="myon-contrac.cloud"
+                    className="w-full px-3 py-2 bg-[#030712] border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 outline-none font-mono"
+                    required={domainMode === 'custom'}
+                  />
+                </div>
+                <div className="p-2.5 bg-[#030712] border border-cyan-500/20 rounded-lg text-[10px] text-slate-400 space-y-1">
+                  <div className="text-cyan-300 font-semibold flex items-center gap-1">
+                    <span>⚡</span> DNS Target: <span className="font-mono text-amber-300">CNAME domains.oxengl.me</span>
+                  </div>
+                  <div className="text-slate-400">
+                    Point your domain's CNAME record to <span className="font-mono text-slate-200">domains.oxengl.me</span>. Automatic TLS certificate will be provisioned on your first visit.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>

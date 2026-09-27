@@ -23,7 +23,9 @@ import {
   Info,
   ExternalLink,
   ChevronUp,
+  Globe,
 } from 'lucide-react';
+import { CustomDomainWizard } from '../../components/platform/CustomDomainWizard';
 import { useApp } from '../../context/AppContext';
 import {
   erpApi,
@@ -55,7 +57,7 @@ export const OrganizationProfile: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
-  const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'branches' | 'cost_centers' | 'purchasing_orgs'>('all');
+  const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'branches' | 'cost_centers' | 'purchasing_orgs' | 'custom_domains'>('all');
 
   // Modal states
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -991,6 +993,7 @@ export const OrganizationProfile: React.FC = () => {
               { id: 'branches', labelAr: 'الفروع فقط', labelEn: 'Branches Only' },
               { id: 'cost_centers', labelAr: 'مراكز التكلفة', labelEn: 'Cost Centers' },
               { id: 'purchasing_orgs', labelAr: 'منظمات الشراء', labelEn: 'Purchasing Orgs' },
+              { id: 'custom_domains', labelAr: 'النطاق المخصص وSSL', labelEn: 'Custom Domains & SSL' },
             ] as const
           ).map((tab) => (
             <button
@@ -1011,37 +1014,44 @@ export const OrganizationProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Interactive Hierarchical Tree Container */}
-      <div
-        className={`rounded-2xl p-4 sm:p-6 border min-h-[400px] ${
-          isDark ? 'bg-[#090d1a] border-slate-800' : 'bg-slate-50 border-slate-200'
-        }`}
-      >
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="h-10 w-10 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent mb-3" />
-            <p className="text-sm font-bold text-slate-400">
-              {isAr ? 'جاري استرجاع الهيكل التنظيمي...' : 'Loading organizational hierarchy...'}
-            </p>
-          </div>
-        ) : treeData.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <Building2 className="h-12 w-12 text-slate-600 mb-3" />
-            <h3 className="text-base font-bold text-slate-300">
-              {isAr ? 'لا توجد بيانات هيكل تنظيمي مسجلة' : 'No organizational entities found'}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-sm">
-              {isAr
-                ? 'قم بإنشاء فرع أو مركز تكلفة لبدء تصميم الهيكل المؤسسي لشركتك.'
-                : 'Start provisioning Company Codes, Plants, and Cost Centers to establish your ERP structure.'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {treeData.map((node) => renderTreeNode(node, 0))}
-          </div>
-        )}
-      </div>
+      {/* 4. Interactive Hierarchical Tree Container or Custom Domains Management */}
+      {activeTabFilter === 'custom_domains' ? (
+        <CustomDomainWizard
+          tenantId={currentCompany?.id || ''}
+          tenantSlug={currentCompany?.slug || 'tenant'}
+        />
+      ) : (
+        <div
+          className={`rounded-2xl p-4 sm:p-6 border min-h-[400px] ${
+            isDark ? 'bg-[#090d1a] border-slate-800' : 'bg-slate-50 border-slate-200'
+          }`}
+        >
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-3 border-indigo-500 border-t-transparent mb-3" />
+              <p className="text-sm font-bold text-slate-400">
+                {isAr ? 'جاري استرجاع الهيكل التنظيمي...' : 'Loading organizational hierarchy...'}
+              </p>
+            </div>
+          ) : treeData.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Building2 className="h-12 w-12 text-slate-600 mb-3" />
+              <h3 className="text-base font-bold text-slate-300">
+                {isAr ? 'لا توجد بيانات هيكل تنظيمي مسجلة' : 'No organizational entities found'}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                {isAr
+                  ? 'قم بإنشاء فرع أو مركز تكلفة لبدء تصميم الهيكل المؤسسي لشركتك.'
+                  : 'Start provisioning Company Codes, Plants, and Cost Centers to establish your ERP structure.'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {treeData.map((node) => renderTreeNode(node, 0))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 5. MODAL: Add Branch / Plant                                              */}

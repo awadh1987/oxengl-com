@@ -35,6 +35,7 @@ class TenantRegistrationPayload(BaseModel):
     company_name_ar: Optional[str] = Field(None, min_length=3, max_length=150)
     company_name_en: str = Field(..., min_length=3, max_length=150)
     domain_slug: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-z0-9_-]+$")
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
     admin_email: str = Field(..., min_length=5, max_length=100)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
@@ -54,6 +55,7 @@ class RegisterInitRequest(BaseModel):
     admin_email: Optional[str] = Field(None, min_length=5, max_length=100)
     email: Optional[str] = Field(None, min_length=5, max_length=100)
     domain_slug: str = Field(..., min_length=3, max_length=50, pattern=r"^[a-z0-9_-]+$")
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
     phone_number: Optional[str] = Field(None, max_length=30)
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
@@ -84,6 +86,7 @@ class RegisterVerifyRequest(BaseModel):
     company_name_en: Optional[str] = Field(None, min_length=3, max_length=150)
     company_name_ar: Optional[str] = Field(None, min_length=3, max_length=150)
     domain_slug: Optional[str] = Field(None, min_length=3, max_length=50)
+    custom_domain: Optional[str] = Field(default=None, max_length=255)
     phone_number: Optional[str] = Field(None, max_length=30)
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
@@ -423,6 +426,32 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
                 detail="Workspace domain slug is already allocated to another enterprise account."
             )
 
+        # 1b. Validate custom domain uniqueness if specified
+        raw_custom_domain = payload_data.get("custom_domain")
+        clean_custom_domain = None
+        if raw_custom_domain:
+            cd = str(raw_custom_domain).strip().lower()
+            if "//" in cd:
+                cd = cd.split("//")[-1].split("/")[0]
+            cd = cd.split(":")[0].strip()
+            if cd:
+                clean_custom_domain = cd
+
+        if clean_custom_domain:
+            from sqlalchemy import func
+            from backend.models import MasterTenant
+            existing_dom_company = db.query(ResCompany).filter(
+                func.lower(func.trim(ResCompany.custom_domain)) == clean_custom_domain
+            ).first()
+            existing_dom_master = db.query(MasterTenant).filter(
+                func.lower(func.trim(MasterTenant.custom_domain)) == clean_custom_domain
+            ).first()
+            if existing_dom_company or existing_dom_master:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail=f"Custom domain '{clean_custom_domain}' is already allocated to another enterprise workspace."
+                )
+
         # 2. Allocate core enterprise company registry entry
         company_uuid = uuid.uuid4()
         primary_color, secondary_color = generate_balanced_brand_palette(slug_cleaned)
@@ -441,6 +470,8 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
         new_company.secondary_color = secondary_color
         new_company.is_active = True
         new_company.status = "ACTIVE"
+        if clean_custom_domain:
+            new_company.custom_domain = clean_custom_domain
         if hasattr(new_company, 'name_ar'):
             setattr(new_company, 'name_ar', company_name_ar)
         if hasattr(new_company, 'name_en'):
@@ -573,13 +604,14 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
             with db.begin_nested():
                 unique_mobile = phone_number or f"+9665{uuid.uuid4().int % 90000000 + 10000000:08d}"
                 db.execute(text('''
-                    INSERT INTO master_tenants (id, name, slug, owner_full_name, owner_email, owner_mobile, status, subscription_tier, max_users, max_storage_gb)
-                    VALUES (:id, :name, :slug, :owner_name, :owner_email, :mobile, 'active', 'standard', 10, 25)
-                    ON CONFLICT (id) DO UPDATE SET slug = :slug, status = 'active', name = :name;
+                    INSERT INTO master_tenants (id, name, slug, custom_domain, owner_full_name, owner_email, owner_mobile, status, subscription_tier, max_users, max_storage_gb)
+                    VALUES (:id, :name, :slug, :custom_domain, :owner_name, :owner_email, :mobile, 'active', 'standard', 10, 25)
+                    ON CONFLICT (id) DO UPDATE SET slug = :slug, status = 'active', name = :name, custom_domain = :custom_domain;
                 '''), {
                     "id": company_uuid,
                     "name": company_name_en or company_name_ar,
                     "slug": slug_cleaned,
+                    "custom_domain": clean_custom_domain,
                     "owner_name": company_name_en or company_name_ar,
                     "owner_email": norm_email,
                     "mobile": unique_mobile,
@@ -598,6 +630,13 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
                 })
         except Exception:
             pass
+
+        if clean_custom_domain:
+            try:
+                from backend.app.core.middleware import invalidate_domain_cache
+                invalidate_domain_cache(clean_custom_domain)
+            except Exception:
+                pass
 
         # 4e. Dedicated Private External Database Provisioning (Phase 1)
         use_external_db = bool(payload_data.get("use_external_db"))
@@ -695,7 +734,8 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
             "status": "PROVISIONED",
             "message": "Enterprise workspace container generated with default ledger templates and seeded administrator.",
             "workspace_slug": slug_cleaned,
-            "workspace_url": f"https://{slug_cleaned}.oxengl.me",
+            "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{slug_cleaned}.oxengl.me",
+            "custom_domain": clean_custom_domain,
             "tenant_id": str(company_uuid),
             "admin_user_id": str(admin_user_id),
             "primary_color": primary_color,
@@ -765,6 +805,7 @@ async def initiate_tenant_registration(req: RegisterInitRequest, background_task
         "company_name_en": req.company_name_en,
         "company_name_ar": req.company_name_ar or req.company_name_en,
         "domain_slug": slug_cleaned,
+        "custom_domain": req.custom_domain.strip().lower() if req.custom_domain else None,
         "admin_email": norm_email,
         "phone_number": req.resolved_phone,
         "admin_password": req.admin_password or req.password or "OxenGL2026!Secure",

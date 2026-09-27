@@ -103,3 +103,82 @@ def test_end_to_end_tenant_onboarding_seeds_5_deep_ledger():
         db.query(ResCompany).filter(ResCompany.id == generated_tenant_id).delete()
         db.commit()
         db.close()
+
+
+def test_custom_domain_onboarding_and_resolution():
+    """
+    Validates end-to-end custom domain registration during onboarding:
+    - Onboard tenant with custom_domain (e.g. myon-contrac.cloud or unique test domain)
+    - Verifies custom_domain is committed to ResCompany and MasterTenant
+    - Verifies Host-header resolution maps custom domain to tenant without 'tenant not found'
+    """
+    from backend.models import MasterTenant
+    random_suffix = uuid.uuid4().hex[:6]
+    test_slug = f"contrac-{random_suffix}"
+    test_domain = f"myon-contrac-{random_suffix}.cloud"
+    onboarding_payload = {
+        "company_name_ar": f"شركة كونتراك {random_suffix}",
+        "company_name_en": f"Contrac Global {random_suffix}",
+        "domain_slug": test_slug,
+        "custom_domain": test_domain,
+        "admin_email": f"admin-{random_suffix}@contrac.cloud"
+    }
+
+    # 1. Register with custom domain
+    res = client.post("/api/v1/auth/register-tenant", json=onboarding_payload)
+    assert res.status_code == 201, f"Failed: {res.text}"
+    body = res.json()
+    assert body["custom_domain"] == test_domain
+    assert test_domain in body["workspace_url"]
+
+    tenant_id = body["tenant_id"]
+
+    # 2. Verify Database records
+    db = SessionLocal()
+    try:
+        comp = db.query(ResCompany).filter(ResCompany.id == tenant_id).first()
+        assert comp is not None
+        assert comp.custom_domain == test_domain
+
+        master = db.query(MasterTenant).filter(MasterTenant.id == tenant_id).first()
+        assert master is not None
+        assert master.custom_domain == test_domain
+
+        # 3. Test Host-Header middleware resolution
+        resolve_res = client.get(
+            f"/api/auth/domains/resolve?domain={test_domain}",
+            headers={"Host": test_domain}
+        )
+        assert resolve_res.status_code == 200, f"Resolve failed: {resolve_res.text}"
+        resolve_data = resolve_res.json()
+        assert resolve_data["tenant_slug"] == test_slug
+        assert resolve_data["custom_domain"] == test_domain
+        assert resolve_data["is_custom_domain"] is True
+
+        # Also verify tenant control resolve endpoint
+        tc_resolve = client.get(
+            f"/api/v1/tenant/control/domains/resolve?domain={test_domain}",
+            headers={"Host": test_domain}
+        )
+        assert tc_resolve.status_code == 200, f"Tenant control resolve failed: {tc_resolve.text}"
+        assert tc_resolve.json()["tenant_slug"] == test_slug
+
+        # 4. Test Zero-slug login query resolution
+        from backend.app.core.middleware import resolve_tenant_from_host
+        meta = resolve_tenant_from_host(test_domain, db=db)
+        assert meta is not None
+        assert meta["tenant_slug"] == test_slug
+        assert meta["tenant_id"] == str(tenant_id)
+
+    finally:
+        db.query(AccountChart).filter(AccountChart.tenant_id == tenant_id).delete()
+        db.query(StockLocation).filter(StockLocation.company_id == tenant_id).delete()
+        db.query(AccountJournal).filter(AccountJournal.company_id == tenant_id).delete()
+        db.query(AccountAccount).filter(AccountAccount.company_id == tenant_id).delete()
+        db.query(FiscalYear).filter(FiscalYear.company_id == tenant_id).delete()
+        db.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
+        db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
+        db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
+        db.commit()
+        db.close()
+

@@ -903,10 +903,7 @@ function AppContent() {
       />}
 
       {activeTab !== 'hub' && (() => {
-        const isTenant = authTier === 'tenant' || Boolean(tenantId);
-        const activeTenantNav = isTenant
-          ? tenantNavigation.filter((item) => item.id !== 'tenant-settings')
-          : tenantNavigation;
+        const activeTenantNav = tenantNavigation;
 
         const currentRibbonItems = activeTenantNav.filter((item) => item.group === selectedDomain);
 

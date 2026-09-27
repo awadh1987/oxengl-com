@@ -534,11 +534,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Filter items by tenant/role
   const filteredMenuItems = useMemo(() => {
-    const isTenant = authTier === 'tenant' || Boolean(tenantId);
     let items = allMenuItems;
-    if (isTenant) {
-      items = items.filter((item) => item.id !== 'tenant-settings');
-    }
     if (availableViews && availableViews.length > 0) {
       items = items.filter((item) => availableViews.includes(item.id));
     }

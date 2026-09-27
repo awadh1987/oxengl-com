@@ -321,6 +321,8 @@ def get_active_company_id(
         or x_tenant_id
         or request.headers.get("x-company-id")
         or request.headers.get("x-tenant-id")
+        or (str(getattr(request.state, "tenant_company_id", None)) if getattr(request.state, "tenant_company_id", None) else None)
+        or (str(getattr(request.state, "company_id", None)) if getattr(request.state, "company_id", None) else None)
     )
     if not cid_str:
         if current_user.company_id:

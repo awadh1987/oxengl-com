@@ -20,7 +20,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Generator, Literal, Optional, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, status
 from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -340,6 +340,7 @@ class TenantRegistrationRequest(BaseModel):
     mobile_number: str = Field(..., min_length=9, max_length=32)
     password: str = Field(..., min_length=10)
     tenant_slug: Optional[str] = None
+    custom_domain: Optional[str] = None
     commercial_registration: Optional[str] = None
     tax_id: Optional[str] = None
 
@@ -556,6 +557,7 @@ def master_login(payload: MasterLoginRequest, request: Request, db: Session = De
 def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Session = Depends(get_db)):
     """Resolves Tenant Plane database via slug and authenticates tenant user."""
     slug = (payload.workspace_slug or payload.tenant_slug or "").lower().strip()
+    meta = None
     if not slug:
         # Zero-Slug Resolution: Extract from request.state or inspect Host / X-Forwarded-Host header
         if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
@@ -573,21 +575,56 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             detail="workspace_slug is required when logging in from generic hub. For zero-slug login, access via your custom domain or tenant subdomain."
         )
 
+    # If slug represents a custom domain (contains a dot), attempt domain resolution
+    if "." in slug:
+        from backend.app.core.middleware import resolve_tenant_from_host
+        if not meta:
+            meta = resolve_tenant_from_host(slug, db=master_db)
+        if meta and meta.get("tenant_slug"):
+            slug = str(meta["tenant_slug"]).lower().strip()
+
     slug_variants = list(dict.fromkeys([slug, slug.replace("-", "_"), slug.replace("_", "-")])) if slug else []
-    tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug.in_(slug_variants))) if slug_variants else None
-    
-    if not tenant and slug_variants:
+    if meta and meta.get("tenant_slug") and meta["tenant_slug"] not in slug_variants:
+        slug_variants.append(meta["tenant_slug"])
+
+    from sqlalchemy import func
+    tenant = None
+    raw_target = (payload.workspace_slug or payload.tenant_slug or slug).lower().strip()
+    if slug_variants:
+        tenant = master_db.scalar(
+            select(MasterTenant).where(
+                (MasterTenant.slug.in_(slug_variants)) |
+                (func.lower(func.trim(MasterTenant.custom_domain)) == raw_target)
+            )
+        )
+    if not tenant and meta and meta.get("tenant_id"):
+        try:
+            tenant = master_db.get(MasterTenant, uuid.UUID(meta["tenant_id"]))
+        except Exception:
+            pass
+
+    if not tenant:
         # Check res_companies table fallback and register into master_tenants dynamically
         try:
             comp_row = master_db.execute(
-                text("SELECT id, name, domain_slug, slug, admin_email FROM res_companies WHERE domain_slug = :s OR slug = :s OR domain_slug = :s2 OR slug = :s2 LIMIT 1"),
-                {"s": slug, "s2": slug.replace("-", "_")}
+                text("""
+                    SELECT id, name, domain_slug, slug, custom_domain, admin_email 
+                    FROM res_companies 
+                    WHERE domain_slug = :s OR slug = :s 
+                       OR domain_slug = :s2 OR slug = :s2 
+                       OR lower(trim(custom_domain)) = :s
+                       OR lower(trim(custom_domain)) = :raw
+                    LIMIT 1
+                """),
+                {"s": slug, "s2": slug.replace("-", "_"), "raw": raw_target}
             ).mappings().first()
             if comp_row:
+                resolved_domain = comp_row.get("custom_domain") or (raw_target if "." in raw_target else None)
                 tenant = MasterTenant(
                     id=comp_row["id"],
                     name=comp_row["name"],
-                    slug=slug,
+                    slug=comp_row.get("slug") or comp_row.get("domain_slug") or slug,
+                    custom_domain=resolved_domain,
                     owner_full_name=comp_row["name"],
                     owner_email=comp_row.get("admin_email") or f"admin@{slug}.com",
                     owner_mobile="+966500000000",
@@ -815,9 +852,17 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Owner email already registered.")
 
     # 3. Create Master Tenant Record
+    clean_custom_domain = None
+    if getattr(payload, "custom_domain", None):
+        cd = str(payload.custom_domain).strip().lower()
+        if "//" in cd:
+            cd = cd.split("//")[-1]
+        clean_custom_domain = cd.split("/")[0].split(":")[0].strip() or None
+
     tenant = MasterTenant(
         name=payload.company_name,
         slug=slug,
+        custom_domain=clean_custom_domain,
         owner_full_name=payload.owner_full_name,
         owner_email=norm_email,
         owner_mobile=norm_mobile,
@@ -854,11 +899,21 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
             id=tenant.id,
             name=tenant.name,
             slug=tenant.slug,
+            custom_domain=clean_custom_domain,
             subscription_tier="standard",
             tax_id=getattr(payload, "tax_id", None) or getattr(payload, "vat_number", None),
             commercial_registration=getattr(payload, "commercial_registration", None) or getattr(payload, "cr_number", None),
         )
         master_db.add(res_comp)
+    elif clean_custom_domain:
+        res_comp.custom_domain = clean_custom_domain
+
+    if clean_custom_domain:
+        try:
+            from backend.app.core.middleware import invalidate_domain_cache
+            invalidate_domain_cache(clean_custom_domain)
+        except Exception:
+            pass
 
     res_user = master_db.scalar(select(app_models.ResUser).where(app_models.ResUser.email == norm_email))
     if not res_user:
@@ -903,8 +958,9 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
         "tenant_id": str(tenant.id),
         "tenant_slug": tenant.slug,
         "workspace_slug": tenant.slug,
-        "workspace_url": f"https://{tenant.slug}.oxengl.me",
-        "tenant": {"id": str(tenant.id), "slug": tenant.slug, "name": tenant.name},
+        "custom_domain": clean_custom_domain,
+        "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{tenant.slug}.oxengl.me",
+        "tenant": {"id": str(tenant.id), "slug": tenant.slug, "name": tenant.name, "custom_domain": clean_custom_domain},
         "admin_user_id": str(created_user_id),
     }
 
@@ -939,6 +995,7 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
         master_db.commit()
     else:
         slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "") or "").lower().strip()
+        raw_target = slug
         if not slug:
             if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
                 slug = str(request.state.tenant_slug).lower().strip()
@@ -949,9 +1006,21 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
                 if meta and meta.get("tenant_slug"):
                     slug = str(meta["tenant_slug"]).lower().strip()
 
+        if "." in slug:
+            from backend.app.core.middleware import resolve_tenant_from_host
+            meta = resolve_tenant_from_host(slug, db=master_db)
+            if meta and meta.get("tenant_slug"):
+                slug = str(meta["tenant_slug"]).lower().strip()
+
         if not slug:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_slug is required for tenant password recovery.")
-        tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
+        from sqlalchemy import func
+        tenant = master_db.scalar(
+            select(MasterTenant).where(
+                (MasterTenant.slug == slug) |
+                (func.lower(func.trim(MasterTenant.custom_domain)) == raw_target)
+            )
+        )
         if not tenant:
             return {"message": "If the account exists, a recovery code has been sent.", "delivery_channel": id_type.upper()}
 
@@ -1030,6 +1099,7 @@ def reset_password(request: Request, payload: PasswordResetCompleteRequest, mast
             master_db.commit()
     else:
         slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "") or "").lower().strip()
+        raw_target = slug
         if not slug:
             if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
                 slug = str(request.state.tenant_slug).lower().strip()
@@ -1040,9 +1110,21 @@ def reset_password(request: Request, payload: PasswordResetCompleteRequest, mast
                 if meta and meta.get("tenant_slug"):
                     slug = str(meta["tenant_slug"]).lower().strip()
 
+        if "." in slug:
+            from backend.app.core.middleware import resolve_tenant_from_host
+            meta = resolve_tenant_from_host(slug, db=master_db)
+            if meta and meta.get("tenant_slug"):
+                slug = str(meta["tenant_slug"]).lower().strip()
+
         if not slug:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_slug is required for tenant password reset.")
-        tenant = master_db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
+        from sqlalchemy import func
+        tenant = master_db.scalar(
+            select(MasterTenant).where(
+                (MasterTenant.slug == slug) |
+                (func.lower(func.trim(MasterTenant.custom_domain)) == raw_target)
+            )
+        )
         if not tenant:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tenant workspace not found.")
 
@@ -1121,3 +1203,50 @@ def get_tenant_profile(auth_ctx: Tuple[TenantUser, MasterTenant] = Depends(requi
         "role": user.role,
         "full_name": f"{user.first_name} {user.last_name}",
     }
+
+
+@router.get("/domains/resolve")
+@router.get("/resolve-domain")
+def resolve_domain_auth_endpoint(
+    request: Request,
+    host: Optional[str] = Query(None),
+    domain: Optional[str] = Query(None),
+    master_db: Session = Depends(get_db),
+):
+    """
+    Public zero-slug domain resolution endpoint under auth.
+    Resolves custom domains and tenant subdomains without returning 'tenant not found'.
+    """
+    target_host = host or domain or request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    clean_host = target_host.split(":")[0].strip().lower()
+    if "//" in clean_host:
+        clean_host = clean_host.split("//")[-1]
+    clean_host = clean_host.split("/")[0].split(":")[0].strip().lower()
+
+    if not clean_host:
+        return {"resolved": False, "message": "Host or domain parameter is required"}
+
+    from backend.app.core.middleware import resolve_tenant_from_host
+    tenant_meta = resolve_tenant_from_host(clean_host, db=master_db)
+
+    if not tenant_meta:
+        return {
+            "resolved": False,
+            "host": clean_host,
+            "message": f"No active tenant mapped to domain '{clean_host}'",
+        }
+
+    return {
+        "resolved": True,
+        "tenant_id": tenant_meta["tenant_id"],
+        "company_id": tenant_meta["company_id"],
+        "tenant_slug": tenant_meta["tenant_slug"],
+        "name": tenant_meta["name"],
+        "custom_domain": tenant_meta["custom_domain"],
+        "is_custom_domain": tenant_meta.get("is_custom_domain", False),
+        "logo_url": tenant_meta.get("logo_url"),
+        "primary_color": tenant_meta.get("primary_color"),
+        "subscription_tier": tenant_meta.get("subscription_tier"),
+        "status": tenant_meta.get("status"),
+    }
+

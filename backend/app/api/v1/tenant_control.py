@@ -526,14 +526,15 @@ def remove_custom_domain(
 def resolve_domain_endpoint(
     request: Request,
     host: Optional[str] = Query(None),
+    domain: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
     Public zero-slug domain resolution endpoint.
-    Translates an incoming Host header or ?host= query parameter into the corresponding
+    Translates an incoming Host header or ?host=/?domain= query parameter into the corresponding
     tenant workspace partition for Zero-Slug Routing and tenant white-label branding.
     """
-    target_host = host or request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    target_host = host or domain or request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
     clean_host = target_host.split(":")[0].strip().lower()
 
     if not clean_host:

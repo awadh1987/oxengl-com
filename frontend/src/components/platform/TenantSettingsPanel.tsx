@@ -18,6 +18,7 @@ import {
   Database,
   Server,
   ArrowRightLeft,
+  ExternalLink,
 } from 'lucide-react';
 import { CustomDomainWizard } from './CustomDomainWizard';
 import { erpApi } from '../../services/api';
@@ -31,6 +32,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
   const [settings, setSettings] = useState<any>(null);
   const [team, setTeam] = useState<any[]>([]);
+  const [domainsList, setDomainsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -66,7 +68,30 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
   useEffect(() => {
     loadSettings();
     loadTeam();
+    loadDomains();
   }, [tenantId]);
+
+  const loadDomains = async () => {
+    try {
+      const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') || localStorage.getItem('oxengl_token') || '') : '';
+      const headers: Record<string, string> = {
+        'x-tenant-id': tenantId,
+        'x-company-id': tenantId,
+        'x-tenant-slug': tenantSlug,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      let res = await fetch('/api/v1/tenant/control/domains', { headers });
+      if (!res.ok) {
+        res = await fetch('/api/tenant/control/domains', { headers });
+      }
+      const data = await res.json();
+      if (data?.success && data.domains) {
+        setDomainsList(data.domains);
+      }
+    } catch (err) {
+      console.warn('Failed to load domains in settings panel:', err);
+    }
+  };
 
   const loadSettings = async () => {
     try {
@@ -430,6 +455,86 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                 <option value="SAR">ريال سعودي (SAR)</option>
                 <option value="USD">دولار أمريكي (USD)</option>
               </select>
+            </div>
+          </div>
+
+          {/* Custom Domain Management Card */}
+          <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <Globe className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>النطاق المخصص وهوية الدخول (Custom Domain & Corporate Portal)</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                      Zero-Slug SSL
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    الوصول المباشر للمنظومة عبر نطاقك الخاص مثل <code className="text-indigo-300 font-mono">myon-contrac.cloud</code> مع شهادات SSL مؤتمتة وتوجيه Zero-Slug.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('domains')}
+                className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 self-start sm:self-auto shrink-0 shadow-sm"
+              >
+                <span>إدارة النطاقات وSSL</span>
+                <ArrowRightLeft className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">النطاق السحابي الافتراضي</span>
+                <div className="font-mono text-slate-200 font-semibold flex items-center justify-between">
+                  <span>{tenantSlug}.oxengl.me</span>
+                  <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">افتراضي</span>
+                </div>
+              </div>
+
+              <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-xl space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">النطاق المخصص النشط</span>
+                {domainsList.length > 0 ? (
+                  <div className="flex items-center justify-between font-mono text-slate-200 font-semibold">
+                    <span className="text-cyan-300">{domainsList[0].domain_name}</span>
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      <ShieldCheck className="w-3 h-3" />
+                      {domainsList[0].ssl_status === 'active' ? 'SSL نشط ومشفر' : domainsList[0].ssl_status}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between text-slate-500">
+                    <span>لم يتم ربط نطاق مخصص</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('domains')}
+                      className="text-indigo-400 hover:text-indigo-300 text-[11px] underline"
+                    >
+                      + ربط الآن
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-400 bg-slate-900/40 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <Server className="w-3.5 h-3.5 text-indigo-400" />
+                سجل CNAME المطلوب: <code className="text-amber-300 font-mono">domains.oxengl.me</code>
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('domains')}
+                className="text-xs text-indigo-400 hover:text-white font-semibold flex items-center gap-1"
+              >
+                <span>فحص وتفعيل الشهادات</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
             </div>
           </div>
 
