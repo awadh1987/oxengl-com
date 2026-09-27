@@ -621,12 +621,12 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
               <Radio className="h-7 w-7 text-orange-400 animate-pulse" />
             </div>
             <div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <h2 className="text-xl font-black tracking-tight text-white">
                   {isAr ? 'بوابة البث اللاسلكي وتتبع الأسطول الميداني' : 'Phase 4: Cold-Chain Telemetry Radar Grid'}
                 </h2>
                 <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-black uppercase tracking-wider ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-black uppercase tracking-wider whitespace-nowrap shrink-0 ${
                     connectionStatus === 'CONNECTED'
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                       : connectionStatus === 'CONNECTING'
@@ -635,16 +635,16 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
                   }`}
                 >
                   {connectionStatus === 'CONNECTED' ? (
-                    <Wifi className="h-3.5 w-3.5" />
+                    <Wifi className="h-3.5 w-3.5 shrink-0" />
                   ) : connectionStatus === 'CONNECTING' ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
                   ) : (
-                    <WifiOff className="h-3.5 w-3.5" />
+                    <WifiOff className="h-3.5 w-3.5 shrink-0" />
                   )}
                   {connectionStatus}
                 </span>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono">
-                  <Cpu className="h-3 w-3" />
+                <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono whitespace-nowrap shrink-0">
+                  <Cpu className="h-3 w-3 shrink-0" />
                   {canvasFps} FPS CANVAS
                 </span>
               </div>
@@ -873,23 +873,23 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
                             <Truck className="h-5 w-5" />
                           </div>
                           <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-mono text-xs font-black text-slate-900 dark:text-white">
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span className="font-mono text-xs font-black text-slate-900 dark:text-white whitespace-nowrap shrink-0">
                                 {vehicle.vehicle_id}
                               </span>
                               {vehicle.license_plate && (
-                                <span className="rounded-md border border-slate-300 dark:border-slate-700 px-1.5 py-0.2 text-[10px] font-mono text-slate-500">
+                                <span className="rounded-md border border-slate-300 dark:border-slate-700 px-1.5 py-0.2 text-[10px] font-mono text-slate-500 whitespace-nowrap shrink-0">
                                   {vehicle.license_plate}
                                 </span>
                               )}
                               <span
-                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-bold ${
+                                className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-mono font-bold whitespace-nowrap shrink-0 ${
                                   isTempBreached
                                     ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                                     : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                 }`}
                               >
-                                <Thermometer className="h-3 w-3" />
+                                <Thermometer className="h-3 w-3 shrink-0" />
                                 {temp.toFixed(1)}°C
                               </span>
                             </div>
@@ -900,13 +900,13 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
                         </div>
 
                         <div className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Gauge className="h-3.5 w-3.5 text-orange-500" />
+                          <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                            <Gauge className="h-3.5 w-3.5 text-orange-500 shrink-0" />
                             <span className="font-mono text-sm font-black">{vehicle.speed_kmh}</span>
                             <span className="text-[10px] text-slate-400">km/h</span>
                           </div>
-                          <div className="flex items-center justify-end gap-1 text-[11px] text-slate-400 mt-1">
-                            <Fuel className="h-3 w-3 text-blue-400" />
+                          <div className="flex items-center justify-end gap-1 text-[11px] text-slate-400 mt-1 whitespace-nowrap">
+                            <Fuel className="h-3 w-3 text-blue-400 shrink-0" />
                             <span className="font-mono">{vehicle.fuel_level_pct?.toFixed(0) || '—'}%</span>
                           </div>
                         </div>
@@ -917,9 +917,9 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
                           {vehicle.alerts.map((alt, i) => (
                             <span
                               key={i}
-                              className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-400"
+                              className="inline-flex items-center gap-1 rounded-md bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 text-[10px] font-bold text-rose-400 whitespace-nowrap shrink-0"
                             >
-                              <AlertTriangle className="h-3 w-3" />
+                              <AlertTriangle className="h-3 w-3 shrink-0" />
                               {alt}
                             </span>
                           ))}

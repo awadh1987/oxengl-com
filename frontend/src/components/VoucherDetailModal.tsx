@@ -102,24 +102,24 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
               <h2 className="text-sm font-black sm:text-base">
                 {isAr
                   ? voucher.type === 'Payment'
-                    ? `معاينة سند صرف: ${voucher.voucherNumber}`
-                    : `معاينة سند قبض: ${voucher.voucherNumber}`
-                  : `Voucher Details: ${voucher.voucherNumber}`}
+                    ? <>معاينة سند صرف: <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{voucher.voucherNumber}</span></>
+                    : <>معاينة سند قبض: <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{voucher.voucherNumber}</span></>
+                  : <>Voucher Details: <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{voucher.voucherNumber}</span></>}
               </h2>
               <p className="text-[11px] text-slate-400">
-                {voucher.partyName} • {voucher.amount.toLocaleString()} SAR
+                {voucher.partyName} • <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{voucher.amount.toLocaleString()} SAR</span>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {/* CEO Approval Action */}
             {voucher.status !== 'Approved' && canApproveVouchers && (
               <button
                 onClick={handleApprove}
-                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-black text-white shadow-xs hover:bg-emerald-700"
+                className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-black text-white shadow-xs hover:bg-emerald-700 whitespace-nowrap shrink-0"
               >
-                <ShieldCheck className="h-4 w-4" />
+                <ShieldCheck className="h-4 w-4 shrink-0" />
                 <span>{isAr ? 'اعتماد وختم السند (CEO)' : 'Approve & Stamp'}</span>
               </button>
             )}
@@ -127,9 +127,9 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
             {/* Print Document */}
             <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-1.5 text-xs font-black text-white shadow-xs hover:bg-orange-700"
+              className="flex items-center gap-1.5 rounded-xl bg-orange-600 px-3.5 py-1.5 text-xs font-black text-white shadow-xs hover:bg-orange-700 whitespace-nowrap shrink-0"
             >
-              <Printer className="h-4 w-4" />
+              <Printer className="h-4 w-4 shrink-0" />
               <span>{isAr ? 'طباعة رسمية (A4)' : 'Print Document'}</span>
             </button>
 
@@ -137,7 +137,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
             {canDeleteRecords && (
               <button
                 onClick={handleDelete}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-800/40 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-800/40 bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 shrink-0"
                 title={isAr ? 'حذف السند' : 'Delete Voucher'}
               >
                 <Trash2 className="h-4 w-4" />
@@ -147,7 +147,7 @@ export const VoucherDetailModal: React.FC<VoucherDetailModalProps> = ({
             {/* Close Modal */}
             <button
               onClick={onClose}
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white shrink-0"
             >
               <X className="h-5 w-5" />
             </button>

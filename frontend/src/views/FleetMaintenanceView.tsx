@@ -398,7 +398,7 @@ export const FleetMaintenanceView: React.FC = () => {
               <DollarSign className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-3 font-mono text-2xl font-black text-amber-500">
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-3 font-mono text-2xl font-black text-amber-500">
             {totalMaintenanceCost.toLocaleString('en-US', { minimumFractionDigits: 2 })} <span className="text-xs font-bold">SAR</span>
           </p>
           <p className="mt-1 text-[11px] text-slate-400">{isAr ? 'قطع غيار وعمالة ورش' : 'Parts & labor combined'}</p>
@@ -411,11 +411,11 @@ export const FleetMaintenanceView: React.FC = () => {
               <Fuel className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-3 font-mono text-2xl font-black text-blue-500">
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-3 font-mono text-2xl font-black text-blue-500">
             {totalFuelLiters.toLocaleString('en-US', { minimumFractionDigits: 1 })} <span className="text-xs font-bold">L</span>
           </p>
           <p className="mt-1 text-[11px] text-slate-400">
-            {totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR {isAr ? 'مصروف الوقود' : 'spent'}
+            <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold">{totalFuelCost.toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR</span> {isAr ? 'مصروف الوقود' : 'spent'}
           </p>
         </div>
 
@@ -426,7 +426,7 @@ export const FleetMaintenanceView: React.FC = () => {
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-3 font-mono text-2xl font-black text-emerald-500">{inspections.length}</p>
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-3 font-mono text-2xl font-black text-emerald-500">{inspections.length}</p>
           <p className="mt-1 text-[11px] text-slate-400">
             {inspections.filter((i) => i.is_safe_to_operate).length} {isAr ? 'فحص مطابق وآمن' : 'verified safe'}
           </p>
@@ -434,52 +434,52 @@ export const FleetMaintenanceView: React.FC = () => {
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+      <div className="flex flex-wrap items-center gap-1.5 md:gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
         <button
           onClick={() => setActiveTab('telemetry')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-all ${
             activeTab === 'telemetry'
               ? 'bg-orange-500 text-white shadow-xs'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Radio className="h-4 w-4" />
+          <Radio className="h-4 w-4 shrink-0" />
           {isAr ? 'تتبع الأسطول المباشر (GPS)' : 'Live GPS Telemetry'}
         </button>
 
         <button
           onClick={() => setActiveTab('maintenance')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-all ${
             activeTab === 'maintenance'
               ? 'bg-orange-500 text-white shadow-xs'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Wrench className="h-4 w-4" />
+          <Wrench className="h-4 w-4 shrink-0" />
           {isAr ? 'أوامر الصيانة والخدمة' : 'Work Orders'} ({orders.length})
         </button>
 
         <button
           onClick={() => setActiveTab('fuel')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-all ${
             activeTab === 'fuel'
               ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Fuel className="h-4 w-4" />
+          <Fuel className="h-4 w-4 shrink-0" />
           {isAr ? 'سجلات الوقود والكفاءة' : 'Fuel Telemetry'} ({fuelLogs.length})
         </button>
 
         <button
           onClick={() => setActiveTab('inspections')}
-          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black transition-all ${
+          className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-all ${
             activeTab === 'inspections'
               ? 'bg-emerald-600 text-white shadow-xs'
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <ShieldCheck className="h-4 w-4" />
+          <ShieldCheck className="h-4 w-4 shrink-0" />
           {isAr ? 'فحوصات السلامة قبل الرحلة' : 'Pre-Trip Inspections'} ({inspections.length})
         </button>
       </div>
@@ -521,9 +521,9 @@ export const FleetMaintenanceView: React.FC = () => {
                     const veh = vehicleMap.get(o.vehicle_id);
                     return (
                       <tr key={o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                        <td className="p-3.5 font-mono font-bold text-orange-500">{o.order_number}</td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-orange-500">{o.order_number}</span></td>
                         <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200">
-                          {veh ? `${veh.license_plate} (${veh.name})` : o.vehicle_id.slice(0, 8)}
+                          {veh ? <span dir="ltr" className="inline-block unicode-bidi-isolate">{veh.license_plate} ({veh.name})</span> : <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{o.vehicle_id.slice(0, 8)}</span>}
                         </td>
                         <td className="p-3.5 uppercase font-medium text-slate-600 dark:text-slate-400">
                           <span className="rounded-md bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px]">
@@ -540,13 +540,13 @@ export const FleetMaintenanceView: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-3.5 max-w-xs truncate text-slate-600 dark:text-slate-300">{o.description}</td>
-                        <td className="p-3.5 font-mono">{Number(o.parts_cost).toFixed(2)}</td>
-                        <td className="p-3.5 font-mono">{Number(o.labor_cost).toFixed(2)}</td>
-                        <td className="p-3.5 font-mono font-black text-slate-900 dark:text-white">
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{Number(o.parts_cost).toFixed(2)}</span></td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{Number(o.labor_cost).toFixed(2)}</span></td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-black text-slate-900 dark:text-white">
                           {Number(o.total_cost).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
+                        </span></td>
                         <td className="p-3.5">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                             o.status === 'completed'
                               ? 'bg-emerald-500/10 text-emerald-500'
                               : o.status === 'in_progress'
@@ -598,28 +598,28 @@ export const FleetMaintenanceView: React.FC = () => {
                     const trp = f.trip_id ? tripMap.get(f.trip_id) : null;
                     return (
                       <tr key={f.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
-                        <td className="p-3.5 font-mono font-bold text-blue-500">{f.transaction_number}</td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-blue-500">{f.transaction_number}</span></td>
                         <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200">
-                          {veh ? `${veh.license_plate} (${veh.name})` : f.vehicle_id.slice(0, 8)}
+                          {veh ? <span dir="ltr" className="inline-block unicode-bidi-isolate">{veh.license_plate} ({veh.name})</span> : <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{f.vehicle_id.slice(0, 8)}</span>}
                         </td>
                         <td className="p-3.5">
                           {f.trip_id ? (
-                            <span className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[10px] font-mono font-bold">
-                              <Truck className="h-3 w-3" />
+                            <span dir="ltr" className="inline-flex items-center gap-1 rounded-md bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2 py-0.5 text-[10px] font-mono font-bold unicode-bidi-isolate whitespace-nowrap shrink-0">
+                              <Truck className="h-3 w-3 shrink-0" />
                               {trp ? trp.trip_number : f.trip_id.slice(0, 8)}
                             </span>
                           ) : (
                             <span className="text-slate-400">—</span>
                           )}
                         </td>
-                        <td className="p-3.5 font-mono font-bold">{Number(f.liters).toFixed(2)} L</td>
-                        <td className="p-3.5 font-mono">{Number(f.price_per_liter).toFixed(2)} SAR</td>
-                        <td className="p-3.5 font-mono font-black text-slate-900 dark:text-white">
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold">{Number(f.liters).toFixed(2)} L</span></td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{Number(f.price_per_liter).toFixed(2)} SAR</span></td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-black text-slate-900 dark:text-white">
                           {Number(f.total_amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </td>
-                        <td className="p-3.5 font-mono text-slate-500">
-                          {f.odometer_reading ? Number(f.odometer_reading).toLocaleString('en-US') : '—'}
-                        </td>
+                        </span></td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-slate-500">
+                          {f.odometer_reading ? Number(f.odometer_reading).toLocaleString('en-US') + ' km' : '—'}
+                        </span></td>
                         <td className="p-3.5 text-slate-600 dark:text-slate-300">{f.fuel_station || '—'}</td>
                       </tr>
                     );
@@ -661,26 +661,26 @@ export const FleetMaintenanceView: React.FC = () => {
                     return (
                       <tr key={insp.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
                         <td className="p-3.5 font-bold text-slate-800 dark:text-slate-200">
-                          {veh ? `${veh.license_plate} (${veh.name})` : insp.vehicle_id.slice(0, 8)}
+                          {veh ? <span dir="ltr" className="inline-block unicode-bidi-isolate">{veh.license_plate} ({veh.name})</span> : <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{insp.vehicle_id.slice(0, 8)}</span>}
                         </td>
                         <td className="p-3.5 uppercase font-medium">{insp.inspection_type}</td>
-                        <td className="p-3.5 font-mono font-bold">
-                          {insp.odometer_reading ? Number(insp.odometer_reading).toLocaleString('en-US') : '—'}
-                        </td>
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold">
+                          {insp.odometer_reading ? Number(insp.odometer_reading).toLocaleString('en-US') + ' km' : '—'}
+                        </span></td>
                         <td className="p-3.5">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black ${
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black whitespace-nowrap shrink-0 ${
                             insp.is_safe_to_operate
                               ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                               : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
                           }`}>
-                            {insp.is_safe_to_operate ? <CheckCircle2 className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
+                            {insp.is_safe_to_operate ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <AlertTriangle className="h-3 w-3 shrink-0" />}
                             {insp.is_safe_to_operate ? (isAr ? 'آمن ومطابق' : 'Safe to Operate') : (isAr ? 'غير آمن' : 'Unsafe / Flagged')}
                           </span>
                         </td>
                         <td className="p-3.5 text-slate-600 dark:text-slate-300 max-w-sm truncate">{insp.notes || '—'}</td>
-                        <td className="p-3.5 font-mono text-slate-500">
+                        <td className="p-3.5"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-slate-500">
                           {insp.inspected_at ? new Date(insp.inspected_at).toLocaleString('en-GB') : '—'}
-                        </td>
+                        </span></td>
                       </tr>
                     );
                   })

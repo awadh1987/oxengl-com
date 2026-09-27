@@ -489,12 +489,12 @@ export const AIOperationsAuditor: React.FC = () => {
         <div className="absolute top-0 right-0 -mt-10 -mr-10 h-72 w-72 rounded-full bg-violet-600/20 blur-3xl" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="flex h-7 items-center gap-1.5 rounded-full bg-violet-500/20 border border-violet-400/30 px-3 text-[11px] font-bold text-violet-200 backdrop-blur-md">
-                <Brain className="h-3.5 w-3.5 text-violet-300" />
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="flex h-7 items-center gap-1.5 rounded-full bg-violet-500/20 border border-violet-400/30 px-3 text-[11px] font-bold text-violet-200 backdrop-blur-md whitespace-nowrap shrink-0">
+                <Brain className="h-3.5 w-3.5 text-violet-300 shrink-0" />
                 <span>{isAr ? 'مدقق العمليات والذكاء المالي المتقدم' : 'AI Operational Intelligence & Audit Studio'}</span>
               </span>
-              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+              <span className="rounded-full bg-emerald-500/20 border border-emerald-400/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300 whitespace-nowrap shrink-0">
                 Live FastAPI /api/v1/ai/query
               </span>
             </div>
@@ -560,16 +560,16 @@ export const AIOperationsAuditor: React.FC = () => {
             id="live-anomaly-triage-panel"
             className="rounded-2xl border border-amber-200/80 bg-amber-50/40 p-5 shadow-xs"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
               <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-600 fill-amber-200" />
+                <Zap className="h-4 w-4 text-amber-600 fill-amber-200 shrink-0" />
                 <span>
                   {isAr
                     ? 'تنبيهات الفاقد الحي (>1.5%) — جاهزة للتسوية الفورية'
                     : 'Live Wastage Alerts (>1.5%) — Ready for Immediate Resolution'}
                 </span>
               </h3>
-              <span className="rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900">
+              <span className="rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap shrink-0">
                 {liveDiscrepancies.anomalies.length} {isAr ? 'رحلة مرصودة' : 'Detected'}
               </span>
             </div>
@@ -684,21 +684,21 @@ export const AIOperationsAuditor: React.FC = () => {
           {/* Backend AI Vector Search Grounding Output */}
           {backendAiOutput && (
             <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 text-xs text-violet-950 shadow-xs">
-              <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <span className="flex items-center gap-1.5 font-bold text-violet-900">
-                  <Brain className="h-4 w-4 text-violet-600" />
+                  <Brain className="h-4 w-4 text-violet-600 shrink-0" />
                   <span>{isAr ? 'استجابة محرك الاستدلال الذكي (FastAPI Backend pgvector):' : 'Backend Explainable Inference:'}</span>
                 </span>
-                <span className="rounded-md bg-violet-200/80 px-2 py-0.5 text-[10px] font-bold text-violet-900 font-mono">
+                <span className="rounded-md bg-violet-200/80 px-2 py-0.5 text-[10px] font-bold text-violet-900 font-mono whitespace-nowrap shrink-0">
                   Confidence: {(backendAiOutput.confidence_score * 100).toFixed(0)}%
                 </span>
               </div>
               <p className="font-semibold text-slate-800 mb-1">{backendAiOutput.recommendation}</p>
               <p className="text-[11px] text-slate-600 leading-relaxed mb-2">{backendAiOutput.business_reasoning}</p>
-              <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+              <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-mono">
                 <span>Sources:</span>
                 {backendAiOutput.data_sources.map((s, i) => (
-                  <span key={i} className="rounded bg-white/80 border border-violet-200 px-1.5 py-0.5">
+                  <span key={i} className="rounded bg-white/80 border border-violet-200 px-1.5 py-0.5 whitespace-nowrap shrink-0">
                     {s}
                   </span>
                 ))}
@@ -711,14 +711,14 @@ export const AIOperationsAuditor: React.FC = () => {
             <div className="space-y-6" ref={anomalyCardRef}>
               {/* Executive Summary Card */}
               <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-100 pb-3">
                   <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-violet-600" />
+                    <FileText className="h-4 w-4 text-violet-600 shrink-0" />
                     <span>{isAr ? 'الملخص التنفيذي للتدقيق التشغيلي' : 'Executive Audit Summary'}</span>
                   </h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500">{isAr ? 'مؤشر الصحة التشغيلية:' : 'Health Score:'}</span>
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-xs font-black text-emerald-800 shrink-0">
                       {analysisResult.operationalHealthScore}%
                     </span>
                   </div>
@@ -730,12 +730,12 @@ export const AIOperationsAuditor: React.FC = () => {
 
               {/* Excessive Wastage & Anomaly Cards */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                   <h3 className="text-sm font-bold text-rose-900 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-rose-600" />
+                    <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
                     <span>{isAr ? 'مؤشرات التلاعب وفاقد الوزن المشبوه (>1.5%):' : 'Weighbridge & Transit Anomalies (>1.5%):'}</span>
                   </h3>
-                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-800">
+                  <span className="rounded-full bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold text-rose-800 whitespace-nowrap shrink-0">
                     {analysisResult.anomaliesDetected.length} {isAr ? 'شاحنة مرصودة' : 'Trips Discrepancy'}
                   </span>
                 </div>
@@ -817,7 +817,7 @@ export const AIOperationsAuditor: React.FC = () => {
                           <td className="py-2.5 px-3 font-semibold text-slate-900">{t.name}</td>
                           <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{t.lossTons} MT طن</td>
                           <td className="py-2.5 px-3">
-                            <span className="rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800 text-[10px]">
+                            <span className="rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800 text-[10px] whitespace-nowrap shrink-0">
                               {t.percentage}%
                             </span>
                           </td>

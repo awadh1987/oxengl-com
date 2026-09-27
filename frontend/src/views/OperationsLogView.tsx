@@ -293,19 +293,19 @@ export const OperationsLogView: React.FC = () => {
       <div className="grid grid-cols-2 gap-3 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/50 via-amber-50/30 to-neutral-50 p-4 sm:grid-cols-4">
         <div>
           <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'عدد الرحلات المفلترة' : 'Filtered Trips'}</span>
-          <p className="text-lg font-black text-neutral-900">{filteredOperations.length} {isAr ? 'رحلة' : 'trips'}</p>
+          <p className="text-lg font-black text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{filteredOperations.length}</span> {isAr ? 'رحلة' : 'trips'}</p>
         </div>
         <div>
           <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي الكميات المحملة' : 'Total Loaded Qty'}</span>
-          <p className="text-lg font-black text-neutral-900">{formatTonnage(currentTotalLoaded, language)}</p>
+          <p className="text-lg font-black text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalLoaded, language)}</span></p>
         </div>
         <div>
           <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي الكميات المستلمة' : 'Net Delivered Qty'}</span>
-          <p className="text-lg font-black text-[#F05627]">{formatTonnage(currentTotalDelivered, language)}</p>
+          <p className="text-lg font-black text-[#F05627]"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalDelivered, language)}</span></p>
         </div>
         <div>
           <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي كمية الفاقد' : 'Total Wastage Loss'}</span>
-          <p className="text-lg font-black text-rose-600">{formatTonnage(currentTotalWastage, language)}</p>
+          <p className="text-lg font-black text-rose-600"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalWastage, language)}</span></p>
         </div>
       </div>
 
@@ -391,14 +391,14 @@ export const OperationsLogView: React.FC = () => {
 
         {/* Second row filters: Month & Excess Wastage Toggle */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-600">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-slate-600 whitespace-nowrap">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
             <div className="flex flex-wrap gap-1">
               {availableMonths.map((m) => (
                 <button
                   key={m}
                   onClick={() => setSelectedMonth(m)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
                     selectedMonth === m
                       ? 'bg-orange-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -470,14 +470,14 @@ export const OperationsLogView: React.FC = () => {
                     <tr key={op.id} className="hover:bg-orange-50/30 transition-colors">
                       <td className="py-3 px-3 font-mono font-bold text-orange-700 whitespace-nowrap">
                         <span className="rounded-md bg-orange-50 px-1.5 py-0.5 border border-orange-100">
-                          {displayTripId}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{displayTripId}</span>
                         </span>
                       </td>
                       <td className="py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">
                         {formatDate(op.loading_date, language)}
                       </td>
                       <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap font-mono">
-                        {op.truck_no}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.truck_no}</span>
                       </td>
                       <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
                         {op.transporter_name}
@@ -485,57 +485,57 @@ export const OperationsLogView: React.FC = () => {
                       <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
                         <div>{op.loading_source}</div>
                         {op.loading_invoice_no && (
-                          <div className="text-[10px] text-slate-400 font-mono">{op.loading_invoice_no}</div>
+                          <div className="text-[10px] text-slate-400 font-mono"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.loading_invoice_no}</span></div>
                         )}
                       </td>
                       <td className="py-3 px-3 font-medium text-slate-900 whitespace-nowrap">
                         <div>{op.destination_customer}</div>
                         {op.receipt_invoice_no && (
-                          <div className="text-[10px] text-slate-400 font-mono">{op.receipt_invoice_no}</div>
+                          <div className="text-[10px] text-slate-400 font-mono"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.receipt_invoice_no}</span></div>
                         )}
                       </td>
                       <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800">
+                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 whitespace-nowrap shrink-0">
                           {op.material_type}
                         </span>
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-semibold text-slate-800">
-                        {op.qty_loaded} {rowUom}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_loaded} {rowUom}</span>
                       </td>
                       <td className="py-3 px-3 text-center font-mono font-bold text-slate-900">
-                        {op.qty_delivered} {rowUom}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_delivered} {rowUom}</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold ${
+                          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold whitespace-nowrap shrink-0 ${
                             isHighLoss ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
                           }`}
                         >
-                          {op.qty_wastage} {rowUom} ({op.wastage_percentage}%)
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_wastage} {rowUom} ({op.wastage_percentage}%)</span>
                         </span>
                       </td>
                       {canAccessFinancials && (
                         <>
                           <td className="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap font-mono">
-                            {formatCurrency(op.sales_amount, language)}
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.sales_amount, language)}</span>
                           </td>
                           <td className="py-3 px-3 text-slate-700 whitespace-nowrap font-mono">
-                            {formatCurrency(op.purchases_cost, language)}
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.purchases_cost, language)}</span>
                           </td>
                           <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-mono">
-                            {formatCurrency(op.crusher_payment ?? 0, language)}
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.crusher_payment ?? 0, language)}</span>
                           </td>
                           <td className="py-3 px-3 font-bold text-emerald-700 whitespace-nowrap font-mono">
-                            {formatCurrency(op.net_profit, language)}
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.net_profit, language)}</span>
                           </td>
                         </>
                       )}
                       <td className="py-3 px-3 text-center whitespace-nowrap font-mono">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <span className="text-[11px] text-slate-600 font-semibold">{op.scale_ticket_no}</span>
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          <span className="text-[11px] text-slate-600 font-semibold whitespace-nowrap"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.scale_ticket_no}</span></span>
                           <button
                             onClick={() => setPreviewTicketOperation(op)}
-                            className="rounded-lg p-1 text-orange-600 hover:bg-orange-50"
+                            className="rounded-lg p-1 text-orange-600 hover:bg-orange-50 shrink-0"
                             title={isAr ? 'عرض تذكرة الميزان الرسمية' : 'View scale ticket'}
                           >
                             <Eye className="h-3.5 w-3.5" />
@@ -543,7 +543,7 @@ export const OperationsLogView: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex flex-wrap items-center justify-center gap-1">
                           <button
                             onClick={() => setAttachmentViewingOp(op)}
                             className="relative rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600"

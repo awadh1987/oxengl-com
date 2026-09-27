@@ -339,11 +339,11 @@ export const CrusherLedgerView: React.FC = () => {
                       key={move.id}
                       className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors text-slate-800 dark:text-slate-200"
                     >
-                      <td className="px-4 py-3">{move.date.slice(0, 10)}</td>
+                      <td className="px-4 py-3"><span dir="ltr" className="inline-block unicode-bidi-isolate">{move.date.slice(0, 10)}</span></td>
                       <td className="px-4 py-3 font-mono font-bold text-orange-600 dark:text-orange-400">
-                        {move.name}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{move.name}</span>
                       </td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400">{move.ref || '-'}</td>
+                      <td className="px-4 py-3 text-slate-500 dark:text-slate-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{move.ref || '-'}</span></td>
                       <td className="px-4 py-3">
                         <span
                           className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
@@ -357,7 +357,7 @@ export const CrusherLedgerView: React.FC = () => {
                       </td>
                       <td className="px-4 py-3">{selected.name}</td>
                       <td className="px-4 py-3 font-mono font-bold">
-                        {settlement ? formatCurrency(Number(settlement.net_payable), language) : '-'}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{settlement ? formatCurrency(Number(settlement.net_payable), language) : '-'}</span>
                       </td>
                     </tr>
                   );

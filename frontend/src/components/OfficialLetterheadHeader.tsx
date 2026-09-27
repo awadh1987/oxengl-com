@@ -59,11 +59,11 @@ export const OfficialLetterheadHeader: React.FC<OfficialLetterheadHeaderProps> =
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[11px] text-neutral-600">
               <span>
-                س.ت (CR): <strong className="font-mono text-neutral-900">{brandConfig.crNumber || '1010894520'}</strong>
+                س.ت (CR): <strong className="font-mono text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{brandConfig.crNumber || '1010894520'}</span></strong>
               </span>
               <span className="text-neutral-300">•</span>
               <span>
-                الرقم الضريبي (VAT): <strong className="font-mono text-neutral-900">{brandConfig.taxNumber || '300189452300003'}</strong>
+                الرقم الضريبي (VAT): <strong className="font-mono text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{brandConfig.taxNumber || '300189452300003'}</span></strong>
               </span>
             </div>
           </div>
@@ -81,12 +81,16 @@ export const OfficialLetterheadHeader: React.FC<OfficialLetterheadHeaderProps> =
             <div className="mt-2 text-xs space-y-0.5">
               <p className="text-neutral-500 font-medium">
                 {isAr ? 'الرقم المرجعي:' : 'Ref Number:'}{' '}
-                <strong className="font-mono text-neutral-950 font-bold">{documentNumber}</strong>
+                <strong className="font-mono text-neutral-950 font-bold">
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{documentNumber}</span>
+                </strong>
               </p>
               {issueDate && (
                 <p className="text-neutral-500 text-[11px]">
                   {isAr ? 'تاريخ التوثيق:' : 'Issue Date:'}{' '}
-                  <strong className="text-neutral-800">{issueDate}</strong>
+                  <strong className="text-neutral-800">
+                    <span dir="ltr" className="inline-block unicode-bidi-isolate">{issueDate}</span>
+                  </strong>
                 </p>
               )}
             </div>

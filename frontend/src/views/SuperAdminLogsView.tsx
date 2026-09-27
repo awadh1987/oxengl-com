@@ -164,9 +164,9 @@ export const SuperAdminLogsView: React.FC = () => {
                   <span className="text-xs font-mono">DISK CAPACITY</span>
                   <HardDrive className="h-4 w-4 text-sky-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{telemetry.disk.utilization_percent}%</div>
+                <div className="text-2xl font-black text-white"><span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.disk.utilization_percent}%</span></div>
                 <div className="text-[11px] text-slate-400 mt-1">
-                  {telemetry.disk.used_gb} GB / {telemetry.disk.total_gb} GB ({telemetry.disk.free_gb} GB free)
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.disk.used_gb} GB / {telemetry.disk.total_gb} GB ({telemetry.disk.free_gb} GB free)</span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
                   <div
@@ -181,7 +181,7 @@ export const SuperAdminLogsView: React.FC = () => {
                   <span className="text-xs font-mono">DATABASE CORE</span>
                   <Database className="h-4 w-4 text-emerald-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{telemetry.database.size}</div>
+                <div className="text-2xl font-black text-white"><span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.database.size}</span></div>
                 <div className="text-[11px] text-slate-400 mt-1">
                   Database: <strong className="text-slate-200">{telemetry.database.name}</strong> • Pool Healthy
                 </div>
@@ -196,12 +196,12 @@ export const SuperAdminLogsView: React.FC = () => {
                   <span className="text-xs font-mono">MANAGED TENANTS</span>
                   <Building2 className="h-4 w-4 text-purple-400" />
                 </div>
-                <div className="text-2xl font-black text-white">{telemetry.tenants.total}</div>
+                <div className="text-2xl font-black text-white"><span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.tenants.total}</span></div>
                 <div className="text-[11px] text-slate-400 mt-1">
                   Active Workspaces: <strong className="text-emerald-400">{telemetry.tenants.active}</strong>
                 </div>
                 <div className="text-[10px] text-slate-500 mt-3 font-mono">
-                  Suspended / Trial: {telemetry.tenants.total - telemetry.tenants.active}
+                  Suspended / Trial: <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.tenants.total - telemetry.tenants.active}</span>
                 </div>
               </div>
 
@@ -228,11 +228,11 @@ export const SuperAdminLogsView: React.FC = () => {
                   <Cloud className="h-4 w-4 text-sky-400" />
                 </div>
                 <div className="text-2xl font-black text-white">
-                  {telemetry.cloud_vault ? `${telemetry.cloud_vault.volume_mb} MB` : '0.00 MB'}
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.cloud_vault ? `${telemetry.cloud_vault.volume_mb} MB` : '0.00 MB'}</span>
                 </div>
                 <div className="text-[11px] text-slate-300 mt-1">
-                  Allocated Limit: <strong className="text-white">{telemetry.cloud_vault?.storage_limit_gb || 500} GB</strong> (
-                  {telemetry.cloud_vault?.utilization_percent ?? 0.01}% used)
+                  Allocated Limit: <strong className="text-white"><span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.cloud_vault?.storage_limit_gb || 500} GB</span></strong> (
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.cloud_vault?.utilization_percent ?? 0.01}%</span> used)
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
                   <div
@@ -248,13 +248,13 @@ export const SuperAdminLogsView: React.FC = () => {
                   <Layers className="h-4 w-4 text-indigo-400" />
                 </div>
                 <div className="text-2xl font-black text-white">
-                  {telemetry.cloud_vault?.file_units ?? 0} <span className="text-xs font-normal text-slate-400">archives</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.cloud_vault?.file_units ?? 0}</span> <span className="text-xs font-normal text-slate-400">archives</span>
                 </div>
                 <div className="text-[11px] text-slate-300 mt-1">
                   Target Bucket: <strong className="text-white">{telemetry.cloud_vault?.bucket_name || 'oxengl-offsite-vault'}</strong>
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-indigo-300 mt-3 font-mono">
-                  <CheckCircle2 className="h-3 w-3 text-indigo-400" />
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-indigo-300 mt-3 font-mono">
+                  <CheckCircle2 className="h-3 w-3 text-indigo-400 shrink-0" />
                   <span>AES-256 Encrypted Stream Containers</span>
                 </div>
               </div>
@@ -265,13 +265,13 @@ export const SuperAdminLogsView: React.FC = () => {
                   <Radio className="h-4 w-4 text-emerald-400 animate-pulse" />
                 </div>
                 <div className="text-2xl font-black text-white">
-                  {telemetry.cloud_vault?.network_throughput_mbps ?? 52.4} <span className="text-xs font-normal text-slate-400">Mbps</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{telemetry.cloud_vault?.network_throughput_mbps ?? 52.4}</span> <span className="text-xs font-normal text-slate-400">Mbps</span>
                 </div>
                 <div className="text-[11px] text-slate-300 mt-1">
                   Encrypted TLS Pipe: <strong className="text-emerald-400">Active</strong> • SSE-C (AES256)
                 </div>
-                <div className="flex items-center gap-1.5 text-[10px] text-emerald-300 mt-3 font-mono">
-                  <Zap className="h-3 w-3 text-emerald-400" />
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-emerald-300 mt-3 font-mono">
+                  <Zap className="h-3 w-3 text-emerald-400 shrink-0" />
                   <span>Master Key Mirrored Offsite</span>
                 </div>
               </div>
@@ -281,8 +281,8 @@ export const SuperAdminLogsView: React.FC = () => {
 
         {/* Filter bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800/80">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Filter className="h-4 w-4 text-slate-500" />
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <Filter className="h-4 w-4 text-slate-500 shrink-0" />
             <select
               value={actionFilter}
               onChange={(e) => setActionFilter(e.target.value)}
@@ -321,15 +321,15 @@ export const SuperAdminLogsView: React.FC = () => {
                 {logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-800/20 transition-colors">
                     <td className="py-3 px-4 text-slate-400 whitespace-nowrap">
-                      {log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{log.created_at ? new Date(log.created_at).toLocaleString() : 'N/A'}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold">
-                        {log.action_type}
+                      <span className="px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/20 text-purple-300 text-[10px] font-bold whitespace-nowrap shrink-0 inline-flex items-center">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{log.action_type}</span>
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-300 font-semibold">{log.actor}</td>
-                    <td className="py-3 px-4 text-sky-400">{log.tenant_id ? log.tenant_id.slice(0, 8) + '...' : 'GLOBAL'}</td>
+                    <td className="py-3 px-4 text-sky-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{log.tenant_id ? log.tenant_id.slice(0, 8) + '...' : 'GLOBAL'}</span></td>
                     <td className="py-3 px-4 text-slate-300 font-sans max-w-md truncate" title={log.details}>
                       {log.details}
                     </td>

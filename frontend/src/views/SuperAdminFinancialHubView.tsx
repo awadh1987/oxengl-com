@@ -333,7 +333,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
                       <span className="block font-mono text-[10px] text-slate-400">{inv.tenant_slug}</span>
                     </td>
                     <td className="py-3 px-3">
-                      <span className="rounded-md bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300 uppercase">
+                      <span className="rounded-md bg-purple-500/20 border border-purple-500/30 px-2 py-0.5 text-[10px] font-bold text-purple-300 uppercase whitespace-nowrap shrink-0">
                         {inv.plan_display_name || inv.plan_name || 'Enterprise'}
                       </span>
                     </td>

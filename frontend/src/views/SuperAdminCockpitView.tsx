@@ -68,9 +68,19 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
 
   return (
     <div dir="ltr" className="flex h-screen w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
-      {sidebarOpen && <button aria-label="Close navigation" onClick={() => setSidebarOpen(false)} className="fixed inset-0 z-30 bg-slate-950/50 lg:hidden" />}
+      {sidebarOpen && (
+        <button
+          aria-label="Close navigation"
+          onClick={() => setSidebarOpen(false)}
+          className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden"
+        />
+      )}
 
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-[#0B132B] p-4 shadow-2xl transition-transform lg:static lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside
+        className={`erp-sidebar-drawer fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-[#0B132B] p-4 shadow-2xl transition-transform md:static md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-3 border-b border-blue-900/50 px-1 pb-4 pt-1">
             <div className="flex items-center gap-3">
@@ -80,7 +90,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
                 <p className="text-[11px] font-medium text-slate-400">Central Platform Owner Console</p>
               </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 lg:hidden"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 md:hidden cursor-pointer"><X className="h-4 w-4" /></button>
           </div>
 
           <div className="space-y-1 rounded-xl border border-blue-500/20 bg-blue-950/40 p-3 text-xs">
@@ -140,7 +150,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-slate-100">
         <header className="z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-xs sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="rounded-lg border border-slate-200 p-2 text-slate-600 lg:hidden"><Menu className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg border border-slate-200 p-2 text-slate-600 md:hidden cursor-pointer"><Menu className="h-4 w-4" /></button>
             <span className="flex shrink-0 items-center gap-2">
               <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
               <span className="font-mono text-xs font-black uppercase tracking-wider text-blue-900">OxenGL • Master Root</span>

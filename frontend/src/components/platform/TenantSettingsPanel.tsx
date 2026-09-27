@@ -328,61 +328,60 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
       </div>
 
       {/* Progressive Disclosure Navigation Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto border-b border-slate-800 pb-3 mb-6 text-xs font-medium">
+      <div className="flex flex-wrap items-center gap-1.5 md:gap-2 border-b border-slate-800 pb-3 mb-6 text-xs font-medium">
         <button
           onClick={() => setActiveTab('general')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'general' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'general' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Building2 className="w-4 h-4" />
+          <Building2 className="w-4 h-4 shrink-0" />
           <span>المعلومات الأساسية</span>
         </button>
 
         <button
           onClick={() => setActiveTab('team')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'team' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'team' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Users className="w-4 h-4" />
+          <Users className="w-4 h-4 shrink-0" />
           <span>فريق العمل والصلاحيات</span>
         </button>
 
         <button
           onClick={() => setActiveTab('domains')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'domains' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'domains' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Globe className="w-4 h-4" />
+          <Globe className="w-4 h-4 shrink-0" />
           <span>النطاقات المخصصة (Domains)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('database')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'database' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'database' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Database className="w-4 h-4" />
+          <Database className="w-4 h-4 shrink-0" />
           <span>قاعدة البيانات والترحيل (External DB)</span>
         </button>
 
         <button
           onClick={() => setActiveTab('webhooks')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'webhooks' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Webhook className="w-4 h-4" />
+          <Webhook className="w-4 h-4 shrink-0" />
           <span>الخطافات البرمجية (Webhooks)</span>
         </button>
 
-
         <button
           onClick={() => setActiveTab('api_keys')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'api_keys' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'api_keys' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <Key className="w-4 h-4" />
+          <Key className="w-4 h-4 shrink-0" />
           <span>مفاتيح الـ API</span>
         </button>
 
         <button
           onClick={() => setActiveTab('sso')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all ${activeTab === 'sso' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'sso' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
         >
-          <ShieldCheck className="w-4 h-4" />
+          <ShieldCheck className="w-4 h-4 shrink-0" />
           <span>الدخول الموحد (SSO / SAML)</span>
         </button>
       </div>
@@ -522,9 +521,9 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   {dbConfig?.is_external_db ? <Database className="w-5 h-5" /> : <Server className="w-5 h-5" />}
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
                     <span>استضافة قاعدة البيانات الحالية (Database Architecture)</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase ${dbConfig?.is_external_db ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase whitespace-nowrap shrink-0 ${dbConfig?.is_external_db ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' : 'bg-slate-800 text-slate-300 border border-slate-700'}`}>
                       {dbConfig?.storage_mode === 'DEDICATED_EXTERNAL' ? 'Dedicated External' : 'Shared PostgreSQL'}
                     </span>
                   </h3>
@@ -540,9 +539,9 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                 <button
                   onClick={() => setRevertConfirmOpen(true)}
                   disabled={dbActionLoading}
-                  className="px-3.5 py-2 bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer"
+                  className="px-3.5 py-2 bg-slate-900 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-800 hover:border-rose-500/30 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap shrink-0"
                 >
-                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
                   <span>الرجوع للمستودع المشترك</span>
                 </button>
               )}
@@ -612,21 +611,21 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
           {/* Active / Recent Migration Progress Tracker Card */}
           {migrationStatus && (
             <div className="p-5 bg-slate-950 border border-slate-800 rounded-2xl shadow-lg space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <ArrowRightLeft className="w-4 h-4 text-cyan-400" />
+                  <ArrowRightLeft className="w-4 h-4 text-cyan-400 shrink-0" />
                   <span className="text-sm font-bold text-white">حالة ترحيل البيانات المباشر (Live Migration Tracker)</span>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 ${
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold uppercase flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                   migrationStatus.status === 'COMPLETED'
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                     : migrationStatus.status === 'FAILED'
                     ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
                     : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
                 }`}>
-                  {migrationStatus.status === 'RUNNING' && <RefreshCw className="w-3 h-3 animate-spin" />}
-                  {migrationStatus.status === 'COMPLETED' && <CheckCircle2 className="w-3 h-3" />}
-                  {migrationStatus.status === 'FAILED' && <AlertCircle className="w-3 h-3" />}
+                  {migrationStatus.status === 'RUNNING' && <RefreshCw className="w-3 h-3 animate-spin shrink-0" />}
+                  {migrationStatus.status === 'COMPLETED' && <CheckCircle2 className="w-3 h-3 shrink-0" />}
+                  {migrationStatus.status === 'FAILED' && <AlertCircle className="w-3 h-3 shrink-0" />}
                   <span>{migrationStatus.status}</span>
                 </span>
               </div>

@@ -440,11 +440,11 @@ export const FinancialVouchersView: React.FC = () => {
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-3">
-            <span className="text-2xl font-black font-mono text-slate-900">
+          <div className="mt-3 flex flex-wrap items-baseline gap-2 sm:gap-3">
+            <span className="text-2xl font-black font-mono text-slate-900 whitespace-nowrap">
               {stats.totalCount}
             </span>
-            <span className="text-xs font-bold text-emerald-600">
+            <span className="text-xs font-bold text-emerald-600 whitespace-nowrap">
               ({stats.approvedCount} {isAr ? 'معتمد' : 'approved'})
             </span>
           </div>
@@ -564,15 +564,15 @@ export const FinancialVouchersView: React.FC = () => {
                           onClick={() => setSelectedVoucherForView(vch)}
                           className="font-mono font-black text-orange-700 hover:underline hover:text-orange-950"
                         >
-                          {vch.voucherNumber}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.voucherNumber}</span>
                         </button>
                       </td>
 
                       {/* Type / Category */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <span
-                            className={`inline-flex rounded-lg px-2 py-0.5 text-[10px] font-black ${
+                            className={`inline-flex items-center whitespace-nowrap shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${
                               isPayment
                                 ? 'bg-rose-50 text-rose-700 border border-rose-200'
                                 : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -580,7 +580,7 @@ export const FinancialVouchersView: React.FC = () => {
                           >
                             {isPayment ? (isAr ? 'صرف' : 'Payment') : (isAr ? 'قبض' : 'Receipt')}
                           </span>
-                          <span className="text-[10px] text-slate-500">
+                          <span className="text-[10px] text-slate-500 whitespace-nowrap">
                             {vch.category === 'Crusher_Settlement' ? (isAr ? 'مورد مواد خام' : 'Raw Materials Supplier') :
                              vch.category === 'Transporter_Payment' ? (isAr ? 'مزود خدمة' : 'Service Supplier') :
                              vch.category === 'Customer_Collection' ? (isAr ? 'عميل' : 'Customer') :
@@ -591,16 +591,16 @@ export const FinancialVouchersView: React.FC = () => {
 
                       {/* Date */}
                       <td className="px-4 py-3.5 whitespace-nowrap font-mono text-slate-600">
-                        {vch.date}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.date}</span>
                       </td>
 
                       {/* Party Name */}
                       <td className="px-4 py-3.5">
                         <div className="max-w-[180px] truncate">
-                          <span className="font-bold text-slate-900 block">{vch.partyName}</span>
+                          <span className="font-bold text-slate-900 block truncate">{vch.partyName}</span>
                           {vch.partyTaxNumber && (
                             <span className="font-mono text-[10px] text-slate-400">
-                              VAT: {vch.partyTaxNumber}
+                              VAT: <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.partyTaxNumber}</span>
                             </span>
                           )}
                         </div>
@@ -614,7 +614,7 @@ export const FinancialVouchersView: React.FC = () => {
                               isPayment ? 'text-rose-700' : 'text-emerald-700'
                             }`}
                           >
-                            {vch.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </span>
                           <span className="text-[9px] text-slate-400 mr-1">SAR</span>
                           <p className="text-[10px] text-slate-500 truncate max-w-[180px] italic">
@@ -651,18 +651,20 @@ export const FinancialVouchersView: React.FC = () => {
                       </td>
 
                       {/* Status */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        {vch.status === 'Approved' ? (
-                          <div className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-200">
-                            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-                            <span>{isAr ? 'معتمد ومختوم' : 'Approved'}</span>
-                          </div>
-                        ) : (
-                          <div className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700 border border-amber-200">
-                            <Clock className="h-3.5 w-3.5 text-amber-600" />
-                            <span>{isAr ? 'قيد المراجعة' : 'Pending CEO'}</span>
-                          </div>
-                        )}
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {vch.status === 'Approved' ? (
+                            <div className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">
+                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                              <span>{isAr ? 'معتمد ومختوم' : 'Approved'}</span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700 border border-amber-200 whitespace-nowrap shrink-0">
+                              <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                              <span>{isAr ? 'قيد المراجعة' : 'Pending CEO'}</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
 
                       {/* Actions */}

@@ -377,7 +377,7 @@ export const InventoryView: React.FC = () => {
         </div>
 
         {/* Search & Warehouse Filter */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="relative min-w-[200px]">
             <Search className="w-4 h-4 text-slate-500 absolute top-1/2 -translate-y-1/2 start-3" />
             <input
@@ -391,7 +391,7 @@ export const InventoryView: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
             <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
             <select
               id="warehouse-filter-select"
@@ -465,7 +465,7 @@ export const InventoryView: React.FC = () => {
                     >
                       {/* Movement Number */}
                       <td className="py-3.5 px-4 font-mono font-bold text-white">
-                        {movement.movement_number}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{movement.movement_number}</span>
                       </td>
 
                       {/* Item */}
@@ -503,30 +503,30 @@ export const InventoryView: React.FC = () => {
                       {/* Quantity */}
                       <td className="py-3.5 px-4 text-end font-mono">
                         <span className={isPos ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-                          {isPos ? `+${movement.quantity}` : movement.quantity}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{isPos ? `+${movement.quantity}` : movement.quantity}</span>
                         </span>
                       </td>
 
                       {/* Unit Cost */}
                       <td className="py-3.5 px-4 text-end font-mono text-slate-300">
-                        {formatCurrency(movement.unit_cost, language)}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(movement.unit_cost, language)}</span>
                       </td>
 
                       {/* Total Value */}
                       <td className="py-3.5 px-4 text-end font-mono font-bold text-white">
-                        {formatCurrency(movement.total_cost, language)}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(movement.total_cost, language)}</span>
                       </td>
 
                       {/* Ledger Status */}
                       <td className="py-3.5 px-4 text-center">
                         {movement.is_posted ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                             <span>{isAr ? 'مرحل للدفتر' : 'Posted (GL)'}</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                            <Clock className="w-3.5 h-3.5" />
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0">
+                            <Clock className="w-3.5 h-3.5 shrink-0" />
                             <span>{isAr ? 'مسودة' : 'Unposted'}</span>
                           </span>
                         )}
@@ -535,9 +535,9 @@ export const InventoryView: React.FC = () => {
                       {/* Action */}
                       <td className="py-3.5 px-4 text-center">
                         {movement.is_posted ? (
-                          <div className="flex items-center justify-center gap-1 text-[11px] text-slate-500">
-                            <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
-                            <span className="font-mono text-[10px] text-emerald-500 font-medium">
+                          <div className="flex flex-wrap items-center justify-center gap-1 text-[11px] text-slate-500">
+                            <BookOpen className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span className="font-mono text-[10px] text-emerald-500 font-medium whitespace-nowrap">
                               {movement.journal_entry_id ? `#${movement.journal_entry_id.slice(0, 8)}` : 'VOUCHER'}
                             </span>
                           </div>
@@ -546,7 +546,7 @@ export const InventoryView: React.FC = () => {
                             id={`post-ledger-btn-${movement.id}`}
                             onClick={() => handlePostToLedger(movement.id)}
                             disabled={postingId === movement.id}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-xs border border-amber-500/30 transition shadow-sm active:scale-95 disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-xs border border-amber-500/30 transition shadow-sm active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
                           >
                             {postingId === movement.id ? (
                               <>

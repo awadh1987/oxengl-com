@@ -236,12 +236,12 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
                     {/* Phase & Department */}
                     <td className="py-0.5 px-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="inline-block px-1.5 py-0.2 bg-slate-800 text-slate-300 text-[9.5px] font-bold rounded border border-slate-700/60">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="inline-block px-1.5 py-0.2 bg-slate-800 text-slate-300 text-[9.5px] font-bold rounded border border-slate-700/60 whitespace-nowrap shrink-0">
                           {task.phase}
                         </span>
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Briefcase className="w-2.5 h-2.5 text-slate-500" />
+                        <span className="text-[10px] text-slate-400 flex items-center gap-1 whitespace-nowrap shrink-0">
+                          <Briefcase className="w-2.5 h-2.5 text-slate-500 shrink-0" />
                           {task.department}
                         </span>
                       </div>
@@ -249,13 +249,13 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
                     {/* Workload / Cost */}
                     <td className="py-0.5 px-2">
-                      <div className="flex items-center gap-2">
-                        <div className="text-[10px] font-semibold text-slate-200 flex items-center gap-0.5 neo-cell-mono">
-                          <Clock className="w-2.5 h-2.5 text-blue-400" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-[10px] font-semibold text-slate-200 flex items-center gap-0.5 neo-cell-mono whitespace-nowrap shrink-0">
+                          <Clock className="w-2.5 h-2.5 text-blue-400 shrink-0" />
                           <bdi>{task.planned_hours}h</bdi>
                         </div>
-                        <div className="text-[10px] text-slate-400 flex items-center gap-0.5 neo-cell-mono">
-                          <DollarSign className="w-2.5 h-2.5 text-emerald-400" />
+                        <div className="text-[10px] text-slate-400 flex items-center gap-0.5 neo-cell-mono whitespace-nowrap shrink-0">
+                          <DollarSign className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
                           <bdi>{Number(task.task_cost).toLocaleString()} SAR</bdi>
                         </div>
                       </div>
@@ -263,8 +263,8 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
                     {/* Assigned Personnel */}
                     <td className="py-0.5 px-2">
-                      <div className="text-[10.5px] font-medium text-slate-200 flex items-center gap-1">
-                        <User className="w-3 h-3 text-slate-400" />
+                      <div className="text-[10.5px] font-medium text-slate-200 flex items-center gap-1 whitespace-nowrap shrink-0">
+                        <User className="w-3 h-3 text-slate-400 shrink-0" />
                         {task.assigned_user_name || t('planning.unassigned', 'Unassigned')}
                       </div>
                     </td>
@@ -272,7 +272,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
                     {/* Priority Badge */}
                     <td className="py-0.5 px-2">
                       <span
-                        className={`px-1.5 py-0.2 text-[9px] font-bold rounded border ${
+                        className={`px-1.5 py-0.2 text-[9px] font-bold rounded border whitespace-nowrap shrink-0 ${
                           task.priority === 'CRITICAL'
                             ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
                             : task.priority === 'HIGH'

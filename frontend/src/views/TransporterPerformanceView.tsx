@@ -305,7 +305,7 @@ export const TransporterPerformanceView: React.FC = () => {
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{card.title}</span>
                 <Icon className={`h-4 w-4 ${card.tone}`} />
               </div>
-              <strong className={`mt-3 block text-xl font-black ${card.tone}`}>{card.value}</strong>
+              <strong dir="ltr" className={`mt-3 block text-xl font-black unicode-bidi-isolate ${card.tone}`}>{card.value}</strong>
             </article>
           );
         })}
@@ -354,7 +354,7 @@ export const TransporterPerformanceView: React.FC = () => {
                   <td className="px-3 py-3 text-center font-semibold text-rose-600 dark:text-rose-400">
                     {formatTonnage(row.wastage, language)}
                   </td>
-                  <td className="px-3 py-3 text-center font-mono text-slate-700 dark:text-slate-300">{row.loss.toFixed(2)}%</td>
+                  <td className="px-3 py-3 text-center"><span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-slate-700 dark:text-slate-300">{row.loss.toFixed(2)}%</span></td>
                   <td className="px-3 py-3 text-slate-800 dark:text-slate-200">{formatCurrency(row.gross, language)}</td>
                   <td className="px-3 py-3 font-bold text-orange-600 dark:text-orange-400">
                     {formatCurrency(row.penalties, language)}
@@ -364,20 +364,20 @@ export const TransporterPerformanceView: React.FC = () => {
                   </td>
                   <td className="px-3 py-3 text-center">
                     <span
-                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                         row.compliance === 'Excellent'
                           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300'
                       }`}
                     >
-                      <CircleCheck className="h-3 w-3" />
-                      {row.compliance === 'Excellent' ? (isAr ? 'ممتاز' : 'Excellent') : (isAr ? 'تحذير هدر' : 'Warning')}
+                      <CircleCheck className="h-3 w-3 shrink-0" />
+                      <span>{row.compliance === 'Excellent' ? (isAr ? 'ممتاز' : 'Excellent') : (isAr ? 'تحذير هدر' : 'Warning')}</span>
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center">
                     {row.voucher ? (
-                      <button className="border border-orange-300 dark:border-orange-700 px-2 py-1 text-[10px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors">
-                        PV-2026-{row.voucher.slice(0, 5)}
+                      <button className="border border-orange-300 dark:border-orange-700 px-2 py-1 text-[10px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors whitespace-nowrap shrink-0">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">PV-2026-{row.voucher.slice(0, 5)}</span>
                       </button>
                     ) : (
                       <button

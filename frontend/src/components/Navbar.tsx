@@ -641,7 +641,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
             <Bell className="h-3.5 w-3.5" />
             {unreadAlertsCount > 0 && (
               <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-500 text-[8px] font-bold text-white shadow-xs">
-                {unreadAlertsCount}
+                <span dir="ltr" className="inline-block unicode-bidi-isolate">{unreadAlertsCount}</span>
               </span>
             )}
           </button>
@@ -675,7 +675,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
                       </button>
                     )}
                     <span className="rounded-full bg-orange-50 dark:bg-orange-950/50 px-2 py-0.5 text-[10px] font-semibold text-[#F05627]">
-                      {unreadAlertsCount} {isAr ? 'تنبيهات' : 'Alerts'}
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{unreadAlertsCount}</span> {isAr ? 'تنبيهات' : 'Alerts'}
                     </span>
                   </div>
                 </div>
@@ -726,7 +726,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
                                 {isAr ? alert.titleAr : alert.titleEn}
                               </p>
                               <span className="text-[10px] text-slate-500 shrink-0 font-mono">
-                                {isAr ? alert.timeAgoAr : alert.timeAgoEn}
+                                <span dir="ltr" className="inline-block unicode-bidi-isolate">{isAr ? alert.timeAgoAr : alert.timeAgoEn}</span>
                               </span>
                             </div>
                             <p className="text-[11px] leading-relaxed opacity-90">
@@ -739,15 +739,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
                                 <ExternalLink className="h-2.5 w-2.5" />
                                 {isWastage
                                   ? isAr
-                                    ? 'فحص رحلة الشاحنة 3190'
-                                    : 'Inspect Truck 3190 Log'
+                                    ? <>فحص رحلة الشاحنة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">3190</span></>
+                                    : <>Inspect Truck <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">3190</span> Log</>
                                   : isBilling
                                   ? isAr
                                     ? 'إصدار دفعة فواتير الكفاح'
                                     : 'Draft Kifah Batch'
                                   : isAr
-                                  ? 'تتبع المركبة V-1002 على الخريطة'
-                                  : 'Track V-1002 on Map'}
+                                  ? <>تتبع المركبة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">V-1002</span> على الخريطة</>
+                                  : <>Track <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">V-1002</span> on Map</>}
                               </span>
 
                               {isWastage && (

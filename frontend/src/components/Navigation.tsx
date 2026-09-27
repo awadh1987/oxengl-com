@@ -16,6 +16,7 @@ import {
   LogOut,
   Building,
   Network,
+  X,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 
@@ -138,25 +139,45 @@ export const Navigation: React.FC<NavigationProps> = ({
   );
 
   return (
-    <aside
-      className={`fixed inset-y-0 z-40 flex w-72 flex-col justify-between border-r border-slate-800 bg-slate-950/95 p-4 backdrop-blur-xl transition-transform duration-300 lg:static lg:translate-x-0 ${
-        isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      }`}
-    >
-      <div>
-        {/* Brand Header */}
-        <div className="flex items-center gap-3 px-3 py-4 border-b border-slate-800/80 mb-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 shadow-lg shadow-orange-500/20">
-            <Layers className="h-6 w-6 text-white" />
+    <>
+      {isOpenMobile && (
+        <div
+          className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`erp-sidebar-drawer fixed inset-y-0 start-0 z-40 flex w-72 flex-col justify-between border-e border-slate-800 bg-slate-950/95 p-4 backdrop-blur-xl transition-transform duration-300 md:static md:translate-x-0 ${
+          isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        <div>
+          {/* Brand Header */}
+          <div className="flex items-center justify-between border-b border-slate-800/80 px-3 py-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 shadow-lg shadow-orange-500/20">
+                <Layers className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <span className="text-lg font-bold tracking-tight text-white">OxenGL</span>
+                <span className="ml-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                  Phase 1 Enterprise
+                </span>
+                <p className="text-[11px] text-slate-400">Global ERP Logistics</p>
+              </div>
+            </div>
+            {onCloseMobile && (
+              <button
+                type="button"
+                onClick={onCloseMobile}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-300 hover:text-white md:hidden cursor-pointer"
+                title={isAr ? 'إغلاق' : 'Close'}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-          <div>
-            <span className="text-lg font-bold tracking-tight text-white">OxenGL</span>
-            <span className="ml-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-              Phase 1 Enterprise
-            </span>
-            <p className="text-[11px] text-slate-400">Global ERP Logistics</p>
-          </div>
-        </div>
 
         {/* User Context Badge */}
         <div className="mx-2 mb-4 rounded-xl bg-slate-900/80 p-3 border border-slate-800/80 flex items-center justify-between">
@@ -234,5 +255,6 @@ export const Navigation: React.FC<NavigationProps> = ({
         </div>
       </div>
     </aside>
+  </>
   );
 };

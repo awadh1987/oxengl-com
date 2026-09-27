@@ -120,6 +120,98 @@ th.financial-num {
   transform: scaleX(-1);
 }
 
+/* Fix 1: Global Mixed-Direction Text & Alphanumeric Isolation */
+.unicode-bidi-isolate {
+  unicode-bidi: isolate !important;
+}
+
+[dir="ltr"].unicode-bidi-isolate,
+[dir="rtl"] [dir="ltr"].unicode-bidi-isolate,
+[dir="rtl"] .unicode-bidi-isolate[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left;
+}
+
+.bidi-code,
+.bidi-metric,
+.bidi-ref {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Fix 2: Global Sidebar Drawers & Floating Action Button (FAB) Safe-Area Layering */
+.erp-mobile-fab {
+  position: fixed;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+  z-index: 40;
+}
+
+[dir="rtl"] .erp-mobile-fab,
+.erp-mobile-fab-left {
+  left: calc(1.5rem + env(safe-area-inset-left, 0px));
+  right: auto;
+}
+
+[dir="ltr"] .erp-mobile-fab,
+.erp-mobile-fab-right {
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+  left: auto;
+}
+
+/* Mobile Drawer Safe Areas & Z-Index Layering */
+.erp-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.erp-sidebar-drawer {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix 3: Global Status Badge & Metadata Pill Wrapping */
+.erp-badge-container,
+.erp-pill-container,
+.erp-metadata-container {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+}
+
+@media (min-width: 768px) {
+  .erp-badge-container,
+  .erp-pill-container,
+  .erp-metadata-container {
+    gap: 0.5rem !important;
+  }
+}
+
+.erp-badge,
+.erp-pill {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+
+.erp-badge-truncate,
+.erp-pill-truncate {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 200px;
+}
+
 /* Responsive Table Wrapper with Smooth Mobile Touch Scrolling */
 .responsive-table-wrapper {
   width: 100%;

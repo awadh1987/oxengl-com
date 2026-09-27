@@ -297,40 +297,40 @@ export const SuperAdminTenantsView: React.FC = () => {
                         </div>
                         <div>
                           <div>{t.name}</div>
-                          <div className="text-[10px] text-slate-500 font-mono">{t.id}</div>
+                          <div className="text-[10px] text-slate-500 font-mono"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.id}</span></div>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 font-mono text-sky-400">{t.slug}.oxengl.me</td>
+                    <td className="py-3 px-4 font-mono text-sky-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.slug}.oxengl.me</span></td>
                     <td className="py-3 px-4 text-slate-400">
-                      <div><span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-bold text-slate-300">{t.subscription_tier || 'PRO'}</span></div>
-                      <div className="text-[10px] text-slate-500 font-mono mt-0.5">{t.currency} • {t.tax_id || 'N/A'}</div>
+                      <div><span className="px-2 py-0.5 rounded bg-slate-800 text-[10px] font-bold text-slate-300 whitespace-nowrap shrink-0">{t.subscription_tier || 'PRO'}</span></div>
+                      <div className="text-[10px] text-slate-500 font-mono mt-0.5"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.currency} • {t.tax_id || 'N/A'}</span></div>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-3.5 w-3.5 rounded-full border border-slate-700" style={{ backgroundColor: t.primary_color }} title={`Primary: ${t.primary_color}`} />
-                        <span className="h-3.5 w-3.5 rounded-full border border-slate-700" style={{ backgroundColor: t.secondary_color }} title={`Secondary: ${t.secondary_color}`} />
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="h-3.5 w-3.5 rounded-full border border-slate-700 shrink-0" style={{ backgroundColor: t.primary_color }} title={`Primary: ${t.primary_color}`} />
+                        <span className="h-3.5 w-3.5 rounded-full border border-slate-700 shrink-0" style={{ backgroundColor: t.secondary_color }} title={`Secondary: ${t.secondary_color}`} />
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 ${
                         t.is_active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
                       }`}>
-                        {t.is_active ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                        {t.is_active ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
                         {t.status || (t.is_active ? 'ACTIVE' : 'SUSPENDED')}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <button
                           onClick={() => toggleTenantStatus(t)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-[11px] transition-colors"
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-[11px] transition-colors whitespace-nowrap shrink-0"
                         >
                           {t.is_active ? 'Suspend' : 'Activate'}
                         </button>
                         <button
                           onClick={() => { setSelectedTenant(t); setIsAlertModalOpen(true); }}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap shrink-0 ${
                             alertStatus[t.id] === 'sent'
                               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                               : alertStatus[t.id] === 'sending'

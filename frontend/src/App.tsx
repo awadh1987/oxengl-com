@@ -1029,8 +1029,16 @@ function AppContent() {
           onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
         <main className={`min-w-0 flex-1 p-1.5 sm:p-2 lg:p-2.5 ${themeMode === 'dark' ? 'bg-[#0b0d19]' : 'bg-slate-100'}`}>
-          <div className="mb-2 flex items-center justify-between lg:hidden">
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-bold text-neutral-700 shadow-xs">{isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}<span>{isAr ? 'Navigation' : 'Menu'}</span></button>
+          <div className="mb-2 flex items-center justify-between md:hidden">
+            <button
+              type="button"
+              id="mobile-nav-toggle-btn"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-2.5 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              {isMobileMenuOpen ? <X className="h-4 w-4 text-rose-500" /> : <Menu className="h-4 w-4 text-orange-500" />}
+              <span>{isAr ? 'القائمة الرئيسية' : 'Menu'}</span>
+            </button>
             <span className="text-xs font-black text-[#F05627]">{isAr ? brandConfig.companyNameAr : brandConfig.companyNameEn}</span>
           </div>
           <div className="w-full">

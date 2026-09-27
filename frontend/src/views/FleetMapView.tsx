@@ -171,7 +171,7 @@ function buildBeaconHtml(vehicle: TelemetryVehicleState, isSelected: boolean, _i
     ? `<div style="position:absolute;top:50%;left:50%;width:36px;height:36px;border-radius:50%;border:2px solid #f59e0b;pointer-events:none;"></div>`
     : '';
   const badge = breached ? ' 🚨' : '';
-  const label = `<div style="position:absolute;top:50%;left:20px;transform:translateY(-50%);white-space:nowrap;background:rgba(2,6,23,0.88);border:1px solid ${color}55;border-radius:6px;padding:2px 7px;font-family:monospace;font-size:10px;font-weight:bold;color:${color};pointer-events:none;">${vehicle.vehicleId}${badge} +${vehicle.tempCelsius.toFixed(1)}°C</div>`;
+  const label = `<div dir="ltr" class="unicode-bidi-isolate" style="position:absolute;top:50%;left:20px;transform:translateY(-50%);white-space:nowrap;background:rgba(2,6,23,0.88);border:1px solid ${color}55;border-radius:6px;padding:2px 7px;font-family:monospace;font-size:10px;font-weight:bold;color:${color};pointer-events:none;direction:ltr;unicode-bidi:isolate;">${vehicle.vehicleId}${badge} +${vehicle.tempCelsius.toFixed(1)}°C</div>`;
   return `<div style="position:relative;width:16px;height:16px;">${selectionRing}${ring}<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};"></div>${label}</div>`;
 }
 
@@ -569,23 +569,23 @@ export const FleetMapView: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono">
-            <Cpu className="h-4 w-4 text-cyan-400" />
-            <span className="text-slate-400">Canvas:</span>
-            <span className="font-bold text-cyan-300">{fps} FPS</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono whitespace-nowrap shrink-0">
+            <Cpu className="h-4 w-4 text-cyan-400 shrink-0" />
+            <span className="text-slate-400 whitespace-nowrap">Canvas:</span>
+            <span dir="ltr" className="inline-block unicode-bidi-isolate font-bold text-cyan-300 whitespace-nowrap">{fps} FPS</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono">
-            <Wifi className={`h-4 w-4 ${isConnected ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
-            <span className="text-slate-400">Stream:</span>
-            <span className={`font-bold ${isConnected ? 'text-emerald-300' : 'text-amber-300'}`}>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono whitespace-nowrap shrink-0">
+            <Wifi className={`h-4 w-4 shrink-0 ${isConnected ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`} />
+            <span className="text-slate-400 whitespace-nowrap">Stream:</span>
+            <span dir="ltr" className={`inline-block unicode-bidi-isolate font-bold whitespace-nowrap ${isConnected ? 'text-emerald-300' : 'text-amber-300'}`}>
               {isConnected ? 'LIVE WS' : 'SIMULATED'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono">
-            <Layers className={`h-4 w-4 ${leafletReady ? 'text-blue-400' : 'text-slate-600'}`} />
-            <span className={`font-bold ${leafletReady ? 'text-blue-300' : 'text-slate-500'}`}>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-800 bg-slate-900 text-xs font-mono whitespace-nowrap shrink-0">
+            <Layers className={`h-4 w-4 shrink-0 ${leafletReady ? 'text-blue-400' : 'text-slate-600'}`} />
+            <span dir="ltr" className={`inline-block unicode-bidi-isolate font-bold whitespace-nowrap ${leafletReady ? 'text-blue-300' : 'text-slate-500'}`}>
               {leafletReady ? 'OSM LIVE' : 'MAP LOADING'}
             </span>
           </div>
@@ -599,7 +599,7 @@ export const FleetMapView: React.FC = () => {
             <span>{isAr ? 'إجمالي الشاحنات المرصودة' : 'Active Haulers'}</span>
             <Activity className="h-4 w-4 text-cyan-400" />
           </div>
-          <p className="mt-2 font-mono text-2xl font-black text-white">{metrics.total}</p>
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-2 font-mono text-2xl font-black text-white">{metrics.total}</p>
           <p className="text-[11px] text-slate-500">{isAr ? 'وحدات GPS تعمل بكفاءة' : 'Telemetry Transponders'}</p>
         </div>
         <div className="p-4 rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xs">
@@ -607,7 +607,7 @@ export const FleetMapView: React.FC = () => {
             <span>{isAr ? 'حمولات مطابقة (≤ +4.2°C)' : 'Within Spec (≤ +4.2°C)'}</span>
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
           </div>
-          <p className="mt-2 font-mono text-2xl font-black text-emerald-400">{metrics.safe}</p>
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-2 font-mono text-2xl font-black text-emerald-400">{metrics.safe}</p>
           <p className="text-[11px] text-slate-500">{isAr ? 'حمولات آمنة وموثقة' : 'Pulsing Emerald Beacons'}</p>
         </div>
         <div className="p-4 rounded-2xl border border-rose-900/60 bg-rose-950/20 shadow-xs">
@@ -615,7 +615,7 @@ export const FleetMapView: React.FC = () => {
             <span>{isAr ? 'تجاوزات حرارية (> +4.2°C)' : 'SLA Breaches (> +4.2°C)'}</span>
             <ShieldAlert className="h-4 w-4 text-rose-400 animate-bounce" />
           </div>
-          <p className="mt-2 font-mono text-2xl font-black text-rose-400">{metrics.breached}</p>
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-2 font-mono text-2xl font-black text-rose-400">{metrics.breached}</p>
           <p className="text-[11px] text-rose-400/80">{isAr ? 'تنبيه طوارئ فوري' : 'Flashing Crimson Alerts'}</p>
         </div>
         <div className="p-4 rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xs">
@@ -623,27 +623,33 @@ export const FleetMapView: React.FC = () => {
             <span>{isAr ? 'متوسط حرارة الحمولات' : 'Mean Cargo Temp'}</span>
             <Thermometer className="h-4 w-4 text-blue-400" />
           </div>
-          <p className="mt-2 font-mono text-2xl font-black text-blue-400">+{metrics.avgTemp}°C</p>
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-2 font-mono text-2xl font-black text-blue-400">+{metrics.avgTemp}°C</p>
           <p className="text-[11px] text-slate-500">{isAr ? 'حساسات الشاحنات المركزية' : 'Core Cargo Probes'}</p>
         </div>
       </div>
 
       {/* SLA Alarm Bar */}
       {metrics.breached > 0 && (
-        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-3.5 flex items-center justify-between text-xs text-rose-300">
+        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs text-rose-300">
           <div className="flex items-center gap-2.5">
             <ShieldAlert className="h-5 w-5 text-rose-400 shrink-0 animate-pulse" />
             <div>
               <span className="font-bold">{isAr ? 'إنذار طارئ في سلسلة التبريد: ' : 'CRITICAL COLD-CHAIN BREACH: '}</span>
               <span>
-                {isAr
-                  ? 'الشاحنة V-1002 تجاوزت الحرارة المسموحة وسجلت +5.4°C في مسار مشروع القدية.'
-                  : 'Vehicle V-1002 registered +5.4°C exceeding safety limit of +4.2°C along Qiddiya transit route.'}
+                {isAr ? (
+                  <>
+                    الشاحنة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-rose-200">V-1002</span> تجاوزت الحرارة المسموحة وسجلت <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-rose-200">+5.4°C</span> في مسار مشروع القدية.
+                  </>
+                ) : (
+                  <>
+                    Vehicle <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-rose-200">V-1002</span> registered <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-rose-200">+5.4°C</span> exceeding safety limit of <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-rose-200">+4.2°C</span> along Qiddiya transit route.
+                  </>
+                )}
               </span>
             </div>
           </div>
           <button type="button" onClick={() => setSelectedVehicleId('V-1002')}
-            className="font-mono text-[10px] uppercase bg-rose-500/20 border border-rose-500/40 px-3 py-1 rounded text-rose-200 hover:bg-rose-500/40 transition">
+            className="font-mono text-[10px] uppercase bg-rose-500/20 border border-rose-500/40 px-3 py-1 rounded text-rose-200 hover:bg-rose-500/40 transition whitespace-nowrap shrink-0">
             {isAr ? 'فحص الشاحنة' : 'Inspect Unit'}
           </button>
         </div>
@@ -702,12 +708,12 @@ export const FleetMapView: React.FC = () => {
         {/* Vehicle Telemetry Detail Panel */}
         <div className="space-y-4">
           <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-lg">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-3 mb-4">
               <div className="flex items-center gap-2">
-                <Truck className="h-4 w-4 text-orange-500" />
-                <h3 className="font-bold text-sm text-white">{selectedVehicle.vehicleId}</h3>
+                <Truck className="h-4 w-4 text-orange-500 shrink-0" />
+                <h3 dir="ltr" className="inline-block unicode-bidi-isolate font-bold text-sm text-white font-mono">{selectedVehicle.vehicleId}</h3>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                 selectedVehicle.tempCelsius > SLA_THRESHOLD
                   ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
                   : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
@@ -723,7 +729,7 @@ export const FleetMapView: React.FC = () => {
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'رقم اللوحة:' : 'Plate No:'}</span>
-                <span className="font-mono font-bold text-amber-300">{selectedVehicle.plateNumber}</span>
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-amber-300">{selectedVehicle.plateNumber}</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'الوجهة:' : 'Destination:'}</span>
@@ -733,27 +739,27 @@ export const FleetMapView: React.FC = () => {
               </div>
               <div className="border-t border-slate-800 pt-2 flex justify-between text-slate-400">
                 <span>{isAr ? 'الإحداثيات:' : 'Coordinates:'}</span>
-                <span className="font-mono text-[10px] text-slate-300">
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-[10px] text-slate-300">
                   {selectedVehicle.lat.toFixed(4)}, {selectedVehicle.lng.toFixed(4)}
                 </span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'السرعة:' : 'Speed:'}</span>
-                <span className="font-mono font-bold text-emerald-400">{selectedVehicle.speedKph} km/h</span>
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-emerald-400">{selectedVehicle.speedKph} km/h</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'حرارة الحمولة:' : 'Cargo Temp:'}</span>
-                <span className={`font-mono font-bold ${selectedVehicle.tempCelsius > SLA_THRESHOLD ? 'text-rose-400' : 'text-blue-400'}`}>
+                <span dir="ltr" className={`inline-block unicode-bidi-isolate font-mono font-bold ${selectedVehicle.tempCelsius > SLA_THRESHOLD ? 'text-rose-400' : 'text-blue-400'}`}>
                   +{selectedVehicle.tempCelsius.toFixed(1)}°C
                 </span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'رطوبة الحجرة:' : 'Humidity:'}</span>
-                <span className="font-mono text-slate-200">{selectedVehicle.humidityPct}%</span>
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-slate-200">{selectedVehicle.humidityPct}%</span>
               </div>
               <div className="flex justify-between text-slate-400">
                 <span>{isAr ? 'بطارية الجهاز:' : 'Device Battery:'}</span>
-                <span className="font-mono text-emerald-400">{selectedVehicle.batteryVoltage} V</span>
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-emerald-400">{selectedVehicle.batteryVoltage} V</span>
               </div>
             </div>
           </div>
@@ -772,9 +778,9 @@ export const FleetMapView: React.FC = () => {
                 }`}>
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${v.tempCelsius > SLA_THRESHOLD ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'}`} />
-                  <span className="font-bold font-mono">{v.vehicleId}</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-bold font-mono">{v.vehicleId}</span>
                 </div>
-                <span className="font-mono text-[11px] text-slate-400">+{v.tempCelsius.toFixed(1)}°C • {v.speedKph} km/h</span>
+                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-[11px] text-slate-400">+{v.tempCelsius.toFixed(1)}°C • {v.speedKph} km/h</span>
               </button>
             ))}
           </div>

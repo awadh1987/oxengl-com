@@ -269,18 +269,18 @@ export const ApprovalQueueView: React.FC = () => {
               className="group relative flex flex-col justify-between rounded-2xl border border-slate-800 bg-slate-900/80 p-5 backdrop-blur-sm hover:border-slate-700 transition-all shadow-lg"
             >
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300">
-                    <FileText className="h-3.5 w-3.5 text-amber-400" />
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1 text-xs font-semibold text-slate-300 whitespace-nowrap shrink-0">
+                    <FileText className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                     {item.document_type.replace('_', ' ')}
                   </span>
-                  <span className="text-xs font-medium text-slate-400">
+                  <span className="text-xs font-medium text-slate-400 whitespace-nowrap shrink-0">
                     Tier {item.sequence_order} of {item.total_steps}
                   </span>
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="text-lg font-bold text-white tracking-tight">
+                  <h3 className="text-lg font-bold text-white tracking-tight break-all">
                     {item.document_number}
                   </h3>
                   <p className="mt-1 text-xs text-slate-400 line-clamp-2">

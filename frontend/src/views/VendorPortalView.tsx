@@ -510,12 +510,12 @@ export const VendorPortalView: React.FC = () => {
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-xs font-bold text-amber-500">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+                      <span className="font-mono text-xs font-bold text-amber-500 whitespace-nowrap shrink-0">
                         {tender.tender_number}
                       </span>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap shrink-0 ${
                           tender.status === 'AWARDED'
                             ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'
                             : isOpen && !isDeadlinePassed

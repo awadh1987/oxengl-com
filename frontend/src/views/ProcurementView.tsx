@@ -372,7 +372,7 @@ export const ProcurementView: React.FC = () => {
           <span className="text-[11px] font-semibold text-slate-500">
             {isAr ? 'إجمالي المشتريات المعتمدة' : 'Total Approved POs'}
           </span>
-          <p className="mt-1 text-lg font-black text-slate-900 dark:text-white">
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-1 text-lg font-black text-slate-900 dark:text-white">
             {formatCurrency(244300, language)}
           </p>
         </div>
@@ -384,7 +384,7 @@ export const ProcurementView: React.FC = () => {
           <span className="text-[11px] font-semibold text-slate-500">
             {isAr ? 'فواتير الموردين المسجلة' : 'Vendor Bills Total'}
           </span>
-          <p className="mt-1 text-lg font-black text-blue-600">
+          <p dir="ltr" className="inline-block unicode-bidi-isolate mt-1 text-lg font-black text-blue-600">
             {formatCurrency(totalBillsAmount > 0 ? totalBillsAmount : 227800, language)}
           </p>
         </div>
@@ -397,7 +397,7 @@ export const ProcurementView: React.FC = () => {
             {isAr ? 'الفواتير المرحلة لدفتر الأستاذ' : 'Posted to General Ledger'}
           </span>
           <p className="mt-1 text-lg font-black text-emerald-600">
-            {postedBillsCount} / {procurementBills.length || 2} {isAr ? 'فاتورة مرحلة' : 'Bills Posted'}
+            <span dir="ltr" className="inline-block unicode-bidi-isolate">{postedBillsCount} / {procurementBills.length || 2}</span> {isAr ? 'فاتورة مرحلة' : 'Bills Posted'}
           </p>
         </div>
         <div
@@ -418,20 +418,20 @@ export const ProcurementView: React.FC = () => {
           isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
         }`}
       >
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
           <button
             type="button"
             onClick={() => setActiveTab('matching')}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'matching'
                 ? 'bg-orange-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
             }`}
           >
-            <Receipt className="h-4 w-4" />
+            <Receipt className="h-4 w-4 shrink-0" />
             <span>{isAr ? 'فواتير الموردين والترحيل المالي (Vendor Bills & Ledger)' : 'Vendor Bills & Ledger Posting'}</span>
             {procurementBills.some((b) => !b.is_posted) && (
-              <span className="rounded-full bg-white text-orange-600 text-[10px] px-1.5 py-0.2 font-black ml-1">
+              <span className="rounded-full bg-white text-orange-600 text-[10px] px-1.5 py-0.2 font-black ml-1 whitespace-nowrap shrink-0">
                 {procurementBills.filter((b) => !b.is_posted).length}
               </span>
             )}
@@ -439,28 +439,28 @@ export const ProcurementView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('orders')}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'orders'
                 ? 'bg-slate-900 text-white dark:bg-orange-500'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
             }`}
           >
-            <Boxes className="h-4 w-4" />
+            <Boxes className="h-4 w-4 shrink-0" />
             <span>{isAr ? 'أوامر الشراء (POs)' : 'Purchase Orders'}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('tenders')}
-            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black transition-colors ${
+            className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-black whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'tenders'
                 ? 'bg-amber-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
             }`}
           >
-            <Lock className="h-4 w-4" />
+            <Lock className="h-4 w-4 shrink-0" />
             <span>{isAr ? 'المناقصات والمظاريف المغلقة (eSourcing)' : 'eSourcing & Tenders'}</span>
             {tenders.length > 0 && (
-              <span className="rounded-full bg-white text-amber-600 text-[10px] px-1.5 py-0.2 font-black ml-1">
+              <span className="rounded-full bg-white text-amber-600 text-[10px] px-1.5 py-0.2 font-black ml-1 whitespace-nowrap shrink-0">
                 {tenders.length}
               </span>
             )}
@@ -585,19 +585,19 @@ export const ProcurementView: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                             bill.match_status === 'MATCHED'
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
                               : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
                           }`}
                         >
-                          {bill.match_status === 'MATCHED' && <CheckCircle2 className="h-3 w-3" />}
+                          {bill.match_status === 'MATCHED' && <CheckCircle2 className="h-3 w-3 shrink-0" />}
                           {bill.match_status || 'MATCHED'}
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
                         <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                             bill.is_posted
                               ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
                               : 'bg-slate-100 text-slate-600 border border-slate-300 dark:bg-slate-800 dark:text-slate-400'
@@ -605,7 +605,7 @@ export const ProcurementView: React.FC = () => {
                         >
                           {bill.is_posted ? (
                             <>
-                              <CheckCircle2 className="h-3 w-3" />
+                              <CheckCircle2 className="h-3 w-3 shrink-0" />
                               <span>{isAr ? 'مرحل لدفتر الأستاذ' : 'POSTED'}</span>
                             </>
                           ) : (
@@ -616,10 +616,10 @@ export const ProcurementView: React.FC = () => {
                       <td className="py-3.5 px-4 text-center">
                         {bill.is_posted ? (
                           <span
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0"
                             title={bill.journal_entry_id ? `Journal Entry ID: ${bill.journal_entry_id}` : 'Posted'}
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                             <span>{isAr ? 'مرحل بنجاح' : 'Posted to GL'}</span>
                           </span>
                         ) : (
@@ -694,7 +694,7 @@ export const ProcurementView: React.FC = () => {
                     <td className="py-3.5 px-4 text-center font-mono text-slate-500">{po.issueDate}</td>
                     <td className="py-3.5 px-4 text-center">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                           po.status === 'MATCHED'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
                             : po.status === 'APPROVED'
@@ -702,8 +702,8 @@ export const ProcurementView: React.FC = () => {
                             : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
                         }`}
                       >
-                        {po.status === 'MATCHED' && <CheckCircle2 className="h-3 w-3" />}
-                        {po.status === 'PENDING' && <AlertCircle className="h-3 w-3" />}
+                        {po.status === 'MATCHED' && <CheckCircle2 className="h-3 w-3 shrink-0" />}
+                        {po.status === 'PENDING' && <AlertCircle className="h-3 w-3 shrink-0" />}
                         {po.status}
                       </span>
                     </td>
@@ -812,14 +812,14 @@ export const ProcurementView: React.FC = () => {
                           {new Date(t.bid_opening_date).toLocaleDateString(isAr ? 'ar-SA' : 'en-US')}
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <span className="inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded-full text-[11px] bg-slate-100 dark:bg-slate-800">
-                            <Lock className="w-2.5 h-2.5 text-amber-500" />
+                          <span className="inline-flex items-center gap-1 font-mono font-bold px-2 py-0.5 rounded-full text-[11px] bg-slate-100 dark:bg-slate-800 whitespace-nowrap shrink-0">
+                            <Lock className="w-2.5 h-2.5 text-amber-500 shrink-0" />
                             {t.bids_count}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                               t.status === 'AWARDED'
                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
                                 : t.bids_unsealed
@@ -828,17 +828,17 @@ export const ProcurementView: React.FC = () => {
                             }`}
                           >
                             {t.status === 'AWARDED' ? (
-                              <Award className="h-3 w-3" />
+                              <Award className="h-3 w-3 shrink-0" />
                             ) : t.bids_unsealed ? (
-                              <Unlock className="h-3 w-3" />
+                              <Unlock className="h-3 w-3 shrink-0" />
                             ) : (
-                              <Lock className="h-3 w-3" />
+                              <Lock className="h-3 w-3 shrink-0" />
                             )}
                             {t.status}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
+                          <div className="flex flex-wrap items-center justify-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => handleOpenBidsModal(t)}

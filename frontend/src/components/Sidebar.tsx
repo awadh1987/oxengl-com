@@ -30,6 +30,7 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  X,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 
@@ -596,30 +597,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Mobile Backdrop */}
+      {/* Mobile Drawer Backdrop */}
       {isOpenMobile && (
         <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-xs lg:hidden"
+          className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden"
           onClick={onCloseMobile}
+          aria-hidden="true"
         />
       )}
 
       <aside
         id="app-sidebar-navigation"
-        className={`fixed top-18 start-0 z-40 h-[calc(100vh-4.5rem)] border-e border-slate-800 bg-[#0B132B] text-slate-100 shadow-xl shadow-slate-950/10 transition-all duration-300 ease-in-out lg:static lg:block ${
-          isCollapsed ? 'w-16' : 'w-64'
+        className={`erp-sidebar-drawer fixed inset-y-0 start-0 z-40 flex h-full h-dvh flex-col justify-between border-e border-slate-800 bg-[#0B132B] text-slate-100 shadow-2xl transition-all duration-300 ease-in-out md:static md:z-auto md:h-[calc(100dvh-4.5rem)] ${
+          isCollapsed ? 'md:w-16' : 'md:w-64'
         } ${
           isOpenMobile
-            ? 'translate-x-0'
+            ? 'w-72 sm:w-80 max-w-[85vw] translate-x-0'
             : isAr
-            ? 'translate-x-full lg:translate-x-0'
-            : '-translate-x-full lg:translate-x-0'
+            ? 'hidden md:flex translate-x-full md:translate-x-0'
+            : 'hidden md:flex -translate-x-full md:translate-x-0'
         }`}
       >
         <div className="flex h-full flex-col justify-between p-2.5">
           {/* Main Top Scrolling Container */}
           <div className="flex-1 space-y-3 overflow-y-auto no-scrollbar">
-            {/* Header: Title & Collapse Toggle Rail Button */}
+            {/* Header: Title & Action Buttons (Mobile Close & Desktop Collapse Rail) */}
             <div
               className={`flex items-center border-b border-slate-800 pb-2 ${
                 isCollapsed ? 'justify-center' : 'justify-between px-1'
@@ -639,33 +641,48 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
 
-              <button
-                type="button"
-                id="sidebar-collapse-toggle-btn"
-                onClick={toggleCollapsed}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all shadow-xs"
-                title={
-                  isCollapsed
-                    ? isAr
-                      ? 'توسيع القائمة الجانبية (w-64)'
-                      : 'Expand Sidebar (w-64)'
-                    : isAr
-                    ? 'تصغير القائمة الجانبية (w-16)'
-                    : 'Collapse Sidebar (w-16)'
-                }
-              >
-                {isCollapsed ? (
-                  isAr ? (
-                    <ChevronLeft className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )
-                ) : isAr ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" />
+              <div className="flex items-center gap-1">
+                {/* Mobile Drawer Close Button */}
+                {onCloseMobile && (
+                  <button
+                    type="button"
+                    onClick={onCloseMobile}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-xs md:hidden cursor-pointer"
+                    title={isAr ? 'إغلاق القائمة' : 'Close Menu'}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 )}
-              </button>
+
+                {/* Desktop Sidebar Collapse Rail Button */}
+                <button
+                  type="button"
+                  id="sidebar-collapse-toggle-btn"
+                  onClick={toggleCollapsed}
+                  className="hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all shadow-xs cursor-pointer"
+                  title={
+                    isCollapsed
+                      ? isAr
+                        ? 'توسيع القائمة الجانبية (w-64)'
+                        : 'Expand Sidebar (w-64)'
+                      : isAr
+                      ? 'تصغير القائمة الجانبية (w-16)'
+                      : 'Collapse Sidebar (w-16)'
+                  }
+                >
+                  {isCollapsed ? (
+                    isAr ? (
+                      <ChevronLeft className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )
+                  ) : isAr ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Driver View Banner */}

@@ -271,31 +271,31 @@ export const MasterControlPanel: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-16">
       {/* 1. Persistent Top Telemetry Status Banner */}
-      <div className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 py-2.5">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 text-xs font-mono">
-          <div className="flex items-center gap-3">
-            <span className="flex h-2.5 w-2.5 relative">
+      <div className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 py-2.5">
+        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 md:gap-4 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <span className="flex h-2.5 w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span className="font-bold text-slate-200 tracking-wide">OXEN-GL MASTER PLATFORM PLANE</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400">Cluster: <span className="text-indigo-400">{health?.infrastructure?.cluster || 'me-central-1'}</span></span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-400">Database: <span className="text-indigo-400">{health?.infrastructure?.database || 'PostgreSQL 16 Multi-Tenant RLS'}</span></span>
+            <span className="font-bold text-slate-200 tracking-wide whitespace-nowrap shrink-0">OXEN-GL MASTER PLATFORM PLANE</span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="text-slate-400 whitespace-nowrap shrink-0">Cluster: <span className="text-indigo-400">{health?.infrastructure?.cluster || 'me-central-1'}</span></span>
+            <span className="text-slate-600 hidden sm:inline">|</span>
+            <span className="text-slate-400 whitespace-nowrap shrink-0">Database: <span className="text-indigo-400">{health?.infrastructure?.database || 'PostgreSQL 16 Multi-Tenant RLS'}</span></span>
           </div>
 
-          <div className="flex items-center gap-5 text-slate-400">
-            <div>
+          <div className="flex flex-wrap items-center gap-3 md:gap-5 text-slate-400">
+            <div className="whitespace-nowrap shrink-0">
               Uptime: <span className="text-emerald-400 font-bold">{health?.uptime_percent || 99.98}%</span>
             </div>
-            <div>
+            <div className="whitespace-nowrap shrink-0">
               Latency: <span className="text-sky-400 font-bold">{health?.api_latency_ms || 14.2}ms</span>
             </div>
-            <div>
+            <div className="whitespace-nowrap shrink-0">
               Error Rate: <span className="text-emerald-400 font-bold">{health?.error_rate_percent || 0.02}%</span>
             </div>
-            <div>
+            <div className="whitespace-nowrap shrink-0">
               RLS Sessions: <span className="text-amber-400 font-bold">{health?.active_rls_connections || 18}</span>
             </div>
           </div>
@@ -385,16 +385,16 @@ export const MasterControlPanel: React.FC = () => {
 
         {/* 3. High-Density Tenant Registry Table */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden mb-8">
-          <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-sm font-bold text-white">سجل المنشآت المستضافة (Tenant Registry)</h2>
-              <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-xs font-mono">
+          <div className="px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Database className="w-4 h-4 text-indigo-400 shrink-0" />
+              <h2 className="text-sm font-bold text-white whitespace-nowrap shrink-0">سجل المنشآت المستضافة (Tenant Registry)</h2>
+              <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-full text-xs font-mono whitespace-nowrap shrink-0">
                 {tenants.length} Active Tenants
               </span>
             </div>
 
-            <button onClick={loadData} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+            <button onClick={loadData} className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors shrink-0">
               <RefreshCw className="w-4 h-4" />
             </button>
           </div>
@@ -425,7 +425,7 @@ export const MasterControlPanel: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-1 rounded font-mono text-[10px] font-bold uppercase tracking-wider ${t.plan_tier === 'enterprise' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-sky-500/10 text-sky-400 border border-sky-500/30'}`}>
+                      <span className={`inline-block px-2.5 py-1 rounded font-mono text-[10px] font-bold uppercase tracking-wider whitespace-nowrap shrink-0 ${t.plan_tier === 'enterprise' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-sky-500/10 text-sky-400 border border-sky-500/30'}`}>
                         {t.plan_tier}
                       </span>
                     </td>

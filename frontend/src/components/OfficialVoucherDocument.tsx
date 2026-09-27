@@ -56,7 +56,7 @@ export const OfficialVoucherDocument: React.FC<OfficialVoucherDocumentProps> = (
               {isPayment ? 'سند صـرف مالـي' : 'سند قـبض مالـي'}
             </h2>
             <p className="text-[11px] text-slate-300 uppercase tracking-widest font-mono">
-              {isPayment ? 'PAYMENT VOUCHER' : 'RECEIPT VOUCHER'} • NO: {voucher.voucherNumber}
+              {isPayment ? 'PAYMENT VOUCHER' : 'RECEIPT VOUCHER'} • NO: <span dir="ltr" className="inline-block unicode-bidi-isolate">{voucher.voucherNumber}</span>
             </p>
           </div>
         </div>
@@ -64,7 +64,7 @@ export const OfficialVoucherDocument: React.FC<OfficialVoucherDocumentProps> = (
         <div className="flex items-center gap-4 text-xs">
           <div className="text-right sm:text-left">
             <span className="text-slate-400 block text-[10px]">{isAr ? 'التاريخ المالي:' : 'Posting Date:'}</span>
-            <strong className="font-mono text-sm">{voucher.date}</strong>
+            <strong className="font-mono text-sm"><span dir="ltr" className="inline-block unicode-bidi-isolate">{voucher.date}</span></strong>
           </div>
           <div className="text-right sm:text-left">
             <span className="text-slate-400 block text-[10px]">{isAr ? 'حالة السند:' : 'Status:'}</span>
@@ -102,7 +102,7 @@ export const OfficialVoucherDocument: React.FC<OfficialVoucherDocumentProps> = (
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-black font-mono text-slate-950 sm:text-4xl print:text-2xl">
-                {voucher.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                <span dir="ltr" className="inline-block unicode-bidi-isolate">{voucher.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </span>
               <span className="rounded-lg bg-orange-700 px-2 py-0.5 text-xs font-black text-white print:text-[10px]">
                 {isAr ? 'ريال سعودي (SAR)' : 'SAR'}
@@ -131,7 +131,9 @@ export const OfficialVoucherDocument: React.FC<OfficialVoucherDocumentProps> = (
             {(voucher.transferRefNumber || voucher.checkNumber) && (
               <p className="text-[11px] text-slate-600 print:text-[10px]">
                 {voucher.checkNumber ? (isAr ? 'رقم الشيك:' : 'Cheque No:') : (isAr ? 'مرجع التحويل:' : 'Ref No:')}{' '}
-                <strong className="font-mono text-orange-950">{voucher.checkNumber || voucher.transferRefNumber}</strong>
+                <strong className="font-mono text-orange-950">
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{voucher.checkNumber || voucher.transferRefNumber}</span>
+                </strong>
               </p>
             )}
           </div>
@@ -183,7 +185,7 @@ export const OfficialVoucherDocument: React.FC<OfficialVoucherDocumentProps> = (
             {voucher.partyTaxNumber && (
               <p className="text-[11px] text-slate-600 print:text-[10px]">
                 {isAr ? 'الرقم الضريبي:' : 'VAT No:'}{' '}
-                <span className="font-mono font-bold text-slate-900">{voucher.partyTaxNumber}</span>
+                <span className="font-mono font-bold text-slate-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{voucher.partyTaxNumber}</span></span>
               </p>
             )}
           </div>

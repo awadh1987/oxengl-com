@@ -301,7 +301,7 @@ export const CustomsClearanceView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 backdrop-blur-md">
           <span className="text-xs font-mono text-slate-400 block mb-1">{t('customs.totalManifests')}</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-white">{stats.total}</span>
+            <span className="text-2xl font-black text-white"><span dir="ltr" className="inline-block unicode-bidi-isolate">{stats.total}</span></span>
             <span className="text-xs font-mono text-cyan-400 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-800/40">
               {t('customs.activeSync', 'Active Sync')}
             </span>
@@ -312,7 +312,7 @@ export const CustomsClearanceView: React.FC = () => {
           <span className="text-xs font-mono text-slate-400 block mb-1">{t('customs.declaredValue')}</span>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-white">
-              {stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              <span dir="ltr" className="inline-block unicode-bidi-isolate">{stats.totalValue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
             </span>
             <span className="text-xs font-mono text-slate-400">SAR</span>
           </div>
@@ -322,10 +322,10 @@ export const CustomsClearanceView: React.FC = () => {
           <span className="text-xs font-mono text-slate-400 block mb-1">{t('customs.clearanceRatio')}</span>
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-black text-emerald-400">
-              {stats.total > 0 ? Math.round((stats.cleared / stats.total) * 100) : 0}%
+              <span dir="ltr" className="inline-block unicode-bidi-isolate">{stats.total > 0 ? Math.round((stats.cleared / stats.total) * 100) : 0}%</span>
             </span>
             <span className="text-xs font-mono text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-800/40">
-              {stats.cleared}/{stats.total} {t('customs.statusCleared')}
+              <span dir="ltr" className="inline-block unicode-bidi-isolate">{stats.cleared}/{stats.total}</span> {t('customs.statusCleared')}
             </span>
           </div>
         </div>
@@ -333,7 +333,7 @@ export const CustomsClearanceView: React.FC = () => {
         <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 backdrop-blur-md">
           <span className="text-xs font-mono text-slate-400 block mb-1">{t('customs.certsMetric')}</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-black text-teal-300">{stats.zatcaCertified}</span>
+            <span className="text-2xl font-black text-teal-300"><span dir="ltr" className="inline-block unicode-bidi-isolate">{stats.zatcaCertified}</span></span>
             <span className="text-xs font-mono text-[#10b981] bg-emerald-950/60 px-2 py-0.5 rounded border border-[#10b981]/40 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
               {t('customs.compliant')}
@@ -422,10 +422,10 @@ export const CustomsClearanceView: React.FC = () => {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-mono font-bold text-cyan-400">
-                              <bdi>{manifest.manifest_number}</bdi>
+                              <span dir="ltr" className="inline-block unicode-bidi-isolate">{manifest.manifest_number}</span>
                             </span>
                             <span className="text-[11px] font-mono text-slate-500">
-                              <bdi>#BLOCK-{manifest.block_index}</bdi>
+                              <span dir="ltr" className="inline-block unicode-bidi-isolate">#BLOCK-{manifest.block_index}</span>
                             </span>
                           </div>
                           <span className="text-sm font-semibold tracking-tight text-white block mt-1">
@@ -434,7 +434,7 @@ export const CustomsClearanceView: React.FC = () => {
                           {manifest.carrier_name && (
                             <span className="text-xs text-slate-400 font-mono flex items-center gap-1 mt-0.5">
                               <Truck className="h-3 w-3 text-slate-500" />
-                              <bdi>{manifest.carrier_name}</bdi>
+                              <span dir="ltr" className="inline-block unicode-bidi-isolate">{manifest.carrier_name}</span>
                             </span>
                           )}
                         </div>
@@ -456,17 +456,17 @@ export const CustomsClearanceView: React.FC = () => {
                         {(manifest.hs_codes || []).map(code => (
                           <span
                             key={code}
-                            className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400"
+                            className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-400 whitespace-nowrap shrink-0"
                           >
-                            <bdi>HS: {code}</bdi>
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">HS: {code}</span>
                           </span>
                         ))}
                       </div>
 
-                      <div className="flex justify-between items-center pt-3 border-t border-slate-800/60 text-xs">
-                        <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap justify-between items-center gap-2 pt-3 border-t border-slate-800/60 text-xs">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span
-                            className={`flex items-center gap-1 font-mono text-[11px] font-semibold ${
+                            className={`flex items-center gap-1 font-mono text-[11px] font-semibold whitespace-nowrap shrink-0 ${
                               manifest.clearance_status === 'CLEARED' || manifest.status === 'CLEARED'
                                 ? 'text-emerald-400'
                                 : manifest.clearance_status === 'UNDER_INSPECTION' || manifest.status === 'INSPECTION'
@@ -497,7 +497,7 @@ export const CustomsClearanceView: React.FC = () => {
                           </span>
                         </div>
                         <span className="font-mono text-slate-200 font-bold">
-                          <bdi>{(manifest.total_value_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} {t('common.currency', 'SAR')}</bdi>
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{(manifest.total_value_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} {t('common.currency', 'SAR')}</span>
                         </span>
                       </div>
                     </div>
@@ -514,16 +514,16 @@ export const CustomsClearanceView: React.FC = () => {
                 <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-cyan-500 via-teal-400 to-blue-600" />
 
                 <div className="border-b border-slate-800/80 pb-4">
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-wrap justify-between items-start gap-2">
                     <div>
                       <h3 className="text-base font-bold tracking-tight text-white">
-                        <bdi>{selectedManifest.manifest_number}</bdi>
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{selectedManifest.manifest_number}</span>
                       </h3>
                       <p className="text-[11px] font-mono text-slate-400 mt-0.5">
-                        <bdi>{maskUuid(selectedManifest.id)}</bdi>
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{maskUuid(selectedManifest.id)}</span>
                       </p>
                     </div>
-                    <span className="text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-cyan-400">
+                    <span className="text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-cyan-400 whitespace-nowrap shrink-0">
                       {t('customs.port', 'Port')}: {selectedManifest.border_port_name || selectedManifest.port_of_entry || ''}
                     </span>
                   </div>
@@ -541,7 +541,7 @@ export const CustomsClearanceView: React.FC = () => {
                         className="px-2.5 py-1.5 bg-slate-900/90 border border-slate-800 font-mono rounded-lg text-xs text-slate-200 flex items-center gap-1.5"
                       >
                         <Layers className="h-3 w-3 text-cyan-400" />
-                        <bdi>{code}</bdi>
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{code}</span>
                       </span>
                     ))}
                   </div>
@@ -552,19 +552,19 @@ export const CustomsClearanceView: React.FC = () => {
                   <div>
                     <span className="text-[10px] text-slate-500 block">{t('customs.duty', 'Duty (SAR)')}</span>
                     <span className="font-bold text-slate-200">
-                      <bdi>{Number(selectedManifest.duty_amount || 0).toLocaleString()} {t('common.currency', 'SAR')}</bdi>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{Number(selectedManifest.duty_amount || 0).toLocaleString()} {t('common.currency', 'SAR')}</span>
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">{t('customs.vat', 'VAT (SAR)')}</span>
                     <span className="font-bold text-slate-200">
-                      <bdi>{Number(selectedManifest.vat_amount || 0).toLocaleString()} {t('common.currency', 'SAR')}</bdi>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{Number(selectedManifest.vat_amount || 0).toLocaleString()} {t('common.currency', 'SAR')}</span>
                     </span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-500 block">{t('customs.totalValue', 'Total Value')}</span>
                     <span className="font-bold text-cyan-400">
-                      <bdi>{Number(selectedManifest.total_value_sar || 0).toLocaleString()} {t('common.currency', 'SAR')}</bdi>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">{Number(selectedManifest.total_value_sar || 0).toLocaleString()} {t('common.currency', 'SAR')}</span>
                     </span>
                   </div>
                 </div>
@@ -577,7 +577,7 @@ export const CustomsClearanceView: React.FC = () => {
                       {t('customs.ledgerBlockSequence', 'LEDGER BLOCK SEQUENCE')}
                     </span>
                     <span className="text-cyan-400 font-bold bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/50">
-                      <bdi>#BLOCK-{selectedManifest.block_index}</bdi>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate">#BLOCK-{selectedManifest.block_index}</span>
                     </span>
                   </div>
 
@@ -600,16 +600,16 @@ export const CustomsClearanceView: React.FC = () => {
                       </button>
                     </div>
                     <p className="text-slate-300 text-[10px] break-all leading-relaxed bg-black/60 p-2.5 rounded-lg border border-slate-800 font-mono">
-                      <bdi title={selectedManifest.block_hash || selectedManifest.payload_hash}>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate" title={selectedManifest.block_hash || selectedManifest.payload_hash}>
                         {maskHash(selectedManifest.block_hash || selectedManifest.payload_hash)}
-                      </bdi>
+                      </span>
                     </p>
                   </div>
 
                   <div>
                     <span className="text-[10px] text-slate-500 block mb-1">{t('customs.prevHash', 'PREVIOUS BLOCK HASH:')}</span>
                     <p className="text-slate-500 text-[10px] break-all leading-relaxed bg-black/40 p-2 rounded-lg border border-slate-900 font-mono">
-                      <bdi title={selectedManifest.previous_hash}>{maskHash(selectedManifest.previous_hash)}</bdi>
+                      <span dir="ltr" className="inline-block unicode-bidi-isolate" title={selectedManifest.previous_hash}>{maskHash(selectedManifest.previous_hash)}</span>
                     </p>
                   </div>
                 </div>
@@ -631,7 +631,7 @@ export const CustomsClearanceView: React.FC = () => {
                           {t('customs.clearedValidated', 'CLEARED & VALIDATED')}
                         </>
                       ) : (
-                        <bdi>{selectedManifest.clearance_status || selectedManifest.status}</bdi>
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{selectedManifest.clearance_status || selectedManifest.status}</span>
                       )}
                     </span>
                   </div>

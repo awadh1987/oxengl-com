@@ -345,7 +345,7 @@ export const HRMSView: React.FC = () => {
             {isAr ? 'إجمالي مسير الرواتب' : 'Monthly Payroll Value'}
           </span>
           <p className="mt-1 text-lg font-black text-[#F05627]">
-            {formatCurrency(totalPayrollValue, language)}
+            <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{formatCurrency(totalPayrollValue, language)}</span>
           </p>
         </div>
         <div
@@ -372,7 +372,7 @@ export const HRMSView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('employees')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-colors ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'employees'
                 ? 'bg-slate-900 text-white dark:bg-orange-500'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -383,7 +383,7 @@ export const HRMSView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('payroll')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-colors ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'payroll'
                 ? 'bg-slate-900 text-white dark:bg-orange-500'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -394,7 +394,7 @@ export const HRMSView: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('attendance')}
-            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition-colors ${
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold whitespace-nowrap shrink-0 transition-colors ${
               activeTab === 'attendance'
                 ? 'bg-slate-900 text-white dark:bg-orange-500'
                 : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
@@ -404,15 +404,15 @@ export const HRMSView: React.FC = () => {
           </button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {activeTab === 'payroll' && (
             <button
               type="button"
               disabled={isDraftingPayroll}
               onClick={handleGenerateSamplePayrollRun}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-xs font-bold text-indigo-900 shadow-2xs hover:bg-indigo-100 disabled:opacity-50 transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-1.5 text-xs font-bold text-indigo-900 shadow-2xs hover:bg-indigo-100 disabled:opacity-50 transition-colors whitespace-nowrap shrink-0"
             >
-              {isDraftingPayroll ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              {isDraftingPayroll ? <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" /> : <Plus className="h-3.5 w-3.5 shrink-0" />}
               <span>{isAr ? 'إعداد مسودة مسير جديدة' : 'Draft Payroll Run'}</span>
             </button>
           )}
@@ -421,9 +421,9 @@ export const HRMSView: React.FC = () => {
             <button
               type="button"
               onClick={handleRecordSampleScan}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-1.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-1.5 text-xs font-bold text-emerald-900 shadow-2xs hover:bg-emerald-100 transition-colors whitespace-nowrap shrink-0"
             >
-              <Fingerprint className="h-3.5 w-3.5 text-emerald-700" />
+              <Fingerprint className="h-3.5 w-3.5 text-emerald-700 shrink-0" />
               <span>{isAr ? 'تسجيل حركة بصمة' : 'Record Biometric Scan'}</span>
             </button>
           )}
@@ -482,7 +482,7 @@ export const HRMSView: React.FC = () => {
                       className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
-                        {emp.employeeNumber}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{emp.employeeNumber}</span>
                       </td>
                       <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
                         {isAr ? emp.nameAr : emp.nameEn}
@@ -494,14 +494,14 @@ export const HRMSView: React.FC = () => {
                         {isAr ? emp.departmentAr : emp.departmentEn}
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900 dark:text-white">
-                        {formatCurrency(emp.baseSalary, language)}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(emp.baseSalary, language)}</span>
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600">
-                        {emp.attendanceRate}%
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{emp.attendanceRate}%</span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
-                          <CheckCircle2 className="h-3 w-3" />
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 whitespace-nowrap shrink-0">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
                           {emp.status}
                         </span>
                       </td>
@@ -571,26 +571,26 @@ export const HRMSView: React.FC = () => {
                         className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                       >
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
-                          {run.pay_period}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{run.pay_period}</span>
                         </td>
                         <td className="py-3.5 px-4 font-bold text-slate-800 dark:text-slate-200">
                           {empLabel}
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono font-bold text-slate-900 dark:text-white">
-                          {formatCurrency(Number(run.gross_earnings), language)}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(Number(run.gross_earnings), language)}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono text-emerald-600">
-                          +{formatCurrency(Number(run.allowances), language)}
+                          +<span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(Number(run.allowances), language)}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono text-rose-600">
-                          -{formatCurrency(Number(run.deductions), language)}
+                          -<span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(Number(run.deductions), language)}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono font-black text-blue-600">
-                          {formatCurrency(Number(run.net_pay), language)}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(Number(run.net_pay), language)}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${
+                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                               run.status === 'APPROVED' || run.status === 'PAID'
                                 ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
                                 : 'bg-amber-50 border border-amber-200 text-amber-800'
@@ -611,18 +611,18 @@ export const HRMSView: React.FC = () => {
                               type="button"
                               disabled={postingPayrollId === run.id}
                               onClick={() => handlePostPayrollToLedger(run.id)}
-                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50 transition-all"
+                              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:opacity-95 disabled:opacity-50 transition-all whitespace-nowrap shrink-0"
                               title={isAr ? 'ترحيل مسير الراتب إلى دفتر الأستاذ العام بقيد متوازن' : 'Post balanced double-entry to General Ledger'}
                             >
                               {postingPayrollId === run.id ? (
-                                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                                <RefreshCw className="h-3.5 w-3.5 animate-spin shrink-0" />
                               ) : (
-                                <BookOpen className="h-3.5 w-3.5" />
+                                <BookOpen className="h-3.5 w-3.5 shrink-0" />
                               )}
                               <span>{isAr ? 'ترحيل لدفتر الأستاذ (Post to GL)' : 'Post to GL'}</span>
                             </button>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 whitespace-nowrap shrink-0">
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                               <span>{isAr ? 'مرحل لدفتر الأستاذ (Posted)' : 'Posted to GL'}</span>
                             </span>
@@ -696,7 +696,7 @@ export const HRMSView: React.FC = () => {
                           {empLabel}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-slate-600 dark:text-slate-400">
-                          {log.device_id || 'BIO-SCANNER-01'}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{log.device_id || 'BIO-SCANNER-01'}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center">
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-800">
@@ -705,17 +705,17 @@ export const HRMSView: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono text-slate-700 dark:text-slate-300">
-                          {formatDate(log.check_in, language)} {new Date(log.check_in).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US')}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatDate(log.check_in, language)} {new Date(log.check_in).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
                         </td>
                         <td className="py-3.5 px-4 text-center font-mono text-slate-500">
                           {log.check_out ? (
-                            `${formatDate(log.check_out, language)} ${new Date(log.check_out).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US')}`
+                            <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatDate(log.check_out, language)} {new Date(log.check_out).toLocaleTimeString(language === 'ar' ? 'ar-SA' : 'en-US')}</span>
                           ) : (
                             <span className="text-amber-600">{isAr ? 'نشط حالياً' : 'Active'}</span>
                           )}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">
-                          {log.biometric_hash ? `${log.biometric_hash.slice(0, 16)}...` : 'N/A'}
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{log.biometric_hash ? `${log.biometric_hash.slice(0, 16)}...` : 'N/A'}</span>
                         </td>
                       </tr>
                     );

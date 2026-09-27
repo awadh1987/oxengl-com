@@ -414,27 +414,29 @@ export const CorporateVault: React.FC = () => {
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
           <div className="space-y-1 max-w-3xl">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                <ShieldCheck className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-sky-500/10 text-sky-400 border border-sky-500/20 whitespace-nowrap shrink-0">
+                <ShieldCheck className="w-3 h-3 shrink-0" />
                 {isAr ? 'معيار UNOPS-STD-2026.1 / ISO-21500' : 'UNOPS-STD-2026.1 / ISO-21500'}
               </span>
 
-              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shrink-0 ${
                 complianceRating === 'COMPLIANT'
                   ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                   : complianceRating === 'PARTIAL'
                   ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                   : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
               }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                   complianceRating === 'COMPLIANT' ? 'bg-emerald-400 animate-pulse' : complianceRating === 'PARTIAL' ? 'bg-amber-400' : 'bg-rose-400'
                 }`} />
-                {isAr
-                  ? complianceRating === 'COMPLIANT' ? 'مطابق ومؤهل للمناقصات' : complianceRating === 'PARTIAL' ? 'مؤهل جزئياً' : 'يتطلب إجراءات نظامية'
-                  : complianceRating}
+                <span>
+                  {isAr
+                    ? complianceRating === 'COMPLIANT' ? 'مطابق ومؤهل للمناقصات' : complianceRating === 'PARTIAL' ? 'مؤهل جزئياً' : 'يتطلب إجراءات نظامية'
+                    : complianceRating}
+                </span>
               </span>
 
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap shrink-0">
                 {isAr ? `جاهزية التأهيل: ${readinessScore}%` : `Readiness: ${readinessScore}%`}
               </span>
             </div>

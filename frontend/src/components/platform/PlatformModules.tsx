@@ -23,7 +23,7 @@ const Banner: React.FC<{ icon: React.ComponentType<{ className?: string }>; titl
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-black">{title}</h1>
-          {badge && <span className="rounded-full border border-emerald-400/30 bg-emerald-500/25 px-3 py-0.5 text-xs font-bold text-emerald-200">{badge}</span>}
+          {badge && <span className="rounded-full border border-emerald-400/30 bg-emerald-500/25 px-3 py-0.5 text-xs font-bold text-emerald-200 whitespace-nowrap shrink-0">{badge}</span>}
         </div>
         <p className="mt-1 max-w-2xl text-xs text-slate-300">{subtitle}</p>
       </div>
@@ -118,7 +118,7 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600/10 text-base font-black text-blue-700">{company.name.slice(0, 1).toUpperCase()}</div>
                 <div><p className="font-mono text-[11px] text-slate-400">{company.slug}</p><h3 className="text-sm font-black text-slate-900">{company.name}</h3></div>
               </div>
-              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span>
+              <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase whitespace-nowrap shrink-0 ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span>
             </div>
             <dl className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 text-xs">
               <div className="flex justify-between"><dt className="text-slate-500">Commercial Reg:</dt><dd className="font-mono font-bold text-slate-800">{company.commercialRegistration || '—'}</dd></div>
@@ -354,12 +354,12 @@ export const LicenseProvisionerView: React.FC = () => {
                 <tr key={company.id} className={currentCompany?.id === company.id ? 'bg-blue-50/60' : 'hover:bg-slate-50'}>
                   <td className="px-4 py-3 font-bold text-slate-900">{company.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-600">{company.slug}</td>
-                  <td className="px-4 py-3"><span className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span></td>
+                  <td className="px-4 py-3"><span className={`rounded-md border px-2 py-0.5 text-[10px] font-black whitespace-nowrap shrink-0 ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span></td>
                   <td className="px-4 py-3">centers max {company.maxCostCenters ?? 25}</td>
                   <td className="px-4 py-3">
-                    {company.licenseKey ? <button onClick={() => copyKey(company.licenseKey as string)} className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-slate-700 hover:text-blue-700">{copied === company.licenseKey ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}{company.licenseKey}</button> : <span className="text-slate-400">Not issued</span>}
+                    {company.licenseKey ? <button onClick={() => copyKey(company.licenseKey as string)} className="inline-flex items-center gap-1.5 font-mono text-[11px] font-bold text-slate-700 hover:text-blue-700">{copied === company.licenseKey ? <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0" /> : <Copy className="h-3.5 w-3.5 shrink-0" />}{company.licenseKey}</button> : <span className="text-slate-400">Not issued</span>}
                   </td>
-                  <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700"><CheckCircle2 className="h-3 w-3" />Active &amp; Isolated</span></td>
+                  <td className="px-4 py-3"><span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 whitespace-nowrap shrink-0"><CheckCircle2 className="h-3 w-3 shrink-0" />Active &amp; Isolated</span></td>
                   <td className="px-4 py-3"><button onClick={() => { setCurrentCompany(company); setCompanyId(company.id); }} className="rounded-lg border border-blue-200 px-2.5 py-1 text-[10px] font-bold text-blue-700 hover:bg-blue-50">Switch Context</button></td>
                 </tr>
               ))}
@@ -464,16 +464,16 @@ export const SystemAuditView: React.FC = () => {
       </div>
 
       <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div><h3 className="text-sm font-black text-slate-900">Database Tables Isolation Matrix</h3>
             <p className="mt-0.5 text-xs text-slate-500">Every query strictly applies the tenant partition filter preventing cross-tenant data leaks</p></div>
-          <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700"><CheckCircle2 className="h-4 w-4" />All Passed</span>
+          <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 whitespace-nowrap shrink-0"><CheckCircle2 className="h-4 w-4 shrink-0" />All Passed</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {tables.map((table) => (
-            <div key={table} className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
-              <span className="flex items-center gap-2"><Database className="h-4 w-4 shrink-0 text-slate-400" /><span className="font-mono font-bold text-slate-800">{table}</span></span>
-              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">ISOLATED</span>
+            <div key={table} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
+              <span className="flex items-center gap-2"><Database className="h-4 w-4 shrink-0 text-slate-400" /><span className="font-mono font-bold text-slate-800 break-all">{table}</span></span>
+              <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 whitespace-nowrap shrink-0">ISOLATED</span>
             </div>
           ))}
         </div>

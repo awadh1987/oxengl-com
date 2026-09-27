@@ -680,12 +680,12 @@ export const MasterDataView: React.FC = () => {
                         {c.customerName}
                         {c.customerNameEn && <span className="inline-block ms-1 text-[9.5px] font-normal text-slate-400">({c.customerNameEn})</span>}
                       </td>
-                      <td className="neo-cell-mono font-bold text-slate-800 dark:text-slate-200">{c.taxNumber || '-'}</td>
+                      <td className="neo-cell-mono font-bold text-slate-800 dark:text-slate-200"><span dir="ltr" className="inline-block unicode-bidi-isolate">{c.taxNumber || '-'}</span></td>
                       <td className="text-slate-700 dark:text-slate-300">{c.contactPerson || '-'}</td>
-                      <td className="neo-cell-mono text-slate-600 dark:text-slate-400">{c.phone || '-'}</td>
+                      <td className="neo-cell-mono text-slate-600 dark:text-slate-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{c.phone || '-'}</span></td>
                       <td className="text-slate-500 dark:text-slate-400 truncate max-w-xs">{c.address || '-'}</td>
                       <td className="text-center neo-cell-mono font-bold text-slate-700 dark:text-slate-200">
-                        {c.creditLimit ? formatCurrency(c.creditLimit, language) : '-'}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{c.creditLimit ? formatCurrency(c.creditLimit, language) : '-'}</span>
                       </td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -760,7 +760,7 @@ export const MasterDataView: React.FC = () => {
                       <td className="text-amber-800 dark:text-amber-400 font-bold">{c.materialProduced}</td>
                       <td className="neo-cell-mono text-slate-600 dark:text-slate-400 text-[9.5px]">{c.bankDetails || '-'}</td>
                       <td className="text-center neo-cell-mono font-bold text-slate-700 dark:text-slate-200">
-                        {formatCurrency(c.openingBalance || 0, language)}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(c.openingBalance || 0, language)}</span>
                       </td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -833,11 +833,11 @@ export const MasterDataView: React.FC = () => {
                     <tr key={t.id}>
                       <td className="font-bold text-slate-900 dark:text-slate-100">{t.transporterName}</td>
                       <td className="text-slate-800 dark:text-slate-200">{t.driverName || '-'}</td>
-                      <td className="neo-cell-mono font-bold text-orange-950 dark:text-orange-400">{t.defaultTruckNo || '-'}</td>
-                      <td className="neo-cell-mono text-slate-600 dark:text-slate-400">{t.phone || '-'}</td>
-                      <td className="text-center neo-cell-mono font-bold text-slate-700 dark:text-slate-300">{t.capacityTons || 44} MT</td>
+                      <td className="neo-cell-mono font-bold text-orange-950 dark:text-orange-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.defaultTruckNo || '-'}</span></td>
+                      <td className="neo-cell-mono text-slate-600 dark:text-slate-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.phone || '-'}</span></td>
+                      <td className="text-center neo-cell-mono font-bold text-slate-700 dark:text-slate-300"><span dir="ltr" className="inline-block unicode-bidi-isolate">{t.capacityTons || 44} MT</span></td>
                       <td className="text-center neo-cell-mono font-bold text-emerald-700 dark:text-emerald-400">
-                        {formatCurrency(t.ratePerTon || 18, language)}
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(t.ratePerTon || 18, language)}</span>
                       </td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
@@ -1076,14 +1076,14 @@ export const MasterDataView: React.FC = () => {
       {isPartnerDrawerOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity"
+            className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs transition-opacity"
             onClick={() => setIsPartnerDrawerOpen(false)}
           />
 
-          <div className="fixed inset-y-0 end-0 max-w-full flex pl-10 rtl:pl-0 rtl:pr-10">
+          <div className="fixed inset-y-0 end-0 z-50 max-w-full flex pl-10 rtl:pl-0 rtl:pr-10">
             <div
               dir={isAr ? 'rtl' : 'ltr'}
-              className="w-screen max-w-md bg-white border-s border-slate-200 p-6 shadow-2xl overflow-y-auto flex flex-col justify-between"
+              className="erp-sidebar-drawer w-screen max-w-md bg-white dark:bg-[#0f172a] border-s border-slate-200 dark:border-slate-800 p-6 shadow-2xl overflow-y-auto flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">

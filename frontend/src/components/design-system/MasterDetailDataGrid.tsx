@@ -79,7 +79,7 @@ export function MasterDetailDataGrid<T extends { id: string }>({
         } ${densityMode === 'compact' ? 'px-3.5 py-2.5' : 'px-5 py-3.5'}`}
       >
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h3
               className={`font-black tracking-tight ${
                 isDark ? 'text-white' : 'text-slate-900'
@@ -88,7 +88,7 @@ export function MasterDetailDataGrid<T extends { id: string }>({
               {title}
             </h3>
             <span
-              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-black ${
+              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-black whitespace-nowrap shrink-0 ${
                 isDark
                   ? 'bg-slate-800 text-slate-300'
                   : 'bg-slate-200 text-slate-700'
@@ -100,7 +100,7 @@ export function MasterDetailDataGrid<T extends { id: string }>({
           <p className="text-[11px] text-slate-400">{subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-[200px] sm:min-w-[260px]">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
@@ -245,13 +245,19 @@ export function MasterDetailDataGrid<T extends { id: string }>({
 
         {/* Slide-out Side-Sheet Inspector Drawer */}
         {selectedItem && (
-          <aside
-            className={`w-full max-w-md shrink-0 border-l transition-all duration-300 sm:max-w-lg ${
-              isDark
-                ? 'border-slate-800 bg-[#0d1222] text-slate-200 shadow-2xl'
-                : 'border-slate-200 bg-white text-slate-800 shadow-xl'
-            }`}
-          >
+          <>
+            <div
+              className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden"
+              onClick={() => setSelectedItem(null)}
+              aria-hidden="true"
+            />
+            <aside
+              className={`fixed inset-y-0 end-0 z-40 w-full max-w-md shrink-0 border-s md:border-l transition-all duration-300 sm:max-w-lg md:static md:z-auto erp-sidebar-drawer ${
+                isDark
+                  ? 'border-slate-800 bg-[#0d1222] text-slate-200 shadow-2xl'
+                  : 'border-slate-200 bg-white text-slate-800 shadow-xl'
+              }`}
+            >
             <div
               className={`flex items-center justify-between border-b ${
                 isDark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-slate-50'
@@ -289,10 +295,10 @@ export function MasterDetailDataGrid<T extends { id: string }>({
                       return (
                         <div
                           key={k}
-                          className="flex items-center justify-between border-b border-slate-800/40 py-2 text-xs"
+                          className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/40 py-2 text-xs"
                         >
                           <span className="text-slate-400 font-mono">{k}</span>
-                          <span className="font-semibold text-slate-200">{String(v ?? '')}</span>
+                          <span className="font-semibold text-slate-200 break-all">{String(v ?? '')}</span>
                         </div>
                       );
                     })}
@@ -301,7 +307,8 @@ export function MasterDetailDataGrid<T extends { id: string }>({
               )}
             </div>
           </aside>
-        )}
+        </>
+      )}
       </div>
     </div>
   );

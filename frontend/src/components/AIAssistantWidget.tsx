@@ -470,7 +470,7 @@ How can I assist you with your operations today?`,
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 20 }}
-          className={`fixed bottom-4 ${isAr ? 'left-4' : 'right-4'} z-30`}
+          className={`erp-mobile-fab ${isAr ? 'erp-mobile-fab-left' : 'erp-mobile-fab-right'}`}
         >
           {isLauncherMinimized ? (
             /* Compact Icon-Only Launcher Rail Mode to never block pagination or table scrollbars */
@@ -558,7 +558,7 @@ How can I assist you with your operations today?`,
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={handleClose}
-              className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs md:hidden"
+              className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-xs md:hidden"
             />
 
             <motion.div
@@ -574,9 +574,9 @@ How can I assist you with your operations today?`,
               className={`fixed z-50 flex flex-col overflow-hidden rounded-3xl border border-orange-200/80 bg-white shadow-2xl shadow-neutral-950/20 transition-all dark:border-slate-800 dark:bg-[#141726] ${
                 isExpanded
                   ? 'inset-4 md:inset-8'
-                  : `bottom-4 sm:bottom-6 ${
+                  : `bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 ${
                       isAr ? 'left-4 sm:left-6' : 'right-4 sm:right-6'
-                    } w-[calc(100vw-2rem)] sm:w-[490px] md:w-[540px] h-[670px] max-h-[92vh]`
+                    } w-[calc(100vw-2rem)] sm:w-[490px] md:w-[540px] h-[670px] max-h-[calc(100dvh-2rem)]`
               }`}
             >
               {/* Header */}

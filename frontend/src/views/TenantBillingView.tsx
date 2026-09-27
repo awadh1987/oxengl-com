@@ -60,7 +60,7 @@ export const TenantBillingView: React.FC = () => {
   const [showPOModal, setShowPOModal] = useState(false);
   const [poForm, setPoForm] = useState({
     poNumber: '',
-    taxId: currentCompany?.tax_id || '',
+    taxId: (currentCompany as any)?.tax_id || currentCompany?.taxId || '',
     billingAddress: '',
     contactEmail: '',
     notes: '',
@@ -296,9 +296,11 @@ export const TenantBillingView: React.FC = () => {
               {subscription?.plan?.display_name || activePlanName}
             </h3>
             <p className="mt-1 font-mono text-xl font-bold">
-              {subscription?.plan?.monthly_price !== undefined
-                ? Number(subscription.plan.monthly_price).toLocaleString('en-US')
-                : '0'}{' '}
+              <span dir="ltr" className="inline-block unicode-bidi-isolate">
+                {subscription?.plan?.monthly_price !== undefined
+                  ? Number(subscription.plan.monthly_price).toLocaleString('en-US')
+                  : '0'}
+              </span>{' '}
               <span className="text-xs font-normal text-slate-400">SAR / month</span>
             </p>
             <p className="mt-2 text-[11px] text-slate-400">
@@ -330,7 +332,7 @@ export const TenantBillingView: React.FC = () => {
           <div className="mt-3">
             <div className="flex items-baseline justify-between">
               <span className="font-mono text-xl font-bold">
-                {seatsUsed}{' '}
+                <span dir="ltr" className="inline-block unicode-bidi-isolate">{seatsUsed}</span>{' '}
                 <span className="text-xs font-normal text-slate-400">
                   / {isSeatsUnlimited ? (isAr ? 'غير محدود (∞)' : 'Unlimited (∞)') : maxSeats}
                 </span>
@@ -391,7 +393,7 @@ export const TenantBillingView: React.FC = () => {
           <div className="mt-3">
             <div className="flex items-baseline justify-between">
               <span className="font-mono text-xl font-bold">
-                {vehiclesUsed}{' '}
+                <span dir="ltr" className="inline-block unicode-bidi-isolate">{vehiclesUsed}</span>{' '}
                 <span className="text-xs font-normal text-slate-400">
                   / {isVehiclesUnlimited ? (isAr ? 'غير محدود (∞)' : 'Unlimited (∞)') : maxVehicles}
                 </span>
@@ -716,7 +718,7 @@ export const TenantBillingView: React.FC = () => {
                   Grade 2
                 </span>
                 {activePlanName === 'PROFESSIONAL' && (
-                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-black text-white whitespace-nowrap shrink-0">
                     {isAr ? 'الخطة النشطة' : 'Current Plan'}
                   </span>
                 )}
@@ -802,7 +804,7 @@ export const TenantBillingView: React.FC = () => {
                 : 'border-purple-500/50 bg-gradient-to-b from-purple-500/10 via-slate-900/40 to-slate-900/60'
             }`}
           >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-3.5 py-0.5 text-[10px] font-black text-white shadow-md">
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-3.5 py-0.5 text-[10px] font-black text-white shadow-md whitespace-nowrap shrink-0">
               {isAr ? 'مؤسسات كبرى (Enterprise Grade)' : 'Enterprise Grade'}
             </span>
 
@@ -812,7 +814,7 @@ export const TenantBillingView: React.FC = () => {
                   Grade 3
                 </span>
                 {activePlanName === 'ENTERPRISE' && (
-                  <span className="rounded-full bg-purple-600 px-2.5 py-0.5 text-[10px] font-black text-white">
+                  <span className="rounded-full bg-purple-600 px-2.5 py-0.5 text-[10px] font-black text-white whitespace-nowrap shrink-0">
                     {isAr ? 'الخطة النشطة' : 'Current Plan'}
                   </span>
                 )}
@@ -939,7 +941,7 @@ export const TenantBillingView: React.FC = () => {
                     </td>
                     <td className="py-3 px-3">
                       <span
-                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                        className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
                           inv.payment_method === 'bank_transfer'
                             ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                             : 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20'
@@ -947,18 +949,18 @@ export const TenantBillingView: React.FC = () => {
                       >
                         {inv.payment_method === 'bank_transfer' ? (
                           <>
-                            <FileText className="h-3 w-3" />
+                            <FileText className="h-3 w-3 shrink-0" />
                             <span>{isAr ? 'حوالة بنكية / PO' : 'Bank Wire / PO'}</span>
                           </>
                         ) : (
                           <>
-                            <CreditCard className="h-3 w-3" />
+                            <CreditCard className="h-3 w-3 shrink-0" />
                             <span>Stripe Card</span>
                           </>
                         )}
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-mono font-bold">
+                    <td className="py-3 px-3 font-mono font-bold whitespace-nowrap">
                       {Number(inv.grand_total_sar || inv.amount_sar).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
                       })}{' '}
@@ -966,7 +968,7 @@ export const TenantBillingView: React.FC = () => {
                     </td>
                     <td className="py-3 px-3">
                       <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase ${
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase whitespace-nowrap shrink-0 inline-block ${
                           inv.status === 'paid'
                             ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
                             : inv.status === 'pending'
@@ -1265,7 +1267,7 @@ export const TenantBillingView: React.FC = () => {
                 <h3 className="text-base font-black text-slate-900 dark:text-white">
                   {isAr ? 'فاتورة اشتراك المنصة الرسمية' : 'Official SaaS Subscription Invoice'}
                 </h3>
-                <p className="font-mono text-xs text-blue-500 font-bold">{selectedInvoice.invoice_number}</p>
+                <p className="font-mono text-xs text-blue-500 font-bold"><span dir="ltr" className="inline-block unicode-bidi-isolate">{selectedInvoice.invoice_number}</span></p>
               </div>
               <button
                 onClick={() => setSelectedInvoice(null)}
@@ -1295,21 +1297,23 @@ export const TenantBillingView: React.FC = () => {
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">{isAr ? 'المبلغ قبل الضريبة' : 'Subtotal'}:</span>
                 <span className="font-mono font-bold">
-                  {Number(selectedInvoice.amount_sar).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{Number(selectedInvoice.amount_sar).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> SAR
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100 dark:border-slate-800">
                 <span className="text-slate-500">{isAr ? 'ضريبة القيمة المضافة (15% ZATCA VAT)' : '15% Saudi VAT'}:</span>
                 <span className="font-mono font-bold">
-                  {Number(selectedInvoice.vat_amount_sar).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">{Number(selectedInvoice.vat_amount_sar).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> SAR
                 </span>
               </div>
               <div className="flex justify-between py-2 text-sm bg-blue-500/10 rounded-xl px-3 font-black text-blue-600 dark:text-blue-400">
                 <span>{isAr ? 'الإجمالي المستحق' : 'Grand Total'}:</span>
                 <span className="font-mono">
-                  {Number(selectedInvoice.grand_total_sar || selectedInvoice.amount_sar).toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                  })}{' '}
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate">
+                    {Number(selectedInvoice.grand_total_sar || selectedInvoice.amount_sar).toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                    })}
+                  </span>{' '}
                   SAR
                 </span>
               </div>
