@@ -281,7 +281,7 @@ class ResUser(TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(64))
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False, default="")
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id"), nullable=True, index=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="Guest")
     role_ids: Mapped[Optional[str]] = mapped_column(Text)
     branch_scope_ids: Mapped[Optional[str]] = mapped_column(Text)
@@ -297,11 +297,11 @@ class ResUser(TimestampMixin, Base):
     )
 
     @property
-    def tenant_id(self) -> uuid.UUID:
+    def tenant_id(self) -> Optional[uuid.UUID]:
         return self.company_id
 
     @tenant_id.setter
-    def tenant_id(self, val: uuid.UUID):
+    def tenant_id(self, val: Optional[uuid.UUID]):
         self.company_id = val
 
     @property
