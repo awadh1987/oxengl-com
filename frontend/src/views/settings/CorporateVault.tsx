@@ -42,7 +42,7 @@ import {
   getTenantSlug,
 } from '../../services/api';
 
-// Canonical Document Types matching UNOPS standard
+// Canonical Document Types matching Enterprise / Global standard
 const DOCUMENT_TYPES = [
   { value: 'CR', labelEn: 'Commercial Registration (CR)', labelAr: 'السجل التجاري' },
   { value: 'TAX_VAT', labelEn: 'ZATCA Tax / VAT Certificate', labelAr: 'شهادة ضريبة القيمة المضافة (زكاة)' },
@@ -146,7 +146,7 @@ export const CorporateVault: React.FC = () => {
     loadData();
   }, [loadData]);
 
-  // 2. Generate and Download / Preview UNOPS PDF
+  // 2. Generate and Download / Preview Enterprise Profile PDF
   const handleGeneratePdf = async (preview: boolean = true) => {
     if (isGeneratingPdf) return;
     setIsGeneratingPdf(true);
@@ -194,14 +194,14 @@ export const CorporateVault: React.FC = () => {
         // Open PDF viewer in new browser tab
         window.open(blobUrl, '_blank');
         showToast(
-          isAr ? 'تم إنشاء ملف المنشأة الموحد (UNOPS) بنجاح!' : 'UNOPS Corporate Profile PDF generated successfully!',
+          isAr ? 'تم إنشاء الملف المؤسسي الموحد (Enterprise Profile) بنجاح!' : 'Enterprise Profile PDF generated successfully!',
           'success'
         );
       } else {
         // Download directly to disk
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `UNOPS_Corporate_Profile_${currentCompany?.name || 'Company'}.pdf`;
+        a.download = `Corporate_Profile_${currentCompany?.name || 'Company'}.pdf`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -216,7 +216,7 @@ export const CorporateVault: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to generate corporate CV PDF:', err);
       showToast(
-        isAr ? `فشل تصدير ملف المنشأة: ${err.message}` : `Failed to generate UNOPS PDF: ${err.message}`,
+        isAr ? `فشل تصدير الملف المؤسسي: ${err.message}` : `Failed to generate Enterprise Profile PDF: ${err.message}`,
         'error'
       );
     } finally {
@@ -404,7 +404,7 @@ export const CorporateVault: React.FC = () => {
   return (
     <div className={`px-3 sm:px-4 md:px-6 py-2 md:py-3 space-y-2 w-full max-w-7xl mx-auto font-sans min-h-dvh erp-viewport-root ${isAr ? 'text-right' : 'text-left'}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* ==================================================================== */}
-      {/* TOP HERO & PROMINENT UNOPS CV ACTION BANNER */}
+      {/* TOP HERO & PROMINENT ENTERPRISE CV ACTION BANNER */}
       {/* ==================================================================== */}
       <div className={`rounded-xl border p-2.5 md:p-3 relative overflow-hidden shadow-xs ${
         isDark
@@ -416,7 +416,7 @@ export const CorporateVault: React.FC = () => {
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-sky-500/10 text-sky-400 border border-sky-500/20 whitespace-nowrap shrink-0">
                 <ShieldCheck className="w-3 h-3 shrink-0" />
-                {isAr ? 'معيار UNOPS-STD-2026.1 / ISO-21500' : 'UNOPS-STD-2026.1 / ISO-21500'}
+                {isAr ? 'معيار GLOBAL-STD-2026.1 / ISO-21500' : 'GLOBAL-STD-2026.1 / ISO-21500'}
               </span>
 
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shrink-0 ${
@@ -442,13 +442,13 @@ export const CorporateVault: React.FC = () => {
             </div>
 
             <h1 className={`text-base md:text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              {isAr ? 'ملف المنشأة وخزينة وثائق الامتثال المعتمدة' : 'Corporate Profile & Document Vault (UNOPS)'}
+              {isAr ? 'ملف المنشأة وخزينة وثائق الامتثال المعتمدة' : 'Corporate Profile & Document Vault (Enterprise Standard)'}
             </h1>
 
             <p className={`text-[11px] leading-relaxed line-clamp-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               {isAr
-                ? 'مركز إدارة الوثائق القانونية والتراخيص وتوليد السيرة الذاتية المؤسسية للمناقصات الدولية والأممية UNOPS بصيغة PDF.'
-                : 'Central repository for statutory licenses, regulatory filings, and compilation of official UNOPS Corporate CV dossier.'}
+                ? 'مركز إدارة الوثائق القانونية والتراخيص وتوليد السيرة الذاتية المؤسسية للمناقصات والمشتريات الدولية بصيغة PDF.'
+                : 'Central repository for statutory licenses, regulatory filings, and compilation of official Corporate CV dossier.'}
             </p>
 
             {/* Multi-Branch Aggregation Switch */}
@@ -470,7 +470,7 @@ export const CorporateVault: React.FC = () => {
             </div>
           </div>
 
-          {/* Action Buttons with PROMINENT UNOPS CV BUTTON */}
+          {/* Action Buttons with PROMINENT CORPORATE CV BUTTON */}
           <div className="flex flex-wrap items-center gap-1.5 shrink-0">
             {/* Primary Generate PDF Button */}
             <button
@@ -481,7 +481,7 @@ export const CorporateVault: React.FC = () => {
                   ? 'bg-slate-700 cursor-not-allowed opacity-80'
                   : 'bg-gradient-to-r from-sky-600 to-indigo-700 hover:from-sky-500 hover:to-indigo-600 shadow-sky-600/20 active:scale-[0.98]'
               }`}
-              title={isAr ? 'عرض وتحميل ملف المنشأة بصيغة PDF' : 'Open UNOPS Corporate Profile PDF'}
+              title={isAr ? 'عرض وتحميل الملف المؤسسي بصيغة PDF' : 'Open Corporate Profile PDF'}
             >
               {isGeneratingPdf ? (
                 <>
@@ -491,7 +491,7 @@ export const CorporateVault: React.FC = () => {
               ) : (
                 <>
                   <Award className="w-3.5 h-3.5 text-amber-300" />
-                  <span>{isAr ? 'توليد ملف المنشأة (UNOPS)' : 'Generate Corporate CV (UNOPS)'}</span>
+                  <span>{isAr ? 'توليد الملف المؤسسي (Enterprise Profile)' : 'Generate Corporate Profile (Enterprise)'}</span>
                   <Download className="w-3 h-3 opacity-70 group-hover:opacity-100" />
                 </>
               )}
@@ -596,7 +596,7 @@ export const CorporateVault: React.FC = () => {
           isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'
         }`}>
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider">{isAr ? 'جاهزية UNOPS' : 'UNOPS Score'}</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider">{isAr ? 'جاهزية التأهيل المؤسسي' : 'Enterprise Readiness'}</span>
             <Award className="w-3.5 h-3.5 text-sky-400" />
           </div>
           <div className="text-lg font-black text-sky-400 font-mono">
@@ -614,7 +614,7 @@ export const CorporateVault: React.FC = () => {
       </div>
 
       {/* ==================================================================== */}
-      {/* MANDATORY UNOPS CHECKLIST MATRIX (High-Density 6-col Strip) */}
+      {/* MANDATORY COMPLIANCE CHECKLIST MATRIX (High-Density 6-col Strip) */}
       {/* ==================================================================== */}
       <div className={`p-2 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'}`}>
         <div className="flex items-center justify-between mb-1.5 px-1">
@@ -1017,7 +1017,7 @@ export const CorporateVault: React.FC = () => {
                     {isAr ? 'تسجيل وثيقة امتثال في الخزينة' : 'Register Compliance Document'}
                   </h3>
                   <p className="text-xs text-slate-400">
-                    {isAr ? 'إيداع الوثائق النظامية والتراخيص لملف UNOPS' : 'Deposit statutory filings into your enterprise vault'}
+                    {isAr ? 'إيداع الوثائق النظامية والتراخيص لملف التأهيل المؤسسي' : 'Deposit statutory filings into your enterprise vault'}
                   </p>
                 </div>
               </div>
@@ -1353,7 +1353,7 @@ export const CorporateVault: React.FC = () => {
             <p className="text-xs text-slate-300 leading-relaxed">
               {isAr
                 ? `هل أنت متأكد من رغبتك في حذف الوثيقة "${deletingDoc.title}" من الخزينة؟ سيؤثر ذلك على نسبة جاهزية ملف المنشأة في المناقصات.`
-                : `Are you sure you want to remove "${deletingDoc.title}" from the corporate vault? This will affect your UNOPS qualification score.`}
+                : `Are you sure you want to remove "${deletingDoc.title}" from the corporate vault? This will affect your enterprise qualification score.`}
             </p>
 
             <div className="pt-2 flex items-center justify-end gap-3">

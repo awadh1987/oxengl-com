@@ -291,7 +291,7 @@ th.financial-num {
 
 
 /* ==========================================================================
-   Phase 9: Neo-Classic High-Density ERP System (Onyx/SAP-GUI Style)
+   Phase 9: Neo-Classic High-Density ERP System (Enterprise Data Grid Style)
    ========================================================================== */
 
 /* High-Density Global Grid Layouts (Designed to fit 50+ rows on 1080p screen) */
@@ -398,7 +398,7 @@ th.financial-num {
 }
 
 .neo-icon-vault {
-  color: #0284c7 !important; /* Statutory Cyan / UNOPS Blue */
+  color: #0284c7 !important; /* Statutory Cyan / Enterprise Blue */
   background: rgba(2, 132, 199, 0.14) !important;
   border: 1px solid rgba(2, 132, 199, 0.35) !important;
 }

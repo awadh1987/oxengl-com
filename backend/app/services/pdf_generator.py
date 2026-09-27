@@ -1,10 +1,10 @@
 """
-UNOPS-Compliant Corporate CV & Prequalification PDF Generator.
+Enterprise-Standard Corporate CV & Prequalification PDF Generator.
 Phase 8 - Step 3 Implementation.
 
 Uses WeasyPrint to transform the aggregated Corporate CV JSON payload
 into an executive, vector-crisp, multi-page PDF document adhering to
-UNOPS (United Nations Office for Project Services) tender evaluation standards.
+global procurement and institutional tender evaluation standards.
 """
 
 from __future__ import annotations
@@ -55,7 +55,7 @@ def _format_date(val: Optional[str]) -> str:
 def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
     """
     Renders a complete, standalone, print-optimized HTML5 document
-    for UNOPS corporate prequalification dossiers.
+    for enterprise corporate prequalification dossiers.
     """
     meta = payload.get("meta", {})
     comp = payload.get("company_profile", {})
@@ -71,7 +71,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
     company_name = html.escape(comp.get("legal_name", "Enterprise Contractor"))
     cr_number = html.escape(comp.get("commercial_registration", "N/A"))
     vat_number = html.escape(comp.get("tax_id", "N/A"))
-    std_code = html.escape(meta.get("standard", "UNOPS-STD-2026.1 / ISO-21500"))
+    std_code = html.escape(meta.get("standard", "GLOBAL-STD-2026.1 / ISO-21500"))
     gen_at = _format_date(meta.get("generated_at", datetime.now(timezone.utc).isoformat()))
     gen_by = html.escape(meta.get("generated_by", "Authorized Officer"))
     readiness_score = float(meta.get("compliance_score_percent", 0.0))
@@ -209,13 +209,13 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>UNOPS Corporate Profile — {company_name}</title>
+<title>Corporate Profile — {company_name}</title>
 <style>
     @page {{
         size: A4 portrait;
         margin: 16mm 14mm 18mm 14mm;
         @top-left {{
-            content: "UNITED NATIONS OFFICE FOR PROJECT SERVICES (UNOPS) — TENDER PRE-QUALIFICATION DOSSIER";
+            content: "GLOBAL INSTITUTIONAL PROCUREMENT STANDARD — TENDER PRE-QUALIFICATION DOSSIER";
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-size: 7pt;
             color: #64748B;
@@ -261,7 +261,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
         margin-bottom: 14px;
         position: relative;
     }}
-    .unops-tag {{
+    .enterprise-tag {{
         display: inline-block;
         background: #006699;
         color: #FFFFFF;
@@ -497,14 +497,14 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
 
 <!-- Header Banner -->
 <div class="header-banner">
-    <div class="unops-tag">United Nations Office for Project Services (UNOPS) Tender Dossier</div>
+    <div class="enterprise-tag">Institutional Tender & Procurement Dossier</div>
     <div class="main-title">{company_name}</div>
     <div class="sub-title">Enterprise Corporate Profile, Technical Asset Register & Prequalification CV</div>
 
     <div class="meta-bar">
         <div class="meta-item"><span class="meta-label">Commercial Reg (CR):</span> <span class="meta-value">{cr_number}</span></div>
         <div class="meta-item"><span class="meta-label">Tax / VAT ID:</span> <span class="meta-value">{vat_number}</span></div>
-        <div class="meta-item"><span class="meta-label">UNOPS Prequalification Standard:</span> <span class="meta-value">{std_code}</span></div>
+        <div class="meta-item"><span class="meta-label">Enterprise Qualification Standard:</span> <span class="meta-value">{std_code}</span></div>
         <div class="meta-item"><span class="meta-label">Dossier Date:</span> <span class="meta-value">{gen_at}</span></div>
         <div class="meta-item"><span class="meta-label">Vendor Status:</span> <span class="badge" style="background:{badge_color};">{rating_badge} ({readiness_score}%)</span></div>
     </div>
@@ -575,8 +575,8 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
     </tr>
 </table>
 
-<!-- Section 2: Mandatory UNOPS Compliance Checklist -->
-<div class="section-title">2. UNOPS Mandatory Procurement Compliance Checklist</div>
+<!-- Section 2: Mandatory Enterprise Compliance Checklist -->
+<div class="section-title">2. Mandatory Institutional Procurement Compliance Checklist</div>
 <table class="data-table">
     <thead>
         <tr>
@@ -674,7 +674,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
             <td>
                 <strong>Submission Timestamp:</strong><br>
                 {datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")}<br>
-                <em>Dossier Ref: UNOPS-PQ-{comp.get("slug", "oxen").upper()[:8]}</em>
+                <em>Dossier Ref: ENT-PQ-{comp.get("slug", "oxen").upper()[:8]}</em>
                 <div class="sig-line">Corporate Legal Seal</div>
             </td>
         </tr>

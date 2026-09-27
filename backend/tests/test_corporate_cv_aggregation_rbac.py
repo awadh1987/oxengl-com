@@ -1,5 +1,5 @@
 """
-Integration Tests: UNOPS Corporate Profile (CV) Aggregation Engine & Vault RBAC.
+Integration Tests: Corporate Profile (CV) Aggregation Engine & Vault RBAC.
 Phase 8 - Step 2 Verification.
 
 Verifies:
@@ -10,7 +10,7 @@ Verifies:
 4. Tenant Document Vault CRUD lifecycle.
 5. RBAC mutation guards (Read-Only user cannot upload or delete documents).
 6. Administrative authority over verification status (only Admins can verify documents).
-7. UNOPS compliance checklist and vendor readiness score calculation.
+7. Institutional compliance checklist and vendor readiness score calculation.
 """
 
 from __future__ import annotations
@@ -311,7 +311,7 @@ def test_cv_payload_aggregation_success(cv_test_env):
 
     # Meta
     assert "meta" in payload
-    assert payload["meta"]["standard"] == "UNOPS-STD-2026.1 / ISO-21500"
+    assert payload["meta"]["standard"] == "GLOBAL-STD-2026.1 / ISO-21500"
     assert payload["meta"]["tenant_id"] == str(alpha.id)
     assert payload["meta"]["compliance_score_percent"] > 0
 
@@ -497,7 +497,7 @@ def test_read_only_user_cannot_mutate_documents(cv_test_env):
 def test_corporate_cv_pdf_download_success(cv_test_env):
     """
     Step 3 Test: Verifies GET /api/v1/corporate/cv-download generates
-    and streams a valid UNOPS-compliant PDF vector binary.
+    and streams a valid enterprise-compliant PDF vector binary.
     """
     alpha = cv_test_env["comp_alpha"]
     admin = cv_test_env["user_alpha_admin"]
@@ -510,7 +510,7 @@ def test_corporate_cv_pdf_download_success(cv_test_env):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert "attachment" in response.headers["content-disposition"]
-    assert response.headers["x-unops-standard"] == "UNOPS-STD-2026.1"
+    assert response.headers["x-enterprise-standard"] == "GLOBAL-STD-2026.1"
 
     pdf_bytes = response.content
     assert len(pdf_bytes) > 5000, f"Expected substantial PDF output, got {len(pdf_bytes)} bytes"

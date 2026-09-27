@@ -1,5 +1,5 @@
 """
-Enterprise Organizational Management (SAP-Style Profiles) API Router.
+Enterprise Organizational Management (Hierarchical Profiles) API Router.
 Phase 7 - Step 2 Implementation.
 
 Provides:

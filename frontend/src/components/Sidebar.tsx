@@ -406,7 +406,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         path: '/compliance/vault',
         icon: FileCheck2,
         roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest', 'Super_Admin'],
-        badge: 'UNOPS',
+        badge: 'Standard',
       },
       {
         id: 'organization-profile',
@@ -415,7 +415,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         path: '/settings/organization',
         icon: FolderTree,
         roles: ['Admin', 'COO', 'Super_Admin'],
-        badge: 'SAP-Tree',
+        badge: 'Hierarchy',
       },
       ...(currentUser?.role === 'Super_Admin' || authTier === 'master'
         ? [

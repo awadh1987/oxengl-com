@@ -5,7 +5,7 @@ Phase 8 - Step 2 Implementation.
 Provides:
 1. Cross-module data aggregation: live operational data, fleet capacity, active manpower,
    financial standing, operating regions, and verified compliance attachments.
-2. Structured JSON payload formatted for UNOPS tender bidding standards.
+2. Structured JSON payload formatted for global tender bidding standards.
 3. TenantDocument Vault management endpoints (CRUD + verification workflow).
 4. Strict multi-tenant RBAC enforcement using TenantContext and permission guards.
 """
@@ -178,7 +178,7 @@ def _serialize_document(doc: TenantDocument) -> DocumentRead:
 
 @router.get(
     "/cv-payload",
-    summary="UNOPS-Ready Corporate Profile (CV) Aggregation Engine",
+    summary="Institutional-Ready Corporate Profile (CV) Aggregation Engine",
     description="Aggregates live operational, fleet, human capital, financial standing, and verified vault documents into a unified, compliant payload for RFP submissions.",
     status_code=status.HTTP_200_OK,
 )
@@ -191,7 +191,7 @@ def get_corporate_cv_payload(
     """
     Main Aggregation Engine Endpoint.
     Validates tenant isolation and cross-branch permissions, queries multiple
-    operational domains, and synthesizes an enterprise UNOPS-compliant CV data model.
+    operational domains, and synthesizes an enterprise institutional-standard CV data model.
     """
     # 1. Resolve Target Company & Scope
     target_company_id = company_id or tenant_ctx.company_id
@@ -469,7 +469,7 @@ def get_corporate_cv_payload(
         "municipal_civil_defense": _check_doc(["MUNICIPAL_LICENSE", "CIVIL_DEFENSE"]),
     }
 
-    # Calculate UNOPS Readiness Score
+    # Calculate Enterprise Readiness Score
     mandatory_items = [
         checklist["commercial_registration"]["verified"] or bool(company.commercial_registration),
         checklist["zatca_tax_vat"]["verified"] or bool(company.tax_id),
@@ -482,11 +482,11 @@ def get_corporate_cv_payload(
 
     compliance_badge = "COMPLIANT" if readiness_percentage >= 80 else ("PARTIAL" if readiness_percentage >= 40 else "ACTION_REQUIRED")
 
-    # 8. Synthesize Complete UNOPS-Ready Payload
+    # 8. Synthesize Complete Institutional-Ready Payload
     return {
         "meta": {
             "profile_title": f"Corporate Profile & Prequalification Dossier — {company.name}",
-            "standard": "UNOPS-STD-2026.1 / ISO-21500",
+            "standard": "GLOBAL-STD-2026.1 / ISO-21500",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "generated_by": tenant_ctx.user.full_name or tenant_ctx.user.email,
             "tenant_id": str(target_company_id),
@@ -528,7 +528,8 @@ def get_corporate_cv_payload(
             "total_operating_regions": len(region_set),
             "total_compliance_documents": len(serialized_docs),
             "verified_compliance_documents": len(verified_docs),
-            "unops_readiness_score": readiness_percentage,
+            "enterprise_readiness_score": readiness_percentage,
+            "readiness_score": readiness_percentage,
         },
         "executed_projects": {
             "total_executed_count": total_executed_operations,
@@ -582,13 +583,13 @@ def get_corporate_cv_payload(
 
 @router.get(
     "/cv-download",
-    summary="Download UNOPS Standard Corporate Profile (CV) PDF",
-    description="Compiles and streams a high-resolution, UNOPS-compliant vector PDF dossier using WeasyPrint.",
+    summary="Download Enterprise Standard Corporate Profile (CV) PDF",
+    description="Compiles and streams a high-resolution, enterprise-standard vector PDF dossier using WeasyPrint.",
     response_class=Response,
     responses={
         200: {
             "content": {"application/pdf": {}},
-            "description": "UNOPS-Compliant Corporate CV PDF stream.",
+            "description": "Enterprise-Standard Corporate CV PDF stream.",
         }
     },
 )
@@ -600,7 +601,7 @@ def download_corporate_cv_pdf(
     db: Session = Depends(get_db),
 ) -> Response:
     """
-    Renders and streams the official UNOPS Corporate Profile (CV) PDF.
+    Renders and streams the official Corporate Profile (CV) PDF.
     Validates RBAC and multi-tenant isolation, generates the live data payload,
     and compiles a vector-crisp PDF dossier via WeasyPrint.
     """
@@ -614,7 +615,7 @@ def download_corporate_cv_pdf(
     comp_info = payload.get("company_profile", {})
     slug = comp_info.get("slug") or "enterprise"
     timestamp_str = datetime.now(timezone.utc).strftime("%Y%m%d")
-    filename = f"UNOPS_Corporate_Profile_{slug}_{timestamp_str}.pdf"
+    filename = f"Corporate_Profile_{slug}_{timestamp_str}.pdf"
 
     try:
         pdf_bytes = generate_corporate_cv_pdf(payload)
@@ -633,7 +634,7 @@ def download_corporate_cv_pdf(
         headers={
             "Content-Disposition": disposition,
             "Content-Length": str(len(pdf_bytes)),
-            "X-UNOPS-Standard": "UNOPS-STD-2026.1",
+            "X-Enterprise-Standard": "GLOBAL-STD-2026.1",
         },
     )
 

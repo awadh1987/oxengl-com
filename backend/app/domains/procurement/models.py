@@ -222,7 +222,7 @@ ProcurementVendor = Vendor
 # ==============================================================================
 
 class ProcurementTender(Base):
-    """Phase 10: eSourcing RFQ Tender bound to SAP Purchasing Organizations."""
+    """Phase 10: eSourcing RFQ Tender bound to Enterprise Purchasing Organizations."""
     __tablename__ = "procurement_tenders"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

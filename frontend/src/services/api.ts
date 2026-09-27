@@ -1713,7 +1713,7 @@ export const erpApi = {
     });
   },
 
-  // Enterprise Organizational Management (Phase 7 SAP-Style Profiles)
+  // Enterprise Organizational Management (Phase 7 Hierarchical Profiles)
   getOrgTree: (rootId?: string, companyId?: string) =>
     request<OrgTreeNode[]>(
       rootId ? `/api/v1/organization/tree?root_id=${encodeURIComponent(rootId)}` : '/api/v1/organization/tree',
@@ -1774,7 +1774,7 @@ export const erpApi = {
       method: 'DELETE',
     }),
 
-  // Corporate Profile & Document Vault (Phase 8 UNOPS Standard)
+  // Corporate Profile & Document Vault (Phase 8 Global Standard)
   getCorporateCvPayload: (companyId?: string, includeBranches: boolean = true) =>
     request<any>(
       `/api/v1/corporate/cv-payload?include_branches=${includeBranches}${companyId ? `&company_id=${encodeURIComponent(companyId)}` : ''}`,

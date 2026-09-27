@@ -4,7 +4,7 @@ Phase 7 - Step 2 Verification.
 
 Verifies:
 1. Super Admin hierarchy provisioning (Company Code -> Branches -> Cost Centers & Purchasing Orgs).
-2. Tree structure traversal via /api/v1/organization/tree (nested SAP-style hierarchy).
+2. Tree structure traversal via /api/v1/organization/tree (nested enterprise hierarchy).
 3. Tenant Admin access spanning root company and descendant branches.
 4. Strict Cross-Branch Isolation (Branch A user cannot read, write, or switch context to Branch B).
 5. Strict Cross-Tenant Isolation (Tenant X user cannot access Tenant Y resources).

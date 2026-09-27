@@ -818,7 +818,7 @@ export const OrganizationProfile: React.FC = () => {
                   }`}
                 >
                   {isAr
-                    ? 'الهيكل التنظيمي للمنشأة (SAP-Style Organizational Management)'
+                    ? 'الهيكل التنظيمي للمنشأة (Enterprise Organizational Management)'
                     : 'Enterprise Organization Profile'}
                 </h1>
                 <span className="text-xs font-mono font-bold bg-[#F05627]/10 text-[#F05627] border border-[#F05627]/30 px-2 py-0.5 rounded-full">
@@ -828,7 +828,7 @@ export const OrganizationProfile: React.FC = () => {
               <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
                 {isAr
                   ? 'هيكلة وتوزيع الكيانات القانونية (Company Codes)، الفروع والمصانع التشغيلية (Plants)، ومراكز التكلفة (Cost Centers) ومنظمات الشراء (Purchasing Orgs) مع عزل أمني صارم بين الفروع.'
-                  : 'Multi-tier SAP-style hierarchical modeling for Company Codes, Plants/Branches, Cost Centers, and Purchasing Organizations with real-time RBAC boundary isolation.'}
+                  : 'Multi-tier enterprise-grade hierarchical modeling for Company Codes, Plants/Branches, Cost Centers, and Purchasing Organizations with real-time RBAC boundary isolation.'}
               </p>
             </div>
           </div>

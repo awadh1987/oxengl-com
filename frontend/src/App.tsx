@@ -108,7 +108,7 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   '/settings/org-chart': 'organization-profile',
   '/settings/org-profile': 'organization-profile',
 
-  // Corporate Profile & Document Vault (Phase 8 UNOPS)
+  // Corporate Profile & Document Vault (Phase 8 Global Standard)
   '/compliance/vault': 'corporate-vault',
   '/compliance': 'corporate-vault',
   '/compliance/cv': 'corporate-vault',

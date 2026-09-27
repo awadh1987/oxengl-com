@@ -2,12 +2,12 @@
 Integration Test Suite: Phase 10 - Procurement Tendering & Vendor Portals.
 Tests:
 1. Vendor Portal Registration & Two-Tier Authentication.
-2. SAP-Style Purchasing Organization binding to RFQ Tenders.
+2. Enterprise Purchasing Organization binding to RFQ Tenders.
 3. RFQ Generation from approved Purchase Requisition.
 4. Cryptographic Sealed-Bid Submission (SHA-256 integrity seal).
 5. Sealed-Bid Confidentiality (financial quotes masked prior to ceremony).
 6. Official Unsealing Ceremony & Ranking Calculation.
-7. Tender Awarding & Automatic SAP-Style Purchase Order Generation.
+7. Tender Awarding & Automatic Enterprise Purchase Order Generation.
 """
 
 import uuid
@@ -157,7 +157,7 @@ def test_01_vendor_portal_registration_and_login(tender_test_env):
 
 
 def test_02_create_tender_bound_to_purchasing_organization(tender_test_env):
-    """Verifies RFQ Tender creation strictly bound to SAP Purchasing Organization."""
+    """Verifies RFQ Tender creation strictly bound to Enterprise Purchasing Organization."""
     deadline = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
     opening_date = (datetime.now(timezone.utc) + timedelta(days=15)).isoformat()
 

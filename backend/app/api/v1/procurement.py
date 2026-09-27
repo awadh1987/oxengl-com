@@ -745,7 +745,7 @@ def create_procurement_tender(
     x_company_id: Optional[str] = Header(None),
 ):
     """
-    Creates an eSourcing RFQ Tender strictly linked to an SAP-Style Purchasing Organization.
+    Creates an eSourcing RFQ Tender strictly linked to an Enterprise Purchasing Organization.
     Generates a unique tender number (RFQ-YYYYMM-XXXX) and persists specification line items.
     """
     company_uuid = payload.company_id or (uuid.UUID(x_company_id) if x_company_id else None)
@@ -869,7 +869,7 @@ def generate_tender_from_purchase_requisition(
 ):
     """
     RFQ Generator Engine: Converts an approved departmental Purchase Requisition (PR)
-    directly into a competitive eSourcing RFQ Tender bound to a SAP Purchasing Organization.
+    directly into a competitive eSourcing RFQ Tender bound to an Enterprise Purchasing Organization.
     """
     pr = db.execute(
         select(PurchaseRequisition).where(PurchaseRequisition.id == payload.purchase_requisition_id)
@@ -1531,7 +1531,7 @@ def award_tender_and_generate_po(
 ):
     """
     Awards the tender to the winning supplier bid and automatically generates
-    an enterprise SAP-Style Purchase Order bound to the Purchasing Organization (Phase 7).
+    an enterprise-grade Purchase Order bound to the Purchasing Organization (Phase 7).
     """
     tender = db.execute(
         select(ProcurementTender).where(ProcurementTender.id == tender_id)
@@ -1562,7 +1562,7 @@ def award_tender_and_generate_po(
     tender.status = "AWARDED"
     tender.winning_bid_id = winning_bid.id
 
-    # Generate SAP-Style Purchase Order strictly bound to purchasing_organization_id
+    # Generate enterprise-grade Purchase Order strictly bound to purchasing_organization_id
     partner = db.execute(
         select(core_models.ResPartner).where(core_models.ResPartner.id == winning_bid.partner_id)
     ).scalar_one_or_none()
