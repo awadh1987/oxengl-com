@@ -401,8 +401,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'corporate-vault',
-        labelAr: 'ملف المنشأة وخزينة الامتثال (UNOPS)',
-        labelEn: 'Corporate Profile & Vault (UNOPS)',
+        labelAr: 'خزينة الامتثال والوثائق المؤسسية',
+        labelEn: 'Corporate Compliance Vault',
         path: '/compliance/vault',
         icon: FileCheck2,
         roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest', 'Super_Admin'],

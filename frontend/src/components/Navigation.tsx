@@ -17,6 +17,7 @@ import {
   Building,
   Network,
   X,
+  FileCheck2,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 
@@ -32,6 +33,7 @@ export type NavigationTab =
   | 'maintenance'
   | 'master-data'
   | 'tenant-settings'
+  | 'corporate-vault'
   | 'mfa-security';
 
 interface NavigationProps {
@@ -123,6 +125,13 @@ export const Navigation: React.FC<NavigationProps> = ({
       labelEn: 'Master Data & Partners',
       icon: Users,
       allowedRoles: ['Super_Admin', 'Admin', 'COO'],
+    },
+    {
+      id: 'corporate-vault',
+      labelAr: 'خزينة الامتثال والوثائق المؤسسية',
+      labelEn: 'Corporate Compliance Vault',
+      icon: FileCheck2,
+      allowedRoles: ['Super_Admin', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest'],
     },
     {
       id: 'tenant-settings',

@@ -17,6 +17,7 @@ import {
   Cpu,
   RefreshCw,
   ExternalLink,
+  FileCheck2,
 } from 'lucide-react';
 
 interface TenantRecord {
@@ -286,6 +287,14 @@ export const MasterControlPanel: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 md:gap-5 text-slate-400">
+            <a
+              href="/compliance/vault"
+              className="flex items-center gap-1.5 text-xs text-indigo-300 hover:text-white hover:underline transition-colors whitespace-nowrap shrink-0"
+              title="Corporate Compliance Vault"
+            >
+              <FileCheck2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Corporate Compliance Vault</span>
+            </a>
             <div className="whitespace-nowrap shrink-0">
               Uptime: <span className="text-emerald-400 font-bold">{health?.uptime_percent || 99.98}%</span>
             </div>
@@ -316,6 +325,15 @@ export const MasterControlPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <a
+              href="/compliance/vault"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-inner"
+              title="Corporate Compliance Vault"
+            >
+              <FileCheck2 className="w-4 h-4 text-emerald-400" />
+              <span>Corporate Compliance Vault</span>
+            </a>
+
             <button
               onClick={() => setSearchOpen(true)}
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 rounded-xl text-xs font-mono flex items-center gap-3 transition-all shadow-inner"

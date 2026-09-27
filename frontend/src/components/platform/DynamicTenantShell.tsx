@@ -12,6 +12,7 @@ import {
   ChevronDown,
   LogOut,
   ExternalLink,
+  FileCheck2,
 } from 'lucide-react';
 import { MasterControlPanel } from './MasterControlPanel';
 import { TenantSettingsPanel } from './TenantSettingsPanel';
@@ -161,6 +162,14 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
                 >
                   النطاقات
                 </button>
+                <a
+                  href="/compliance/vault"
+                  title="Corporate Compliance Vault"
+                  className="px-3 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white flex items-center gap-1.5 font-semibold"
+                >
+                  <FileCheck2 className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Corporate Compliance Vault</span>
+                </a>
               </div>
             )}
           </div>
@@ -197,6 +206,14 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
                     </div>
 
                     <div className="flex items-center gap-3">
+                      <a
+                        href="/compliance/vault"
+                        className="px-4 py-2 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-xs font-medium rounded-xl text-slate-200 flex items-center gap-2 transition-colors"
+                        title="Corporate Compliance Vault"
+                      >
+                        <FileCheck2 className="w-4 h-4 text-emerald-400" />
+                        <span>Corporate Compliance Vault</span>
+                      </a>
                       <button
                         onClick={() => setActiveTab('domains')}
                         className="px-4 py-2 bg-slate-900/80 hover:bg-slate-800 border border-slate-700 text-xs font-medium rounded-xl text-slate-200 flex items-center gap-2 transition-colors"

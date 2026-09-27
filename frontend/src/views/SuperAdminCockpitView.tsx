@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Activity, ArrowRight, Building2, ChevronDown, CreditCard, Crown, ExternalLink, Globe2,
   KeyRound, LayoutDashboard, LogOut, Menu, Radio, Search, Settings, ShieldCheck, X, Server,
-  TrendingUp, BarChart3
+  TrendingUp, BarChart3, FileCheck2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useOutsideClick } from '../hooks/useOutsideClick';
@@ -121,6 +121,22 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
         </div>
 
         <div className="space-y-2.5 border-t border-slate-800 pt-4">
+          <a
+            href="/compliance/vault"
+            className="group flex w-full items-center justify-between rounded-xl border border-emerald-700/60 bg-emerald-950/60 p-2.5 text-emerald-200 transition-all hover:bg-emerald-900/80"
+          >
+            <span className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                <FileCheck2 className="h-3.5 w-3.5" />
+              </span>
+              <span className="text-left">
+                <span className="block text-xs font-bold text-white">Corporate Compliance Vault</span>
+                <span className="block text-[10px] text-emerald-300/80">Corporate Profile &amp; Document Vault</span>
+              </span>
+            </span>
+            <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+          </a>
+
           <button onClick={onOpenTenantOnboarding} className="group flex w-full items-center justify-between rounded-xl border border-indigo-700/60 bg-indigo-950/70 p-2.5 text-indigo-200 transition-all hover:bg-indigo-900/80">
             <span className="flex items-center gap-2.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white"><Building2 className="h-3.5 w-3.5" /></span>
