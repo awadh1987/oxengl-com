@@ -57,7 +57,7 @@ const TableSkeletonRows: React.FC<{ rows?: number; cols?: number }> = ({ rows = 
 );
 
 const KpiSkeletonCards: React.FC = () => (
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 animate-pulse">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 animate-pulse">
     {[1, 2, 3, 4].map((i) => (
       <div key={i} className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-3">
         <div className="h-3 bg-slate-200 rounded w-1/2" />
@@ -186,7 +186,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
   }, [trialBalance, searchQuery, selectedTypeFilter]);
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Header Card & Controls */}
       <div className="rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-xl relative overflow-hidden text-white no-print">
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-indigo-500 to-amber-500" />
@@ -327,7 +327,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
       {activeReport === 'trial-balance' && (
         <div className="space-y-6">
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
               <span className="text-xs font-bold text-slate-500">
                 {isAr ? 'إجمالي المدين (Debits)' : 'Total Debits'}
@@ -563,7 +563,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
       {activeReport === 'income-statement' && (
         <div className="space-y-6">
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
               <span className="text-xs font-bold text-slate-500">
                 {isAr ? 'إجمالي الإيرادات (Total Revenue)' : 'Total Revenue'}
@@ -735,7 +735,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
       {activeReport === 'balance-sheet' && (
         <div className="space-y-6">
           {/* KPI Summary Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
               <span className="text-xs font-bold text-slate-500">
                 {isAr ? 'إجمالي الأصول (Total Assets)' : 'Total Assets'}

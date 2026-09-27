@@ -257,7 +257,7 @@ export const HRMSView: React.FC = () => {
   }, [payrollRuns, employees]);
 
   return (
-    <div className="space-y-6" id="hrms-view">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="hrms-view">
       {/* Top Header Card */}
       <div
         className={`flex flex-col justify-between gap-4 rounded-3xl border p-6 shadow-xs transition-colors sm:flex-row sm:items-center ${
@@ -311,7 +311,7 @@ export const HRMSView: React.FC = () => {
       </div>
 
       {/* KPI Cards Ribbon */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
             isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'

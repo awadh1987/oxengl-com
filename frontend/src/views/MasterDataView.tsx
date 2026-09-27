@@ -375,7 +375,7 @@ export const MasterDataView: React.FC = () => {
   const DynamicActionIcon = dynamicActionConfig.icon;
 
   return (
-    <div className="space-y-1.5" id="master-data-view">
+    <div className="space-y-1.5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="master-data-view">
       {/* 1. Primary Header Card (High-Density Neo-Classic) */}
       <div className="neo-compact-panel flex flex-col justify-between gap-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 px-2.5 py-1.5 shadow-2xs sm:flex-row sm:items-center">
         <div>

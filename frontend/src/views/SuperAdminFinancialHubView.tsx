@@ -146,7 +146,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
   );
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 py-6 w-full max-w-7xl mx-auto">
       {/* Top Banner */}
       <div className="rounded-3xl border border-blue-900/40 bg-gradient-to-r from-[#0B132B] via-blue-950/60 to-slate-950 p-6 shadow-2xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -199,7 +199,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       )}
 
       {/* Global Financial KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* MRR Card */}
         <div className="rounded-2xl border border-slate-800 bg-[#0B132B]/90 p-5 shadow-lg">
           <div className="flex items-center justify-between">

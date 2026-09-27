@@ -212,7 +212,7 @@ export const VendorPortalView: React.FC = () => {
   // Render Authentication View if not logged in
   if (!vendorUser) {
     return (
-      <div className={`min-h-screen flex flex-col justify-center py-12 sm:px-6 lg:px-8 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
+      <div className={`min-h-dvh erp-viewport-root flex flex-col justify-center py-12 sm:px-6 lg:px-8 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
         <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
           <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 mb-4 shadow-lg shadow-amber-500/5">
             <Lock className="w-8 h-8" />
@@ -422,7 +422,7 @@ export const VendorPortalView: React.FC = () => {
 
   // Logged-in Vendor Portal Dashboard
   return (
-    <div className={`min-h-screen p-6 md:p-10 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`min-h-dvh erp-viewport-root p-6 md:p-10 ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* Header ribbon */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>

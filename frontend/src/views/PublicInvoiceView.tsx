@@ -88,7 +88,7 @@ export const PublicInvoiceView: React.FC<PublicInvoiceViewProps> = ({ token: pro
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-orange-500/30 selection:text-orange-200">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-orange-500/30 selection:text-orange-200">
       {/* Top Banner Navigation */}
       <header className="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">

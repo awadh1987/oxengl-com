@@ -712,7 +712,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
       </div>
 
       {/* KPI Metric Matrix */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'الأسطول المتتبع' : 'Tracked Fleet'}</span>

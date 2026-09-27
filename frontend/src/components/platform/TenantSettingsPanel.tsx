@@ -579,7 +579,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
             {dbLoading ? (
               <div className="text-center py-4 text-slate-500 font-mono">جاري فحص حالة قاعدة البيانات...</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 pt-1">
                 <div className="p-3 bg-slate-900/60 border border-slate-800/80 rounded-xl">
                   <span className="text-[10px] text-slate-400 font-mono block uppercase">وضع التخزين (Storage Mode)</span>
                   <span className="font-bold text-white text-xs mt-1 block">

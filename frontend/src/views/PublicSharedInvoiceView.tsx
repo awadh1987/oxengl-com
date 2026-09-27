@@ -170,7 +170,7 @@ export const PublicSharedInvoiceView: React.FC<PublicSharedInvoiceViewProps> = (
     <div
       id="public-shared-invoice-view"
       dir={isAr ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-slate-100 p-4 sm:p-6 lg:p-10 font-sans text-slate-900"
+      className="min-h-dvh erp-viewport-root bg-slate-100 p-4 sm:p-6 lg:p-10 font-sans text-slate-900"
     >
       {/* Top Client Portal Bar */}
       <div className="max-w-5xl mx-auto mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-3xl bg-slate-900 p-5 text-white shadow-xl">

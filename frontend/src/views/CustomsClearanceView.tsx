@@ -205,7 +205,7 @@ export const CustomsClearanceView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#070913] text-slate-100 p-4 sm:p-6 lg:p-8 font-sans selection:bg-cyan-500 selection:text-black">
+    <div className="min-h-dvh erp-viewport-root bg-[#070913] text-slate-100 px-3 sm:px-4 md:px-6 py-4 sm:py-6 lg:py-8 w-full max-w-7xl mx-auto font-sans selection:bg-cyan-500 selection:text-black">
       {/* COMPLIANCE BOARD TOP BAR */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-800/80 pb-6 mb-8 gap-4">
         <div>
@@ -297,7 +297,7 @@ export const CustomsClearanceView: React.FC = () => {
       )}
 
       {/* METRIC CARDS HEADER */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-8">
         <div className="p-4 rounded-2xl bg-slate-900/50 border border-slate-800/80 backdrop-blur-md">
           <span className="text-xs font-mono text-slate-400 block mb-1">{t('customs.totalManifests')}</span>
           <div className="flex items-baseline justify-between">

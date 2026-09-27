@@ -188,7 +188,7 @@ export const InventoryView: React.FC = () => {
   });
 
   return (
-    <div className="space-y-6" id="inventory-view">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="inventory-view">
       {/* Top Notification Banner */}
       {notification && (
         <div
@@ -260,7 +260,7 @@ export const InventoryView: React.FC = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total Valuation */}
         <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
           <div className="flex justify-between items-start mb-2">

@@ -205,7 +205,7 @@ export const TenantBillingView: React.FC = () => {
     : 0;
 
   return (
-    <div className={`space-y-6 min-h-screen ${isDark ? 'text-slate-100' : 'text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`space-y-6 min-h-dvh erp-viewport-root px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto ${isDark ? 'text-slate-100' : 'text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* Platform Header Banner */}
       <div
         className={`rounded-3xl border p-6 shadow-xl relative overflow-hidden ${
@@ -276,7 +276,7 @@ export const TenantBillingView: React.FC = () => {
       )}
 
       {/* Live Operational Meters & Quotas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Active Plan Card */}
         <div
           className={`rounded-2xl border p-5 transition-all ${

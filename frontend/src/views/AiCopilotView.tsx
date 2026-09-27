@@ -104,7 +104,7 @@ export const AiCopilotView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-2rem)] bg-slate-900 text-white rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-[calc(100dvh-2rem)] bg-slate-900 text-white rounded-xl border border-slate-800 overflow-hidden shadow-2xl">
       {/* HEADER SECTION CONTROLS INDICATOR */}
       <div className="bg-slate-950 border-b border-slate-800 p-4 flex justify-between items-center">
         <div>

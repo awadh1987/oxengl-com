@@ -184,7 +184,7 @@ export const OperationsLogView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5" id="operations-log-view">
+    <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="operations-log-view">
       {/* Top Header & Actions */}
       <div className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
         <div>
@@ -290,7 +290,7 @@ export const OperationsLogView: React.FC = () => {
       </div>
 
       {/* Summary KPI Mini-Banner */}
-      <div className="grid grid-cols-2 gap-3 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/50 via-amber-50/30 to-neutral-50 p-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/50 via-amber-50/30 to-neutral-50 p-4">
         <div>
           <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'عدد الرحلات المفلترة' : 'Filtered Trips'}</span>
           <p className="text-lg font-black text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{filteredOperations.length}</span> {isAr ? 'رحلة' : 'trips'}</p>

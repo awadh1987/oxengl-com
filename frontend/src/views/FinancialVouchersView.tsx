@@ -238,7 +238,7 @@ export const FinancialVouchersView: React.FC = () => {
   };
 
   return (
-    <div id="financial-vouchers-view" className="space-y-6">
+    <div id="financial-vouchers-view" className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto">
       {/* Header Banner */}
       <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:flex-row sm:items-center">
         <div>
@@ -375,7 +375,7 @@ export const FinancialVouchersView: React.FC = () => {
       ) : (
         <>
           {/* KPI Cards Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total Payments */}
         <div className="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-white p-5 shadow-xs">
           <div className="flex items-center justify-between">

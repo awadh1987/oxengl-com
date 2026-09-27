@@ -477,7 +477,7 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
   }, [selectedVehicleId]);
 
   return (
-    <div className="space-y-6 pb-12 font-sans">
+    <div className="space-y-6 pb-12 font-sans px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto">
       {/* 1. Header Bar with Telemetry State Indicators */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800/80 pb-4">
         <div>
@@ -533,7 +533,7 @@ export const DashboardView: React.FC<{ onNavigateToTab?: (tab: any) => void }> =
       </div>
 
       {/* 2. Top Tier Metrics KPI Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div className="rounded-2xl border border-slate-800/90 bg-[#090f1c] p-4 shadow-lg backdrop-blur-md">
           <div className="flex items-center justify-between text-slate-400">
             <span className="text-xs font-semibold uppercase">{isAr ? 'إجمالي الأسطول' : 'Total Vehicles'}</span>

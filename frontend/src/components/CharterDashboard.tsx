@@ -137,7 +137,7 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
   const variance = budget - committed;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto">
       {/* Top Header & Project Switcher */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/80 backdrop-blur-md p-6 rounded-2xl border border-slate-800/80 shadow-xl">
         <div className="space-y-1">
@@ -192,7 +192,7 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
       </div>
 
       {/* KPI & Metrics Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Metric 1: Budget Health */}
         <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-2xl border border-slate-800/80 flex flex-col justify-between hover:border-slate-700 transition-colors">
           <div className="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider mb-2">

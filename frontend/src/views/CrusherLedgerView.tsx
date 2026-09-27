@@ -133,7 +133,7 @@ export const CrusherLedgerView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5" id="crusher-ledger-view">
+    <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="crusher-ledger-view">
       {/* Header Banner & Action Bar */}
       <header
         className={`flex flex-col gap-4 rounded-2xl border p-5 shadow-xs transition-colors sm:flex-row sm:items-center sm:justify-between ${
@@ -203,7 +203,7 @@ export const CrusherLedgerView: React.FC = () => {
       </header>
 
       {/* Sourcing Supplier Grid */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {suppliers.map((supplier) => {
           const suppPurchases = purchaseFor(supplier.id, supplier.name);
           const suppOutstanding = suppPurchases - paymentFor(supplier.id);

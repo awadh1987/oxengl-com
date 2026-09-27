@@ -187,7 +187,7 @@ export const ApprovalQueueView: React.FC = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 p-6 lg:p-8 text-slate-100 font-sans">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 px-3 sm:px-4 md:px-6 py-4 sm:py-6 lg:py-8 w-full max-w-7xl mx-auto text-slate-100 font-sans">
       {/* Header */}
       <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
@@ -262,7 +262,7 @@ export const ApprovalQueueView: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           {filteredItems.map(item => (
             <div
               key={item.step_id}

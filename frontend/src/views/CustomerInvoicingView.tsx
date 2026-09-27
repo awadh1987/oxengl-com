@@ -685,7 +685,7 @@ Myon Economic Contracting Co. Ltd.`;
   };
 
   return (
-    <div className="space-y-6" id="customer-invoicing-view">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="customer-invoicing-view">
       {/* 1. Header & Quick Actions */}
       <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center no-print">
         <div>
@@ -1065,7 +1065,7 @@ Myon Economic Contracting Co. Ltd.`;
 
       {/* 3. Invoice Generator Controls Bar */}
       <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs no-print">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <div>
             <label htmlFor="invoicing-customer-select" className="mb-1 block text-xs font-bold text-slate-700">
               {isAr ? 'اختيار العميل المطلوب محاسبته *' : 'Select Customer *'}

@@ -87,7 +87,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
       : (successData.workspace_url || `https://${slug}.oxengl.me`);
 
     return (
-      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6 font-sans">
+      <div className="min-h-dvh erp-viewport-root bg-[#030712] flex items-center justify-center p-6 font-sans">
         <div className="w-full max-w-md bg-[#090f1c] border border-emerald-500/20 rounded-2xl p-8 shadow-2xl text-center">
           <div className="text-4xl mb-4 animate-bounce">🚀</div>
           <h2 className="text-xl font-bold text-emerald-400">Workspace Generated!</h2>
@@ -136,7 +136,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] flex items-center justify-center p-6 font-sans">
+    <div className="min-h-dvh erp-viewport-root bg-[#030712] flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-md bg-[#090f1c] border border-slate-800 rounded-2xl p-8 shadow-2xl relative">
         <button onClick={() => navigate('/')} className="absolute top-4 right-4 text-xs font-mono text-slate-500 hover:text-slate-300">← Back</button>
 

@@ -130,7 +130,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
   return (
     <div
       dir="ltr"
-      className={`min-h-screen pb-16 font-sans transition-colors ${
+      className={`min-h-dvh erp-viewport-root pb-16 font-sans transition-colors ${
         isDark
           ? 'bg-[#0b0d19] text-slate-100 selection:bg-orange-500 selection:text-white'
           : 'bg-slate-50 text-slate-900 selection:bg-orange-500 selection:text-white'

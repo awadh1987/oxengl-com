@@ -525,7 +525,7 @@ export const FleetMapView: React.FC = () => {
   const selectedVehicle = vehicles[selectedVehicleId] || vehiclesRef.current[selectedVehicleId] || INITIAL_VEHICLES['V-1002'];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 sm:p-6 space-y-6" id="fleet-radar-view">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-white px-3 sm:px-4 md:px-6 py-4 sm:py-6 w-full max-w-7xl mx-auto space-y-6" id="fleet-radar-view">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-5">
         <div className="flex items-center gap-3">
@@ -593,7 +593,7 @@ export const FleetMapView: React.FC = () => {
       </div>
 
       {/* KPI Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div className="p-4 rounded-2xl border border-slate-800 bg-slate-900/60 shadow-xs">
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'إجمالي الشاحنات المرصودة' : 'Active Haulers'}</span>

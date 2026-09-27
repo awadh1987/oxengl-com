@@ -82,7 +82,7 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 font-mono text-xs gap-3">
+      <div className="min-h-dvh erp-viewport-root bg-slate-950 flex flex-col items-center justify-center text-slate-400 font-mono text-xs gap-3">
         <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         <span>Resolving tenant plane & multi-tenant RLS schema...</span>
       </div>
@@ -90,7 +90,7 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* Dynamic Multi-Tenant Top Bar */}
       <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-slate-800 px-6 py-3">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">

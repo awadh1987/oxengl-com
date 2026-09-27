@@ -402,7 +402,7 @@ export const CorporateVault: React.FC = () => {
   };
 
   return (
-    <div className={`p-1.5 md:p-2.5 space-y-2 w-full font-sans min-h-screen ${isAr ? 'text-right' : 'text-left'}`} dir={isAr ? 'rtl' : 'ltr'}>
+    <div className={`px-3 sm:px-4 md:px-6 py-2 md:py-3 space-y-2 w-full max-w-7xl mx-auto font-sans min-h-dvh erp-viewport-root ${isAr ? 'text-right' : 'text-left'}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* ==================================================================== */}
       {/* TOP HERO & PROMINENT UNOPS CV ACTION BANNER */}
       {/* ==================================================================== */}
@@ -542,7 +542,7 @@ export const CorporateVault: React.FC = () => {
       {/* ==================================================================== */}
       {/* COMPLIANCE TELEMETRY KPI METRICS CARDS */}
       {/* ==================================================================== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3">
         {/* Total Documents */}
         <div className={`p-2 rounded-lg border transition-all ${
           isDark ? 'bg-slate-900/80 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'

@@ -227,7 +227,7 @@ export const TransporterPerformanceView: React.FC = () => {
     : ['#', 'Service Supplier / Carrier', 'Trips', 'Loaded (MT طن)', 'Delivered (MT طن)', 'Wastage (MT طن)', 'Loss %', 'Freight Fee', 'Penalties', 'Net Payout', 'Compliance', 'Action'];
 
   return (
-    <div className="space-y-5" id="transporter-performance-view">
+    <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="transporter-performance-view">
       {/* Header Banner & Action Bar */}
       <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] p-5 shadow-xs transition-colors sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -293,7 +293,7 @@ export const TransporterPerformanceView: React.FC = () => {
       </header>
 
       {/* Metric Cards */}
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (

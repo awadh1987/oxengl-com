@@ -114,7 +114,7 @@ export const PlanningDepartmentView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-8 space-y-6">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 p-6 md:p-8 space-y-6">
       {/* Top Navigation & Status Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
         <div>

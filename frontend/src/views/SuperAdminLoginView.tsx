@@ -96,7 +96,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
   return (
     <div
       dir="ltr"
-      className="min-h-screen w-full bg-[#030712] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-cyan-500 selection:text-black"
+      className="min-h-dvh erp-viewport-root w-full bg-[#030712] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-cyan-500 selection:text-black"
     >
       {/* BACKGROUND GRAPHICS: Pure CSS Dark Matrix Tech Mesh */}
       <div

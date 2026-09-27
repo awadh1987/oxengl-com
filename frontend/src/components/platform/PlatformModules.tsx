@@ -453,7 +453,7 @@ export const SystemAuditView: React.FC = () => {
         subtitle="Live verification of multi-tenant row isolation across every scoped table, header guards, and active tenant context."
         action={<button onClick={run} disabled={busy} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${busy ? 'animate-spin' : ''}`} />Run Live Audit</button>} />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {cards.map((card) => { const Icon = card.icon; return (
           <div key={card.label} className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-500">{card.label}</span><Icon className={`h-5 w-5 ${card.tone}`} /></div>
@@ -899,7 +899,7 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {kpis.map((kpi) => { const Icon = kpi.icon; return (
           <article key={kpi.label} className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/50 p-5 shadow-xs transition-all hover:shadow-md">
             <div className="flex items-center justify-between">

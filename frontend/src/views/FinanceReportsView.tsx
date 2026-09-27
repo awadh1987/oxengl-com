@@ -367,7 +367,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({ initialM
   };
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Top Header Card */}
       <div className="rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-xl relative overflow-hidden">
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-orange-500 via-indigo-500 to-emerald-500" />
@@ -513,7 +513,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({ initialM
       {activeSubTab === 'trial-balance' && (
         <div className="space-y-4">
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
             <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
               <span className="text-[11px] font-bold text-slate-400">
                 {isAr ? 'إجمالي المدين' : 'Total Debits'}

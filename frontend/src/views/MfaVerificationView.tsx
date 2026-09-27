@@ -114,7 +114,7 @@ export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8 font-sans">
+    <div className="flex min-h-dvh erp-viewport-root items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8 font-sans">
       <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900/90 p-8 shadow-2xl border border-slate-800 backdrop-blur-xl">
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">

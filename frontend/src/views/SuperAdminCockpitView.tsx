@@ -67,7 +67,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
   };
 
   return (
-    <div dir="ltr" className="flex h-screen w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
+    <div dir="ltr" className="flex h-dvh erp-viewport-screen w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
       {sidebarOpen && (
         <button
           aria-label="Close navigation"
@@ -199,7 +199,9 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
           </div>
         )}
 
-        <main className="w-full flex-1 overflow-y-auto p-4 text-slate-900 sm:p-6 lg:p-8">{renderModule()}</main>
+        <main className="w-full flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-slate-900">
+          <div className="w-full max-w-7xl mx-auto">{renderModule()}</div>
+        </main>
 
         <footer className="flex shrink-0 flex-col items-center justify-between gap-2 border-t border-slate-200 bg-white px-6 py-2.5 text-xs text-slate-500 sm:flex-row">
           <div className="flex flex-wrap items-center gap-3">

@@ -117,8 +117,8 @@ export const SuperAdminAnalyticsView: React.FC = () => {
   const avgDaily = velocityData?.data.length ? Math.round(totalOps / velocityData.data.length) : 0;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
           <div>
@@ -159,7 +159,7 @@ export const SuperAdminAnalyticsView: React.FC = () => {
         </div>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
           <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800/80">
             <div className="flex items-center justify-between text-slate-400 mb-2">
               <span className="text-xs font-mono">TOTAL OPERATIONS (7-DAY)</span>

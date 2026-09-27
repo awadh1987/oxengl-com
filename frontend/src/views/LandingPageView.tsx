@@ -259,7 +259,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
     <div
       id="oxengl-landing-page"
       dir={isAr ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-[#111827] font-sans text-neutral-100 antialiased selection:bg-[#F97316] selection:text-white flex flex-col justify-between"
+      className="min-h-dvh erp-viewport-root bg-[#111827] font-sans text-neutral-100 antialiased selection:bg-[#F97316] selection:text-white flex flex-col justify-between"
     >
       <NotificationTopBar />
 

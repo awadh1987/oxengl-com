@@ -483,7 +483,7 @@ export const AIOperationsAuditor: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       {/* Top Banner Header */}
       <div className="relative overflow-hidden rounded-3xl border border-violet-200/70 bg-gradient-to-br from-violet-900 via-indigo-950 to-slate-950 p-6 text-white shadow-xl">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 h-72 w-72 rounded-full bg-violet-600/20 blur-3xl" />
@@ -858,7 +858,7 @@ export const AIOperationsAuditor: React.FC = () => {
               <span>{isAr ? 'إعداد وصياغة خطاب رسمي ذكي' : 'Configure & Generate Official Letter'}</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
               <div>
                 <label className="block text-[11px] font-bold text-slate-700 mb-1">
                   {isAr ? 'نوع الخطاب المطلوب' : 'Letter Purpose'}

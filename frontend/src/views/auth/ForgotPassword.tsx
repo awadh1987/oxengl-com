@@ -89,7 +89,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
   return (
     <div
       dir={isAr ? 'rtl' : 'ltr'}
-      className="min-h-screen w-full bg-[#0a0d17] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
+      className="min-h-dvh erp-viewport-root w-full bg-[#0a0d17] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
     >
       {/* Background Ambience */}
       <div

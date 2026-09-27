@@ -283,7 +283,7 @@ export const ProcurementView: React.FC = () => {
   const totalBillsAmount = procurementBills.reduce((acc, b) => acc + (Number(b.total_billed) || 0), 0);
 
   return (
-    <div className="space-y-6" id="procurement-view">
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="procurement-view">
       {/* Toast Alert Banner */}
       {notification && (
         <div
@@ -363,7 +363,7 @@ export const ProcurementView: React.FC = () => {
       </div>
 
       {/* KPI Cards Ribbon */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
             isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
@@ -992,7 +992,7 @@ export const ProcurementView: React.FC = () => {
                           </span>
                           <span className="text-sm font-mono font-black text-amber-500">
                             {bid.total_amount != null
-                              ? formatCurrency(bid.total_amount, bid.currency || 'SAR')
+                              ? formatCurrency(bid.total_amount, (language as 'ar' | 'en') || 'ar')
                               : '•••••••• SAR (مشفر)'}
                           </span>
                         </div>

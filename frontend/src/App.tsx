@@ -890,7 +890,7 @@ function AppContent() {
     <div
       id="meayon-erp-app-root"
       dir={isAr ? 'rtl' : 'ltr'}
-      className={`min-h-screen font-sans antialiased selection:bg-[#F05627] selection:text-white relative transition-colors ${
+      className={`min-h-dvh erp-viewport-root font-sans antialiased selection:bg-[#F05627] selection:text-white relative transition-colors ${
         themeMode === 'dark' ? 'bg-[#0b0d19] text-slate-100' : 'bg-slate-100 text-neutral-900'
       }`}
     >
@@ -1028,7 +1028,7 @@ function AppContent() {
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
-        <main className={`min-w-0 flex-1 p-1.5 sm:p-2 lg:p-2.5 ${themeMode === 'dark' ? 'bg-[#0b0d19]' : 'bg-slate-100'}`}>
+        <main className={`min-w-0 flex-1 px-3 sm:px-4 md:px-6 py-2 sm:py-3 ${themeMode === 'dark' ? 'bg-[#0b0d19]' : 'bg-slate-100'}`}>
           <div className="mb-2 flex items-center justify-between md:hidden">
             <button
               type="button"
@@ -1041,7 +1041,7 @@ function AppContent() {
             </button>
             <span className="text-xs font-black text-[#F05627]">{isAr ? brandConfig.companyNameAr : brandConfig.companyNameEn}</span>
           </div>
-          <div className="w-full">
+          <div className="w-full max-w-7xl mx-auto">
             <ProtectedRoute
               tier="tenant"
               allowedRoles={viewRoleRequirements[activeTab]}

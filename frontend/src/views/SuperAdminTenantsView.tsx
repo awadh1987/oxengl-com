@@ -158,9 +158,9 @@ export const SuperAdminTenantsView: React.FC = () => {
   const handleRestoreUpload = handleArchiveUpload;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6">
+    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans px-3 sm:px-4 md:px-6 py-4 sm:py-6">
       {/* Header */}
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="w-full max-w-7xl mx-auto space-y-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
           <div>
             <div className="flex items-center gap-3">
