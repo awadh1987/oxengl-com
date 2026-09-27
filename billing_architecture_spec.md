@@ -371,3 +371,4 @@ On application startup, the platform ensures these three default plans are seede
   * Return descriptive `HTTP 403 Forbidden` with upgrade prompts for non-enterprise tenants.
 * **Phase 4: End-to-End Validation & Comprehensive Integration Testing**
   * Automated adversarial tests for quota bypass, downgrade state machines, webhook replays, and enterprise tier unlocks.
+  
