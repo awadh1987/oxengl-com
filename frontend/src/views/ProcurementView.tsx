@@ -27,12 +27,15 @@ import {
   Send,
   Check,
   X,
+  Trash2,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { NewPurchaseOrderModal, PurchaseOrderRecord } from '../components/NewPurchaseOrderModal';
 import { erpApi, ApiProcurementBill, ApiProcurementTender, ApiProcurementBid } from '../services/api';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 
 export const ProcurementView: React.FC = () => {
   const { language, themeMode } = useApp();
@@ -279,6 +282,79 @@ export const ProcurementView: React.FC = () => {
     );
   });
 
+  const billsBulk = useBulkSelection<ApiProcurementBill>(filteredBills);
+
+  const bulkBillActions: BulkActionItem[] = [
+    {
+      id: 'bulk-post-gl',
+      label: isAr ? 'ترحيل جماعي لدفتر الأستاذ' : 'Batch Post to GL',
+      icon: <BookOpen className="h-4 w-4" />,
+      variant: 'primary',
+      requiresConfirmation: true,
+      confirmTitle: isAr ? 'ترحيل الفواتير المحددة لدفتر الأستاذ' : 'Batch Post Bills to General Ledger',
+      confirmMessage: isAr
+        ? `هل أنت متأكد من ترحيل ${billsBulk.selectedCount} فواتير محددة لدفتر الأستاذ العام وتوليد القيود المحاسبية دفعة واحدة؟`
+        : `Are you sure you want to post all ${billsBulk.selectedCount} selected bills to the General Ledger and generate accounting journal entries atomically?`,
+      onClick: async (selectedIds) => {
+        try {
+          const res = await erpApi.bulkProcurementStatus({ ids: selectedIds, entity: 'procurement_bills', status: 'MATCHED' });
+          if (res?.success) {
+            setProcurementBills((prev) =>
+              prev.map((b) => (selectedIds.includes(b.id) ? { ...b, is_posted: true, match_status: 'MATCHED' } : b))
+            );
+            billsBulk.clearSelection();
+            setNotification({
+              type: 'success',
+              message: isAr
+                ? `تم ترحيل ${res.affected_count || selectedIds.length} فواتير بنجاح لدفتر الأستاذ`
+                : `Successfully posted ${res.affected_count || selectedIds.length} bills to General Ledger.`,
+            });
+            setTimeout(() => setNotification(null), 8000);
+          }
+        } catch (err: any) {
+          setNotification({
+            type: 'error',
+            message: err?.message || (isAr ? 'فشل الترحيل الجماعي' : 'Batch posting failed.'),
+          });
+          setTimeout(() => setNotification(null), 8000);
+        }
+      },
+    },
+    {
+      id: 'bulk-delete-bills',
+      label: isAr ? 'حذف الفواتير المحددة' : 'Delete Selected Bills',
+      icon: <Trash2 className="h-4 w-4" />,
+      variant: 'danger',
+      requiresConfirmation: true,
+      confirmTitle: isAr ? 'تأكيد حذف الفواتير' : 'Confirm Deleting Bills',
+      confirmMessage: isAr
+        ? `سيتم حذف ${billsBulk.selectedCount} فواتير محددة نهائياً من سجلات المشتريات. هل تريد المتابعة؟`
+        : `This will permanently delete ${billsBulk.selectedCount} selected bills. Are you sure you want to proceed?`,
+      onClick: async (selectedIds) => {
+        try {
+          const res = await erpApi.bulkProcurementDelete({ ids: selectedIds, entity: 'procurement_bills', hard_delete: true });
+          if (res?.success) {
+            setProcurementBills((prev) => prev.filter((b) => !selectedIds.includes(b.id)));
+            billsBulk.clearSelection();
+            setNotification({
+              type: 'success',
+              message: isAr
+                ? `تم حذف ${res.affected_count || selectedIds.length} فواتير بنجاح`
+                : `Successfully deleted ${res.affected_count || selectedIds.length} bills.`,
+            });
+            setTimeout(() => setNotification(null), 8000);
+          }
+        } catch (err: any) {
+          setNotification({
+            type: 'error',
+            message: err?.message || (isAr ? 'فشل حذف الفواتير' : 'Batch delete failed.'),
+          });
+          setTimeout(() => setNotification(null), 8000);
+        }
+      },
+    },
+  ];
+
   const postedBillsCount = procurementBills.filter((b) => b.is_posted).length;
   const totalBillsAmount = procurementBills.reduce((acc, b) => acc + (Number(b.total_billed) || 0), 0);
 
@@ -524,6 +600,18 @@ export const ProcurementView: React.FC = () => {
                       : 'border-slate-200 bg-slate-50 text-slate-700'
                   }`}
                 >
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label={isAr ? 'تحديد الكل' : 'Select all'}
+                      checked={billsBulk.isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = billsBulk.isIndeterminate;
+                      }}
+                      onChange={billsBulk.toggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </th>
                   <th className="py-3 px-4">{isAr ? 'رقم الفاتورة' : 'Invoice Number'}</th>
                   <th className="py-3 px-4">{isAr ? 'المورد' : 'Vendor'}</th>
                   <th className="py-3 px-4">{isAr ? 'مرجع أمر الشراء' : 'PO Reference'}</th>
@@ -539,6 +627,7 @@ export const ProcurementView: React.FC = () => {
                 {loadingBills ? (
                   Array.from({ length: 4 }).map((_, idx) => (
                     <tr key={`bill-skel-${idx}`} className="animate-pulse">
+                      <td className="py-3.5 px-4 text-center"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-4 mx-auto" /></td>
                       <td className="py-3.5 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-28" /></td>
                       <td className="py-3.5 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-36" /></td>
                       <td className="py-3.5 px-4"><div className="h-4 bg-slate-200 dark:bg-slate-800 rounded w-24" /></td>
@@ -552,7 +641,7 @@ export const ProcurementView: React.FC = () => {
                   ))
                 ) : filteredBills.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-400">
+                    <td colSpan={10} className="py-8 text-center text-slate-400">
                       {isAr ? 'لا توجد فواتير موردين مطابقة' : 'No vendor bills found.'}
                     </td>
                   </tr>
@@ -560,8 +649,19 @@ export const ProcurementView: React.FC = () => {
                   filteredBills.map((bill) => (
                     <tr
                       key={bill.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors ${
+                        billsBulk.isSelected(bill.id) ? 'bg-blue-50/50 dark:bg-blue-900/20' : ''
+                      }`}
                     >
+                      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label={`Select bill ${bill.invoice_number}`}
+                          checked={billsBulk.isSelected(bill.id)}
+                          onChange={() => billsBulk.toggleSelect(bill.id)}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
                         <div className="flex items-center gap-1.5">
                           <FileText className="h-3.5 w-3.5 text-slate-400" />
@@ -649,6 +749,15 @@ export const ProcurementView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Floating Bulk Action Bar for Vendor Bills */}
+          <BulkActionBar
+            selectedIds={billsBulk.selectedIds}
+            onClearSelection={billsBulk.clearSelection}
+            actions={bulkBillActions}
+            itemLabel={isAr ? 'فاتورة' : 'bills'}
+            isRTL={isAr}
+          />
         </div>
       ) : (
         /* Purchase Orders Table */

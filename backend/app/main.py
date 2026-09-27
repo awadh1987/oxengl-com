@@ -473,6 +473,11 @@ app.include_router(ssl_api.router, prefix="/api/v1")
 app.include_router(ssl_api.router, prefix="/api")
 app.include_router(ssl_api.router)
 
+# Global Select & Bulk Operations Architecture
+from backend.app.api.v1.bulk import router as bulk_router
+app.include_router(bulk_router, prefix="/api/v1")
+app.include_router(bulk_router, prefix="/api")
+
 
 
 

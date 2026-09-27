@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Building2, Search, RefreshCw, AlertTriangle, Trash2, Bell, Upload,
-  CheckCircle2, XCircle, ArrowRight, Shield, Layers, HardDrive, Activity
+  CheckCircle2, XCircle, ArrowRight, Shield, Layers, HardDrive, Activity,
+  CheckSquare, Check
 } from 'lucide-react';
+import { useBulkSelection } from '../hooks/useBulkSelection';
+import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
+import { erpApi } from '../services/api';
 
 interface TenantItem {
   id: string;
@@ -30,6 +34,66 @@ export const SuperAdminTenantsView: React.FC = () => {
   const [customAlertMsg, setCustomAlertMsg] = useState('Emergency platform security notice from SuperAdmin.');
   const [isUploading, setIsUploading] = useState(false);
   const [alertStatus, setAlertStatus] = useState<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
+
+  // Global Bulk Operations
+  const bulk = useBulkSelection(tenants);
+
+  const bulkActions: BulkActionItem[] = [
+    {
+      id: 'bulk-activate',
+      label: 'Activate Selected',
+      icon: CheckCircle2,
+      variant: 'success',
+      onClick: async (selectedIds) => {
+        try {
+          const res = await erpApi.bulkTenantStatus({ ids: selectedIds, is_active: true, status: 'ACTIVE' });
+          setActionMessage(res?.message || `Successfully activated ${selectedIds.length} tenants.`);
+          bulk.clearSelection();
+          fetchTenants();
+        } catch (err: any) {
+          setActionMessage(`Bulk activation failed: ${err.message}`);
+        }
+      },
+    },
+    {
+      id: 'bulk-suspend',
+      label: 'Suspend Selected',
+      icon: AlertTriangle,
+      variant: 'warning',
+      requiresConfirmation: true,
+      confirmTitle: 'Suspend Selected Workspaces',
+      confirmMessage: `Are you sure you want to suspend ${bulk.selectedCount} tenant workspaces? Users of suspended tenants will be temporarily blocked from logging in.`,
+      onClick: async (selectedIds) => {
+        try {
+          const res = await erpApi.bulkTenantStatus({ ids: selectedIds, is_active: false, status: 'SUSPENDED' });
+          setActionMessage(res?.message || `Successfully suspended ${selectedIds.length} tenants.`);
+          bulk.clearSelection();
+          fetchTenants();
+        } catch (err: any) {
+          setActionMessage(`Bulk suspension failed: ${err.message}`);
+        }
+      },
+    },
+    {
+      id: 'bulk-delete',
+      label: 'Purge Selected',
+      icon: Trash2,
+      variant: 'danger',
+      requiresConfirmation: true,
+      confirmTitle: 'Hard Purge Selected Workspaces',
+      confirmMessage: `CRITICAL ACTION: You are about to purge ${bulk.selectedCount} tenant workspaces and all their associated RLS schema data. This cannot be undone.`,
+      onClick: async (selectedIds) => {
+        try {
+          const res = await erpApi.bulkTenantDelete({ ids: selectedIds, hard_delete: true });
+          setActionMessage(res?.message || `Successfully purged ${selectedIds.length} tenants.`);
+          bulk.clearSelection();
+          fetchTenants();
+        } catch (err: any) {
+          setActionMessage(`Bulk purge failed: ${err.message}`);
+        }
+      },
+    },
+  ];
 
   const fetchTenants = async () => {
     setLoading(true);
@@ -279,6 +343,18 @@ export const SuperAdminTenantsView: React.FC = () => {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-900/80 text-slate-400 font-mono uppercase tracking-wider border-b border-slate-800">
                 <tr>
+                  <th className="py-3 px-4 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={bulk.isAllSelected}
+                      ref={(input) => {
+                        if (input) input.indeterminate = bulk.isIndeterminate;
+                      }}
+                      onChange={bulk.toggleSelectAll}
+                      className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                      title="Select All Workspaces"
+                    />
+                  </th>
                   <th className="py-3 px-4">Workspace Entity</th>
                   <th className="py-3 px-4">Domain Slug</th>
                   <th className="py-3 px-4">Tier & Tax</th>
@@ -289,7 +365,16 @@ export const SuperAdminTenantsView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-slate-800/20 transition-colors">
+                  <tr key={t.id} className={`hover:bg-slate-800/20 transition-colors ${bulk.isSelected(t.id) ? 'bg-sky-950/30' : ''}`}>
+                    <td className="py-3 px-4 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={bulk.isSelected(t.id)}
+                        onChange={() => bulk.toggleSelect(t.id)}
+                        className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                        title={`Select ${t.name}`}
+                      />
+                    </td>
                     <td className="py-3 px-4 font-semibold text-white">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 rounded-lg flex items-center justify-center font-bold text-white text-xs" style={{ backgroundColor: t.primary_color || '#0ea5e9' }}>
@@ -427,6 +512,14 @@ export const SuperAdminTenantsView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Floating Bulk Action Bar */}
+      <BulkActionBar
+        selectedIds={bulk.selectedIds}
+        onClearSelection={bulk.clearSelection}
+        actions={bulkActions}
+        itemLabel="tenants"
+      />
     </div>
   );
 };

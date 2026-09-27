@@ -1810,6 +1810,38 @@ export const erpApi = {
     request<void>(`/api/v1/corporate/documents/${id}`, companyId, {
       method: 'DELETE',
     }),
+
+  // Global Bulk Operations (BULK_OPERATIONS_ARCHITECTURE.md)
+  bulkUpdateStatus: (payload: { ids: string[]; entity: string; is_active?: boolean; status?: string; reason?: string }, companyId?: string) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/status', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  bulkDelete: (payload: { ids: string[]; entity: string; hard_delete?: boolean; confirm_phrase?: string }, companyId?: string) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/delete', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  bulkTenantStatus: (payload: { ids: string[]; is_active?: boolean; status?: string; reason?: string }) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/tenants/status', undefined, {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, entity: 'tenants' }),
+    }),
+  bulkTenantDelete: (payload: { ids: string[]; hard_delete?: boolean }) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/tenants/delete', undefined, {
+      method: 'POST',
+      body: JSON.stringify({ ...payload, entity: 'tenants' }),
+    }),
+  bulkProcurementStatus: (payload: { ids: string[]; entity: 'procurement_bills' | 'purchase_orders'; status: string }, companyId?: string) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/procurement/status', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  bulkProcurementDelete: (payload: { ids: string[]; entity: 'procurement_bills' | 'purchase_orders'; hard_delete?: boolean }, companyId?: string) =>
+    request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/procurement/delete', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 };
 
 export interface TenantDocumentRecord {
