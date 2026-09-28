@@ -503,3 +503,14 @@ def toggle_or_patch_feature_flag(payload: ToggleFeatureFlagRequest, db: Session 
         "flags": all_flags,
     }
 
+
+# Export standard Super Admin security dependencies
+from backend.app.core.auth import (  # noqa: E402
+    require_super_admin,
+    get_current_active_superuser,
+    verify_super_admin_role,
+    verify_super_admin,
+    is_super_admin_authorized,
+)
+
+

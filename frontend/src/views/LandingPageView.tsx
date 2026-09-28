@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { redirectToTenantWorkspace } from '../utils/subdomain';
 import { UserRole } from '../types';
+
 import { BrandLogo } from '../components/BrandLogo';
 import { PlatformLogo } from '../components/PlatformLogo';
 import { LoginButton } from '../components/LoginButton';
@@ -227,25 +229,22 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
   };
 
   const handleLaunchWorkspace = (tenant: PublicTenant) => {
-    const host = window.location.hostname;
-    const isApex = host === 'oxengl.me' || host === 'www.oxengl.me';
-    if (isApex) {
-      window.location.href = `https://${tenant.slug}.oxengl.me/`;
-    } else if (host.includes('oxengl.me')) {
-      window.location.href = `https://${tenant.slug}.oxengl.me/`;
-    } else {
-      // Localhost or direct IP preview mode
-      localStorage.setItem('oxengl_tenant_slug', tenant.slug);
-      localStorage.setItem('oxengl_tenant_id', tenant.id);
-      localStorage.setItem('tenant_slug', tenant.slug);
-      localStorage.setItem('tenant_id', tenant.id);
-      const matchedComp = companies.find((c) => c.slug === tenant.slug || c.id === tenant.id);
-      if (matchedComp) {
-        setCurrentCompany(matchedComp);
-      }
-      window.location.href = `/login?tenant=${tenant.slug}`;
+    localStorage.setItem('oxengl_tenant_slug', tenant.slug);
+    localStorage.setItem('oxengl_tenant_id', tenant.id);
+    localStorage.setItem('tenant_slug', tenant.slug);
+    localStorage.setItem('tenant_id', tenant.id);
+    const matchedComp = companies.find((c) => c.slug === tenant.slug || c.id === tenant.id);
+    if (matchedComp) {
+      setCurrentCompany(matchedComp);
     }
+
+    const customDomain = (tenant as any)?.custom_domain || (tenant as any)?.domain || matchedComp?.custom_domain;
+    redirectToTenantWorkspace({
+      slug: tenant.slug,
+      custom_domain: customDomain,
+    }, '/operations/daily');
   };
+
 
   const filteredTenants = publicTenants.filter((tenant) => {
     if (!tenantFilter.trim()) return true;

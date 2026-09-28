@@ -3,7 +3,8 @@ import { Building2, KeyRound, Loader2, Lock, Mail, Phone, AlertCircle, ArrowRigh
 import { useApp } from '../../context/AppContext';
 import { Company } from '../../types';
 import { erpApi } from '../../services/api';
-import { redirectToTenantSubdomain } from '../../utils/subdomain';
+import { redirectToTenantSubdomain, redirectToTenantWorkspace } from '../../utils/subdomain';
+
 
 interface TenantLoginFormProps {
   initialTenantSlug?: string;
@@ -101,22 +102,16 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
         onSuccess?.();
 
         const effectiveSlug = res.tenant_slug || cleanSlug;
-        const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-        if (!isLocal && effectiveSlug) {
-          const parts = window.location.hostname.split('.');
-          const rootDomain = parts.slice(-2).join('.'); // 'oxengl.me'
-          const targetHost = `${effectiveSlug}.${rootDomain}`;
+        const customDomain = (res as any)?.custom_domain || (res as any)?.domain || selectedCompany?.custom_domain;
 
-          if (window.location.hostname !== targetHost) {
-            window.location.href = `https://${targetHost}/`;
-            return;
-          }
-        }
-
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
+        // Strictly enforce absolute URL redirect upon login success
+        redirectToTenantWorkspace({
+          slug: effectiveSlug,
+          custom_domain: customDomain,
+        }, '/operations/daily');
+        return;
       } else {
+
         const failureMessage = res?.message || (isAr ? 'بيانات الاعتماد غير صالحة لمساحة العمل هذه.' : 'Invalid credentials for this workspace.');
         setError(failureMessage);
       }
@@ -213,22 +208,16 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
         onSuccess?.();
 
         const effectiveSlug = data.tenant_slug || cleanSlug;
-        const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-        if (!isLocal && effectiveSlug) {
-          const parts = window.location.hostname.split('.');
-          const rootDomain = parts.slice(-2).join('.'); // 'oxengl.me'
-          const targetHost = `${effectiveSlug}.${rootDomain}`;
+        const customDomain = data.custom_domain || data.domain || selectedCompany?.custom_domain;
 
-          if (window.location.hostname !== targetHost) {
-            window.location.href = `https://${targetHost}/`;
-            return;
-          }
-        }
-
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
+        // Strictly enforce absolute URL redirect upon 2FA success
+        redirectToTenantWorkspace({
+          slug: effectiveSlug,
+          custom_domain: customDomain,
+        }, '/operations/daily');
+        return;
       } else {
+
         throw new Error(
           isAr
             ? 'فشل استلام رمز الدخول من الخادم'

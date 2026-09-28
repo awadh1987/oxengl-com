@@ -8,8 +8,9 @@ import { AIAssistantWidget } from './components/AIAssistantWidget';
 import type { ExportDocType } from './components/ExportPrintModal';
 import { Building2, Cpu, CreditCard, Layers, FileSpreadsheet, Landmark, LayoutDashboard, Menu, Palette, Receipt, Scale, Sparkles, Truck, Users, Wrench, X, Globe, Radio, TrendingUp } from 'lucide-react';
 import { UserRole } from './types';
-import { getSubdomain, isApexDomain, isCustomDomain, getCustomDomain } from './utils/subdomain';
+import { getSubdomain, isApexDomain, isCustomDomain, getCustomDomain, redirectToTenantWorkspace } from './utils/subdomain';
 import { resolveDomain } from './services/api';
+
 import { useNavigate } from './hooks/useNavigate';
 
 // Code-split dynamic view imports
@@ -679,15 +680,20 @@ function AppContent() {
   const activeSubdomain = getSubdomain();
   const effectiveTenantSlug = activeSubdomain || resolvedCustomSlug || (isCustomDomain() ? getCustomDomain() : null);
 
+  const handleWorkspaceLoginRedirect = () => {
+    setIsLoggedIn(true);
+    const storedSlug = localStorage.getItem('tenant_slug') || effectiveTenantSlug;
+    const customDom = isCustomDomain() ? getCustomDomain() : null;
+    redirectToTenantWorkspace({
+      slug: storedSlug,
+      custom_domain: customDom,
+    }, '/operations/daily');
+  };
+
   if (currentPath === '/' && !effectiveTenantSlug) {
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
-        <Route path="/" element={<LandingPageView onLoginSuccess={() => {
-          setIsLoggedIn(true);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/operations/daily';
-          }
-        }} />} />
+        <Route path="/" element={<LandingPageView onLoginSuccess={handleWorkspaceLoginRedirect} />} />
       </Suspense>
     );
   }
@@ -695,8 +701,12 @@ function AppContent() {
   if (currentPath === '/login' || (!isLoggedIn && effectiveTenantSlug && currentPath !== '/')) {
     if (isLoggedIn) {
       if (typeof window !== 'undefined') {
-        window.history.replaceState({}, '', '/operations/daily');
-        setCurrentPath('/operations/daily');
+        const storedSlug = localStorage.getItem('tenant_slug') || effectiveTenantSlug;
+        const customDom = isCustomDomain() ? getCustomDomain() : null;
+        redirectToTenantWorkspace({
+          slug: storedSlug,
+          custom_domain: customDom,
+        }, '/operations/daily');
       }
     } else {
       return (
@@ -704,12 +714,7 @@ function AppContent() {
           <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
             setCurrentPath(to);
             navigate(to);
-          }} onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/operations/daily';
-            }
-          }} />} />
+          }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
         </Suspense>
       );
     }
@@ -722,23 +727,13 @@ function AppContent() {
           <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug} onNavigate={(to) => {
             setCurrentPath(to);
             navigate(to);
-          }} onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/operations/daily';
-            }
-          }} />} />
+          }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
         </Suspense>
       );
     }
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
-        <Route path="/" element={<LandingPageView onLoginSuccess={() => {
-          setIsLoggedIn(true);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/operations/daily';
-          }
-        }} />} />
+        <Route path="/" element={<LandingPageView onLoginSuccess={handleWorkspaceLoginRedirect} />} />
       </Suspense>
     );
   }
@@ -749,15 +744,11 @@ function AppContent() {
         <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
           setCurrentPath(to);
           navigate(to);
-        }} onLoginSuccess={() => {
-          setIsLoggedIn(true);
-          if (typeof window !== 'undefined') {
-            window.location.href = '/operations/daily';
-          }
-        }} />} />
+        }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
       </Suspense>
     );
   }
+
 
   if ((authTier === 'master' || currentUser.role === 'Super_Admin') && !inspectingWorkspace && !activeSubdomain) {
     return (

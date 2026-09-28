@@ -23,11 +23,16 @@ export interface Company {
   uiPrimaryColor?: string;
   uiSecondaryColor?: string;
   uiLogoUrl?: string | null;
+  ui_logo_url?: string | null;
   logo_url?: string | null;
   logoUrl?: string | null;
   wallpaper_url?: string | null;
   background_url?: string | null;
   uiBackgroundUrl?: string | null;
+  custom_domain?: string | null;
+  domain?: string | null;
+  ui_primary_color?: string | null;
+  ui_secondary_color?: string | null;
 }
 
 export interface DocumentAttachment {
@@ -50,6 +55,8 @@ export interface User {
   phone?: string;
   role: UserRole;
   companyId?: string;
+  companyName?: string;
+  company_name?: string;
   assignedCustomerId?: string | null;
   avatar?: string;
   avatar_url?: string;
@@ -59,6 +66,7 @@ export interface User {
   deleted_by?: string;
   created_at?: string;
 }
+
 
 export interface Customer {
   id: string;

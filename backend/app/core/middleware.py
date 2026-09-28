@@ -311,6 +311,23 @@ class HostHeaderMiddleware(BaseHTTPMiddleware):
             request.state.tenant_name = tenant_meta["name"]
             request.state.custom_domain = clean_host
             request.state.is_custom_domain = tenant_meta.get("is_custom_domain", False)
+        else:
+            header_or_query_cid = (
+                request.headers.get("x-company-id")
+                or request.headers.get("x-tenant-id")
+                or request.headers.get("x-target-company-id")
+                or request.query_params.get("company_id")
+                or request.query_params.get("tenant_id")
+            )
+            if header_or_query_cid and not request.state.company_id:
+                try:
+                    parsed_cid = uuid.UUID(str(header_or_query_cid).strip())
+                    request.state.requested_company_id = parsed_cid
+                    request.state.company_id = parsed_cid
+                    request.state.tenant_company_id = parsed_cid
+                    request.state.tenant_id = str(parsed_cid)
+                except (ValueError, TypeError):
+                    pass
 
         response = await call_next(request)
 
@@ -318,6 +335,8 @@ class HostHeaderMiddleware(BaseHTTPMiddleware):
             response.headers["X-Resolved-Tenant"] = tenant_meta["tenant_slug"]
             if tenant_meta.get("is_custom_domain"):
                 response.headers["X-Custom-Domain"] = clean_host
+        elif getattr(request.state, "company_id", None):
+            response.headers["X-Active-Company-ID"] = str(request.state.company_id)
 
         return response
 

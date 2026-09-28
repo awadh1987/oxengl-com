@@ -16,8 +16,15 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { redirectToTenantSubdomain, isCustomDomain } from '../utils/subdomain';
+import {
+  redirectToTenantSubdomain,
+  isCustomDomain,
+  isLocalhost,
+  buildTenantAbsoluteUrl,
+  redirectToTenantWorkspace,
+} from '../utils/subdomain';
 import { useNavigate } from '../hooks/useNavigate';
+
 
 interface TenantLoginViewProps {
   onLoginSuccess?: () => void;
@@ -114,6 +121,26 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
       }
 
       const data = await res.json();
+      const customDomain = data?.custom_domain || data?.domain || matchedCompany?.custom_domain;
+
+      // Upon successful workspace slug validation, evaluate absolute tenant target:
+      const targetUrl = buildTenantAbsoluteUrl({
+        slug: cleanSlug,
+        custom_domain: customDomain,
+      }, '/operations/daily');
+
+      try {
+        const targetHost = new URL(targetUrl).hostname.toLowerCase();
+        const currentHost = window.location.hostname.toLowerCase();
+        // If not already on the target host and not on localhost, redirect immediately to prevent master root domain entrapment
+        if (targetHost && currentHost !== targetHost && !isLocalhost()) {
+          window.location.href = targetUrl;
+          return;
+        }
+      } catch (err) {
+        console.warn('Tenant URL parsing warning:', err);
+      }
+
       setValidatedTarget(data.target || cleanSlug);
       setTenantSlug(cleanSlug);
       setSlugValidated(true);
@@ -186,26 +213,19 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
         }
 
         const effectiveSlug = res.tenant_slug || tenantSlug;
-        const isLocal = window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1');
-        const isCustom = isCustomDomain();
-        if (!isLocal && !isCustom && effectiveSlug) {
-          const parts = window.location.hostname.split('.');
-          const rootDomain = parts.slice(-2).join('.'); // 'oxengl.me'
-          const targetHost = `${effectiveSlug}.${rootDomain}`;
+        const customDomain = (res as any)?.custom_domain || (res as any)?.domain || matchedCompany?.custom_domain;
 
-          if (window.location.hostname !== targetHost) {
-            window.location.href = `https://${targetHost}/`;
-            return;
-          }
-        }
-
-        if (typeof window !== 'undefined') {
-          window.location.href = '/';
-        }
+        // Strictly enforce absolute URL redirection upon successful authentication
+        redirectToTenantWorkspace({
+          slug: effectiveSlug,
+          custom_domain: customDomain,
+        }, '/operations/daily');
+        return;
       } else {
         const failureMsg = res?.message || (isAr ? 'بيانات الاعتماد غير صحيحة لمساحة العمل المحددة.' : 'Invalid credentials for this workspace. Please verify your details.');
         setErrorMessage(failureMsg);
       }
+
     } catch (err: any) {
       setErrorMessage(
         err?.message ||

@@ -30,6 +30,9 @@ import {
   X,
   FileCode,
   Eye,
+  Truck,
+  Landmark,
+  HardHat,
 } from 'lucide-react';
 import { HoverIcon } from '../../components/common/HoverIcon';
 import { useApp } from '../../context/AppContext';
@@ -43,18 +46,27 @@ import {
   getTenantSlug,
 } from '../../services/api';
 
-// Canonical Document Types matching Enterprise / Global standard
+// Canonical Document Types matching Enterprise / Global Prequalification Standard
 const DOCUMENT_TYPES = [
+  // Pillar 1: Legal Documents
   { value: 'CR', labelEn: 'Commercial Registration (CR)', labelAr: 'السجل التجاري' },
   { value: 'TAX_VAT', labelEn: 'ZATCA Tax / VAT Certificate', labelAr: 'شهادة ضريبة القيمة المضافة (زكاة)' },
   { value: 'GOSI', labelEn: 'GOSI Saudization Certificate', labelAr: 'شهادة التأمينات الاجتماعية ونسب التوطين' },
-  { value: 'ISO_9001', labelEn: 'ISO 9001:2015 Quality System', labelAr: 'شهادة الجودة آيزو 9001' },
-  { value: 'ISO_14001', labelEn: 'ISO 14001 Environmental', labelAr: 'شهادة البيئة آيزو 14001' },
-  { value: 'ISO_45001', labelEn: 'ISO 45001 Health & Safety', labelAr: 'شهادة السلامة والصحة المهنية آيزو 45001' },
   { value: 'CHAMBER_COMMERCE', labelEn: 'Chamber of Commerce Membership', labelAr: 'اشتراك الغرفة التجارية' },
   { value: 'MUNICIPAL_LICENSE', labelEn: 'Municipal Operating License', labelAr: 'رخصة البلدية التشغيلية' },
   { value: 'CIVIL_DEFENSE', labelEn: 'Civil Defense Safety License', labelAr: 'رخصة السلامة من الدفاع المدني' },
-  { value: 'AUDITED_FINANCIALS', labelEn: 'Audited Financial Statement', labelAr: 'القوائم المالية المدققة' },
+  { value: 'ARTICLES_OF_ASSOCIATION', labelEn: 'Articles of Association & Bylaws', labelAr: 'عقد التأسيس والملفات القانونية' },
+  // Pillar 4: Quality Requirements
+  { value: 'ISO_9001', labelEn: 'ISO 9001:2015 Quality System', labelAr: 'شهادة الجودة آيزو 9001' },
+  { value: 'QA_QC_PROCEDURES', labelEn: 'QA/QC Manual & Inspection Procedures', labelAr: 'إجراءات وضوابط ضبط الجودة (QA/QC)' },
+  // Pillar 5: HSE Requirements
+  { value: 'ISO_45001', labelEn: 'ISO 45001 Health & Safety System', labelAr: 'شهادة السلامة والصحة المهنية آيزو 45001' },
+  { value: 'ISO_14001', labelEn: 'ISO 14001 Environmental Management', labelAr: 'شهادة الإدارة البيئية آيزو 14001' },
+  { value: 'HSE_MANUAL', labelEn: 'Corporate HSE Manual & Emergency Plan', labelAr: 'دليل السلامة والصحة المهنية والبيئة (HSE)' },
+  { value: 'HSE_STATISTICS', labelEn: 'HSE Incident & Safety Statistics (LTIFR)', labelAr: 'إحصائيات وسجلات السلامة المهنية' },
+  // Pillar 6: Financial Requirements
+  { value: 'AUDITED_FINANCIALS', labelEn: 'Audited Financial Statement (CPA)', labelAr: 'القوائم المالية المدققة' },
+  { value: 'BANK_REFERENCE', labelEn: 'Bank Reference & Solvency Letter', labelAr: 'شهادة الملاءة والخطاب البنكي' },
   { value: 'INSURANCE_POLICY', labelEn: 'Corporate Comprehensive Insurance', labelAr: 'وثيقة التأمين الشامل للمنشأة' },
   { value: 'OTHER', labelEn: 'Other Supporting Document', labelAr: 'وثيقة نظامية داعمة أخرى' },
 ];
@@ -80,6 +92,7 @@ export const CorporateVault: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [pillarFilter, setPillarFilter] = useState<'ALL' | 'LEGAL' | 'COMPANY' | 'TECHNICAL' | 'QUALITY' | 'HSE' | 'FINANCIAL'>('ALL');
 
   // Modal States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
@@ -373,9 +386,27 @@ export const CorporateVault: React.FC = () => {
       const matchesType = typeFilter === 'ALL' || doc.document_type === typeFilter;
       const matchesStatus = statusFilter === 'ALL' || doc.verification_status === statusFilter;
 
-      return matchesSearch && matchesType && matchesStatus;
+      let matchesPillar = true;
+      if (pillarFilter !== 'ALL') {
+        const type = doc.document_type.toUpperCase();
+        if (pillarFilter === 'LEGAL') {
+          matchesPillar = ['CR', 'COMMERCIAL_REGISTRATION', 'TRADE_LICENSE', 'TAX_VAT', 'VAT_CERTIFICATE', 'ZATCA', 'GOSI', 'SAUDIZATION', 'CHAMBER_COMMERCE', 'MUNICIPAL_LICENSE', 'CIVIL_DEFENSE', 'ARTICLES_OF_ASSOCIATION'].includes(type);
+        } else if (pillarFilter === 'COMPANY') {
+          matchesPillar = ['ARTICLES_OF_ASSOCIATION', 'COMPANY_BYLAWS', 'LEGAL_DEED', 'OTHER'].includes(type);
+        } else if (pillarFilter === 'TECHNICAL') {
+          matchesPillar = ['FLEET', 'EQUIPMENT', 'TECHNICAL', 'CALIBRATION'].includes(type);
+        } else if (pillarFilter === 'QUALITY') {
+          matchesPillar = ['ISO_9001', 'QA_QC_PROCEDURES', 'QUALITY_MANUAL', 'QUALITY_POLICY'].includes(type) || type.startsWith('ISO');
+        } else if (pillarFilter === 'HSE') {
+          matchesPillar = ['ISO_45001', 'ISO_14001', 'HSE_MANUAL', 'SAFETY_MANUAL', 'HSE_STATISTICS', 'SAFETY_STATISTICS'].includes(type);
+        } else if (pillarFilter === 'FINANCIAL') {
+          matchesPillar = ['AUDITED_FINANCIALS', 'AUDITED_STATEMENTS', 'BANK_REFERENCE', 'SOLVENCY_LETTER', 'INSURANCE_POLICY'].includes(type);
+        }
+      }
+
+      return matchesSearch && matchesType && matchesStatus && matchesPillar;
     });
-  }, [documents, searchTerm, typeFilter, statusFilter]);
+  }, [documents, searchTerm, typeFilter, statusFilter, pillarFilter]);
 
   // Statistics
   const totalCount = documents.length;
@@ -402,10 +433,18 @@ export const CorporateVault: React.FC = () => {
       verified: Boolean(currentCompany?.taxId || (currentCompany as any)?.tax_id),
       present: Boolean(currentCompany?.taxId || (currentCompany as any)?.tax_id),
     },
-    gosi_saudization: { verified: documents.some((d) => d.document_type === 'GOSI' && d.verification_status === 'VERIFIED') },
-    iso_certifications: { verified: documents.some((d) => d.document_type.startsWith('ISO') && d.verification_status === 'VERIFIED') },
+    gosi_saudization: { verified: documents.some((d) => (d.document_type === 'GOSI' || d.document_type === 'SAUDIZATION') && d.verification_status === 'VERIFIED') },
     chamber_of_commerce: { verified: documents.some((d) => d.document_type === 'CHAMBER_COMMERCE' && d.verification_status === 'VERIFIED') },
     municipal_civil_defense: { verified: documents.some((d) => (d.document_type === 'MUNICIPAL_LICENSE' || d.document_type === 'CIVIL_DEFENSE') && d.verification_status === 'VERIFIED') },
+    articles_of_association: { verified: documents.some((d) => (d.document_type === 'ARTICLES_OF_ASSOCIATION' || d.document_type === 'COMPANY_BYLAWS') && d.verification_status === 'VERIFIED') },
+    iso_certifications: { verified: documents.some((d) => d.document_type.startsWith('ISO') && d.verification_status === 'VERIFIED') },
+    iso_9001: { verified: documents.some((d) => (d.document_type === 'ISO_9001' || d.document_type === 'QA_QC_PROCEDURES') && d.verification_status === 'VERIFIED') },
+    qa_qc_procedures: { verified: documents.some((d) => (d.document_type === 'QA_QC_PROCEDURES' || d.document_type === 'QUALITY_MANUAL') && d.verification_status === 'VERIFIED') },
+    iso_45001: { verified: documents.some((d) => (d.document_type === 'ISO_45001' || d.document_type === 'HSE_MANUAL') && d.verification_status === 'VERIFIED') },
+    hse_manual: { verified: documents.some((d) => (d.document_type === 'HSE_MANUAL' || d.document_type === 'SAFETY_MANUAL') && d.verification_status === 'VERIFIED') },
+    hse_statistics: { verified: documents.some((d) => (d.document_type === 'HSE_STATISTICS' || d.document_type === 'SAFETY_STATISTICS') && d.verification_status === 'VERIFIED') },
+    audited_financials: { verified: documents.some((d) => (d.document_type === 'AUDITED_FINANCIALS' || d.document_type === 'AUDITED_STATEMENTS') && d.verification_status === 'VERIFIED') },
+    bank_reference: { verified: documents.some((d) => (d.document_type === 'BANK_REFERENCE' || d.document_type === 'SOLVENCY_LETTER') && d.verification_status === 'VERIFIED') },
   };
 
   return (
@@ -423,7 +462,7 @@ export const CorporateVault: React.FC = () => {
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-sky-500/10 text-sky-400 border border-sky-500/20 whitespace-nowrap shrink-0">
                 <ShieldCheck className="w-3 h-3 shrink-0" />
-                {isAr ? 'معيار الامتثال والحوكمة المؤسسية / ISO-21500' : 'Enterprise Compliance Standard / ISO-21500'}
+                {isAr ? 'معيار التأهيل المعتمد / GLOBAL-STD-2026.1 / ISO-21500' : 'Enterprise Prequalification Standard / GLOBAL-STD-2026.1 / ISO-21500'}
               </span>
 
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shrink-0 ${
@@ -633,36 +672,51 @@ export const CorporateVault: React.FC = () => {
       </div>
 
       {/* ==================================================================== */}
-      {/* MANDATORY COMPLIANCE CHECKLIST MATRIX (High-Density 6-col Strip) */}
+      {/* STANDARDIZED PREQUALIFICATION CHECKLIST MATRIX (6-Pillar High-Density Strip) */}
       {/* ==================================================================== */}
       <div className={`p-2 rounded-xl border ${isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200 shadow-2xs'}`}>
         <div className="flex items-center justify-between mb-1.5 px-1">
           <div className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
             <h2 className="text-xs font-bold text-slate-200">
-              {isAr ? 'مصفوفة المتطلبات الإلزامية للمناقصات والمشتريات الحكومية' : 'Mandatory Statutory & Procurement Checklist'}
+              {isAr ? 'مصفوفة ركائز التأهيل المسبق المعتمدة (6 ركائز)' : 'Standard Prequalification Dossier Matrix (6 Pillars)'}
             </h2>
+            {pillarFilter !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => setPillarFilter('ALL')}
+                className="text-[10px] px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 transition-colors"
+              >
+                {isAr ? 'عرض الكل' : 'Clear Filter'}
+              </button>
+            )}
           </div>
           <span className="text-[10px] text-slate-400">
-            {isAr ? 'المعايير التنظيمية الصارمة' : 'Mandatory Qualification Gates'}
+            {isAr ? 'انقر على أي ركيزة لتصفية الوثائق المرتبطة بها' : 'Click any pillar to filter associated compliance documents'}
           </span>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5">
-          {/* 1. Commercial Registration */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.commercial_registration?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 1. Legal Documents */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'LEGAL' ? 'ALL' : 'LEGAL')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'LEGAL' ? 'ring-2 ring-sky-500' : ''
+            } ${
+              mandatoryChecklist.commercial_registration?.verified && mandatoryChecklist.zatca_tax_vat?.verified
+                ? 'bg-emerald-500/5 border-emerald-500/30'
+                : 'bg-slate-800/40 border-slate-700/60'
+            }`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <Building2 className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.commercial_registration?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <Building2 className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.commercial_registration?.verified && mandatoryChecklist.zatca_tax_vat?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'السجل التجاري' : 'CR License'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.commercialRegistration || (currentCompany as any)?.commercial_registration || (isAr ? 'غير مسجل' : 'None')}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '١. الوثائق النظامية' : '1. Legal Documents'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'السجل والضريبة والتأمينات' : 'CR, VAT, GOSI, Chamber'}</div>
               </div>
             </div>
-            {mandatoryChecklist.commercial_registration?.verified ? (
+            {mandatoryChecklist.commercial_registration?.verified && mandatoryChecklist.zatca_tax_vat?.verified ? (
               <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                 {isAr ? 'معتمد' : 'VERIFIED'}
               </span>
@@ -671,70 +725,72 @@ export const CorporateVault: React.FC = () => {
                 {isAr ? 'مطلوب' : 'REQ'}
               </span>
             )}
-          </div>
+          </button>
 
-          {/* 2. ZATCA Tax / VAT */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.zatca_tax_vat?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 2. Company Information */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'COMPANY' ? 'ALL' : 'COMPANY')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'COMPANY' ? 'ring-2 ring-sky-500' : ''
+            } bg-emerald-500/5 border-emerald-500/30`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <ShieldCheck className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.zatca_tax_vat?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <FileText className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'الزكاة والضريبة' : 'ZATCA VAT'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.taxId || (currentCompany as any)?.tax_id || (isAr ? 'غير مسجل' : 'None')}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '٢. بيانات المنشأة' : '2. Company Info'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{currentCompany?.name || (isAr ? 'المركز الرئيسي' : 'HQ Entity')} ({cvPayload?.operating_regions?.facilities_count || 1})</div>
               </div>
             </div>
-            {mandatoryChecklist.zatca_tax_vat?.verified ? (
-              <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                {isAr ? 'معتمد' : 'VERIFIED'}
-              </span>
-            ) : (
-              <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
-                {isAr ? 'مطلوب' : 'REQ'}
-              </span>
-            )}
-          </div>
+            <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+              {isAr ? 'معتمد' : 'VERIFIED'}
+            </span>
+          </button>
 
-          {/* 3. GOSI Saudization */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.gosi_saudization?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 3. Technical Requirements */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'TECHNICAL' ? 'ALL' : 'TECHNICAL')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'TECHNICAL' ? 'ring-2 ring-sky-500' : ''
+            } ${
+              (cvPayload?.fleet_capacity?.total_units || 0) > 0 || (cvPayload?.executed_projects?.total_executed_count || 0) > 0
+                ? 'bg-emerald-500/5 border-emerald-500/30'
+                : 'bg-slate-800/40 border-slate-700/60'
+            }`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <BadgeCheck className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.gosi_saudization?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <Truck className={`w-3.5 h-3.5 shrink-0 ${(cvPayload?.fleet_capacity?.total_units || 0) > 0 ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'التأمينات والتوطين' : 'GOSI Saudization'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'نسب التوطين' : 'Quotas'}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '٣. المتطلبات الفنية' : '3. Technical & Fleet'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{cvPayload?.fleet_capacity?.total_units || 0} {isAr ? 'مركبة' : 'Units'} · {cvPayload?.executed_projects?.total_executed_count || 0} {isAr ? 'مشروع' : 'Projects'}</div>
               </div>
             </div>
-            {mandatoryChecklist.gosi_saudization?.verified ? (
-              <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                {isAr ? 'معتمد' : 'VERIFIED'}
-              </span>
-            ) : (
-              <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
-                {isAr ? 'مطلوب' : 'REQ'}
-              </span>
-            )}
-          </div>
+            <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+              {isAr ? 'جاهز' : 'READY'}
+            </span>
+          </button>
 
-          {/* 4. ISO Certifications */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.iso_certifications?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 4. Quality Requirements (ISO 9001, QA/QC) */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'QUALITY' ? 'ALL' : 'QUALITY')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'QUALITY' ? 'ring-2 ring-sky-500' : ''
+            } ${
+              mandatoryChecklist.iso_certifications?.verified || mandatoryChecklist.iso_9001?.verified || mandatoryChecklist.qa_qc_procedures?.verified
+                ? 'bg-emerald-500/5 border-emerald-500/30'
+                : 'bg-slate-800/40 border-slate-700/60'
+            }`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <Award className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.iso_certifications?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <Award className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.iso_certifications?.verified || mandatoryChecklist.iso_9001?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'شهادات الجودة' : 'ISO 9001/45001'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'نظام الجودة' : 'QMS/HSE'}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '٤. الجودة (9001)' : '4. Quality (ISO 9001)'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'نظام وإجراءات الجودة QA/QC' : 'ISO 9001 & QA/QC Manual'}</div>
               </div>
             </div>
-            {mandatoryChecklist.iso_certifications?.verified ? (
+            {mandatoryChecklist.iso_certifications?.verified || mandatoryChecklist.iso_9001?.verified || mandatoryChecklist.qa_qc_procedures?.verified ? (
               <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                 {isAr ? 'معتمد' : 'VERIFIED'}
               </span>
@@ -743,22 +799,28 @@ export const CorporateVault: React.FC = () => {
                 {isAr ? 'مطلوب' : 'REQ'}
               </span>
             )}
-          </div>
+          </button>
 
-          {/* 5. Chamber of Commerce */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.chamber_of_commerce?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 5. HSE Requirements (ISO 45001, Stats) */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'HSE' ? 'ALL' : 'HSE')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'HSE' ? 'ring-2 ring-sky-500' : ''
+            } ${
+              mandatoryChecklist.iso_45001?.verified || mandatoryChecklist.hse_manual?.verified || mandatoryChecklist.hse_statistics?.verified
+                ? 'bg-emerald-500/5 border-emerald-500/30'
+                : 'bg-slate-800/40 border-slate-700/60'
+            }`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <FileCheck2 className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.chamber_of_commerce?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.iso_45001?.verified || mandatoryChecklist.hse_manual?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'الغرفة التجارية' : 'Chamber of Comm.'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'اشتراك ساري' : 'Active'}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '٥. السلامة (45001)' : '5. HSE (ISO 45001)'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'دليل HSE وصفر إصابات' : 'ISO 45001 & Stats'}</div>
               </div>
             </div>
-            {mandatoryChecklist.chamber_of_commerce?.verified ? (
+            {mandatoryChecklist.iso_45001?.verified || mandatoryChecklist.hse_manual?.verified || mandatoryChecklist.hse_statistics?.verified ? (
               <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                 {isAr ? 'معتمد' : 'VERIFIED'}
               </span>
@@ -767,22 +829,28 @@ export const CorporateVault: React.FC = () => {
                 {isAr ? 'مطلوب' : 'REQ'}
               </span>
             )}
-          </div>
+          </button>
 
-          {/* 6. Municipal & Civil Defense */}
-          <div className={`p-1.5 px-2 rounded-lg border flex items-center justify-between ${
-            mandatoryChecklist.municipal_civil_defense?.verified
-              ? 'bg-emerald-500/5 border-emerald-500/30'
-              : 'bg-slate-800/40 border-slate-700/60'
-          }`}>
+          {/* 6. Financial Requirements (Audited Statements, Bank Reference) */}
+          <button
+            type="button"
+            onClick={() => setPillarFilter(pillarFilter === 'FINANCIAL' ? 'ALL' : 'FINANCIAL')}
+            className={`p-1.5 px-2 rounded-lg border flex items-center justify-between text-left transition-all ${
+              pillarFilter === 'FINANCIAL' ? 'ring-2 ring-sky-500' : ''
+            } ${
+              mandatoryChecklist.audited_financials?.verified || mandatoryChecklist.bank_reference?.verified
+                ? 'bg-emerald-500/5 border-emerald-500/30'
+                : 'bg-slate-800/40 border-slate-700/60'
+            }`}
+          >
             <div className="flex items-center gap-1.5 truncate">
-              <ShieldAlert className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.municipal_civil_defense?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
+              <Landmark className={`w-3.5 h-3.5 shrink-0 ${mandatoryChecklist.audited_financials?.verified || mandatoryChecklist.bank_reference?.verified ? 'text-emerald-400' : 'text-slate-400'}`} />
               <div className="truncate">
-                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? 'البلدية والدفاع' : 'Civil Defense'}</div>
-                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'رخص السلامة' : 'Permits'}</div>
+                <div className="text-[10.5px] font-bold text-slate-200 truncate">{isAr ? '٦. المتطلبات المالية' : '6. Financial & Bank'}</div>
+                <div className="text-[9.5px] text-slate-400 truncate">{isAr ? 'القوائم والخطاب البنكي' : 'Audited Stmts & Bank'}</div>
               </div>
             </div>
-            {mandatoryChecklist.municipal_civil_defense?.verified ? (
+            {mandatoryChecklist.audited_financials?.verified || mandatoryChecklist.bank_reference?.verified ? (
               <span className="px-1 py-0.2 text-[8.5px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
                 {isAr ? 'معتمد' : 'VERIFIED'}
               </span>
@@ -791,7 +859,7 @@ export const CorporateVault: React.FC = () => {
                 {isAr ? 'مطلوب' : 'REQ'}
               </span>
             )}
-          </div>
+          </button>
         </div>
       </div>
 

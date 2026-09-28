@@ -322,6 +322,8 @@ class ResUser(TimestampMixin, Base):
             kwargs["password_hash"] = kwargs.pop("hashed_password")
 
         username = kwargs.pop("username", None)
+        is_superuser = kwargs.pop("is_superuser", None)
+        is_super_admin = kwargs.pop("is_super_admin", None)
         if "full_name" not in kwargs:
             kwargs["full_name"] = username or kwargs.get("email", "Admin User")
         if "firebase_uid" not in kwargs:
@@ -329,6 +331,10 @@ class ResUser(TimestampMixin, Base):
         if "role" not in kwargs:
             kwargs["role"] = "Admin"
         super().__init__(*args, **kwargs)
+        if is_superuser is not None:
+            self.is_superuser = is_superuser
+        if is_super_admin is not None:
+            self.is_super_admin = is_super_admin
 
 
 # Standard alias for ResUser

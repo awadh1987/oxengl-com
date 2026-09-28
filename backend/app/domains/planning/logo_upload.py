@@ -118,46 +118,15 @@ async def upload_tenant_logo(
         "message": "Tenant logo asset uploaded and securely isolated.",
         "logo_url": public_web_url
     }
-import re
-from pydantic import BaseModel, Field
-from backend.app.database import SessionLocal  # Standard session connection pool (bypass RLS prior to login verification)
 
-class SlugCheckRequest(BaseModel):
-    # Enforce alphanumeric + hyphen checking to entirely block malicious SQL injection strings
-    slug: str = Field(..., min_length=2, max_length=100)
+from backend.app.api.routers.tenants import validate_slug as _validate_slug, SlugValidateRequest
+
 
 @router.post("/validate-slug", status_code=status.HTTP_200_OK)
-async def validate_tenant_slug(payload: SlugCheckRequest):
+async def validate_tenant_slug(payload: SlugValidateRequest, db: Session = Depends(get_db)):
     """
     Zero-Disclosure backend workspace verification gateway.
-    Confirms workspace existence without exposing internal database topologies.
+    Delegates to canonical tenants router handler.
     """
-    # Clean and validate input structure string format
-    sanitized_slug = payload.slug.lower().strip()
-    if not re.match(r"^[a-z0-9\-]+$", sanitized_slug):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid workspace format parameters."
-        )
+    return await _validate_slug(payload, db)
 
-    db = SessionLocal()
-    try:
-        # Search directly for matching localized tenant registry anchors
-        company = db.query(ResCompany).filter(ResCompany.domain_slug == sanitized_slug).first()
-        
-        if not company:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Requested workspace environment is either inactive or unregistered."
-            )
-            
-        # Return strict, minimized layout parameters required to flip frontend display gates
-        return {
-            "status": "VALID",
-            "target": str(company.id),
-            "branding_context": {
-                "custom_logo": bool(company.logo_url)
-            }
-        }
-    finally:
-        db.close()
