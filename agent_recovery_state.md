@@ -14,10 +14,14 @@
 
 ## Phase Breakdown
 - [ ] **Phase 1: Unified Dark Theme Overhaul**
-  - Standardize base application backgrounds to `bg-slate-950`.
-  - Standardize cards, modals, and elevated surfaces to `bg-slate-900`.
-  - Standardize text contrast to `text-slate-200` (primary) and `text-slate-400` (secondary) with `border-slate-800`.
-  - Implement interactive Tailwind hover glow effects (`transition-all duration-300 hover:shadow-[0_0_15px_rgba(14,165,233,0.5)]`) across key buttons, navigation elements, and interactive cards.
+  - [x] Standardize base application backgrounds to `bg-slate-950` in `index.css`.
+  - [x] Standardize cards, modals, and elevated surfaces to `bg-slate-900` in `index.css`.
+  - [x] Standardize text contrast to `text-slate-200` (primary) and `text-slate-400` (secondary) with `border-slate-800`.
+  - [x] Implement interactive Tailwind hover glow effects (`erp-glow-btn`, `erp-card-interactive`, `erp-card-elevated`) in `index.css`.
+  - [ ] Standardize `App.tsx` shell, domain switcher ribbon, and main container.
+  - [ ] Standardize `Navbar.tsx` surfaces, headers, and interactive glow buttons.
+  - [ ] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
+  - [ ] Standardize common views and modals.
 - [ ] **Phase 2: Enterprise Tier Gating (Registration View)**
   - Gate "External Database Hosting" and "Custom Domain" configurations for Standard/Professional tiers.
   - UI visual locking (`opacity-50 pointer-events-none` + lock icons).
