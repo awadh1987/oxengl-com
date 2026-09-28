@@ -38,17 +38,21 @@ logger = logging.getLogger("oxengl.security")
 
 class StandardRole(str, Enum):
     SUPER_ADMIN = "Super_Admin"
+    OWNER = "Owner"
     ADMIN = "Admin"
+    USER = "User"
     ACCOUNTANT = "Accountant"
     READ_ONLY = "Read_Only"
 
 
 SUPER_ADMIN = StandardRole.SUPER_ADMIN.value
+OWNER = StandardRole.OWNER.value
 ADMIN = StandardRole.ADMIN.value
+USER = StandardRole.USER.value
 ACCOUNTANT = StandardRole.ACCOUNTANT.value
 READ_ONLY = StandardRole.READ_ONLY.value
 
-STANDARD_ROLES = [SUPER_ADMIN, ADMIN, ACCOUNTANT, READ_ONLY]
+STANDARD_ROLES = [SUPER_ADMIN, OWNER, ADMIN, USER, ACCOUNTANT, READ_ONLY]
 
 # Role Aliases Mapping to Canonical Standard Roles
 ROLE_ALIASES: Dict[str, str] = {
@@ -56,12 +60,17 @@ ROLE_ALIASES: Dict[str, str] = {
     "superadmin": SUPER_ADMIN,
     "master": SUPER_ADMIN,
     "root": SUPER_ADMIN,
+    "owner": OWNER,
+    "tenant_owner": OWNER,
+    "company_owner": OWNER,
     "admin": ADMIN,
     "administrator": ADMIN,
     "ceo": ADMIN,
     "coo": ADMIN,
     "executive": ADMIN,
     "data_entry": ADMIN,
+    "user": USER,
+    "member": USER,
     "accountant": ACCOUNTANT,
     "accounting": ACCOUNTANT,
     "finance": ACCOUNTANT,
@@ -153,8 +162,8 @@ class TenantContext:
             except Exception:
                 pass
 
-        # If user is Admin/Executive at a company, traverse all descendant branches
-        if user_role in (ADMIN, "company_admin", "ceo", "coo"):
+        # If user is Owner/Admin/Executive at a company, traverse all descendant branches
+        if user_role in (OWNER, ADMIN, "company_admin", "ceo", "coo"):
             to_visit = [self.company_id]
             visited = {self.company_id}
             while to_visit:
@@ -540,9 +549,18 @@ class RoleChecker:
             getattr(current_user, "is_superuser", False) is True
             or getattr(current_user, "is_super_admin", False) is True
             or user_role == SUPER_ADMIN
-            or str(getattr(current_user, "role", "")).upper().replace(" ", "_") in {"SUPER_ADMIN", "SUPERADMIN"}
+            or str(getattr(current_user, "role", "")).upper().replace(" ", "_") in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}
         ):
             return current_user
+
+        # OWNER is supreme tenant authority, automatically inheriting all ADMIN privileges
+        if user_role == OWNER:
+            if (
+                OWNER in self.allowed_roles
+                or ADMIN in self.allowed_roles
+                or any(r.lower() in ("owner", "admin") for r in self.raw_allowed_roles)
+            ):
+                return current_user
 
         if user_role in self.allowed_roles:
             return current_user
@@ -581,8 +599,9 @@ async def require_write_access(
 
 # Role-specific security dependencies
 require_super_admin = require_role([SUPER_ADMIN])
-require_admin = require_role([SUPER_ADMIN, ADMIN])
-require_accountant_or_admin = require_role([SUPER_ADMIN, ADMIN, ACCOUNTANT])
+require_owner = require_role([SUPER_ADMIN, OWNER])
+require_admin = require_role([SUPER_ADMIN, OWNER, ADMIN])
+require_accountant_or_admin = require_role([SUPER_ADMIN, OWNER, ADMIN, ACCOUNTANT])
 require_admin_or_accountant = require_accountant_or_admin
 
 
@@ -700,7 +719,7 @@ def get_tenant_context(
         scope_ids_raw = getattr(current_user, "branch_scope_ids", None)
         if scope_ids_raw and str(requested_uuid) in str(scope_ids_raw):
             is_accessible = True
-        elif user_role in (ADMIN, "company_admin", "ceo", "coo", "executive"):
+        elif user_role in (OWNER, ADMIN, "company_admin", "ceo", "coo", "executive"):
             curr = db.query(ResCompany).filter(ResCompany.id == requested_uuid).first()
             visited = set()
             while curr and curr.parent_id and curr.id not in visited:

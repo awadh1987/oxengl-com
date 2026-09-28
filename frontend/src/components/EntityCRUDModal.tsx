@@ -753,6 +753,7 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                     onChange={(e) => handleChange('role', e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:bg-white focus:outline-none"
                   >
+                    <option value="Owner">{isAr ? 'مالك المنشأة (Tenant Owner - Supreme Access)' : 'Tenant Owner - Supreme Access'}</option>
                     <option value="Admin">{isAr ? 'المدير العام والتنفيذي (Admin / CEO - Full Access)' : 'CEO / Admin - Full Access'}</option>
                     <option value="COO">{isAr ? 'المدير التنفيذي للعمليات (COO - Operations & Approvals)' : 'COO - Operations & Approvals'}</option>
                     <option value="Accountant">{isAr ? 'المدير المالي / المحاسب (Accountant - Invoices & Ledgers)' : 'Accountant / Finance'}</option>

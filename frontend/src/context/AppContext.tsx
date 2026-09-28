@@ -103,8 +103,9 @@ function decodeJwt(token: string): DecodedTwoTierJwt | null {
 
 function mapBackendRoleToFrontend(role?: string): UserRole {
   const r = (role || '').toLowerCase();
-  if (r === 'super_admin') return 'Super_Admin';
-  if (r === 'admin' || r === 'platform_admin') return 'Admin';
+  if (r === 'super_admin' || r === 'master' || r === 'root') return 'Super_Admin';
+  if (r === 'owner' || r === 'tenant_owner' || r === 'company_owner') return 'Owner';
+  if (r === 'admin' || r === 'platform_admin' || r === 'ceo' || r === 'executive') return 'Admin';
   if (r === 'coo') return 'COO';
   if (r === 'accountant') return 'Accountant';
   if (r === 'data_entry' || r === 'user') return 'Data_Entry';

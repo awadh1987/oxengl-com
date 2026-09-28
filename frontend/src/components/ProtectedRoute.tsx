@@ -271,7 +271,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 4. Role-Based Access Control (RBAC) Guard
   const activeUserRole: UserRole = currentUser?.role ?? 'Guest';
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(activeUserRole)) {
+  const isAuthorizedRole =
+    allowedRoles?.includes(activeUserRole) ||
+    activeUserRole === 'Super_Admin' ||
+    (activeUserRole === 'Owner' && (allowedRoles?.includes('Admin') || allowedRoles?.includes('Owner') || allowedRoles?.includes('COO')));
+
+  if (allowedRoles && allowedRoles.length > 0 && !isAuthorizedRole) {
     return (
       <div
         id="unauthorized-rbac-view"

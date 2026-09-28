@@ -689,7 +689,7 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 	is_exec_role = (
 		getattr(user, "is_superuser", False)
 		or is_master_or_super
-		or user_role_norm in ["SUPER_ADMIN", "ADMIN", "CEO", "EXECUTIVE"]
+		or user_role_norm in ["SUPER_ADMIN", "OWNER", "ADMIN", "CEO", "EXECUTIVE"]
 		or is_super_admin_authorized(user, request)
 	)
 	if claim_company_id and not is_exec_role:
@@ -828,7 +828,7 @@ def get_active_company_id(request: Request, x_company_id: str | None = Header(de
 	elif current_user.company_id and company_id != current_user.company_id:
 		# Check descendant branch or administrative scopes
 		is_branch_allowed = False
-		if user_role_norm in ["ADMIN", "CEO", "EXECUTIVE", "COO"]:
+		if user_role_norm in ["OWNER", "ADMIN", "CEO", "EXECUTIVE", "COO"]:
 			curr = database.get(models.ResCompany, company_id)
 			visited = set()
 			while curr and curr.parent_id and curr.id not in visited:

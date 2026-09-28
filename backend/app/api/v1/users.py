@@ -23,6 +23,7 @@ from backend.api.dependencies import (
     get_tenant_context,
     require_role,
     ADMIN,
+    OWNER,
     SUPER_ADMIN,
 )
 from backend.two_tier_auth import hash_password
@@ -47,7 +48,7 @@ class UserResponse(BaseModel):
 
 class InviteUserRequest(BaseModel):
     email: str = Field(..., description="Corporate email address of invitee")
-    role: str = Field("Guest", description="Assigned role: Admin, Accountant, Data_Entry, or Guest")
+    role: str = Field("Guest", description="Assigned role: Owner, Admin, Accountant, Data_Entry, or Guest")
     full_name: Optional[str] = Field(None, description="Full name of user")
 
 
@@ -62,10 +63,10 @@ class InviteUserResponse(BaseModel):
 
 
 class UpdateRoleRequest(BaseModel):
-    role: str = Field(..., description="Target role: Admin, Accountant, Data_Entry, or Guest")
+    role: str = Field(..., description="Target role: Owner, Admin, Accountant, Data_Entry, or Guest")
 
 
-VALID_ROLES = ["Admin", "Accountant", "Data_Entry", "Guest"]
+VALID_ROLES = ["Owner", "Admin", "Accountant", "Data_Entry", "Guest"]
 
 
 # 1. GET /api/v1/users
@@ -73,7 +74,7 @@ VALID_ROLES = ["Admin", "Accountant", "Data_Entry", "Guest"]
 @router.get("/", response_model=List[UserResponse])
 def get_tenant_users(
     context: TenantContext = Depends(get_tenant_context),
-    current_user: User = Depends(require_role(["Admin"])),
+    current_user: User = Depends(require_role(["Owner", "Admin"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -94,6 +95,7 @@ def get_tenant_users(
         else:
             query = query.filter(ResUser.company_id.in_(accessible_cids))
     else:
+        # If requester is an OWNER or ADMIN, fetch all users where company_id matches requester's company_id
         query = query.filter(ResUser.company_id.in_(accessible_cids))
 
     users = query.order_by(ResUser.created_at.desc()).all()
@@ -117,7 +119,7 @@ def get_tenant_users(
 def invite_tenant_user(
     payload: InviteUserRequest,
     context: TenantContext = Depends(get_tenant_context),
-    current_user: User = Depends(require_role(["Admin"])),
+    current_user: User = Depends(require_role(["Owner", "Admin"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -211,12 +213,12 @@ def invite_tenant_user(
 def delete_tenant_user(
     user_id: str,
     context: TenantContext = Depends(get_tenant_context),
-    current_user: User = Depends(require_role(["Admin"])),
+    current_user: User = Depends(require_role(["Owner", "Admin"])),
     db: Session = Depends(get_db),
 ):
     """
     Deletes a user from the workspace.
-    Enforces strict tenant isolation: Admins can ONLY delete users from their own tenant.
+    Enforces strict tenant isolation: Admins and Owners can ONLY delete users from their own tenant.
     """
     tenant_id = context.company_id
     try:
@@ -254,7 +256,7 @@ def delete_tenant_user(
         pass
 
     db.commit()
-    logger.info(f"Admin '{current_user.email}' deleted user '{target_uuid}' from tenant '{tenant_id}'.")
+    logger.info(f"Admin/Owner '{current_user.email}' deleted user '{target_uuid}' from tenant '{tenant_id}'.")
 
     return {
         "status": "deleted",
@@ -269,7 +271,7 @@ def update_tenant_user_role(
     user_id: str,
     payload: UpdateRoleRequest,
     context: TenantContext = Depends(get_tenant_context),
-    current_user: User = Depends(require_role(["Admin"])),
+    current_user: User = Depends(require_role(["Owner", "Admin"])),
     db: Session = Depends(get_db),
 ):
     """

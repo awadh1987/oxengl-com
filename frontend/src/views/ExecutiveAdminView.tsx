@@ -631,6 +631,7 @@ export const ExecutiveAdminView: React.FC = () => {
                                 }
                                 className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-orange-950 focus:outline-none"
                               >
+                                <option value="Owner">Owner (مالك المنشأة)</option>
                                 <option value="Admin">Admin (مدير عام)</option>
                                 <option value="Accountant">Accountant (محاسب)</option>
                                 <option value="Data_Entry">Data Entry (مدخل بيانات)</option>

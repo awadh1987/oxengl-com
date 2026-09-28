@@ -44,9 +44,19 @@ def test_tenants_and_users():
     db.add_all([company_a, company_b])
     db.commit()
 
-    # Tenant A Admin & Non-Admin
+    # Tenant A Owner, Admin & Non-Admin
+    user_owner_a_id = uuid.uuid4()
     user_admin_a_id = uuid.uuid4()
     user_accountant_a_id = uuid.uuid4()
+    owner_a = ResUser(
+        id=user_owner_a_id,
+        company_id=tenant_a_id,
+        email=f"owner_a_{user_owner_a_id.hex[:6]}@tenanta.com",
+        full_name="Owner Tenant A",
+        role="Owner",
+        password_hash=hash_password("Pass123!"),
+        is_active=True,
+    )
     admin_a = ResUser(
         id=user_admin_a_id,
         company_id=tenant_a_id,
@@ -88,10 +98,18 @@ def test_tenants_and_users():
         is_active=True,
     )
 
-    db.add_all([admin_a, accountant_a, admin_b, member_b])
+    db.add_all([owner_a, admin_a, accountant_a, admin_b, member_b])
     db.commit()
 
     # Generate JWT access tokens
+    token_owner_a = issue_two_tier_jwt(
+        tier="tenant",
+        user_id=user_owner_a_id,
+        identity=owner_a.email,
+        role="Owner",
+        tenant_id=tenant_a_id,
+        tenant_slug=company_a.slug,
+    )
     token_admin_a = issue_two_tier_jwt(
         tier="tenant",
         user_id=user_admin_a_id,
@@ -120,8 +138,10 @@ def test_tenants_and_users():
     data = {
         "tenant_a_id": tenant_a_id,
         "tenant_b_id": tenant_b_id,
+        "owner_a_id": user_owner_a_id,
         "admin_a_id": user_admin_a_id,
         "member_b_id": user_member_b_id,
+        "token_owner_a": token_owner_a,
         "token_admin_a": token_admin_a,
         "token_accountant_a": token_accountant_a,
         "token_admin_b": token_admin_b,
@@ -249,3 +269,61 @@ async def test_tenant_a_user_cannot_see_tenant_b_users(async_client, test_tenant
     idor_header = await async_client.get("/api/v1/users", headers={**headers_a, "X-Company-ID": str(tenant_b_id)})
     assert idor_header.status_code == status.HTTP_403_FORBIDDEN
     assert "Multi-tenant isolation violation" in idor_header.json().get("detail", "")
+
+
+@pytest.mark.asyncio
+async def test_owner_can_list_tenant_users(async_client, test_tenants_and_users):
+    """OWNER should successfully query GET /api/v1/users without triggering 403."""
+    token_owner_a = test_tenants_and_users["token_owner_a"]
+    headers = {"Authorization": f"Bearer {token_owner_a}"}
+
+    response = await async_client.get("/api/v1/users", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+    users = response.json()
+    assert len(users) >= 3
+    for u in users:
+        assert u["tenant_id"] == str(test_tenants_and_users["tenant_a_id"])
+
+
+@pytest.mark.asyncio
+async def test_owner_can_invite_and_assign_roles(async_client, test_tenants_and_users):
+    """OWNER can invite new users with Owner, Admin, or staff roles."""
+    token_owner_a = test_tenants_and_users["token_owner_a"]
+    headers = {"Authorization": f"Bearer {token_owner_a}"}
+
+    unique_email = f"co_owner_{uuid.uuid4().hex[:6]}@tenanta.com"
+    payload = {
+        "email": unique_email,
+        "role": "Owner",
+        "full_name": "Co-Owner Partner",
+    }
+    response = await async_client.post("/api/v1/users/invite", json=payload, headers=headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    data = response.json()
+    assert data["role"] == "Owner"
+    assert data["email"] == unique_email
+
+    # Also update role to Admin
+    user_id = data["user_id"]
+    update_resp = await async_client.put(f"/api/v1/users/{user_id}/role", json={"role": "Admin"}, headers=headers)
+    assert update_resp.status_code == status.HTTP_200_OK
+    assert update_resp.json()["role"] == "Admin"
+
+
+@pytest.mark.asyncio
+async def test_owner_cross_tenant_isolation(async_client, test_tenants_and_users):
+    """OWNER cannot access users of another tenant or spoof headers."""
+    token_owner_a = test_tenants_and_users["token_owner_a"]
+    tenant_b_id = test_tenants_and_users["tenant_b_id"]
+    headers = {"Authorization": f"Bearer {token_owner_a}"}
+
+    # Attempt query param IDOR
+    idor_query = await async_client.get(f"/api/v1/users?company_id={tenant_b_id}", headers=headers)
+    assert idor_query.status_code == status.HTTP_403_FORBIDDEN
+    assert "Multi-tenant isolation violation" in idor_query.json().get("detail", "")
+
+    # Attempt header spoofing
+    idor_header = await async_client.get("/api/v1/users", headers={**headers, "X-Company-ID": str(tenant_b_id)})
+    assert idor_header.status_code == status.HTTP_403_FORBIDDEN
+    assert "Multi-tenant isolation violation" in idor_header.json().get("detail", "")
+

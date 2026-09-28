@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Optional
 
 from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
@@ -17,6 +18,25 @@ try:
 except ImportError:
     from database import Base
 from backend.app.domains.inventory.models import Material
+
+
+class UserRole(str, Enum):
+    SUPER_ADMIN = "SUPER_ADMIN"
+    OWNER = "OWNER"
+    ADMIN = "ADMIN"
+    USER = "USER"
+    COO = "COO"
+    CEO = "CEO"
+    ACCOUNTANT = "ACCOUNTANT"
+    DATA_ENTRY = "DATA_ENTRY"
+    GUEST = "GUEST"
+
+    # Title-case / Normalized aliases
+    Super_Admin = "Super_Admin"
+    Owner = "Owner"
+    Admin = "Admin"
+    User = "User"
+
 
 
 class TimestampMixin:
@@ -293,7 +313,7 @@ class ResUser(TimestampMixin, Base):
     mfa_backup_codes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (
-        CheckConstraint("role IN ('Super_Admin', 'Admin', 'COO', 'CEO', 'Accountant', 'Data_Entry', 'Guest')", name="ck_res_user_role"),
+        CheckConstraint("role IN ('Super_Admin', 'super_admin', 'SUPER_ADMIN', 'Owner', 'owner', 'OWNER', 'Admin', 'admin', 'ADMIN', 'User', 'user', 'USER', 'COO', 'CEO', 'Accountant', 'Data_Entry', 'Guest')", name="ck_res_user_role"),
     )
 
     @property
@@ -2027,7 +2047,7 @@ class TenantUser(TimestampMixin, Base):
     tfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     __table_args__ = (
-        CheckConstraint("role IN ('admin', 'ceo', 'user', 'guest_user')", name="ck_tenant_user_role"),
+        CheckConstraint("role IN ('admin', 'ADMIN', 'Admin', 'owner', 'OWNER', 'Owner', 'ceo', 'user', 'USER', 'guest_user')", name="ck_tenant_user_role"),
     )
 
 
@@ -2061,7 +2081,7 @@ class TenantUserInvitation(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        CheckConstraint("role IN ('admin', 'user', 'guest_user')", name="ck_tenant_invite_role"),
+        CheckConstraint("role IN ('admin', 'ADMIN', 'Admin', 'owner', 'OWNER', 'Owner', 'user', 'USER', 'guest_user')", name="ck_tenant_invite_role"),
     )
 
 

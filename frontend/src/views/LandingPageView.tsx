@@ -1091,6 +1091,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                     </label>
                     <div className="grid grid-cols-3 gap-1.5">
                       {[
+                        { role: 'Owner' as UserRole, label: isAr ? 'مالك المنشأة Owner' : 'Tenant Owner' },
                         { role: 'Admin' as UserRole, label: isAr ? 'المدير العام CEO' : 'Admin / CEO' },
                         { role: 'COO' as UserRole, label: isAr ? 'مدير العمليات' : 'COO Exec' },
                         { role: 'Accountant' as UserRole, label: isAr ? 'المحاسب' : 'Accountant' },

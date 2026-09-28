@@ -269,11 +269,11 @@ class RoleChecker:
     def __call__(self, current_user: User = Depends(get_current_user)) -> User:
         user_role_str = str(getattr(current_user, "role", "")).lower().replace(" ", "_")
 
-        # Super_Admin, Admin, and CEO roles have full executive clearance
+        # Super_Admin, Owner, Admin, and CEO roles have full executive clearance
         if (
             getattr(current_user, "is_superuser", False) is True
             or getattr(current_user, "is_super_admin", False) is True
-            or user_role_str in ["super_admin", "superadmin", "admin", "ceo", "executive"]
+            or user_role_str in ["super_admin", "superadmin", "owner", "tenant_owner", "company_owner", "admin", "ceo", "executive"]
         ):
             return current_user
 
@@ -284,8 +284,8 @@ class RoleChecker:
         if any(user_role_str == r or user_role_str.replace("_", "") == r.replace("_", "") for r in self.allowed_roles):
             return current_user
 
-        # If Admin is allowed, CEO is also authorized
-        if ("admin" in self.allowed_roles or "super_admin" in self.allowed_roles) and user_role_str in ["admin", "ceo", "executive"]:
+        # If Admin is allowed, Owner and CEO are also authorized
+        if ("admin" in self.allowed_roles or "super_admin" in self.allowed_roles) and user_role_str in ["owner", "tenant_owner", "company_owner", "admin", "ceo", "executive"]:
             return current_user
 
         raise HTTPException(
@@ -425,7 +425,7 @@ def get_active_company_id(
 
     is_exec_role = (
         is_super_admin
-        or user_role in ["super_admin", "superadmin", "admin", "ceo", "executive"]
+        or user_role in ["super_admin", "superadmin", "owner", "tenant_owner", "company_owner", "admin", "ceo", "executive"]
     )
     if not is_exec_role and current_user.company_id and cid != current_user.company_id:
         raise HTTPException(

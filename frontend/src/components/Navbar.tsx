@@ -6,6 +6,7 @@ import {
   Globe,
   UserCheck,
   Shield,
+  Crown,
   LogOut,
   AlertTriangle,
   WifiOff,
@@ -107,6 +108,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
       border: 'border-violet-200 dark:border-violet-800/60',
       labelAr: 'مدير المنصة (Super Admin)',
       labelEn: 'Platform Super Admin',
+    },
+    Owner: {
+      bg: 'bg-gradient-to-r from-amber-500/15 to-yellow-500/10 dark:from-amber-400/20 dark:to-yellow-400/10',
+      text: 'text-amber-800 dark:text-amber-300 font-bold',
+      border: 'border-amber-400/60 dark:border-amber-400/50 shadow-sm shadow-amber-500/10',
+      labelAr: 'مالك المنشأة (Tenant Owner)',
+      labelEn: 'Tenant Owner',
     },
     Admin: {
       bg: 'bg-orange-50 dark:bg-orange-950/40',
@@ -843,17 +851,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
 
         {/* Authenticated User Role Badge (Derived strictly from Authentication Context) */}
         {(() => {
-          const activeUserRole: UserRole = (currentUser?.role && roleColors[currentUser.role]) ? currentUser.role : 'Guest';
+          const rawRole = currentUser?.role;
+          const normalizedRole = rawRole?.toLowerCase() === 'owner' ? 'Owner' : rawRole;
+          const activeUserRole: UserRole = (normalizedRole && roleColors[normalizedRole as UserRole]) ? (normalizedRole as UserRole) : 'Guest';
           const activeRoleBadge = roleColors[activeUserRole] ?? roleColors.Guest;
+          const isOwner = activeUserRole === 'Owner';
           return (
             <div
               id="nav-user-role-badge"
               className={`flex h-7.5 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold select-none ${
                 activeRoleBadge.bg
-              } ${activeRoleBadge.border} ${activeRoleBadge.text}`}
+              } ${activeRoleBadge.border} ${activeRoleBadge.text} ${
+                isOwner ? 'ring-1 ring-amber-400/40 dark:ring-amber-400/30 shadow-[0_0_12px_rgba(245,158,11,0.25)]' : ''
+              }`}
               title={isAr ? `صلاحية الحساب الحالية: ${activeRoleBadge.labelAr}` : `Active Account Role: ${activeRoleBadge.labelEn}`}
             >
-              <Shield className="h-3 w-3" />
+              {isOwner ? (
+                <Crown className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 animate-pulse" />
+              ) : (
+                <Shield className="h-3 w-3" />
+              )}
               <span className="hidden sm:inline">
                 {isAr ? activeRoleBadge.labelAr : activeRoleBadge.labelEn}
               </span>

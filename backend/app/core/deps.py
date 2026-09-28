@@ -147,7 +147,7 @@ def get_active_company_id(
 
     is_exec_role = (
         is_super_admin
-        or user_role in ["super_admin", "superadmin", "admin", "ceo", "executive"]
+        or user_role in ["super_admin", "superadmin", "owner", "tenant_owner", "company_owner", "admin", "ceo", "executive"]
     )
     if not is_exec_role and current_user.company_id and cid != current_user.company_id:
         raise HTTPException(
