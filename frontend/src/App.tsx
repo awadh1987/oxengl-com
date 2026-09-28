@@ -882,7 +882,7 @@ function AppContent() {
       id="meayon-erp-app-root"
       dir={isAr ? 'rtl' : 'ltr'}
       className={`min-h-dvh erp-viewport-root font-sans antialiased selection:bg-[#F05627] selection:text-white relative transition-colors ${
-        themeMode === 'dark' ? 'bg-[#0b0d19] text-slate-100' : 'bg-slate-100 text-neutral-900'
+        themeMode === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-neutral-900'
       }`}
     >
       <NotificationTopBar />
@@ -902,14 +902,14 @@ function AppContent() {
           <div
             id="domain-navigation-switcher"
             className={`border-b shadow-xs transition-colors ${
-              themeMode === 'dark' ? 'border-slate-800 bg-[#0e1324]' : 'border-slate-200 bg-white'
+              themeMode === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
             }`}
             dir={isAr ? 'rtl' : 'ltr'}
           >
             {/* Master Domain Switcher Bar */}
             <div
               className={`flex flex-wrap items-center justify-between gap-1.5 border-b px-3 py-1 sm:px-4 ${
-                themeMode === 'dark' ? 'border-slate-800/80 bg-slate-950/40' : 'border-slate-100 bg-slate-50/70'
+                themeMode === 'dark' ? 'border-slate-800/80 bg-slate-950/60' : 'border-slate-100 bg-slate-50/70'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -927,11 +927,11 @@ function AppContent() {
                         navigateToTab('operations');
                       }
                     }}
-                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-black transition-all ${
+                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-black transition-all duration-300 ${
                       selectedDomain === 'Operations & Logistics'
-                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs'
+                        ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]'
                         : themeMode === 'dark'
-                        ? 'text-slate-400 hover:text-white'
+                        ? 'text-slate-400 hover:text-white hover:bg-slate-800/70 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)]'
                         : 'text-slate-600 hover:text-slate-950'
                     }`}
                   >
@@ -949,11 +949,11 @@ function AppContent() {
                         navigateToTab('invoicing');
                       }
                     }}
-                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-black transition-all ${
+                    className={`inline-flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-black transition-all duration-300 ${
                       selectedDomain === 'Finance, Accounting & Control'
-                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs'
+                        ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]'
                         : themeMode === 'dark'
-                        ? 'text-slate-400 hover:text-white'
+                        ? 'text-slate-400 hover:text-white hover:bg-slate-800/70 hover:shadow-[0_0_15px_rgba(14,165,233,0.3)]'
                         : 'text-slate-600 hover:text-slate-950'
                     }`}
                   >
@@ -988,13 +988,13 @@ function AppContent() {
                     <button
                       key={item.id}
                       onClick={() => navigateToTab(item.id)}
-                      className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-1 text-[10.5px] font-bold transition-all ${
+                      className={`inline-flex shrink-0 items-center gap-1.5 border-b-2 px-2.5 py-1 text-[10.5px] font-bold transition-all duration-300 ${
                         isActive
                           ? isOps
-                            ? 'border-orange-500 text-orange-500 dark:text-orange-400'
-                            : 'border-violet-500 text-violet-600 dark:text-violet-400'
+                            ? 'border-orange-500 text-orange-400 shadow-[0_2px_8px_rgba(249,115,22,0.25)]'
+                            : 'border-violet-500 text-violet-400 shadow-[0_2px_8px_rgba(139,92,246,0.25)]'
                           : themeMode === 'dark'
-                          ? 'border-transparent text-slate-400 hover:border-slate-700 hover:text-white'
+                          ? 'border-transparent text-slate-400 hover:border-slate-700 hover:text-slate-200 hover:shadow-[0_0_12px_rgba(14,165,233,0.25)]'
                           : 'border-transparent text-slate-600 hover:border-slate-300 hover:text-slate-950'
                       }`}
                     >
@@ -1016,7 +1016,7 @@ function AppContent() {
           isOpenMobile={isMobileMenuOpen}
           onCloseMobile={() => setIsMobileMenuOpen(false)}
         />
-        <main className={`min-w-0 flex-1 px-3 sm:px-4 md:px-6 py-2 sm:py-3 ${themeMode === 'dark' ? 'bg-[#0b0d19]' : 'bg-slate-100'}`}>
+        <main className={`min-w-0 flex-1 px-3 sm:px-4 md:px-6 py-2 sm:py-3 ${themeMode === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-neutral-900'}`}>
           <div className="mb-2 flex items-center justify-between md:hidden">
             <button
               type="button"

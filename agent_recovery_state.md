@@ -18,7 +18,7 @@
   - [x] Standardize cards, modals, and elevated surfaces to `bg-slate-900` in `index.css`.
   - [x] Standardize text contrast to `text-slate-200` (primary) and `text-slate-400` (secondary) with `border-slate-800`.
   - [x] Implement interactive Tailwind hover glow effects (`erp-glow-btn`, `erp-card-interactive`, `erp-card-elevated`) in `index.css`.
-  - [ ] Standardize `App.tsx` shell, domain switcher ribbon, and main container.
+  - [x] Standardize `App.tsx` shell, domain switcher ribbon, and main container.
   - [ ] Standardize `Navbar.tsx` surfaces, headers, and interactive glow buttons.
   - [ ] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
   - [ ] Standardize common views and modals.
