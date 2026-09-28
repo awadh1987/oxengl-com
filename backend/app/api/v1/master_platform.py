@@ -253,11 +253,12 @@ def delete_tenant_with_safety_guard(
     name = company.name
 
     try:
-        # Deactivate or delete
-        master = db.query(MasterTenant).filter(MasterTenant.slug == slug).first()
-        if master:
-            db.delete(master)
-        db.delete(company)
+        from backend.app.services.tenant_purger import purge_single_tenant_data
+        purge_res = purge_single_tenant_data(
+            db=db,
+            tenant_id=company.id,
+            company={"id": company.id, "name": company.name, "slug": company.slug, "domain_slug": company.domain_slug},
+        )
         db.commit()
     except IntegrityError as exc:
         db.rollback()

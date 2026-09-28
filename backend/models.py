@@ -281,7 +281,7 @@ class ResUser(TimestampMixin, Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(64))
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False, default="")
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id"), nullable=True, index=True)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True, index=True)
     role: Mapped[str] = mapped_column(String(32), nullable=False, default="Guest")
     role_ids: Mapped[Optional[str]] = mapped_column(Text)
     branch_scope_ids: Mapped[Optional[str]] = mapped_column(Text)
@@ -348,7 +348,7 @@ class PlatformAuditLog(Base):
     request_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     user_agent: Mapped[Optional[str]] = mapped_column(String(512))
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id"), index=True)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
 
 
@@ -356,7 +356,7 @@ class ResPartner(TimestampMixin, Base):
     __tablename__ = "res_partners"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     partner_type: Mapped[str] = mapped_column(String(32), nullable=False, default="customer")
     email: Mapped[Optional[str]] = mapped_column(String(255), unique=True)
@@ -380,7 +380,7 @@ class StockLocation(TimestampMixin, Base):
     __tablename__ = "stock_locations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     location_type: Mapped[str] = mapped_column(String(32), nullable=False, default="internal")
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("stock_locations.id", ondelete="SET NULL"))
@@ -407,7 +407,7 @@ class ProductProduct(TimestampMixin, Base):
     __tablename__ = "product_products"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     sku: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     product_type: Mapped[str] = mapped_column(String(32), nullable=False, default="storable")
@@ -428,7 +428,7 @@ class StockPicking(TimestampMixin, Base):
     __tablename__ = "stock_pickings"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     reference: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     picking_type: Mapped[str] = mapped_column(String(32), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
@@ -451,7 +451,7 @@ class StockMove(TimestampMixin, Base):
     __tablename__ = "stock_moves"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     picking_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_pickings.id", ondelete="CASCADE"), nullable=False)
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("product_products.id"), nullable=False)
     location_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_locations.id"), nullable=False)
@@ -480,7 +480,7 @@ class StockQuant(TimestampMixin, Base):
     __tablename__ = "stock_quants"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("product_products.id"), nullable=False)
     location_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_locations.id"), nullable=False)
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
@@ -503,7 +503,7 @@ class WeighbridgeTicket(TimestampMixin, Base):
     __tablename__ = "weighbridge_tickets"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     ticket_number: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     picking_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_pickings.id"), nullable=False, index=True)
     truck_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
@@ -553,7 +553,7 @@ class OperationAttachment(TimestampMixin, Base):
     __tablename__ = "operation_attachments"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id"), nullable=True, index=True)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True, index=True)
     ticket_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("weighbridge_tickets.id", ondelete="CASCADE"), nullable=True, index=True)
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_size: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
@@ -606,7 +606,7 @@ class TransporterLedger(TimestampMixin, Base):
     __tablename__ = "transporter_ledger"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     transporter_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_partners.id"), nullable=False)
     operation_id: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     expected_qty: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False)
@@ -628,7 +628,7 @@ class AccountAccount(TimestampMixin, Base):
     __tablename__ = "account_accounts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     internal_type: Mapped[str] = mapped_column(String(16), nullable=False)
@@ -646,7 +646,7 @@ class AccountJournal(TimestampMixin, Base):
     __tablename__ = "account_journals"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(16), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     journal_type: Mapped[str] = mapped_column(String(32), nullable=False, default="general")
@@ -666,7 +666,7 @@ class FiscalYear(TimestampMixin, Base):
     __tablename__ = "fiscal_years"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
     date_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     date_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -685,7 +685,7 @@ class CostCenter(TimestampMixin, Base):
     __tablename__ = "cost_centers"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("cost_centers.id", ondelete="SET NULL"), index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -732,7 +732,7 @@ class AccountMove(TimestampMixin, Base):
     __tablename__ = "account_moves"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     journal_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("account_journals.id"), index=True)
     fiscal_year_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("fiscal_years.id"), index=True)
     name: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -762,7 +762,7 @@ class AccountMoveLine(Base):
     __tablename__ = "account_move_lines"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     move_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account_moves.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account_accounts.id"), nullable=False)
     partner_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"))
@@ -785,7 +785,7 @@ class CustomerInvoice(TimestampMixin, Base):
     __tablename__ = "customer_invoices"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     partner_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"), index=True)
     move_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("account_moves.id", ondelete="SET NULL"), unique=True)
     invoice_number: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -886,7 +886,7 @@ class SupplierSettlement(TimestampMixin, Base):
     __tablename__ = "supplier_settlements"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     partner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_partners.id"), nullable=False)
     move_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account_moves.id"), nullable=False, unique=True)
     total_gross_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
@@ -914,7 +914,7 @@ class Vehicle(TimestampMixin, Base):
     __tablename__ = "vehicles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), index=True, nullable=True)
     plate_number: Mapped[Optional[str]] = mapped_column(String(50), index=True, nullable=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -953,7 +953,7 @@ class MaintenanceWorkOrder(TimestampMixin, Base):
     __tablename__ = "maintenance_work_orders"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     order_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=False, index=True)
     order_type: Mapped[str] = mapped_column(String(32), nullable=False, default="preventive")
@@ -995,7 +995,7 @@ class PartRequirement(TimestampMixin, Base):
     __tablename__ = "part_requirements"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     work_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("maintenance_work_orders.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("product_products.id"), nullable=False, index=True)
     quantity_required: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("1"))
@@ -1018,7 +1018,7 @@ class FuelTransaction(TimestampMixin, Base):
     __tablename__ = "fuel_transactions"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     transaction_number: Mapped[str] = mapped_column(String(64), nullable=False)
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=False, index=True)
     driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"), index=True)
@@ -1057,7 +1057,7 @@ class SeasonalCropCycle(TimestampMixin, Base):
     __tablename__ = "seasonal_crop_cycles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     product_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("product_products.id", ondelete="SET NULL"), index=True)
@@ -1087,7 +1087,7 @@ class HarvestBatch(TimestampMixin, Base):
     __tablename__ = "harvest_batches"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     batch_number: Mapped[str] = mapped_column(String(64), nullable=False)
     crop_cycle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("seasonal_crop_cycles.id", ondelete="CASCADE"), nullable=False, index=True)
     location_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("stock_locations.id", ondelete="SET NULL"), index=True)
@@ -1117,7 +1117,7 @@ class FarmGateWeighment(TimestampMixin, Base):
     __tablename__ = "farm_gate_weighments"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     ticket_number: Mapped[str] = mapped_column(String(64), nullable=False)
     harvest_batch_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("harvest_batches.id", ondelete="CASCADE"), nullable=False, index=True)
     vehicle_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("vehicles.id", ondelete="SET NULL"), index=True)
@@ -1152,7 +1152,7 @@ class PurchaseOrder(TimestampMixin, Base):
     __tablename__ = "purchase_orders"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     po_number: Mapped[str] = mapped_column(String(64), nullable=False)
     partner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_partners.id"), nullable=False, index=True)
     cost_center_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("cost_centers.id", ondelete="SET NULL"), index=True)
@@ -1184,7 +1184,7 @@ class GoodsReceipt(TimestampMixin, Base):
     __tablename__ = "goods_receipts"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     gr_number: Mapped[str] = mapped_column(String(64), nullable=False)
     purchase_order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("purchase_orders.id", ondelete="CASCADE"), nullable=False, index=True)
     picking_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("stock_pickings.id", ondelete="SET NULL"), index=True)
@@ -1209,7 +1209,7 @@ class SupplierInvoice(TimestampMixin, Base):
     __tablename__ = "supplier_invoices"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     invoice_number: Mapped[str] = mapped_column(String(64), nullable=False)
     supplier_invoice_ref: Mapped[Optional[str]] = mapped_column(String(64))
     partner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_partners.id"), nullable=False, index=True)
@@ -1245,7 +1245,7 @@ class TaxProfile(TimestampMixin, Base):
     __tablename__ = "tax_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     tax_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     legal_name: Mapped[str] = mapped_column(String(255), nullable=False)
     trade_name: Mapped[Optional[str]] = mapped_column(String(255))
@@ -1278,7 +1278,7 @@ class TaxRule(TimestampMixin, Base):
     __tablename__ = "tax_rules"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     tax_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("tax_profiles.id", ondelete="CASCADE"), index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -1304,7 +1304,7 @@ class ZATCALog(Base):
     __tablename__ = "zatca_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     tax_profile_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("tax_profiles.id", ondelete="SET NULL"), index=True)
     invoice_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("customer_invoices.id", ondelete="SET NULL"), index=True)
     invoice_uuid: Mapped[Optional[str]] = mapped_column(String(64), index=True)
@@ -1383,7 +1383,7 @@ class DeviceRegistration(TimestampMixin, Base):
     __tablename__ = "device_registrations"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_users.id", ondelete="SET NULL"), index=True)
     device_token: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     device_model: Mapped[Optional[str]] = mapped_column(String(128))
@@ -1407,7 +1407,7 @@ class SyncQueueEvent(TimestampMixin, Base):
     __tablename__ = "sync_queue_events"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     device_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("device_registrations.id", ondelete="SET NULL"), index=True)
     user_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_users.id", ondelete="SET NULL"), index=True)
     operation_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
@@ -1441,7 +1441,7 @@ class Warehouse(TimestampMixin, Base):
     __tablename__ = "warehouses"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     address: Mapped[Optional[str]] = mapped_column(String(255))
@@ -1461,7 +1461,7 @@ class WarehouseZone(TimestampMixin, Base):
     __tablename__ = "warehouse_zones"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     warehouse_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("warehouses.id", ondelete="CASCADE"), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
@@ -1485,7 +1485,7 @@ class StockItem(TimestampMixin, Base):
     __tablename__ = "stock_items"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     product_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("product_products.id"), nullable=False, index=True)
     sku: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -1514,7 +1514,7 @@ class StockLot(TimestampMixin, Base):
     __tablename__ = "stock_lots"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     stock_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_items.id"), nullable=False, index=True)
     lot_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     harvest_batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("harvest_batches.id", ondelete="SET NULL"), index=True)
@@ -1545,7 +1545,7 @@ class StockMovement(TimestampMixin, Base):
     __tablename__ = "stock_movements"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     movement_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     stock_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_items.id"), nullable=False, index=True)
     lot_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("stock_lots.id", ondelete="SET NULL"), index=True)
@@ -1589,7 +1589,7 @@ class YardGateAppointment(TimestampMixin, Base):
     __tablename__ = "yard_gate_appointments"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     appointment_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     warehouse_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("warehouses.id"), nullable=False, index=True)
     vehicle_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("vehicles.id", ondelete="SET NULL"), index=True)
@@ -2127,7 +2127,7 @@ class FleetTrip(TimestampMixin, Base):
     __tablename__ = "fleet_trips"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     trip_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     vehicle_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("vehicles.id", ondelete="SET NULL"), index=True)
     driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"), index=True)
@@ -2166,7 +2166,7 @@ class DeliveryProof(TimestampMixin, Base):
     __tablename__ = "delivery_proofs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     trip_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fleet_trips.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     recipient_name: Mapped[str] = mapped_column(String(128), nullable=False)
     recipient_phone: Mapped[Optional[str]] = mapped_column(String(32))
@@ -2188,7 +2188,7 @@ class TripInspectionLog(TimestampMixin, Base):
     __tablename__ = "trip_inspection_logs"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
     trip_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("fleet_trips.id", ondelete="SET NULL"), index=True)
     vehicle_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), nullable=False, index=True)
     driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"), index=True)

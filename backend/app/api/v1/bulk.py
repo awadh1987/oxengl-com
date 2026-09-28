@@ -250,26 +250,27 @@ def execute_bulk_deletion(
 
     try:
         if payload.entity == "tenants":
-            # For tenants, soft delete by deactivating or hard delete if requested
+            # For tenants, soft delete by deactivating or hard delete with full ordered purge
             stmt = select(ResCompany).where(ResCompany.id.in_(valid_uuids))
             companies = db.execute(stmt).scalars().all()
 
             for company in companies:
                 if payload.hard_delete:
-                    db.delete(company)
+                    from backend.app.services.tenant_purger import purge_single_tenant_data
+                    purge_single_tenant_data(db, company.id, company={"id": company.id, "name": company.name, "slug": company.slug, "domain_slug": company.domain_slug})
                 else:
                     company.is_active = False
                     company.status = "SUSPENDED"
 
-                audit = TenantAuditLog(
-                    id=str(uuid.uuid4()),
-                    tenant_id=str(company.id),
-                    action_type="BULK_DELETE" if payload.hard_delete else "BULK_DEACTIVATE",
-                    actor="PLATFORM_OPERATOR",
-                    details=f"Bulk deletion executed (hard_delete={payload.hard_delete})",
-                    created_at=datetime.now(timezone.utc),
-                )
-                db.add(audit)
+                    audit = TenantAuditLog(
+                        id=str(uuid.uuid4()),
+                        tenant_id=company.id,
+                        action_type="BULK_DEACTIVATE",
+                        actor="PLATFORM_OPERATOR",
+                        details="Bulk deactivation executed",
+                        created_at=datetime.now(timezone.utc),
+                    )
+                    db.add(audit)
                 processed.append(str(company.id))
 
             affected_count = len(companies)

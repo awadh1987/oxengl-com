@@ -680,46 +680,38 @@ def purge_tenant(
     with open(backup_path, "wb") as f:
         f.write(encrypted_pkg)
 
-    # 4. Record purge audit log
-    audit_entry = TenantAuditLog(
-        id=str(uuid.uuid4()),
-        tenant_id=str(company.id),
-        action_type="TENANT_PURGED",
-        actor="SUPERADMIN_OPERATOR",
-        details=f"Tenant {company.name} purged. Pre-purge .enc.tar.gz backup preserved at {enc_backup_path} and encrypted snapshot at {backup_path}",
-        created_at=datetime.utcnow(),
-    )
-    db.add(audit_entry)
-
-    # 5. Cascading deletions across related tables
-    for tbl in ["customs_manifests", "electronic_ledger_blocks", "journal_lines", "journal_entries", "accounts"]:
-        try:
-            if tbl == "journal_lines":
-                db.execute(text("DELETE FROM journal_lines WHERE entry_id IN (SELECT id FROM journal_entries WHERE tenant_id = :tid OR company_id = :cid)"), {"tid": str(company.id), "cid": str(company.id)})
-            elif tbl == "accounts":
-                db.execute(text("DELETE FROM accounts WHERE (tenant_id = :tid OR company_id = :cid) AND parent_id IS NOT NULL"), {"tid": str(company.id), "cid": str(company.id)})
-                db.execute(text("DELETE FROM accounts WHERE tenant_id = :tid OR company_id = :cid"), {"tid": str(company.id), "cid": str(company.id)})
-            else:
-                db.execute(text(f"DELETE FROM {tbl} WHERE tenant_id = :tid"), {"tid": str(company.id)})
-        except Exception:
-            pass
-
-    # 6. Delete company record
+    # 4. Perform comprehensive, topologically ordered cascade deletion
+    from backend.app.services.tenant_purger import purge_single_tenant_data
     try:
-        db.delete(company)
+        purge_res = purge_single_tenant_data(
+            db=db,
+            tenant_id=company.id,
+            company={"id": company.id, "name": company.name, "slug": company.slug, "domain_slug": company.domain_slug},
+        )
+        
+        # Record purge audit log with null tenant_id so it persists in platform records
+        audit_entry = TenantAuditLog(
+            id=str(uuid.uuid4()),
+            tenant_id=None,
+            action_type="TENANT_PURGED",
+            actor="SUPERADMIN_OPERATOR",
+            details=f"Tenant {company.name} ({company.slug}) purged. Pre-purge backup: {backup_path}. Purged {purge_res.get('total_records_purged', 0)} dependent records.",
+            created_at=datetime.utcnow(),
+        )
+        db.add(audit_entry)
         db.commit()
     except IntegrityError as exc:
         db.rollback()
         err_msg = str(exc.orig) if hasattr(exc, "orig") else str(exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot delete workspace: dependent records exist or constraint failed ({err_msg}).",
+            detail=f"Cannot purge workspace: dependent records exist or constraint failed ({err_msg}).",
         )
     except Exception as exc:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot delete workspace: {str(exc)}",
+            detail=f"Cannot purge workspace: {str(exc)}",
         )
 
     return {
