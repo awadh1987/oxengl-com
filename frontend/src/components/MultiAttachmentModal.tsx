@@ -202,7 +202,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
               <div className="flex items-end">
                 <label
                   htmlFor="camera-scan-input"
-                  className="mr-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-orange-600 bg-white px-3 py-2 text-xs font-bold text-orange-700 shadow-xs hover:bg-orange-50 transition-colors"
+                  className="mr-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-orange-600 dark:border-orange-500/80 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-orange-700 dark:text-orange-400 shadow-xs hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors"
                   title={isAr ? 'مسح المستند بالكاميرا' : 'Scan with mobile camera'}
                 >
                   <ScanLine className="h-4 w-4" />
@@ -244,18 +244,18 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               className={`rounded-xl border border-dashed p-4 text-center transition-all ${
-                isDragging ? 'border-orange-600 bg-orange-100/50' : 'border-slate-300 bg-white'
+                isDragging ? 'border-orange-600 bg-orange-100/50 dark:bg-orange-950/40' : 'border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900'
               }`}
             >
               {selectedFile ? (
                 <div className="flex items-center justify-between gap-3 text-left rtl:text-right">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                       {selectedFile.type.includes('pdf') ? <FileText className="h-5 w-5" /> : <Image className="h-5 w-5" />}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-slate-900 truncate max-w-xs">{selectedFile.name}</p>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-xs">{selectedFile.name}</p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {Math.round(selectedFile.size / 1024)} KB - {category}
                       </p>
                     </div>
@@ -273,7 +273,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                         setSelectedFile(null);
                         setPreviewUrl('');
                       }}
-                      className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 hover:text-rose-600"
+                      className="rounded-xl p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-rose-600 dark:hover:text-rose-400"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -281,7 +281,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                 </div>
               ) : (
                 <div className="py-2">
-                  <p className="text-xs text-slate-500 font-medium">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                     {isAr
                       ? 'يمكنك سحب وإفلات ملفات PDF أو صور تذاكر الميزان هنا مباشرة'
                       : 'Drag & drop PDF files or ticket images directly here'}
@@ -294,23 +294,23 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
           {/* Attached Files List */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              <h3 className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
                 {isAr ? `المرفقات الحالية (${safeAttachments.length})` : `Attached Documents (${safeAttachments.length})`}
               </h3>
             </div>
 
             {safeAttachments.length === 0 ? (
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-8 text-center">
-                <File className="mx-auto h-8 w-8 text-slate-300" />
-                <p className="mt-2 text-xs font-bold text-slate-600">
+              <div className="rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 p-8 text-center">
+                <File className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
+                <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
                   {isAr ? 'لا توجد مرفقات مرتبطة بهذا السجل حتى الآن' : 'No attachments linked to this record yet'}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                   {isAr ? 'استخدم الزر أعلاه لإضافة تذكرة ميزان أو بوليصة شحن أو سند قبض' : 'Use the uploader above to add scale tickets or waybills'}
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-xs">
                 {safeAttachments.map((att) => {
                   const isPdf = Boolean(
                     att?.fileType?.toLowerCase().includes('pdf') ||
@@ -318,21 +318,21 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                   );
 
                   return (
-                    <div key={att?.id || Math.random()} className="flex items-center justify-between p-3.5 hover:bg-slate-50 transition-colors">
+                    <div key={att?.id || Math.random()} className="flex items-center justify-between p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                           {isPdf ? <FileText className="h-5 w-5 text-rose-600" /> : <Image className="h-5 w-5 text-orange-600" />}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="text-xs font-bold text-slate-900 truncate max-w-sm">{att?.fileName || (isAr ? 'مستند بدون اسم' : 'Unnamed Document')}</p>
+                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate max-w-sm">{att?.fileName || (isAr ? 'مستند بدون اسم' : 'Unnamed Document')}</p>
                             {att?.docCategory && (
                               <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold ${getCategoryBadgeClass(att.docCategory)}`}>
                                 {att.docCategory}
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-500 mt-0.5">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                             {att?.fileSize || '0 KB'} - {att?.uploadedAt ? formatDate(att.uploadedAt) : '-'} - {att?.uploadedBy || '-'}
                           </p>
                         </div>
@@ -342,7 +342,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                         <button
                           onClick={() => setViewingAttachment(att)}
                           title={isAr ? 'معاينة' : 'Preview'}
-                          className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-orange-50 hover:text-orange-600 transition-colors shadow-2xs"
+                          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300 hover:bg-orange-50 dark:hover:bg-slate-700 hover:text-orange-600 dark:hover:text-orange-400 transition-colors shadow-2xs"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -353,7 +353,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                             target="_blank"
                             rel="noreferrer"
                             title={isAr ? 'تحميل' : 'Download'}
-                            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-colors shadow-2xs"
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-slate-600 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shadow-2xs"
                           >
                             <Download className="h-4 w-4" />
                           </a>
@@ -367,7 +367,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
                             }
                           }}
                           title={isAr ? 'حذف' : 'Delete'}
-                          className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors shadow-2xs"
+                          className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-slate-400 dark:text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 transition-colors shadow-2xs"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>

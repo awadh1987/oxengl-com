@@ -187,23 +187,23 @@ export const OperationsLogView: React.FC = () => {
   return (
     <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="operations-log-view">
       {/* Top Header & Actions */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-neutral-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-800 bg-[#090f1c] p-5 shadow-lg sm:flex-row sm:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-            <h1 className="text-xl font-black text-neutral-900">
+            <h1 className="text-xl font-black text-slate-100">
               {isAr ? 'قيد العمليات اليومية' : 'Daily Operations Entry Portal'}
             </h1>
-            <span className="rounded-md bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-bold text-[#F05627] whitespace-nowrap shrink-0">
+            <span className="rounded-md bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 text-xs font-bold text-orange-400 whitespace-nowrap shrink-0">
               {filteredOperations.length} {isAr ? 'رحلة مسجلة' : 'trips'}
             </span>
             {isDriverMode && (
-              <span className="rounded-md bg-amber-100 border border-amber-300 px-2 py-0.5 text-xs font-black text-amber-900 flex items-center gap-1 whitespace-nowrap shrink-0">
-                <Truck className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+              <span className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-xs font-black text-amber-300 flex items-center gap-1 whitespace-nowrap shrink-0">
+                <Truck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 <span>{isAr ? 'وضع السائقين نشط' : 'Driver View Active'}</span>
               </span>
             )}
           </div>
-          <p className="text-xs text-neutral-500 mt-1">
+          <p className="text-xs text-slate-400 mt-1">
             {isAr
               ? 'بوابة تسجيل ومطابقة الحمولات اليومية، أوزان تذاكر الميزان (بسكول)، وحساب الفاقد وهوامش الربحية آلياً'
               : 'Official daily operations log mirroring Excel dispatch sheets, weighbridge verification, and live margin calculation'}
@@ -216,11 +216,11 @@ export const OperationsLogView: React.FC = () => {
             id="refresh-operations-btn"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="group flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 disabled:opacity-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-bold text-slate-200 shadow-xs hover:bg-slate-700 disabled:opacity-50 transition-colors"
             title={isAr ? 'تحديث العمليات مباشرة من خادم PostgreSQL' : 'Refresh Operations Live from Server'}
           >
             <HoverIcon className="h-4 w-4">
-              <RefreshCw className={`h-full w-full text-orange-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-full w-full text-orange-400 ${isRefreshing ? 'animate-spin' : ''}`} />
             </HoverIcon>
             <span>{isAr ? (isRefreshing ? 'جارِ التحديث...' : 'تحديث السجل') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
@@ -229,22 +229,22 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="export-json-snapshot-btn"
             onClick={handleExportJSONSnapshot}
-            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3.5 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-bold text-amber-300 shadow-xs hover:bg-amber-500/20 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON لعمليات اليوم للتدقيق والمطابقة' : 'Export Today JSON Snapshot for Local Audit'}
           >
             <HoverIcon className="h-4 w-4">
-              <Download className="h-full w-full text-amber-700" />
+              <Download className="h-full w-full text-amber-400" />
             </HoverIcon>
             <span>{isAr ? 'لقطة بيانات JSON' : 'JSON Snapshot'}</span>
           </button>
 
           <button
             onClick={() => setIsPrintModalOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50/70 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-300 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2 text-xs font-bold text-orange-400 shadow-xs hover:bg-orange-500/20 transition-colors"
             title={isAr ? 'معاينة وطباعة سجل العمليات اليومية' : 'Live Print Preview & Export'}
           >
             <HoverIcon className="h-4 w-4">
-              <Printer className="h-full w-full text-[#F05627]" />
+              <Printer className="h-full w-full text-orange-400" />
             </HoverIcon>
             <span>{isAr ? 'معاينة وطباعة (Print)' : 'Export & Print'}</span>
           </button>
@@ -253,11 +253,11 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="bulk-import-operations-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-400 shadow-xs hover:bg-emerald-500/20 transition-colors"
             title={isAr ? 'استيراد عمليات وقاعدة البيانات الشاملة من ملف Excel أو CSV' : 'Bulk Import Operations & Comprehensive Log from Excel/CSV'}
           >
             <HoverIcon className="h-4 w-4">
-              <Upload className="h-full w-full text-emerald-700" />
+              <Upload className="h-full w-full text-emerald-400" />
             </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
@@ -266,22 +266,22 @@ export const OperationsLogView: React.FC = () => {
           <button
             id="import-system-resource-btn"
             onClick={() => setIsLegacyImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-orange-300 bg-orange-50/90 px-3.5 py-2 text-xs font-bold text-orange-950 shadow-xs hover:bg-orange-100 hover:border-orange-400 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2 text-xs font-bold text-orange-400 shadow-xs hover:bg-orange-500/20 transition-colors"
             title={isAr ? 'استيراد وامتصاص ملف قاعدة البيانات التاريخية System Resource.xlsx' : 'Import Legacy System Resource Excel (.xlsx)'}
           >
             <HoverIcon className="h-4 w-4">
-              <Database className="h-full w-full text-[#F05627]" />
+              <Database className="h-full w-full text-orange-400" />
             </HoverIcon>
             <span>{isAr ? 'جسر البيانات التاريخية (System Resource)' : 'Import System Resource (.xlsx)'}</span>
           </button>
 
           <button
             onClick={handleExportExcel}
-            className="group flex items-center gap-1.5 rounded-xl border border-neutral-200 bg-white px-3.5 py-2 text-xs font-bold text-neutral-700 shadow-xs hover:bg-neutral-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-bold text-slate-200 shadow-xs hover:bg-slate-700 transition-colors"
             title={isAr ? 'تصدير جدول العمليات إلى Excel' : 'Export to Excel'}
           >
             <HoverIcon className="h-4 w-4">
-              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+              <FileSpreadsheet className="h-full w-full text-emerald-400" />
             </HoverIcon>
             <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
           </button>
@@ -305,27 +305,27 @@ export const OperationsLogView: React.FC = () => {
       </div>
 
       {/* Summary KPI Mini-Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/50 via-amber-50/30 to-neutral-50 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 rounded-2xl border border-slate-800 bg-[#0e1424] p-4 shadow-lg">
         <div>
-          <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'عدد الرحلات المفلترة' : 'Filtered Trips'}</span>
-          <p className="text-lg font-black text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{filteredOperations.length}</span> {isAr ? 'رحلة' : 'trips'}</p>
+          <span className="text-[11px] font-semibold text-slate-400">{isAr ? 'عدد الرحلات المفلترة' : 'Filtered Trips'}</span>
+          <p className="text-lg font-black text-slate-100"><span dir="ltr" className="inline-block unicode-bidi-isolate">{filteredOperations.length}</span> {isAr ? 'رحلة' : 'trips'}</p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي الكميات المحملة' : 'Total Loaded Qty'}</span>
-          <p className="text-lg font-black text-neutral-900"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalLoaded, language)}</span></p>
+          <span className="text-[11px] font-semibold text-slate-400">{isAr ? 'إجمالي الكميات المحملة' : 'Total Loaded Qty'}</span>
+          <p className="text-lg font-black text-slate-100"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalLoaded, language)}</span></p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي الكميات المستلمة' : 'Net Delivered Qty'}</span>
-          <p className="text-lg font-black text-[#F05627]"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalDelivered, language)}</span></p>
+          <span className="text-[11px] font-semibold text-slate-400">{isAr ? 'إجمالي الكميات المستلمة' : 'Net Delivered Qty'}</span>
+          <p className="text-lg font-black text-orange-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalDelivered, language)}</span></p>
         </div>
         <div>
-          <span className="text-[11px] font-semibold text-neutral-500">{isAr ? 'إجمالي كمية الفاقد' : 'Total Wastage Loss'}</span>
-          <p className="text-lg font-black text-rose-600"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalWastage, language)}</span></p>
+          <span className="text-[11px] font-semibold text-slate-400">{isAr ? 'إجمالي كمية الفاقد' : 'Total Wastage Loss'}</span>
+          <p className="text-lg font-black text-rose-400"><span dir="ltr" className="inline-block unicode-bidi-isolate">{formatTonnage(currentTotalWastage, language)}</span></p>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+      <div className="rounded-2xl border border-slate-800 bg-[#090f1c] p-4 shadow-lg">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {/* Search Box */}
           <div className="relative lg:col-span-2">
@@ -335,7 +335,7 @@ export const OperationsLogView: React.FC = () => {
               placeholder={isAr ? 'بحث برقم الشاحنة، التذكرة، العميل، مورد المواد...' : 'Search truck, ticket, customer, supplier...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2 pr-9 pl-3 text-xs text-slate-800 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/90 py-2 pr-9 pl-3 text-xs text-slate-100 placeholder-slate-400 focus:border-orange-500 focus:bg-slate-800 focus:outline-none"
             />
           </div>
 
@@ -344,11 +344,11 @@ export const OperationsLogView: React.FC = () => {
             <select
               value={selectedCustomer}
               onChange={(e) => setSelectedCustomer(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs text-slate-100 focus:border-orange-500 focus:bg-slate-800 focus:outline-none"
             >
-              <option value="">{isAr ? 'كافة العملاء' : 'All Customers'}</option>
+              <option className="bg-slate-800 text-slate-100" value="">{isAr ? 'كافة العملاء' : 'All Customers'}</option>
               {customers.map((c) => (
-                <option key={c.id} value={c.customerName}>
+                <option className="bg-slate-800 text-slate-100" key={c.id} value={c.customerName}>
                   {c.customerName}
                 </option>
               ))}
@@ -360,11 +360,11 @@ export const OperationsLogView: React.FC = () => {
             <select
               value={selectedCrusher}
               onChange={(e) => setSelectedCrusher(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs text-slate-100 focus:border-orange-500 focus:bg-slate-800 focus:outline-none"
             >
-              <option value="">{isAr ? 'كافة موردي المواد' : 'All Material Suppliers'}</option>
+              <option className="bg-slate-800 text-slate-100" value="">{isAr ? 'كافة موردي المواد' : 'All Material Suppliers'}</option>
               {crushers.map((c) => (
-                <option key={c.id} value={c.crusherName}>
+                <option className="bg-slate-800 text-slate-100" key={c.id} value={c.crusherName}>
                   {c.crusherName}
                 </option>
               ))}
@@ -376,11 +376,11 @@ export const OperationsLogView: React.FC = () => {
             <select
               value={selectedTransporter}
               onChange={(e) => setSelectedTransporter(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs text-slate-100 focus:border-orange-500 focus:bg-slate-800 focus:outline-none"
             >
-              <option value="">{isAr ? 'كافة موردي الخدمات' : 'All Service Suppliers'}</option>
+              <option className="bg-slate-800 text-slate-100" value="">{isAr ? 'كافة موردي الخدمات' : 'All Service Suppliers'}</option>
               {transporters.map((t) => (
-                <option key={t.id} value={t.transporterName}>
+                <option className="bg-slate-800 text-slate-100" key={t.id} value={t.transporterName}>
                   {t.transporterName}
                 </option>
               ))}
@@ -392,11 +392,11 @@ export const OperationsLogView: React.FC = () => {
             <select
               value={selectedMaterial}
               onChange={(e) => setSelectedMaterial(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/90 px-3 py-2 text-xs text-slate-100 focus:border-orange-500 focus:bg-slate-800 focus:outline-none"
             >
-              <option value="">{isAr ? 'كافة المواد' : 'All Materials'}</option>
+              <option className="bg-slate-800 text-slate-100" value="">{isAr ? 'كافة المواد' : 'All Materials'}</option>
               {materials.map((m) => (
-                <option key={m.id} value={m.nameAr}>
+                <option className="bg-slate-800 text-slate-100" key={m.id} value={m.nameAr}>
                   {m.nameAr}
                 </option>
               ))}
@@ -405,9 +405,9 @@ export const OperationsLogView: React.FC = () => {
         </div>
 
         {/* Second row filters: Month & Excess Wastage Toggle */}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3 text-xs">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-600 whitespace-nowrap">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
+            <span className="font-semibold text-slate-400 whitespace-nowrap">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
             <div className="flex flex-wrap gap-1">
               {availableMonths.map((m) => (
                 <button
@@ -416,7 +416,7 @@ export const OperationsLogView: React.FC = () => {
                   className={`rounded-lg px-2.5 py-1 text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
                     selectedMonth === m
                       ? 'bg-orange-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
                   }`}
                 >
                   {m === 'ALL' ? (isAr ? 'الكل' : 'All') : `${m}/${new Date().getFullYear()}`}
@@ -425,25 +425,25 @@ export const OperationsLogView: React.FC = () => {
             </div>
           </div>
 
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/60 px-3 py-1 text-xs font-bold text-rose-800">
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-900/40 bg-rose-950/30 px-3 py-1 text-xs font-bold text-rose-300">
             <input
               type="checkbox"
               checked={filterExcessLoss}
               onChange={(e) => setFilterExcessLoss(e.target.checked)}
-              className="rounded text-rose-600 focus:ring-rose-500"
+              className="rounded text-rose-500 focus:ring-rose-500 bg-slate-800 border-slate-700"
             />
-            <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />
+            <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
             <span>{isAr ? 'عرض فاقد الوزن المرتفع فقط (>2%)' : 'High Loss Only (>2%)'}</span>
           </label>
         </div>
       </div>
 
       {/* Main Operations Table */}
-      <div className="rounded-2xl border border-slate-200/80 bg-white shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-slate-800 bg-[#090f1c] shadow-lg overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-right text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-900 text-white font-bold">
+              <tr className="border-b border-slate-800 bg-slate-950 text-white font-bold">
                 <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'رقم الرحلة' : 'Trip ID'}</th>
                 <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'تاريخ التحميل' : 'Date'}</th>
                 <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'رقم الشاحنة' : 'Truck #'}</th>
@@ -466,7 +466,7 @@ export const OperationsLogView: React.FC = () => {
                 <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'إجراءات' : 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-800/80">
               {paginatedOperations.length === 0 ? (
                 <tr>
                   <td colSpan={16} className="py-12 text-center text-slate-400">
@@ -482,48 +482,48 @@ export const OperationsLogView: React.FC = () => {
                   const rowUom = op.uom ? (op.uom === 'MT طن' ? (isAr ? 'MT طن' : 'MT') : op.uom) : (isAr ? 'MT طن' : 'MT');
 
                   return (
-                    <tr key={op.id} className="hover:bg-orange-50/30 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-orange-700 whitespace-nowrap">
-                        <span className="rounded-md bg-orange-50 px-1.5 py-0.5 border border-orange-100">
+                    <tr key={op.id} className="hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-orange-400 whitespace-nowrap">
+                        <span className="rounded-md bg-orange-500/10 px-1.5 py-0.5 border border-orange-500/20">
                           <span dir="ltr" className="inline-block unicode-bidi-isolate">{displayTripId}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-semibold text-slate-800 whitespace-nowrap">
+                      <td className="py-3 px-3 font-semibold text-slate-300 whitespace-nowrap">
                         {formatDate(op.loading_date, language)}
                       </td>
-                      <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap font-mono">
+                      <td className="py-3 px-3 font-bold text-slate-100 whitespace-nowrap font-mono">
                         <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.truck_no}</span>
                       </td>
-                      <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
+                      <td className="py-3 px-3 text-slate-300 whitespace-nowrap">
                         {op.transporter_name}
                       </td>
-                      <td className="py-3 px-3 text-slate-600 whitespace-nowrap">
+                      <td className="py-3 px-3 text-slate-300 whitespace-nowrap">
                         <div>{op.loading_source}</div>
                         {op.loading_invoice_no && (
                           <div className="text-[10px] text-slate-400 font-mono"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.loading_invoice_no}</span></div>
                         )}
                       </td>
-                      <td className="py-3 px-3 font-medium text-slate-900 whitespace-nowrap">
+                      <td className="py-3 px-3 font-medium text-slate-200 whitespace-nowrap">
                         <div>{op.destination_customer}</div>
                         {op.receipt_invoice_no && (
                           <div className="text-[10px] text-slate-400 font-mono"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.receipt_invoice_no}</span></div>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-slate-700 whitespace-nowrap">
-                        <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-800 whitespace-nowrap shrink-0">
+                      <td className="py-3 px-3 text-slate-300 whitespace-nowrap">
+                        <span className="rounded-md bg-slate-800 border border-slate-700 px-2 py-0.5 text-[11px] font-medium text-slate-300 whitespace-nowrap shrink-0">
                           {op.material_type}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-center font-mono font-semibold text-slate-800">
+                      <td className="py-3 px-3 text-center font-mono font-semibold text-slate-200">
                         <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_loaded} {rowUom}</span>
                       </td>
-                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-900">
+                      <td className="py-3 px-3 text-center font-mono font-bold text-slate-100">
                         <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_delivered} {rowUom}</span>
                       </td>
                       <td className="py-3 px-3 text-center">
                         <span
                           className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-bold whitespace-nowrap shrink-0 ${
-                            isHighLoss ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-700'
+                            isHighLoss ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' : 'bg-slate-800 text-slate-300 border border-slate-700'
                           }`}
                         >
                           <span dir="ltr" className="inline-block unicode-bidi-isolate">{op.qty_wastage} {rowUom} ({op.wastage_percentage}%)</span>
@@ -531,26 +531,26 @@ export const OperationsLogView: React.FC = () => {
                       </td>
                       {canAccessFinancials && (
                         <>
-                          <td className="py-3 px-3 font-semibold text-slate-900 whitespace-nowrap font-mono">
+                          <td className="py-3 px-3 font-semibold text-slate-100 whitespace-nowrap font-mono">
                             <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.sales_amount, language)}</span>
                           </td>
-                          <td className="py-3 px-3 text-slate-700 whitespace-nowrap font-mono">
+                          <td className="py-3 px-3 text-slate-300 whitespace-nowrap font-mono">
                             <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.purchases_cost, language)}</span>
                           </td>
-                          <td className="py-3 px-3 text-slate-600 whitespace-nowrap font-mono">
+                          <td className="py-3 px-3 text-slate-400 whitespace-nowrap font-mono">
                             <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.crusher_payment ?? 0, language)}</span>
                           </td>
-                          <td className="py-3 px-3 font-bold text-emerald-700 whitespace-nowrap font-mono">
+                          <td className="py-3 px-3 font-bold text-emerald-400 whitespace-nowrap font-mono">
                             <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(op.net_profit, language)}</span>
                           </td>
                         </>
                       )}
                       <td className="py-3 px-3 text-center whitespace-nowrap font-mono">
                         <div className="flex flex-wrap items-center justify-center gap-1.5">
-                          <span className="text-[11px] text-slate-600 font-semibold whitespace-nowrap"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.scale_ticket_no}</span></span>
+                          <span className="text-[11px] text-slate-300 font-semibold whitespace-nowrap"><span dir="ltr" className="inline-block unicode-bidi-isolate">{op.scale_ticket_no}</span></span>
                           <button
                             onClick={() => setPreviewTicketOperation(op)}
-                            className="group rounded-lg p-1 text-orange-600 hover:bg-orange-50 shrink-0 transition-colors"
+                            className="group rounded-lg p-1 text-orange-400 hover:bg-orange-950/40 shrink-0 transition-colors"
                             title={isAr ? 'عرض تذكرة الميزان الرسمية' : 'View scale ticket'}
                           >
                             <HoverIcon className="h-3.5 w-3.5">
@@ -563,7 +563,7 @@ export const OperationsLogView: React.FC = () => {
                         <div className="flex flex-wrap items-center justify-center gap-1">
                           <button
                             onClick={() => setAttachmentViewingOp(op)}
-                            className="group relative rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600 transition-colors"
+                            className="group relative rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-orange-400 transition-colors"
                             title={isAr ? 'إدارة المرفقات والمستندات' : 'Manage attachments'}
                           >
                             <HoverIcon className="h-3.5 w-3.5">
@@ -581,7 +581,7 @@ export const OperationsLogView: React.FC = () => {
                                 setEditingOperation(op);
                                 setIsNewModalOpen(true);
                               }}
-                              className="group rounded-lg p-1 text-slate-500 hover:bg-slate-100 hover:text-orange-600 transition-colors"
+                              className="group rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-orange-400 transition-colors"
                               title={isAr ? 'تعديل' : 'Edit'}
                             >
                               <HoverIcon className="h-3.5 w-3.5">
@@ -592,7 +592,7 @@ export const OperationsLogView: React.FC = () => {
                           {canDeleteRecords && (
                             <button
                               onClick={() => handleDelete(op.id)}
-                              className="group rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                              className="group rounded-lg p-1 text-slate-400 hover:bg-rose-950/40 hover:text-rose-400 transition-colors"
                               title={isAr ? 'حذف' : 'Delete'}
                             >
                               <HoverIcon className="h-3.5 w-3.5">
@@ -611,7 +611,7 @@ export const OperationsLogView: React.FC = () => {
         </div>
 
         {/* Pagination Bar */}
-        <div className="flex items-center justify-between border-t border-slate-100 p-4 text-xs text-slate-500">
+        <div className="flex items-center justify-between border-t border-slate-800 p-4 text-xs text-slate-400">
           <div>
             {isAr
               ? `عرض ${paginatedOperations.length} من أصل ${filteredOperations.length} سجل`
@@ -621,17 +621,17 @@ export const OperationsLogView: React.FC = () => {
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => p - 1)}
-              className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40"
+              className="rounded-lg border border-slate-700 bg-slate-800 text-slate-200 px-3 py-1 hover:bg-slate-700 disabled:opacity-40 transition-colors"
             >
               {isAr ? 'السابق' : 'Previous'}
             </button>
-            <span className="font-bold text-slate-800">
+            <span className="font-bold text-slate-200">
               {currentPage} / {totalPages}
             </span>
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
-              className="rounded-lg border border-slate-200 px-3 py-1 disabled:opacity-40"
+              className="rounded-lg border border-slate-700 bg-slate-800 text-slate-200 px-3 py-1 hover:bg-slate-700 disabled:opacity-40 transition-colors"
             >
               {isAr ? 'التالي' : 'Next'}
             </button>

@@ -38,6 +38,7 @@ import { formatCurrency } from '../utils/formatters';
 import { EntityCRUDModal, CRUDModalType } from '../components/EntityCRUDModal';
 import { CsvImportModal, CsvImportEntityType } from '../components/CsvImportModal';
 import { BulkImportModal } from '../components/BulkImportModal';
+import { HoverIcon } from '../components/common/HoverIcon';
 
 export const MasterDataView: React.FC = () => {
   const {
@@ -586,10 +587,12 @@ export const MasterDataView: React.FC = () => {
             type="button"
             onClick={handleRefreshRecords}
             disabled={isRefreshing}
-            className="flex h-6.5 w-6.5 items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer"
+            className="group flex h-6.5 w-6.5 items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-2xs cursor-pointer"
             title={isAr ? 'تحديث السجلات' : 'Refresh Records'}
           >
-            <RefreshCw className={`h-3 w-3 ${isRefreshing ? 'animate-spin text-orange-600' : ''}`} />
+            <HoverIcon className="h-3 w-3">
+              <RefreshCw className={`h-full w-full ${isRefreshing ? 'animate-spin text-orange-600' : ''}`} />
+            </HoverIcon>
           </button>
 
           {/* Universal Bulk Import Button (REM-P7) */}
@@ -597,10 +600,12 @@ export const MasterDataView: React.FC = () => {
             id="bulk-import-master-btn"
             type="button"
             onClick={() => setIsUniversalBulkImportOpen(true)}
-            className="flex items-center gap-1 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/40 px-2 py-1 text-[11px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer"
+            className="group flex items-center gap-1 rounded border border-emerald-300 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-950/40 px-2 py-1 text-[11px] font-bold text-emerald-900 dark:text-emerald-300 shadow-2xs hover:bg-emerald-100 transition-colors cursor-pointer"
             title={isAr ? 'استيراد بيانات الشركاء وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
-            <Upload className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
+            <HoverIcon className="h-3 w-3">
+              <Upload className="h-full w-full text-emerald-700 dark:text-emerald-400" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد شامل' : 'Bulk Import'}</span>
           </button>
 
@@ -608,9 +613,11 @@ export const MasterDataView: React.FC = () => {
           <button
             type="button"
             onClick={handleOpenCsv}
-            className="flex items-center gap-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            className="group flex items-center gap-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
           >
-            <FileSpreadsheet className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+            <HoverIcon className="h-3 w-3">
+              <FileSpreadsheet className="h-full w-full text-emerald-600 dark:text-emerald-400" />
+            </HoverIcon>
             <span>{isAr ? 'استيراد CSV' : 'CSV Import'}</span>
           </button>
 
@@ -618,10 +625,12 @@ export const MasterDataView: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsPartnerDrawerOpen(true)}
-            className="flex items-center gap-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            className="group flex items-center gap-1 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-200 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             title={isAr ? 'إدارة شريك مباشر في قاعدة البيانات' : 'Direct Backend Partner Entry'}
           >
-            <SlidersHorizontal className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+            <HoverIcon className="h-3 w-3">
+              <SlidersHorizontal className="h-full w-full text-indigo-600 dark:text-indigo-400" />
+            </HoverIcon>
             <span>{isAr ? 'شركاء DB' : 'DB Partners'}</span>
           </button>
 
@@ -630,9 +639,11 @@ export const MasterDataView: React.FC = () => {
             id="btn-dynamic-create-master"
             type="button"
             onClick={() => handleOpenCreate(activeSubTab)}
-            className="flex items-center gap-1 rounded bg-orange-600 px-2.5 py-1 text-[11px] font-black text-white shadow-xs hover:bg-orange-700 transition-colors cursor-pointer"
+            className="group flex items-center gap-1 rounded bg-orange-600 px-2.5 py-1 text-[11px] font-black text-white shadow-xs hover:bg-orange-700 transition-colors cursor-pointer"
           >
-            <DynamicActionIcon className="h-3 w-3" />
+            <HoverIcon className="h-3 w-3">
+              <DynamicActionIcon className="h-full w-full" />
+            </HoverIcon>
             <span>{isAr ? dynamicActionConfig.labelAr : dynamicActionConfig.labelEn}</span>
           </button>
         </div>
@@ -1083,19 +1094,19 @@ export const MasterDataView: React.FC = () => {
           <div className="fixed inset-y-0 end-0 z-50 max-w-full flex pl-10 rtl:pl-0 rtl:pr-10">
             <div
               dir={isAr ? 'rtl' : 'ltr'}
-              className="erp-sidebar-drawer w-screen max-w-md bg-white dark:bg-[#0f172a] border-s border-slate-200 dark:border-slate-800 p-6 shadow-2xl overflow-y-auto flex flex-col justify-between"
+              className="erp-sidebar-drawer w-screen max-w-md bg-white dark:bg-[#090f1c] border-s border-slate-200 dark:border-slate-800 p-6 shadow-2xl overflow-y-auto flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
                       <Users className="h-5 w-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-slate-900">
+                      <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
                         {isAr ? 'إضافة شريك في قاعدة البيانات المباشرة' : 'Direct Backend Partner Registry'}
                       </h3>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {isAr ? 'ربط وإدراج شريك مباشرة عبر FastAPI' : 'Sync partner payload directly to backend schema'}
                       </p>
                     </div>
@@ -1103,7 +1114,7 @@ export const MasterDataView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsPartnerDrawerOpen(false)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -1118,7 +1129,7 @@ export const MasterDataView: React.FC = () => {
                   className="space-y-3.5"
                 >
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       {isAr ? 'اسم الشريك / الكيان *' : 'Partner Name *'}
                     </label>
                     <input
@@ -1127,18 +1138,18 @@ export const MasterDataView: React.FC = () => {
                       value={partnerForm.name}
                       onChange={(e) => setPartnerForm({ ...partnerForm, name: e.target.value })}
                       placeholder={isAr ? 'مثال: شركة الإنشاءات الحديثة' : 'e.g. Modern Construction Co.'}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold focus:border-emerald-500 focus:bg-white focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       {isAr ? 'نوع الشريك (Partner Type) *' : 'Partner Type *'}
                     </label>
                     <select
                       value={partnerForm.partner_type}
                       onChange={(e) => setPartnerForm({ ...partnerForm, partner_type: e.target.value })}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold focus:border-emerald-500 focus:bg-white focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                     >
                       <option value="customer">{isAr ? 'عميل (Customer)' : 'Customer'}</option>
                       <option value="raw_materials_supplier">{isAr ? 'مورد مواد خام (Quarry)' : 'Raw Materials Supplier'}</option>
@@ -1151,7 +1162,7 @@ export const MasterDataView: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                         {isAr ? 'البريد الإلكتروني' : 'Email'}
                       </label>
                       <input
@@ -1159,11 +1170,11 @@ export const MasterDataView: React.FC = () => {
                         value={partnerForm.email}
                         onChange={(e) => setPartnerForm({ ...partnerForm, email: e.target.value })}
                         placeholder="contact@entity.sa"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs focus:border-emerald-500 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                         {isAr ? 'رقم الهاتف' : 'Phone'}
                       </label>
                       <input
@@ -1171,14 +1182,14 @@ export const MasterDataView: React.FC = () => {
                         value={partnerForm.phone}
                         onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })}
                         placeholder="05XXXXXXXX"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs focus:border-emerald-500 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                         {isAr ? 'الرقم الضريبي (VAT)' : 'Tax Number'}
                       </label>
                       <input
@@ -1186,11 +1197,11 @@ export const MasterDataView: React.FC = () => {
                         value={partnerForm.tax_number}
                         onChange={(e) => setPartnerForm({ ...partnerForm, tax_number: e.target.value })}
                         placeholder="300XXXXXXXXXXX3"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono focus:border-emerald-500 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                      <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                         {isAr ? 'السجل التجاري (CR)' : 'CR Number'}
                       </label>
                       <input
@@ -1198,13 +1209,13 @@ export const MasterDataView: React.FC = () => {
                         value={partnerForm.commercial_registration}
                         onChange={(e) => setPartnerForm({ ...partnerForm, commercial_registration: e.target.value })}
                         placeholder="1010XXXXXX"
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono focus:border-emerald-500 focus:bg-white focus:outline-none"
+                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       {isAr ? 'نطاق الفروع والمستودعات (Scope IDs)' : 'Branch & Warehouse Scope'}
                     </label>
                     <input
@@ -1212,12 +1223,12 @@ export const MasterDataView: React.FC = () => {
                       value={partnerForm.branch_scope_ids}
                       onChange={(e) => setPartnerForm({ ...partnerForm, branch_scope_ids: e.target.value })}
                       placeholder="branch-01, warehouse-south"
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs focus:border-emerald-500 focus:bg-white focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                       {isAr ? 'قائمة الصلاحيات والتحكم (ACL / Policies)' : 'Access Control List (ACL)'}
                     </label>
                     <input
@@ -1225,26 +1236,26 @@ export const MasterDataView: React.FC = () => {
                       value={partnerForm.access_control_list}
                       onChange={(e) => setPartnerForm({ ...partnerForm, access_control_list: e.target.value })}
                       placeholder='["read:invoices", "write:scale"]'
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-[11px] focus:border-emerald-500 focus:bg-white focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-mono text-[11px] text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                     />
                   </div>
                 </form>
 
                 {/* Existing Backend Partners List inside Drawer */}
                 {backendPartners.length > 0 && (
-                  <div className="mt-6 border-t border-slate-100 pt-4">
-                    <h4 className="text-xs font-bold text-slate-700 mb-2">
+                  <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
                       {isAr ? 'الشركاء المسجلون في قاعدة البيانات:' : 'Backend Partners Directory:'}
                     </h4>
                     <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                       {backendPartners.map((bp) => (
                         <div
                           key={bp.id}
-                          className="flex items-center justify-between p-2 rounded-xl border border-slate-100 bg-slate-50/70 text-xs"
+                          className="flex items-center justify-between p-2 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/60 text-xs"
                         >
                           <div>
-                            <span className="font-bold text-slate-900 block">{bp.name}</span>
-                            <span className="text-[10px] text-slate-500">{bp.partner_type}</span>
+                            <span className="font-bold text-slate-900 dark:text-slate-100 block">{bp.name}</span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400">{bp.partner_type}</span>
                           </div>
                           <span className="text-[10px] font-mono text-slate-400">{bp.phone || bp.email || '-'}</span>
                         </div>
@@ -1254,11 +1265,11 @@ export const MasterDataView: React.FC = () => {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4 mt-6">
+              <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsPartnerDrawerOpen(false)}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   {isAr ? 'إلغاء' : 'Cancel'}
                 </button>
@@ -1279,21 +1290,21 @@ export const MasterDataView: React.FC = () => {
 
       {/* 6. Invite User Modal */}
       {isInviteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
           <div
             dir={isAr ? 'rtl' : 'ltr'}
-            className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95"
+            className="w-full max-w-md rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090f1c] p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95"
           >
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-orange-600">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
                   <UserPlus className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">
+                  <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
                     {isAr ? 'دعوة مستخدم جديد للمنظومة' : 'Invite New Workspace User'}
                   </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
                     {isAr ? 'إنشاء حساب موظف ضمن مساحة عمل المنشأة الحالية' : 'Create employee account under current tenant'}
                   </p>
                 </div>
@@ -1304,7 +1315,7 @@ export const MasterDataView: React.FC = () => {
                   setIsInviteModalOpen(false);
                   setInviteResult(null);
                 }}
-                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
               >
                 ✕
               </button>
@@ -1312,18 +1323,18 @@ export const MasterDataView: React.FC = () => {
 
             {inviteResult ? (
               <div className="space-y-4">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900">
+                <div className="rounded-2xl border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50/80 dark:bg-emerald-950/30 p-4 text-emerald-900 dark:text-emerald-200">
                   <div className="flex items-center gap-2 text-xs font-black">
-                    <CheckCircle className="h-4 w-4 text-emerald-600" />
+                    <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                     <span>{isAr ? 'تم إنشاء حساب المستخدم بنجاح!' : 'User created successfully!'}</span>
                   </div>
-                  <p className="mt-2 text-xs leading-relaxed text-emerald-800">
+                  <p className="mt-2 text-xs leading-relaxed text-emerald-800 dark:text-emerald-300">
                     {isAr
                       ? `تم ربط المستخدم (${inviteResult.email}) بدور (${inviteResult.role}). يُرجى مشاركة كلمة المرور المؤقتة التالية بأمان مع الموظف:`
                       : `User (${inviteResult.email}) created with role (${inviteResult.role}). Please share this temporary password securely:`}
                   </p>
-                  <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-300 bg-white px-3 py-2">
-                    <code className="font-mono text-sm font-black text-emerald-950">
+                  <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-slate-900 px-3 py-2">
+                    <code className="font-mono text-sm font-black text-emerald-950 dark:text-emerald-300">
                       {inviteResult.temporary_password}
                     </code>
                     <button
@@ -1348,7 +1359,7 @@ export const MasterDataView: React.FC = () => {
                       setIsInviteModalOpen(false);
                       setInviteResult(null);
                     }}
-                    className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 transition-colors"
+                    className="rounded-xl bg-slate-900 dark:bg-slate-800 border border-slate-700 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                   >
                     {isAr ? 'إغلاق ومتابعة' : 'Close'}
                   </button>
@@ -1357,7 +1368,7 @@ export const MasterDataView: React.FC = () => {
             ) : (
               <form onSubmit={handleInviteUser} className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'البريد الإلكتروني المهني للمستخدم *' : 'Corporate Email Address *'}
                   </label>
                   <input
@@ -1366,12 +1377,12 @@ export const MasterDataView: React.FC = () => {
                     placeholder="user@corporate.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الاسم الكامل (اختياري)' : 'Full Name (Optional)'}
                   </label>
                   <input
@@ -1379,18 +1390,18 @@ export const MasterDataView: React.FC = () => {
                     placeholder={isAr ? 'مثال: أحمد محمد' : 'e.g. Ahmed Mohamed'}
                     value={inviteFullName}
                     onChange={(e) => setInviteFullName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الدور ومستوى الصلاحيات (RBAC Role) *' : 'Assigned Role & Permissions *'}
                   </label>
                   <select
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value as any)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                   >
                     <option value="Admin">{isAr ? 'Admin - مدير عام (كامل الصلاحيات)' : 'Admin - Full Administrator'}</option>
                     <option value="Accountant">{isAr ? 'Accountant - محاسب مالي (الفواتير والتقارير)' : 'Accountant - Invoices & Financial Reports'}</option>
@@ -1399,11 +1410,11 @@ export const MasterDataView: React.FC = () => {
                   </select>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+                <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <button
                     type="button"
                     onClick={() => setIsInviteModalOpen(false)}
-                    className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50"
+                    className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                   >
                     {isAr ? 'إلغاء' : 'Cancel'}
                   </button>

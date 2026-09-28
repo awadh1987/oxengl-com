@@ -85,6 +85,8 @@ export interface CompanyBrandingPayload {
   ui_logo_url?: string | null;
   ui_primary_color?: string;
   ui_secondary_color?: string;
+  wallpaper_url?: string | null;
+  background_url?: string | null;
 }
 
 export interface SubscriptionPlanDto {
@@ -1027,6 +1029,23 @@ export const erpApi = {
   registerUser: (payload: UserRegistrationPayload) => request<NativeAuthResponse>('/api/user-registrations', payload.company_id, { method: 'POST', body: JSON.stringify(payload) }),
   registerCompany: (payload: CompanyRegistrationPayload) => request<{ company: ApiCompany; user: { id: string; company_id: string; role: string } }>('/api/companies/register', undefined, { method: 'POST', body: JSON.stringify(payload) }),
   updateCompanyBranding: (companyId: string, payload: CompanyBrandingPayload) => request<ApiCompany>(`/api/companies/${companyId}/branding`, companyId, { method: 'PUT', body: JSON.stringify(payload) }),
+  uploadPlatformAsset: (
+    payload: {
+      asset_type: string;
+      file_buffer?: string;
+      file_name?: string;
+      company_id?: string;
+      primary_color?: string;
+      secondary_color?: string;
+      wallpaper_url?: string;
+      background_url?: string;
+    },
+    companyId?: string
+  ) =>
+    request<{ success: boolean; asset_url: string; asset_type: string }>('/api/platform/assets/upload', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   directWorkspaceAccess: (payload: DirectWorkspaceAccessPayload) => request<DirectWorkspaceAccessResponse>('/api/auth/direct-access', undefined, { method: 'POST', body: JSON.stringify(payload) }),
   getIsolationAudit: () => request<IsolationAudit>('/api/platform/audit'),
   issueLicense: (payload: LicenseIssuePayload, superAdminKey: string) => request<ApiCompany>('/api/platform/licenses', undefined, {
@@ -1113,7 +1132,7 @@ export const erpApi = {
   updatePartner: (companyId: string, partnerId: string, payload: Partial<PartnerPayload>) => request<Partner>(`/api/partners/${partnerId}`, companyId, { method: 'PATCH', body: JSON.stringify(payload) }),
   archivePartner: (companyId: string, partnerId: string) => request<void>(`/api/partners/${partnerId}`, companyId, { method: 'DELETE' }),
   
-  // Phase 7: Universal Bulk Import Engine
+  // Universal Bulk Import Engine
   bulkImportOperations: (payload: FormData | any, companyId?: string) =>
     request<{ success: boolean; imported_count: number; skipped_count: number; errors: string[]; imported_ticket_ids: string[] }>(
       '/api/v1/operations/bulk-import',
@@ -1579,7 +1598,7 @@ export const erpApi = {
       body: JSON.stringify(payload),
     }),
 
-  // Procurement Bills & Double-Entry Ledger Integration (Phase 7)
+  // Procurement Bills & Double-Entry Ledger Integration
   getProcurementBills: (companyId?: string) =>
     request<ApiProcurementBill[]>('/api/procurement/bills', companyId),
   createProcurementBill: (payload: any, companyId?: string) =>
@@ -1713,7 +1732,7 @@ export const erpApi = {
     });
   },
 
-  // Enterprise Organizational Management (Phase 7 Hierarchical Profiles)
+  // Enterprise Organizational Management (Hierarchical Profiles)
   getOrgTree: (rootId?: string, companyId?: string) =>
     request<OrgTreeNode[]>(
       rootId ? `/api/v1/organization/tree?root_id=${encodeURIComponent(rootId)}` : '/api/v1/organization/tree',

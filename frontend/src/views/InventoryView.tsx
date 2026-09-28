@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   X,
 } from 'lucide-react';
+import { HoverIcon } from '../components/common/HoverIcon';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
 import {
@@ -226,7 +227,7 @@ export const InventoryView: React.FC = () => {
               <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex flex-wrap items-center gap-1.5 md:gap-2">
                 <span>{isAr ? 'إدارة المخزون والتقييم المالي' : 'Inventory Management & Valuation'}</span>
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium whitespace-nowrap shrink-0">
-                  {isAr ? 'المرحلة 8: دفتر الأستاذ' : 'Phase 8: Double-Entry GL'}
+                  {isAr ? 'دفتر الأستاذ المزدوج' : 'Perpetual Inventory / Double-Entry GL'}
                 </span>
               </h1>
               <p className="text-sm text-slate-400 mt-1">
@@ -242,18 +243,22 @@ export const InventoryView: React.FC = () => {
           <button
             onClick={fetchData}
             disabled={loading}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium border border-slate-700 transition"
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium border border-slate-700 transition"
             title={isAr ? 'تحديث البيانات' : 'Refresh'}
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            <HoverIcon className="w-4 h-4">
+              <RefreshCw className={`h-full w-full ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            </HoverIcon>
             <span className="hidden sm:inline">{isAr ? 'تحديث' : 'Refresh'}</span>
           </button>
           <button
             id="new-stock-adjustment-btn"
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition active:scale-95"
+            className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition active:scale-95"
           >
-            <Plus className="w-4 h-4 text-slate-950" />
+            <HoverIcon className="w-4 h-4">
+              <Plus className="h-full w-full text-slate-950" />
+            </HoverIcon>
             <span>{isAr ? 'تسوية مخزون جديدة' : 'New Stock Adjustment'}</span>
           </button>
         </div>

@@ -688,21 +688,21 @@ Myon Economic Contracting Co. Ltd.`;
   return (
     <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="customer-invoicing-view">
       {/* 1. Header & Quick Actions */}
-      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs sm:flex-row sm:items-center no-print">
+      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs sm:flex-row sm:items-center no-print">
         <div>
           <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-            <h1 className="text-xl font-black text-slate-900">
+            <h1 className="text-xl font-black text-slate-900 dark:text-slate-100">
               {isAr ? 'محرك الفواتير والمطالبات الشهرية للعملاء' : 'Dynamic Customer Invoicing Engine'}
             </h1>
             <span
               className={`rounded-full px-2.5 py-0.5 text-[10px] font-black whitespace-nowrap shrink-0 ${
                 currentBackendInvoice?.status === 'Issued' || invoiceStatus === 'Paid'
-                  ? 'bg-blue-100 text-blue-900 border border-blue-200'
+                  ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60'
                   : invoiceStatus === 'Approved'
-                  ? 'bg-emerald-100 text-emerald-800'
+                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
                   : invoiceStatus === 'Pending_Approval'
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-slate-100 text-slate-700'
+                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
               }`}
             >
               {currentBackendInvoice?.status === 'Issued' || invoiceStatus === 'Paid'
@@ -722,7 +722,7 @@ Myon Economic Contracting Co. Ltd.`;
                 : 'Draft'}
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {isAr
               ? 'تجميع رحلات التوريد، احتساب ضريبة القيمة المضافة 15%، وإدارة سير الاعتماد والتوقيع الرقمي للمدير التنفيذي مع الترحيل المالي لدفتر الأستاذ العام'
               : 'Auto-aggregate monthly deliveries, compute 15% VAT, manage CEO approvals, and post double-entry GL vouchers'}
@@ -734,11 +734,11 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             onClick={loadBackendInvoices}
             disabled={isLoadingBackend}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 disabled:opacity-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
             title={isAr ? 'تحديث حالة الفاتورة من الخادم' : 'Sync status with backend'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <RefreshCw className={`h-full w-full text-slate-500 ${isLoadingBackend ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`h-full w-full text-slate-500 dark:text-slate-400 ${isLoadingBackend ? 'animate-spin' : ''}`} />
             </HoverIcon>
             <span>{isAr ? 'مزامنة' : 'Sync'}</span>
           </button>
@@ -746,10 +746,10 @@ Myon Economic Contracting Co. Ltd.`;
           {/* Attachments Trigger */}
           <button
             onClick={() => setIsAttachmentModalOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <HoverIcon className="h-4 w-4">
-              <Paperclip className="h-full w-full text-orange-600" />
+              <Paperclip className="h-full w-full text-orange-600 dark:text-orange-400" />
             </HoverIcon>
             <span>
               {isAr ? 'المرفقات وتذاكر الميزان' : 'Attachments'} ({invoiceAttachments.length})
@@ -760,11 +760,11 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="bulk-import-invoicing-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-900 dark:text-emerald-300 shadow-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
             title={isAr ? 'استيراد فواتير وعمليات وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <Upload className="h-full w-full text-emerald-700" />
+              <Upload className="h-full w-full text-emerald-700 dark:text-emerald-400" />
             </HoverIcon>
             <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
           </button>
@@ -773,11 +773,11 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="export-invoice-json-btn"
             onClick={handleExportJSONSnapshot}
-            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/40 px-3 py-2 text-xs font-bold text-amber-900 dark:text-amber-300 shadow-xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON للفاتورة' : 'Export JSON Snapshot'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <Download className="h-full w-full text-amber-700" />
+              <Download className="h-full w-full text-amber-700 dark:text-amber-400" />
             </HoverIcon>
             <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
           </button>
@@ -785,10 +785,10 @@ Myon Economic Contracting Co. Ltd.`;
           {/* Excel Export */}
           <button
             onClick={handleExcelExport}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             <HoverIcon className="h-4 w-4">
-              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+              <FileSpreadsheet className="h-full w-full text-emerald-600 dark:text-emerald-400" />
             </HoverIcon>
             <span>{isAr ? 'تصدير كشف Excel' : 'Export Excel'}</span>
           </button>
@@ -797,11 +797,11 @@ Myon Economic Contracting Co. Ltd.`;
           <button
             id="copy-invoice-magic-link-top-btn"
             onClick={() => copyMagicLink(currentBackendInvoice?.public_token || undefined)}
-            className="group flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/80 px-3 py-2 text-xs font-bold text-indigo-900 shadow-xs hover:bg-indigo-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/40 px-3 py-2 text-xs font-bold text-indigo-900 dark:text-indigo-300 shadow-xs hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors"
             title={isAr ? 'نسخ رابط الدفع المباشر السحري (Magic Link)' : 'Copy Public Magic Link'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <Link2 className="h-full w-full text-indigo-700" />
+              <Link2 className="h-full w-full text-indigo-700 dark:text-indigo-400" />
             </HoverIcon>
             <span>{isAr ? 'الرابط السحري' : 'Magic Link'}</span>
           </button>
@@ -809,7 +809,7 @@ Myon Economic Contracting Co. Ltd.`;
           {/* Print / Live Preview Export */}
           <button
             onClick={() => setIsExportPrintModalOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-orange-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-orange-700 transition-colors"
           >
             <HoverIcon className="h-4 w-4">
               <Printer className="h-full w-full" />
@@ -870,10 +870,10 @@ Myon Economic Contracting Co. Ltd.`;
       <div
         className={`rounded-3xl border p-5 transition-all no-print ${
           currentBackendInvoice?.status === 'Issued' || invoiceStatus === 'Paid'
-            ? 'border-blue-200 bg-blue-50/70 text-blue-950'
+            ? 'border-blue-200 dark:border-blue-900/40 bg-blue-50/70 dark:bg-blue-950/20 text-blue-950 dark:text-blue-200'
             : invoiceStatus === 'Approved'
-            ? 'border-emerald-200 bg-emerald-50/70 text-emerald-950'
-            : 'border-amber-200 bg-amber-50/70 text-amber-950'
+            ? 'border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/70 dark:bg-emerald-950/20 text-emerald-950 dark:text-emerald-200'
+            : 'border-amber-200 dark:border-amber-900/40 bg-amber-50/70 dark:bg-amber-950/20 text-amber-950 dark:text-amber-200'
         }`}
       >
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -926,14 +926,14 @@ Myon Economic Contracting Co. Ltd.`;
               </p>
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {currentBackendInvoice?.move_id && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-mono font-bold text-blue-900 shadow-xs">
-                    <BookOpen className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 dark:border-blue-800/60 bg-white dark:bg-slate-800 px-2.5 py-1 text-[11px] font-mono font-bold text-blue-900 dark:text-blue-300 shadow-xs">
+                    <BookOpen className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span>{isAr ? 'معرف القيد المالي:' : 'GL Move ID:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{currentBackendInvoice.move_id}</span></span>
                   </div>
                 )}
                 {currentBackendInvoice?.journal_entry_id && (
-                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50/90 px-2.5 py-1 text-[11px] font-mono font-bold text-violet-900 shadow-xs">
-                    <BookOpen className="h-3.5 w-3.5 text-violet-600 shrink-0" />
+                  <div className="inline-flex items-center gap-1.5 rounded-lg border border-violet-200 dark:border-violet-800/60 bg-violet-50/90 dark:bg-violet-950/40 px-2.5 py-1 text-[11px] font-mono font-bold text-violet-900 dark:text-violet-300 shadow-xs">
+                    <BookOpen className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400 shrink-0" />
                     <span>{isAr ? 'سند دفتر الأستاذ:' : 'GL Ledger Voucher:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{String(currentBackendInvoice.journal_entry_id).slice(0, 8)}...</span></span>
                   </div>
                 )}
@@ -941,10 +941,10 @@ Myon Economic Contracting Co. Ltd.`;
                   <button
                     type="button"
                     onClick={() => copyMagicLink(currentBackendInvoice.public_token || undefined)}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/80 px-2.5 py-1 text-[11px] font-mono font-bold text-indigo-900 hover:bg-indigo-100 transition-colors shadow-xs"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/80 dark:bg-indigo-950/40 px-2.5 py-1 text-[11px] font-mono font-bold text-indigo-900 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors shadow-xs"
                     title={isAr ? 'انقر لنسخ الرابط السحري' : 'Click to copy magic link'}
                   >
-                    <Link2 className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                    <Link2 className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
                     <span>{isAr ? 'الرابط السحري:' : 'Magic Link:'} <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{currentBackendInvoice.public_token.slice(0, 8)}...</span></span>
                   </button>
                 )}
@@ -960,10 +960,10 @@ Myon Economic Contracting Co. Ltd.`;
                 <button
                   disabled={actionLoading || isUnbalanced}
                   onClick={handleSaveDraft}
-                  className="group flex items-center gap-1.5 rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  className="group flex items-center gap-1.5 rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50 transition-colors"
                 >
                   <HoverIcon className="h-4 w-4">
-                    {actionLoading ? <RefreshCw className="h-full w-full animate-spin text-slate-600" /> : <Save className="h-full w-full text-slate-600" />}
+                    {actionLoading ? <RefreshCw className="h-full w-full animate-spin text-slate-600 dark:text-slate-400" /> : <Save className="h-full w-full text-slate-600 dark:text-slate-400" />}
                   </HoverIcon>
                   <span>{isAr ? 'حفظ كمسودة (Save Draft)' : 'Save Draft'}</span>
                 </button>
@@ -1031,14 +1031,14 @@ Myon Economic Contracting Co. Ltd.`;
             {isFinalized && isPostedToLedger && (
               <div
                 id="workflow-posted-ledger-badge"
-                className="flex items-center gap-1.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 px-4 py-2.5 text-xs font-black text-emerald-700 shadow-xs"
+                className="flex items-center gap-1.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-900/50 px-4 py-2.5 text-xs font-black text-emerald-700 dark:text-emerald-400 shadow-xs"
                 title={isAr ? 'تم ترحيل هذه الفاتورة إلى دفتر الأستاذ العام بنجاح' : 'Invoice is posted to General Ledger'}
               >
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 <span>
                   {isAr ? 'مُرحل لدفتر الأستاذ' : 'Posted to Ledger'}
                   {currentBackendInvoice?.journal_entry_id && (
-                    <span className="ml-1 text-[10px] text-emerald-600 font-mono">
+                    <span className="ml-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
                       (#{String(currentBackendInvoice.journal_entry_id).slice(0, 8)})
                     </span>
                   )}
@@ -1077,7 +1077,7 @@ Myon Economic Contracting Co. Ltd.`;
 
                 <button
                   onClick={() => setIsEmailModalOpen(true)}
-                  className="flex items-center gap-1.5 rounded-2xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-colors"
+                  className="flex items-center gap-1.5 rounded-2xl bg-slate-900 dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Mail className="h-4 w-4" />
                   <span>{isAr ? 'بريد إلكتروني' : 'Email'}</span>
@@ -1089,10 +1089,10 @@ Myon Economic Contracting Co. Ltd.`;
       </div>
 
       {/* 3. Invoice Generator Controls Bar */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs no-print">
+      <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs no-print">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           <div>
-            <label htmlFor="invoicing-customer-select" className="mb-1 block text-xs font-bold text-slate-700">
+            <label htmlFor="invoicing-customer-select" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
               {isAr ? 'اختيار العميل المطلوب محاسبته *' : 'Select Customer *'}
             </label>
             <select
@@ -1100,7 +1100,7 @@ Myon Economic Contracting Co. Ltd.`;
               name="customer_id"
               value={selectedCustomerId}
               onChange={(e) => setSelectedCustomerId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
             >
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -1111,7 +1111,7 @@ Myon Economic Contracting Co. Ltd.`;
           </div>
 
           <div>
-            <label htmlFor="invoicing-month-select" className="mb-1 block text-xs font-bold text-slate-700">
+            <label htmlFor="invoicing-month-select" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
               {isAr ? 'الشهر المالي *' : 'Billing Month *'}
             </label>
             <select
@@ -1119,7 +1119,7 @@ Myon Economic Contracting Co. Ltd.`;
               name="billing_month"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
             >
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
                 <option key={m} value={m}>
@@ -1130,7 +1130,7 @@ Myon Economic Contracting Co. Ltd.`;
           </div>
 
           <div>
-            <label htmlFor="invoicing-year-select" className="mb-1 block text-xs font-bold text-slate-700">
+            <label htmlFor="invoicing-year-select" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
               {isAr ? 'السنة المالية' : 'Year'}
             </label>
             <select
@@ -1138,7 +1138,7 @@ Myon Economic Contracting Co. Ltd.`;
               name="billing_year"
               value={selectedYear}
               onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
             >
               <option value={2026}>2026</option>
               <option value={2025}>2025</option>
@@ -1146,7 +1146,7 @@ Myon Economic Contracting Co. Ltd.`;
           </div>
 
           <div>
-            <label htmlFor="invoicing-workflow-select" className="mb-1 block text-xs font-bold text-slate-700">
+            <label htmlFor="invoicing-workflow-select" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
               {isAr ? 'حالة الاعتماد وسير العمل' : 'Workflow Stage'}
             </label>
             <select
@@ -1159,7 +1159,7 @@ Myon Economic Contracting Co. Ltd.`;
                 if (val === 'Approved') setIsSigned(true);
                 else setIsSigned(false);
               }}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
             >
               <option value="Draft">{isAr ? 'مسودة أولية (Draft)' : 'Draft'}</option>
               <option value="Pending_Approval">{isAr ? 'قيد المراجعة والاعتماد (Pending)' : 'Pending Approval'}</option>

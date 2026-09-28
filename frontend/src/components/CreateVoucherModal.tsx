@@ -241,7 +241,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
           {/* Voucher Type & Category Switchers */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-black text-slate-700">
+              <label className="mb-1 block text-xs font-black text-slate-700 dark:text-slate-300">
                 {isAr ? 'نوع السند المالي:' : 'Voucher Type:'}
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -253,8 +253,8 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   }}
                   className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-black transition-all ${
                     type === 'Payment'
-                      ? 'border-rose-600 bg-rose-50 text-rose-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      ? 'border-rose-600 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <CreditCard className="h-4 w-4" />
@@ -270,8 +270,8 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   }}
                   className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 text-xs font-black transition-all ${
                     type === 'Receipt'
-                      ? 'border-emerald-600 bg-emerald-50 text-emerald-700 shadow-xs'
-                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                      ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 shadow-xs'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
                   }`}
                 >
                   <DollarSign className="h-4 w-4" />
@@ -281,27 +281,27 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-black text-slate-700">
+              <label className="mb-1 block text-xs font-black text-slate-700 dark:text-slate-300">
                 {isAr ? 'تصنيف السند المحاسبي:' : 'Voucher Category:'}
               </label>
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as VoucherCategory)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-orange-500 focus:outline-hidden"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-hidden"
               >
                 {type === 'Payment' ? (
                   <>
-                    <option value="Crusher_Settlement">{isAr ? 'سداد مستحقات كسارة ومواد خام' : 'Crusher Settlement'}</option>
-                    <option value="Transporter_Payout">{isAr ? 'صرف مستحقات مقاولي النقل' : 'Transporter Payout'}</option>
-                    <option value="Operational_Expense">{isAr ? 'مصروفات تشغيلية ومحروقات' : 'Operational Expense'}</option>
-                    <option value="Administrative_Expense">{isAr ? 'مصروفات إدارية وعمومية' : 'Administrative Expense'}</option>
-                    <option value="Equipment_Maintenance">{isAr ? 'صيانة معدات وشاحنات' : 'Equipment Maintenance'}</option>
-                    <option value="Other_Payment">{isAr ? 'مدفوعات أخرى' : 'Other Payment'}</option>
+                    <option value="Crusher_Settlement" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'سداد مستحقات كسارة ومواد خام' : 'Crusher Settlement'}</option>
+                    <option value="Transporter_Payout" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'صرف مستحقات مقاولي النقل' : 'Transporter Payout'}</option>
+                    <option value="Operational_Expense" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'مصروفات تشغيلية ومحروقات' : 'Operational Expense'}</option>
+                    <option value="Administrative_Expense" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'مصروفات إدارية وعمومية' : 'Administrative Expense'}</option>
+                    <option value="Equipment_Maintenance" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'صيانة معدات وشاحنات' : 'Equipment Maintenance'}</option>
+                    <option value="Other_Payment" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'مدفوعات أخرى' : 'Other Payment'}</option>
                   </>
                 ) : (
                   <>
-                    <option value="Customer_Collection">{isAr ? 'تحصيل من عميل' : 'Customer Collection'}</option>
-                    <option value="Other_Receipt">{isAr ? 'مقبوضات أخرى' : 'Other Receipt'}</option>
+                    <option value="Customer_Collection" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'تحصيل من عميل' : 'Customer Collection'}</option>
+                    <option value="Other_Receipt" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'مقبوضات أخرى' : 'Other Receipt'}</option>
                   </>
                 )}
               </select>
@@ -309,10 +309,10 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
           </div>
 
           {/* Amount & Real-Time Tafqeet Box */}
-          <div className="rounded-2xl border-2 border-orange-200 bg-orange-50/50 p-4 space-y-3">
+          <div className="rounded-2xl border-2 border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/20 p-4 space-y-3">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-black text-neutral-950">
+                <label className="mb-1 block text-xs font-black text-neutral-950 dark:text-slate-100">
                   {isAr ? 'المبلغ بالريال السعودي (SAR):' : 'Amount (SAR):'} *
                 </label>
                 <div className="relative">
@@ -323,45 +323,45 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="0.00"
-                    className="w-full rounded-xl border border-orange-300 bg-white px-3 py-2.5 text-base font-black font-mono text-slate-900 focus:border-orange-600 focus:ring-2 focus:ring-orange-500/20 focus:outline-hidden"
+                    className="w-full rounded-xl border border-orange-300 dark:border-orange-900/60 bg-white dark:bg-slate-900 px-3 py-2.5 text-base font-black font-mono text-slate-900 dark:text-slate-100 focus:border-orange-600 focus:ring-2 focus:ring-orange-500/20 focus:outline-hidden"
                   />
-                  <span className="absolute left-3 top-2.5 rounded-md bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-800">
+                  <span className="absolute left-3 top-2.5 rounded-md bg-orange-100 dark:bg-orange-900/60 px-2 py-0.5 text-xs font-bold text-orange-800 dark:text-orange-300">
                     SAR
                   </span>
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-black text-slate-700">
+                <label className="mb-1 block text-xs font-black text-slate-700 dark:text-slate-300">
                   {isAr ? 'تاريخ المعاملة:' : 'Posting Date:'} *
                 </label>
                 <input
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-hidden"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-hidden"
                 />
               </div>
             </div>
 
             {/* Live Tafqeet Banner */}
-            <div className="rounded-xl border border-orange-300/80 bg-white p-3 shadow-xs">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-orange-950 mb-1">
-                <Sparkles className="h-3.5 w-3.5 text-orange-600" />
+            <div className="rounded-xl border border-orange-300/80 dark:border-orange-900/50 bg-white dark:bg-slate-900 p-3 shadow-xs">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-orange-950 dark:text-orange-400 mb-1">
+                <Sparkles className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                 <span>{isAr ? 'المبلغ كتابة بالحروف (تفقيط آلي فوري):' : 'Amount in Words (Auto-Tafqeet):'}</span>
               </div>
-              <p className="text-xs font-black text-neutral-950 font-serif leading-relaxed">
+              <p className="text-xs font-black text-neutral-950 dark:text-slate-100 font-serif leading-relaxed">
                 {amountInWordsAr}
               </p>
-              <p className="text-[10px] font-medium text-slate-500 font-mono mt-0.5">
+              <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 font-mono mt-0.5">
                 {amountInWordsEn}
               </p>
             </div>
           </div>
 
           {/* Beneficiary / Payer Information */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-            <h3 className="text-xs font-black text-slate-900">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-3">
+            <h3 className="text-xs font-black text-slate-900 dark:text-slate-100">
               {isAr
                 ? type === 'Payment' ? 'بيانات المستفيد (Payee)' : 'بيانات الدافع / المستلم منه (Payer)'
                 : 'Party Details'}
@@ -369,7 +369,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   {isAr ? 'نوع الجهة:' : 'Party Type:'}
                 </label>
                 <select
@@ -381,42 +381,42 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     setPartyName('');
                     setPartyTaxNumber('');
                   }}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100"
                 >
-                  <option value="Crusher">{isAr ? 'كسارة' : 'Crusher'}</option>
-                  <option value="Transporter">{isAr ? 'ناقل' : 'Transporter'}</option>
-                  <option value="Customer">{isAr ? 'عميل' : 'Customer'}</option>
-                  <option value="Other">{isAr ? 'أخرى / مورد' : 'Other'}</option>
+                  <option value="Crusher" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'كسارة' : 'Crusher'}</option>
+                  <option value="Transporter" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'ناقل' : 'Transporter'}</option>
+                  <option value="Customer" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'عميل' : 'Customer'}</option>
+                  <option value="Other" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'أخرى / مورد' : 'Other'}</option>
                 </select>
               </div>
 
               {/* Quick Dropdown if Crusher/Transporter/Customer */}
               {partyType !== 'Other' && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                     {isAr ? 'اختر من السجلات:' : 'Select from Directory:'}
                   </label>
                   <select
                     value={partyId}
                     onChange={(e) => handlePartySelect(e.target.value)}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100"
                   >
-                    <option value="">{isAr ? '-- اختر --' : '-- Select --'}</option>
+                    <option value="" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? '-- اختر --' : '-- Select --'}</option>
                     {partyType === 'Crusher' &&
                       crushers.map((c) => (
-                        <option key={c.id} value={c.id}>
+                        <option key={c.id} value={c.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                           {c.crusherName || c.name}
                         </option>
                       ))}
                     {partyType === 'Transporter' &&
                       transporters.map((t) => (
-                        <option key={t.id} value={t.id}>
+                        <option key={t.id} value={t.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                           {t.transporterName || t.name}
                         </option>
                       ))}
                     {partyType === 'Customer' &&
                       customers.map((c) => (
-                        <option key={c.id} value={c.id}>
+                        <option key={c.id} value={c.id} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                           {c.customerName || (c as any).name}
                         </option>
                       ))}
@@ -425,7 +425,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
               )}
 
               <div className={partyType === 'Other' ? 'sm:col-span-2' : ''}>
-                <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   {isAr ? 'اسم المستفيد / الجهة الصريح:' : 'Beneficiary / Entity Name:'} *
                 </label>
                 <input
@@ -433,38 +433,38 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   value={partyName}
                   onChange={(e) => setPartyName(e.target.value)}
                   placeholder={isAr ? 'مثال: شركة ركاز للمقاولات' : 'e.g. Rikaz Contracting'}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-900"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
           </div>
 
           {/* Payment Method & Bank Coordinates */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
-            <h3 className="text-xs font-black text-slate-900">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-3">
+            <h3 className="text-xs font-black text-slate-900 dark:text-slate-100">
               {isAr ? 'طريقة الدفع والتفاصيل المصرفية' : 'Payment Method & Banking'}
             </h3>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   {isAr ? 'طريقة السداد:' : 'Payment Method:'}
                 </label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value as any)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100"
                 >
-                  <option value="Bank Transfer">{isAr ? 'تحويل بنكي' : 'Bank Transfer'}</option>
-                  <option value="Cheque">{isAr ? 'شيك مصرفي' : 'Cheque'}</option>
-                  <option value="Cash">{isAr ? 'نقداً (صندوق)' : 'Cash'}</option>
-                  <option value="Credit Memo">{isAr ? 'تسوية قيد / مقاصة' : 'Credit Memo'}</option>
+                  <option value="Bank Transfer" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'تحويل بنكي' : 'Bank Transfer'}</option>
+                  <option value="Cheque" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'شيك مصرفي' : 'Cheque'}</option>
+                  <option value="Cash" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'نقداً (صندوق)' : 'Cash'}</option>
+                  <option value="Credit Memo" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">{isAr ? 'تسوية قيد / مقاصة' : 'Credit Memo'}</option>
                 </select>
               </div>
 
               {paymentMethod !== 'Cash' && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                     {isAr ? 'البنك المنفذ:' : 'Bank Name:'}
                   </label>
                   <input
@@ -472,14 +472,14 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     placeholder={isAr ? 'مثال: مصرف الراجحي' : 'e.g. Al Rajhi Bank'}
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
               )}
 
               {paymentMethod === 'Bank Transfer' && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                     {isAr ? 'رقم الحوالة / المرجع البنكي:' : 'Transfer Reference No:'}
                   </label>
                   <input
@@ -487,14 +487,14 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     value={transferRefNumber}
                     onChange={(e) => setTransferRefNumber(e.target.value)}
                     placeholder="TRF-88401923"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
               )}
 
               {paymentMethod === 'Cheque' && (
                 <div>
-                  <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                  <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                     {isAr ? 'رقم الشيك:' : 'Cheque Number:'}
                   </label>
                   <input
@@ -502,7 +502,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     value={checkNumber}
                     onChange={(e) => setCheckNumber(e.target.value)}
                     placeholder="CHQ-001924"
-                    className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-800"
+                    className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
               )}
@@ -512,7 +512,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
           {/* Purpose & References */}
           <div className="space-y-3">
             <div>
-              <label className="mb-1 block text-xs font-black text-slate-700">
+              <label className="mb-1 block text-xs font-black text-slate-700 dark:text-slate-300">
                 {isAr ? 'الغرض من الصرف / القبض (Purpose):' : 'Payment Purpose:'} *
               </label>
               <textarea
@@ -520,13 +520,13 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                 value={purpose}
                 onChange={(e) => setPurpose(e.target.value)}
                 placeholder={isAr ? 'وصف تفصيلي للدفعة، نوع المواد، أو رقم الشهر المالي' : 'Detailed description of the transaction'}
-                className="w-full rounded-xl border border-slate-300 bg-white p-3 text-xs font-medium text-slate-900 focus:border-orange-500 focus:outline-hidden"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-hidden"
               />
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   {isAr ? 'رقم الفاتورة أو العقد المرتبط:' : 'Linked Invoice / Ref No:'}
                 </label>
                 <input
@@ -534,12 +534,12 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   value={linkedReferenceNo}
                   onChange={(e) => setLinkedReferenceNo(e.target.value)}
                   placeholder="INV-2026-08-1048"
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-800"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[11px] font-bold text-slate-600">
+                <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                   {isAr ? 'اسم المستلم / الوكيل (Received By):' : 'Received By Name:'}
                 </label>
                 <input
@@ -547,13 +547,13 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   value={receivedBy}
                   onChange={(e) => setReceivedBy(e.target.value)}
                   placeholder={isAr ? 'اسم المندوب أو أمين الصندوق' : 'Receiver / Agent name'}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-800"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1 block text-[11px] font-bold text-slate-600">
+              <label className="mb-1 block text-[11px] font-bold text-slate-600 dark:text-slate-400">
                 {isAr ? 'ملاحظات إضافية للمحاسبة:' : 'Additional Accounting Notes:'}
               </label>
               <input
@@ -561,21 +561,21 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder={isAr ? 'أي شروط أو ملحوظات تدقيق' : 'Optional internal notes'}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs text-slate-800"
+                className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100"
               />
             </div>
           </div>
 
           {/* CEO / Executive Direct Approval Switch if user is Admin or COO */}
           {(isAdmin || isCOO) && (
-            <div className="flex items-center justify-between rounded-xl border border-orange-200 bg-orange-50/70 p-3">
+            <div className="flex items-center justify-between rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/70 dark:bg-orange-950/20 p-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-orange-700" />
+                <CheckCircle2 className="h-4 w-4 text-orange-700 dark:text-orange-400" />
                 <div>
-                  <span className="text-xs font-black text-neutral-950">
+                  <span className="text-xs font-black text-neutral-950 dark:text-slate-100">
                     {isAr ? 'اعتماد وختم السند فورياً (صلاحيات المدير العام CEO)' : 'Instant Executive Approval & Stamp'}
                   </span>
-                  <p className="text-[10px] text-orange-700">
+                  <p className="text-[10px] text-orange-700 dark:text-orange-400">
                     {isAr ? 'تطبيق الختم والتوقيع الإلكتروني دون الحاجة لتمرير السند لقائمة الانتظار' : 'Stamp digital signature immediately'}
                   </p>
                 </div>
@@ -590,11 +590,11 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
           )}
 
           {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               {isAr ? 'إلغاء' : 'Cancel'}
             </button>

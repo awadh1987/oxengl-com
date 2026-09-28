@@ -198,7 +198,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 {companyDisplayName} • GENERAL LEDGER ANALYTICS
               </span>
               <span className="rounded-md border border-slate-700 bg-slate-800/80 px-2 py-0.5 text-[10px] font-mono text-slate-300">
-                Phase 10 Engine
+                {isAr ? 'محرك التقارير المالية' : 'Financial Analytics Engine'}
               </span>
             </div>
             <h1 className="text-2xl font-black text-white mt-1">

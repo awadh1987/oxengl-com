@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { TENANT_PALETTES, TenantColorTheme } from '../../theme/designTokens';
+import { HoverIcon } from '../common/HoverIcon';
 
 export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const {
@@ -52,7 +53,7 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
       <button
         type="button"
         onClick={() => setDensityMode(densityMode === 'comfortable' ? 'compact' : 'comfortable')}
-        className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
+        className={`group inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
           isDark
             ? 'border-slate-800 bg-slate-900/90 text-slate-300 hover:border-slate-700 hover:text-white'
             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900 shadow-xs'
@@ -61,12 +62,16 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
       >
         {densityMode === 'comfortable' ? (
           <>
-            <Rows3 className="h-3.5 w-3.5 text-indigo-400" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Rows3 className="h-full w-full text-indigo-400" />
+            </HoverIcon>
             <span className="hidden sm:inline">Comfortable</span>
           </>
         ) : (
           <>
-            <Rows4 className="h-3.5 w-3.5 text-amber-400" />
+            <HoverIcon className="h-3.5 w-3.5">
+              <Rows4 className="h-full w-full text-amber-400" />
+            </HoverIcon>
             <span className="hidden sm:inline">Compact Grid</span>
           </>
         )}
@@ -76,14 +81,16 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
       <button
         type="button"
         onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
-        className={`inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+        className={`group inline-flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
           isDark
             ? 'border-slate-800 bg-slate-900/90 text-amber-400 hover:border-slate-700 hover:text-amber-300'
             : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:text-slate-900 shadow-xs'
         }`}
         title={isDark ? 'Switch to Light Mode' : 'Switch to OxenGL Dark Enterprise Mode'}
       >
-        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        <HoverIcon className="h-4 w-4">
+          {isDark ? <Sun className="h-full w-full" /> : <Moon className="h-full w-full" />}
+        </HoverIcon>
       </button>
 
       {/* Tenant Color Theme Switcher Dropdown */}
@@ -92,7 +99,7 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
           type="button"
           onClick={() => setPaletteMenuOpen(!paletteMenuOpen)}
           style={{ borderColor: `${activePalette.primary}80` }}
-          className={`inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
+          className={`group inline-flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-xs font-bold transition-all ${
             isDark
               ? 'bg-slate-900/90 text-slate-200 hover:brightness-110'
               : 'bg-white text-slate-800 shadow-xs hover:border-slate-300'
@@ -104,7 +111,9 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
             style={{ backgroundColor: activePalette.primary }}
           />
           <span className="hidden lg:inline">{activePalette.nameEn}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+          <HoverIcon className="h-3.5 w-3.5 opacity-60">
+            <ChevronDown className="h-full w-full" />
+          </HoverIcon>
         </button>
 
         {paletteMenuOpen && (

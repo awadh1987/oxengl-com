@@ -71,7 +71,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
     company_name = html.escape(comp.get("legal_name", "Enterprise Contractor"))
     cr_number = html.escape(comp.get("commercial_registration", "N/A"))
     vat_number = html.escape(comp.get("tax_id", "N/A"))
-    std_code = html.escape(meta.get("standard", "GLOBAL-STD-2026.1 / ISO-21500"))
+    std_code = html.escape(meta.get("standard", "ISO-21500 / ENTERPRISE-STD"))
     gen_at = _format_date(meta.get("generated_at", datetime.now(timezone.utc).isoformat()))
     gen_by = html.escape(meta.get("generated_by", "Authorized Officer"))
     readiness_score = float(meta.get("compliance_score_percent", 0.0))
@@ -215,7 +215,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
         size: A4 portrait;
         margin: 16mm 14mm 18mm 14mm;
         @top-left {{
-            content: "GLOBAL INSTITUTIONAL PROCUREMENT STANDARD — TENDER PRE-QUALIFICATION DOSSIER";
+            content: "ENTERPRISE PRE-QUALIFICATION DOSSIER";
             font-family: 'Helvetica Neue', Arial, sans-serif;
             font-size: 7pt;
             color: #64748B;
@@ -497,7 +497,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
 
 <!-- Header Banner -->
 <div class="header-banner">
-    <div class="enterprise-tag">Institutional Tender & Procurement Dossier</div>
+    <div class="enterprise-tag">ENTERPRISE CORPORATE TENDER DOSSIER</div>
     <div class="main-title">{company_name}</div>
     <div class="sub-title">Enterprise Corporate Profile, Technical Asset Register & Prequalification CV</div>
 
@@ -576,7 +576,7 @@ def render_corporate_cv_html(payload: Dict[str, Any]) -> str:
 </table>
 
 <!-- Section 2: Mandatory Enterprise Compliance Checklist -->
-<div class="section-title">2. Mandatory Institutional Procurement Compliance Checklist</div>
+<div class="section-title">2. ENTERPRISE PROCUREMENT COMPLIANCE CHECKLIST</div>
 <table class="data-table">
     <thead>
         <tr>

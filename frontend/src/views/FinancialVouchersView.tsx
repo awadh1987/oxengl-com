@@ -241,17 +241,17 @@ export const FinancialVouchersView: React.FC = () => {
   return (
     <div id="financial-vouchers-view" className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-xs sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs sm:flex-row sm:items-center">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-700">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400">
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">
+              <h1 className="text-xl font-black text-slate-900 dark:text-slate-100">
                 {isAr ? 'سندات القبض والصرف الرسمية' : 'Financial Payment & Receipt Vouchers'}
               </h1>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isAr
                   ? 'الدورة المستندية المالية الكاملة بتفقيط آلي بالريال واعتمادات المدير التنفيذي (CEO)'
                   : 'Official corporate financial vouchers with automatic Arabic Tafqeet and CEO approval workflows'}
@@ -262,29 +262,29 @@ export const FinancialVouchersView: React.FC = () => {
 
         {/* Navigation Tabs and Actions */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex rounded-2xl border border-slate-200 bg-slate-100 p-1">
+          <div className="flex rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 p-1">
             <button
               onClick={() => setActiveTab('vouchers')}
               className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black transition cursor-pointer ${
                 activeTab === 'vouchers'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
-              <FileText className="h-4 w-4 text-orange-600" />
+              <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'سندات القبض والصرف' : 'Cash Vouchers'}</span>
             </button>
             <button
               onClick={() => setActiveTab('balanced_grid')}
               className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-black transition cursor-pointer ${
                 activeTab === 'balanced_grid'
-                  ? 'bg-white text-indigo-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-white dark:bg-slate-900 text-indigo-900 dark:text-indigo-400 shadow-xs'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
-              <Scale className="h-4 w-4 text-indigo-600" />
+              <Scale className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               <span>{isAr ? 'مصفوفة قيود اليومية' : 'Balanced Journal'}</span>
-              <span className="rounded-md bg-indigo-100 px-1.5 py-0.5 text-[10px] font-black text-indigo-700 whitespace-nowrap shrink-0">
+              <span className="rounded-md bg-indigo-100 dark:bg-indigo-950/60 px-1.5 py-0.5 text-[10px] font-black text-indigo-700 dark:text-indigo-300 whitespace-nowrap shrink-0">
                 Σ Dr = Σ Cr
               </span>
             </button>
@@ -295,7 +295,7 @@ export const FinancialVouchersView: React.FC = () => {
             id="refresh-vouchers-btn"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors disabled:opacity-50"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
             title={isAr ? 'تحديث السندات' : 'Refresh Vouchers'}
           >
             <HoverIcon className="h-3.5 w-3.5">
@@ -307,11 +307,11 @@ export const FinancialVouchersView: React.FC = () => {
           <button
             id="export-vouchers-json-btn"
             onClick={handleExportJSONSnapshot}
-            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/40 px-3 py-2 text-xs font-bold text-amber-900 dark:text-amber-300 shadow-xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
             title={isAr ? 'تصدير لقطة بيانات JSON' : 'Export JSON Snapshot'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <Download className="h-full w-full text-amber-700" />
+              <Download className="h-full w-full text-amber-700 dark:text-amber-400" />
             </HoverIcon>
             <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
           </button>
@@ -319,11 +319,11 @@ export const FinancialVouchersView: React.FC = () => {
           <button
             id="export-vouchers-excel-btn"
             onClick={handleExportExcel}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             title={isAr ? 'تصدير كشف Excel' : 'Export to Excel'}
           >
             <HoverIcon className="h-3.5 w-3.5">
-              <FileSpreadsheet className="h-full w-full text-emerald-600" />
+              <FileSpreadsheet className="h-full w-full text-emerald-600 dark:text-emerald-400" />
             </HoverIcon>
             <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
           </button>
@@ -331,7 +331,7 @@ export const FinancialVouchersView: React.FC = () => {
           <button
             id="print-vouchers-btn"
             onClick={handlePrint}
-            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-orange-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-orange-700 transition-colors"
             title={isAr ? 'طباعة كشف السندات' : 'Print Vouchers'}
           >
             <HoverIcon className="h-3.5 w-3.5">
@@ -392,78 +392,78 @@ export const FinancialVouchersView: React.FC = () => {
           {/* KPI Cards Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total Payments */}
-        <div className="rounded-3xl border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-white p-5 shadow-xs">
+        <div className="rounded-3xl border border-rose-100 dark:border-rose-900/40 bg-gradient-to-br from-rose-50/70 via-white to-white dark:from-rose-950/20 dark:via-slate-900 dark:to-slate-900 p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
               {isAr ? 'إجمالي سندات الصرف' : 'Total Payments (Outflow)'}
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-rose-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400">
               <TrendingDown className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-3 text-2xl font-black font-mono text-rose-700">
+          <p className="mt-3 text-2xl font-black font-mono text-rose-700 dark:text-rose-400">
             {stats.totalPayments.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             {isAr ? 'مدفوعات موردي المواد الخام ومزودي الخدمات والتشغيل' : 'Raw materials, service suppliers & operations'}
           </p>
         </div>
 
         {/* Total Receipts */}
-        <div className="rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50/70 via-white to-white p-5 shadow-xs">
+        <div className="rounded-3xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/70 via-white to-white dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-900 p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
               {isAr ? 'إجمالي سندات القبض' : 'Total Receipts (Inflow)'}
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-3 text-2xl font-black font-mono text-emerald-700">
+          <p className="mt-3 text-2xl font-black font-mono text-emerald-700 dark:text-emerald-400">
             {stats.totalReceipts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             {isAr ? 'تحصيلات العملاء والمبيعات' : 'Customer collections & revenue'}
           </p>
         </div>
 
         {/* Net Flow */}
-        <div className="rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50/70 via-white to-white p-5 shadow-xs">
+        <div className="rounded-3xl border border-orange-100 dark:border-orange-900/40 bg-gradient-to-br from-orange-50/70 via-white to-white dark:from-orange-950/20 dark:via-slate-900 dark:to-slate-900 p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
               {isAr ? 'صافي حركة الصندوق / البنك' : 'Net Documented Flow'}
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400">
               <CreditCard className="h-4 w-4" />
             </div>
           </div>
-          <p className={`mt-3 text-2xl font-black font-mono ${stats.netFlow >= 0 ? 'text-orange-950' : 'text-amber-700'}`}>
+          <p className={`mt-3 text-2xl font-black font-mono ${stats.netFlow >= 0 ? 'text-orange-950 dark:text-orange-400' : 'text-amber-700 dark:text-amber-400'}`}>
             {stats.netFlow.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </p>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
             {isAr ? 'الفارق بين المقبوض والمصروف' : 'Net documented cash position'}
           </p>
         </div>
 
         {/* Approvals & Document Count */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xs">
+        <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
               {isAr ? 'حالة الاعتمادات والتواقيع' : 'Approval & Sealing'}
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
               <ShieldCheck className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-baseline gap-2 sm:gap-3">
-            <span className="text-2xl font-black font-mono text-slate-900 whitespace-nowrap">
+            <span className="text-2xl font-black font-mono text-slate-900 dark:text-slate-100 whitespace-nowrap">
               {stats.totalCount}
             </span>
-            <span className="text-xs font-bold text-emerald-600 whitespace-nowrap">
+            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
               ({stats.approvedCount} {isAr ? 'معتمد' : 'approved'})
             </span>
           </div>
-          <p className="mt-1 text-[11px] text-amber-600 font-semibold">
+          <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
             {stats.pendingCount > 0
               ? isAr ? `يوجد (${stats.pendingCount}) سند بانتظار اعتماد المدير العام` : `${stats.pendingCount} pending CEO approval`
               : isAr ? 'جميع السندات معتمدة ومختومة' : 'All vouchers fully approved'}
@@ -472,7 +472,7 @@ export const FinancialVouchersView: React.FC = () => {
       </div>
 
       {/* Search & Filter Toolbar */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs lg:flex-row lg:items-center lg:justify-between">
         {/* Search Input */}
         <div className="relative flex-1">
           <Search className="absolute right-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -485,7 +485,7 @@ export const FinancialVouchersView: React.FC = () => {
                 ? 'بحث برقم السند، اسم المستفيد/الدافع، الغرض، أو رقم المرجع...'
                 : 'Search by voucher no, party name, purpose, ref...'
             }
-            className="w-full rounded-xl border border-slate-300 bg-slate-50 py-2 pl-4 pr-10 text-xs font-medium text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-hidden"
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 py-2 pl-4 pr-10 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden"
           />
         </div>
 
@@ -495,7 +495,7 @@ export const FinancialVouchersView: React.FC = () => {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as any)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
           >
             <option value="ALL">{isAr ? 'جميع الأنواع' : 'All Types'}</option>
             <option value="Payment">{isAr ? 'سندات صرف فقط' : 'Payment Only'}</option>
@@ -506,7 +506,7 @@ export const FinancialVouchersView: React.FC = () => {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as any)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
           >
             <option value="ALL">{isAr ? 'جميع التصنيفات' : 'All Categories'}</option>
             <option value="Crusher_Settlement">{isAr ? 'مستحقات موردي المواد الخام' : 'Raw Materials Suppliers'}</option>
@@ -519,7 +519,7 @@ export const FinancialVouchersView: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
           >
             <option value="ALL">{isAr ? 'جميع الحالات' : 'All Statuses'}</option>
             <option value="Approved">{isAr ? 'معتمد ومختوم' : 'Approved'}</option>
@@ -530,7 +530,7 @@ export const FinancialVouchersView: React.FC = () => {
           <select
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700"
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
           >
             <option value="ALL">{isAr ? 'جميع الأشهر' : 'All Months'}</option>
             <option value="8">{isAr ? 'أغسطس (August)' : 'August'}</option>
@@ -541,10 +541,10 @@ export const FinancialVouchersView: React.FC = () => {
       </div>
 
       {/* Vouchers Data Table */}
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-right text-xs">
-            <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-black uppercase text-slate-600">
+            <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 text-[11px] font-black uppercase text-slate-600 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3.5">{isAr ? 'رقم السند' : 'Voucher No'}</th>
                 <th className="px-4 py-3.5">{isAr ? 'النوع / التصنيف' : 'Type / Category'}</th>
@@ -557,13 +557,13 @@ export const FinancialVouchersView: React.FC = () => {
                 <th className="px-4 py-3.5 text-center">{isAr ? 'الإجراءات' : 'Actions'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-800 dark:text-slate-200">
               {filteredVouchers.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-slate-400">
-                    <FileText className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                  <td colSpan={9} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                    <FileText className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600 mb-2" />
                     <p className="font-bold">{isAr ? 'لا توجد سندات مالية مطابقة' : 'No vouchers found'}</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                       {isAr ? 'يمكنك إنشاء سند صرف أو قبض جديد بسهولة' : 'Create a new voucher using the button above'}
                     </p>
                   </td>
@@ -572,12 +572,12 @@ export const FinancialVouchersView: React.FC = () => {
                 paginatedVouchers.map((vch) => {
                   const isPayment = vch.type === 'Payment';
                   return (
-                    <tr key={vch.id} className="transition-colors hover:bg-slate-50/80">
+                    <tr key={vch.id} className="transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
                       {/* Voucher No */}
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <button
                           onClick={() => setSelectedVoucherForView(vch)}
-                          className="font-mono font-black text-orange-700 hover:underline hover:text-orange-950"
+                          className="font-mono font-black text-orange-700 dark:text-orange-400 hover:underline hover:text-orange-950 dark:hover:text-orange-300"
                         >
                           <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.voucherNumber}</span>
                         </button>
@@ -589,13 +589,13 @@ export const FinancialVouchersView: React.FC = () => {
                           <span
                             className={`inline-flex items-center whitespace-nowrap shrink-0 rounded-lg px-2 py-0.5 text-[10px] font-black ${
                               isPayment
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-900/40'
+                                : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40'
                             }`}
                           >
                             {isPayment ? (isAr ? 'صرف' : 'Payment') : (isAr ? 'قبض' : 'Receipt')}
                           </span>
-                          <span className="text-[10px] text-slate-500 whitespace-nowrap">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {vch.category === 'Crusher_Settlement' ? (isAr ? 'مورد مواد خام' : 'Raw Materials Supplier') :
                              vch.category === 'Transporter_Payment' ? (isAr ? 'مزود خدمة' : 'Service Supplier') :
                              vch.category === 'Customer_Collection' ? (isAr ? 'عميل' : 'Customer') :
@@ -605,16 +605,16 @@ export const FinancialVouchersView: React.FC = () => {
                       </td>
 
                       {/* Date */}
-                      <td className="px-4 py-3.5 whitespace-nowrap font-mono text-slate-600">
+                      <td className="px-4 py-3.5 whitespace-nowrap font-mono text-slate-600 dark:text-slate-400">
                         <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.date}</span>
                       </td>
 
                       {/* Party Name */}
                       <td className="px-4 py-3.5">
                         <div className="max-w-[180px] truncate">
-                          <span className="font-bold text-slate-900 block truncate">{vch.partyName}</span>
+                          <span className="font-bold text-slate-900 dark:text-slate-100 block truncate">{vch.partyName}</span>
                           {vch.partyTaxNumber && (
-                            <span className="font-mono text-[10px] text-slate-400">
+                            <span className="font-mono text-[10px] text-slate-400 dark:text-slate-500">
                               VAT: <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.partyTaxNumber}</span>
                             </span>
                           )}
@@ -626,13 +626,13 @@ export const FinancialVouchersView: React.FC = () => {
                         <div className="space-y-0.5">
                           <span
                             className={`font-mono text-sm font-black ${
-                              isPayment ? 'text-rose-700' : 'text-emerald-700'
+                              isPayment ? 'text-rose-700 dark:text-rose-400' : 'text-emerald-700 dark:text-emerald-400'
                             }`}
                           >
                             <span dir="ltr" className="inline-block unicode-bidi-isolate">{vch.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                           </span>
                           <span className="text-[9px] text-slate-400 mr-1">SAR</span>
-                          <p className="text-[10px] text-slate-500 truncate max-w-[180px] italic">
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[180px] italic">
                             {vch.amountInWordsAr}
                           </p>
                         </div>
@@ -640,7 +640,7 @@ export const FinancialVouchersView: React.FC = () => {
 
                       {/* Payment Method */}
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <div className="text-[11px] text-slate-700">
+                        <div className="text-[11px] text-slate-700 dark:text-slate-300">
                           <span className="font-semibold block">
                             {vch.paymentMethod === 'Bank Transfer' ? (isAr ? 'تحويل بنكي' : 'Bank Transfer') :
                              vch.paymentMethod === 'Cheque' ? (isAr ? 'شيك مصرفي' : 'Cheque') :
@@ -648,7 +648,7 @@ export const FinancialVouchersView: React.FC = () => {
                              (isAr ? 'مقاصة' : 'Credit Memo')}
                           </span>
                           {vch.bankName && (
-                            <span className="text-[10px] text-slate-400">{vch.bankName}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500">{vch.bankName}</span>
                           )}
                         </div>
                       </td>
@@ -656,9 +656,9 @@ export const FinancialVouchersView: React.FC = () => {
                       {/* Purpose & Ref */}
                       <td className="px-4 py-3.5">
                         <div className="max-w-[200px]">
-                          <p className="truncate text-[11px] text-slate-800 font-medium">{vch.purpose}</p>
+                          <p className="truncate text-[11px] text-slate-800 dark:text-slate-200 font-medium">{vch.purpose}</p>
                           {vch.linkedReferenceNo && (
-                            <span className="font-mono text-[10px] text-orange-700 block">
+                            <span className="font-mono text-[10px] text-orange-700 dark:text-orange-400 block">
                               Ref: {vch.linkedReferenceNo}
                             </span>
                           )}
@@ -669,13 +669,13 @@ export const FinancialVouchersView: React.FC = () => {
                       <td className="px-4 py-3.5">
                         <div className="flex flex-wrap items-center gap-1.5">
                           {vch.status === 'Approved' ? (
-                            <div className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-[11px] font-bold text-emerald-700 border border-emerald-200 whitespace-nowrap shrink-0">
-                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            <div className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 px-2 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 whitespace-nowrap shrink-0">
+                              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                               <span>{isAr ? 'معتمد ومختوم' : 'Approved'}</span>
                             </div>
                           ) : (
-                            <div className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-bold text-amber-700 border border-amber-200 whitespace-nowrap shrink-0">
-                              <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <div className="inline-flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 px-2 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 whitespace-nowrap shrink-0">
+                              <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
                               <span>{isAr ? 'قيد المراجعة' : 'Pending CEO'}</span>
                             </div>
                           )}
@@ -688,11 +688,11 @@ export const FinancialVouchersView: React.FC = () => {
                           {/* View & Print Document */}
                           <button
                             onClick={() => setSelectedVoucherForView(vch)}
-                            className="group flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-bold text-slate-700 shadow-2xs hover:border-orange-300 hover:bg-orange-50 hover:text-orange-950 transition-colors"
+                            className="group flex h-8 items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-2xs hover:border-orange-300 dark:hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-slate-700 hover:text-orange-950 dark:hover:text-orange-300 transition-colors"
                             title={isAr ? 'معاينة وطباعة رسمية' : 'View & Print'}
                           >
                             <HoverIcon className="h-3.5 w-3.5">
-                              <Printer className="h-full w-full text-slate-500" />
+                              <Printer className="h-full w-full text-slate-500 dark:text-slate-400" />
                             </HoverIcon>
                             <span className="hidden sm:inline">{isAr ? 'معاينة' : 'View'}</span>
                           </button>
@@ -725,7 +725,7 @@ export const FinancialVouchersView: React.FC = () => {
                                   deleteVoucher(vch.id);
                                 }
                               }}
-                              className="group flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                              className="group flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
                               title={isAr ? 'حذف السند' : 'Delete'}
                             >
                               <HoverIcon className="h-3.5 w-3.5">
@@ -744,7 +744,7 @@ export const FinancialVouchersView: React.FC = () => {
         </div>
 
         {/* Table Pagination Bar */}
-        <div className="flex items-center justify-between border-t border-slate-100 p-4 text-xs text-slate-500">
+        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 p-4 text-xs text-slate-500 dark:text-slate-400">
           <div>
             {isAr
               ? `عرض ${paginatedVouchers.length} من أصل ${filteredVouchers.length} سند مالي`
@@ -754,18 +754,18 @@ export const FinancialVouchersView: React.FC = () => {
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => p - 1)}
-              className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
             >
               {isAr ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
               <span>{isAr ? 'السابق' : 'Previous'}</span>
             </button>
-            <span className="font-mono font-bold text-slate-900 px-2">
+            <span className="font-mono font-bold text-slate-900 dark:text-slate-100 px-2">
               {currentPage} / {totalPages}
             </span>
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
-              className="flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-1 font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40 transition-colors"
+              className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-40 transition-colors"
             >
               <span>{isAr ? 'التالي' : 'Next'}</span>
               {isAr ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}

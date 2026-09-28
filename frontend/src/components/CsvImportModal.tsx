@@ -517,9 +517,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-200 bg-slate-50 px-6 py-2">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-6 py-2">
           <div className="flex gap-2">
-            <div className="flex rounded-xl bg-slate-200/70 p-1">
+            <div className="flex rounded-xl bg-slate-200/70 dark:bg-slate-800 p-1">
               <button
                 onClick={() => {
                   setEntityType('customers');
@@ -527,7 +527,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   setActiveTab('upload');
                 }}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                  entityType === 'customers' ? 'bg-white text-orange-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  entityType === 'customers' ? 'bg-white dark:bg-slate-900 text-orange-950 dark:text-orange-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {isAr ? 'العملاء (Customers)' : 'Customers'}
@@ -539,7 +539,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   setActiveTab('upload');
                 }}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                  entityType === 'crushers' ? 'bg-white text-orange-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  entityType === 'crushers' ? 'bg-white dark:bg-slate-900 text-orange-950 dark:text-orange-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {isAr ? 'موردي المواد (Material Suppliers)' : 'Material Suppliers'}
@@ -552,7 +552,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   setImportSummary(null);
                 }}
                 className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
-                  entityType === 'transporters' ? 'bg-white text-orange-950 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                  entityType === 'transporters' ? 'bg-white dark:bg-slate-900 text-orange-950 dark:text-orange-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 {isAr ? 'موردي الخدمات (Service Suppliers)' : 'Service Suppliers'}
@@ -563,7 +563,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           {/* Download Template button */}
           <button
             onClick={handleDownloadTemplate}
-            className="flex items-center gap-1.5 rounded-xl border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-800 hover:bg-orange-100 transition-colors shadow-2xs"
+            className="flex items-center gap-1.5 rounded-xl border border-orange-200 dark:border-orange-900/60 bg-orange-50 dark:bg-orange-950/40 px-3 py-1.5 text-xs font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors shadow-2xs"
           >
             <Download className="h-3.5 w-3.5" />
             <span>{isAr ? 'تحميل نموذج CSV الجاهز' : 'Download Sample CSV'}</span>
@@ -650,7 +650,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
             <div className="space-y-6">
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="group flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-10 text-center hover:border-orange-500 hover:bg-orange-50/30 transition-all cursor-pointer"
+                className="group flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/50 p-10 text-center hover:border-orange-500 hover:bg-orange-50/30 dark:hover:bg-slate-800/40 transition-all cursor-pointer"
               >
                 <input
                   ref={fileInputRef}
@@ -659,19 +659,19 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-orange-100 text-orange-600 group-hover:scale-110 transition-transform">
+                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
                   <UploadCloud className="h-8 w-8" />
                 </div>
-                <h3 className="mt-4 text-sm font-black text-slate-900">
+                <h3 className="mt-4 text-sm font-black text-slate-900 dark:text-slate-100">
                   {isAr ? 'اسحب ملف CSV وأفلته هنا، أو انقر للاختيار' : 'Drag and drop your CSV file here, or browse'}
                 </h3>
-                <p className="mt-1 text-xs text-slate-500 max-w-sm">
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-sm">
                   {isAr
                     ? 'يدعم ملفات CSV بترميز UTF-8 المستخرجة من Excel أو أنظمة ERP السابقة'
                     : 'Supports UTF-8 CSV exports from Excel, Google Sheets, or legacy ERP systems'}
                 </p>
                 {fileName && (
-                  <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-1.5 text-xs font-bold text-orange-700 border border-orange-200">
+                  <div className="mt-4 inline-flex items-center gap-2 rounded-xl bg-orange-50 dark:bg-orange-950/60 px-3 py-1.5 text-xs font-bold text-orange-700 dark:text-orange-300 border border-orange-200 dark:border-orange-900/60">
                     <FileText className="h-4 w-4" />
                     <span>{fileName}</span>
                   </div>
@@ -679,12 +679,12 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
               </div>
 
               {/* Instructions Callout */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-black text-slate-800">
-                  <HelpCircle className="h-4 w-4 text-orange-600" />
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-black text-slate-800 dark:text-slate-200">
+                  <HelpCircle className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <span>{isAr ? 'إرشادات استيراد البيانات:' : 'Import Guidelines:'}</span>
                 </div>
-                <ul className="list-disc list-inside text-xs text-slate-600 space-y-1">
+                <ul className="list-disc list-inside text-xs text-slate-600 dark:text-slate-400 space-y-1">
                   <li>
                     {isAr
                       ? 'يجب أن يحتوي السطر الأول على أسماء الأعمدة مطابقة للنموذج المعتمد.'
@@ -709,7 +709,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           {activeTab === 'paste' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-black text-slate-800 block mb-1.5">
+                <label className="text-xs font-black text-slate-800 dark:text-slate-200 block mb-1.5">
                   {isAr ? 'الصق الأعمدة المنسوخة من جدول Excel هنا مباشرة:' : 'Paste table data copied from Excel:'}
                 </label>
                 <textarea
@@ -721,7 +721,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                       ? 'اسم العميل,الرقم الضريبي,السجل التجاري,مسؤول التواصل,رقم الجوال\nشركة المقاولات المتحدة,300184920100003,1010394821,أبو فهد,+966501112233'
                       : 'Paste CSV or Tab-separated rows here...'
                   }
-                  className="w-full rounded-2xl border border-slate-300 p-3.5 text-xs font-mono text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-2xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-3.5 text-xs font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
@@ -742,13 +742,13 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           {activeTab === 'preview' && (
             <div className="space-y-4">
               {/* Filter Badges & Summary */}
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-100/80 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/60 dark:border-slate-800 p-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-600">{isAr ? 'تصفية السجلات:' : 'Filter rows:'}</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{isAr ? 'تصفية السجلات:' : 'Filter rows:'}</span>
                   <button
                     onClick={() => setFilterStatus('all')}
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
-                      filterStatus === 'all' ? 'bg-orange-600 text-white' : 'bg-white text-slate-700'
+                      filterStatus === 'all' ? 'bg-orange-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     {isAr ? 'الكل' : 'All'} ({parsedRows.length})
@@ -756,7 +756,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                   <button
                     onClick={() => setFilterStatus('valid')}
                     className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
-                      filterStatus === 'valid' ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700'
+                      filterStatus === 'valid' ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400'
                     }`}
                   >
                     {isAr ? 'سليم' : 'Valid'} ({validCount})
@@ -765,7 +765,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     <button
                       onClick={() => setFilterStatus('warning')}
                       className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
-                        filterStatus === 'warning' ? 'bg-amber-600 text-white' : 'bg-white text-amber-700'
+                        filterStatus === 'warning' ? 'bg-amber-600 text-white' : 'bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400'
                       }`}
                     >
                       {isAr ? 'تنبيهات' : 'Warnings'} ({warningCount})
@@ -775,7 +775,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                     <button
                       onClick={() => setFilterStatus('error')}
                       className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${
-                        filterStatus === 'error' ? 'bg-rose-600 text-white' : 'bg-white text-rose-700'
+                        filterStatus === 'error' ? 'bg-rose-600 text-white' : 'bg-white dark:bg-slate-800 text-rose-700 dark:text-rose-400'
                       }`}
                     >
                       {isAr ? 'أخطاء' : 'Errors'} ({errorCount})
@@ -784,7 +784,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                 </div>
 
                 {/* Option: Update existing */}
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={updateExisting}
@@ -800,9 +800,9 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
               </div>
 
               {/* Table */}
-              <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200">
+              <div className="max-h-72 overflow-y-auto rounded-2xl border border-slate-200 dark:border-slate-800">
                 <table className="w-full text-right text-xs">
-                  <thead className="sticky top-0 bg-slate-100 font-black text-slate-800">
+                  <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 font-black text-slate-800 dark:text-slate-200">
                     <tr>
                       <th className="py-2.5 px-3 w-10 text-center">#</th>
                       <th className="py-2.5 px-3">{isAr ? 'الحالة' : 'Status'}</th>
@@ -819,55 +819,55 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
                       <th className="py-2.5 px-3">{isAr ? 'الملاحظات' : 'Notes'}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {filteredRows.map((row, idx) => (
                       <tr
                         key={idx}
-                        className={`hover:bg-slate-50 transition-colors ${
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
                           row.status === 'error'
-                            ? 'bg-rose-50/40'
+                            ? 'bg-rose-50/40 dark:bg-rose-950/30'
                             : row.status === 'warning'
-                            ? 'bg-amber-50/30'
+                            ? 'bg-amber-50/30 dark:bg-amber-950/30'
                             : ''
                         }`}
                       >
-                        <td className="py-2 px-3 text-center font-mono text-slate-400">{idx + 1}</td>
+                        <td className="py-2 px-3 text-center font-mono text-slate-400 dark:text-slate-500">{idx + 1}</td>
                         <td className="py-2 px-3">
                           {row.status === 'valid' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
                               <CheckCircle2 className="h-3 w-3" />
                               {isAr ? 'جاهز' : 'Valid'}
                             </span>
                           )}
                           {row.status === 'warning' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/50 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300">
                               <AlertCircle className="h-3 w-3" />
                               {isAr ? 'تنبيه' : 'Warning'}
                             </span>
                           )}
                           {row.status === 'error' && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-800">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 dark:bg-rose-950/50 px-2 py-0.5 text-[10px] font-bold text-rose-800 dark:text-rose-300">
                               <AlertCircle className="h-3 w-3" />
                               {isAr ? 'خطأ' : 'Error'}
                             </span>
                           )}
                         </td>
-                        <td className="py-2 px-3 font-bold text-slate-900">
+                        <td className="py-2 px-3 font-bold text-slate-900 dark:text-slate-100">
                           {row.mapped.customerName || row.mapped.crusherName || row.mapped.transporterName || '-'}
                         </td>
-                        <td className="py-2 px-3 font-mono text-slate-600">
+                        <td className="py-2 px-3 font-mono text-slate-600 dark:text-slate-400">
                           {row.mapped.taxNumber || row.mapped.location || row.mapped.truckNo || '-'}
                         </td>
-                        <td className="py-2 px-3 text-slate-600">
+                        <td className="py-2 px-3 text-slate-600 dark:text-slate-300">
                           <div>{row.mapped.contactPerson}</div>
-                          <div className="text-[10px] font-mono text-slate-400">{row.mapped.phone}</div>
+                          <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500">{row.mapped.phone}</div>
                         </td>
-                        <td className="py-2 px-3 text-center font-mono font-bold text-orange-950">
+                        <td className="py-2 px-3 text-center font-mono font-bold text-orange-950 dark:text-orange-400">
                           {row.mapped.openingBalance !== undefined
                             ? `${row.mapped.openingBalance.toLocaleString()} ر.س`
                             : '-'}
                         </td>
-                        <td className="py-2 px-3 text-[11px] text-slate-500">
+                        <td className="py-2 px-3 text-[11px] text-slate-500 dark:text-slate-400">
                           {row.messages.length > 0 ? row.messages.join(' | ') : isAr ? 'بيانات سليمة' : 'All clear'}
                         </td>
                       </tr>
@@ -880,8 +880,8 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
-          <div className="text-xs text-slate-500">
+        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 px-6 py-4">
+          <div className="text-xs text-slate-500 dark:text-slate-400">
             {parsedRows.length > 0 && (
               <span>
                 {isAr
@@ -894,7 +894,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
             >
               {isAr ? 'إلغاء' : 'Cancel'}
             </button>

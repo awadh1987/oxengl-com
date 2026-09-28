@@ -1,9 +1,31 @@
 import React, { useState } from 'react';
 import { redirectToTenantSubdomain, getRootDomain, isLocalhost } from '../utils/subdomain';
+import {
+  Lock,
+  ShieldCheck,
+  Sparkles,
+  CheckCircle2,
+  CreditCard,
+  X,
+  Building2,
+  Database,
+  Globe,
+  ArrowRight,
+  ShieldAlert,
+  Check,
+  Zap,
+} from 'lucide-react';
 
 export interface TenantRegistrationViewProps {
   onSuccess?: () => void;
 }
+
+const SAUDI_BANK_DETAILS = {
+  bankName: 'مصرف الإنماء (Alinma Bank)',
+  accountName: 'شركة منصة أوكسن للخدمات اللوجستية (Oxen Logistics Platform Co.)',
+  iban: 'SA4405000068201234567890',
+  swift: 'INMASARI',
+};
 
 export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ onSuccess }) => {
   const navigate = (path: string) => {
@@ -34,16 +56,86 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   const [error, setError] = useState<string | null>(null);
   const [successData, setSuccessData] = useState<any | null>(null);
 
+  // Subscription tier and enterprise payment verification gating
+  const [subscriptionTier, setSubscriptionTier] = useState<'standard' | 'professional' | 'enterprise'>('standard');
+  const [isEnterprisePaid, setIsEnterprisePaid] = useState<boolean>(false);
+  const [enterprisePaymentRef, setEnterprisePaymentRef] = useState<string>('');
+  const [showUpgradeModal, setShowUpgradeModal] = useState<boolean>(false);
+  const [upgradeTriggerReason, setUpgradeTriggerReason] = useState<'custom_domain' | 'external_db' | 'tier_select' | 'general'>('general');
+
+  // Checkout modal states
+  const [checkoutMethod, setCheckoutMethod] = useState<'card' | 'bank_transfer'>('card');
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState<boolean>(false);
+  const [cardNumber, setCardNumber] = useState<string>('');
+  const [cardExpiry, setCardExpiry] = useState<string>('');
+  const [cardCvc, setCardCvc] = useState<string>('');
+  const [bankWireRef, setBankWireRef] = useState<string>('');
+
+  // Strict enterprise gating check
+  const requiresEnterprise = domainMode === 'custom' || useExternalDb;
+  const isEnterpriseGated = requiresEnterprise && (!isEnterprisePaid || subscriptionTier !== 'enterprise');
+
   const cleanDomain = (d: string) => {
     let clean = d.trim().toLowerCase();
     if (clean.includes('://')) clean = clean.split('://')[1];
     return clean.split('/')[0].split(':')[0].trim();
   };
 
+  const handleDomainModeSelect = (mode: 'subdomain' | 'custom') => {
+    if (mode === 'custom' && (!isEnterprisePaid || subscriptionTier !== 'enterprise')) {
+      setError("Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.");
+      setUpgradeTriggerReason('custom_domain');
+      setShowUpgradeModal(true);
+    }
+    setDomainMode(mode);
+  };
+
+  const handleToggleExternalDb = (checked: boolean) => {
+    if (checked && (!isEnterprisePaid || subscriptionTier !== 'enterprise')) {
+      setError("Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.");
+      setUpgradeTriggerReason('external_db');
+      setShowUpgradeModal(true);
+    }
+    setUseExternalDb(checked);
+  };
+
+  const handleSelectTier = (tier: 'standard' | 'professional' | 'enterprise') => {
+    if (tier === 'enterprise' && !isEnterprisePaid) {
+      setUpgradeTriggerReason('tier_select');
+      setShowUpgradeModal(true);
+      return;
+    }
+    setSubscriptionTier(tier);
+  };
+
+  const handleSimulatePayment = () => {
+    setIsVerifyingPayment(true);
+    setTimeout(() => {
+      const generatedRef = checkoutMethod === 'card'
+        ? `MADA-AUTH-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+        : (bankWireRef.trim() || `WIRE-${Math.random().toString(36).substring(2, 9).toUpperCase()}`);
+
+      setIsEnterprisePaid(true);
+      setSubscriptionTier('enterprise');
+      setEnterprisePaymentRef(generatedRef);
+      setIsVerifyingPayment(false);
+      setShowUpgradeModal(false);
+      setError(null);
+    }, 1200);
+  };
+
   const handleRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    // Gating check
+    if (isEnterpriseGated) {
+      setError("Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.");
+      setShowUpgradeModal(true);
+      return;
+    }
+
+    setLoading(true);
 
     const resolvedCustomDomain = domainMode === 'custom' && customDomain.trim()
       ? cleanDomain(customDomain)
@@ -74,6 +166,9 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           external_db_user: useExternalDb ? externalDbUser.trim() : undefined,
           external_db_password: useExternalDb ? externalDbPassword : undefined,
           external_db_sslmode: useExternalDb ? externalDbSslMode : undefined,
+          subscription_tier: subscriptionTier,
+          is_enterprise_paid: isEnterprisePaid,
+          payment_reference: enterprisePaymentRef || undefined,
         }),
       });
 
@@ -170,6 +265,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                 <span dir="ltr" className="font-mono unicode-bidi-isolate">{successData.external_db_host || 'External Host'}</span>
               </div>
             )}
+            {isEnterprisePaid && (
+              <div className="text-[10px] text-amber-400 font-bold pt-1 flex items-center gap-1">
+                <span>⭐</span>
+                <span>Enterprise Grade License: Verified Active ({enterprisePaymentRef || 'PAID'})</span>
+              </div>
+            )}
           </div>
 
           <button
@@ -205,7 +306,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
     <div className="min-h-screen min-h-[100dvh] erp-viewport-root bg-[#030712] flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
       <div className="w-full max-w-lg bg-[#090f1c] border border-slate-800/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl relative transition-all">
         {/* Header with Navigation */}
-        <div className="flex items-center justify-between mb-5 sm:mb-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-5">
           <div className="text-left">
             <h2 className="text-lg sm:text-xl font-bold text-slate-100 tracking-tight">
               Register Enterprise Workspace
@@ -224,10 +325,107 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           </button>
         </div>
 
+        {/* Subscription Tier Ribbon */}
+        <div className="mb-5 p-3 rounded-xl bg-[#030712] border border-slate-800 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              Workspace Subscription Grade
+            </span>
+            {isEnterprisePaid ? (
+              <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-md">
+                <CheckCircle2 className="h-3 w-3" />
+                <span>Enterprise Verified</span>
+              </span>
+            ) : (
+              <span className="text-[10px] font-mono text-slate-500">
+                Tier: {subscriptionTier.toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-1.5 text-center">
+            {/* Standard Tier */}
+            <button
+              type="button"
+              onClick={() => handleSelectTier('standard')}
+              className={`p-2 rounded-lg border text-left transition-all ${
+                subscriptionTier === 'standard'
+                  ? 'border-cyan-500 bg-cyan-950/20 text-white shadow-xs'
+                  : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="text-[11px] font-bold truncate">Standard</div>
+              <div className="text-[9px] text-slate-400 mt-0.5 truncate">Subdomain Only</div>
+            </button>
+
+            {/* Professional Tier */}
+            <button
+              type="button"
+              onClick={() => handleSelectTier('professional')}
+              className={`p-2 rounded-lg border text-left transition-all ${
+                subscriptionTier === 'professional'
+                  ? 'border-blue-500 bg-blue-950/20 text-white shadow-xs'
+                  : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="text-[11px] font-bold truncate">Professional</div>
+              <div className="text-[9px] text-slate-400 mt-0.5 truncate">Priority Queue</div>
+            </button>
+
+            {/* Enterprise Tier */}
+            <button
+              type="button"
+              onClick={() => handleSelectTier('enterprise')}
+              className={`p-2 rounded-lg border text-left transition-all relative ${
+                subscriptionTier === 'enterprise'
+                  ? 'border-amber-500 bg-amber-950/20 text-white shadow-xs'
+                  : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold truncate">Enterprise</span>
+                {isEnterprisePaid ? (
+                  <Check className="h-3 w-3 text-emerald-400" />
+                ) : (
+                  <Lock className="h-3 w-3 text-amber-400" />
+                )}
+              </div>
+              <div className="text-[9px] text-amber-400 mt-0.5 truncate">Custom Domain & DB</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Global Error / Warning Alert */}
         {error && (
           <div className="mb-4 sm:mb-5 p-3 sm:p-3.5 bg-rose-500/10 border border-rose-500/25 rounded-xl text-xs font-medium font-mono text-rose-400 text-center flex items-center justify-center gap-2">
             <span>⚠️</span>
             <span dir="ltr" className="unicode-bidi-isolate break-words">{error}</span>
+          </div>
+        )}
+
+        {/* Enterprise Upgrade CTA Alert when feature is gated */}
+        {isEnterpriseGated && (
+          <div className="mb-4 sm:mb-5 p-3.5 bg-gradient-to-r from-amber-950/30 via-slate-900 to-amber-950/30 border border-amber-500/40 rounded-xl space-y-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2 text-amber-400 text-xs font-bold">
+                <Lock className="h-4 w-4 shrink-0" />
+                <span>Enterprise Subscription & Payment Required</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setUpgradeTriggerReason(domainMode === 'custom' ? 'custom_domain' : 'external_db');
+                  setShowUpgradeModal(true);
+                }}
+                className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors shadow-md cursor-pointer flex items-center gap-1"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Upgrade & Verify Payment</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.
+            </p>
           </div>
         )}
 
@@ -269,13 +467,21 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           {/* Domain Architecture Selection */}
           <div className="p-3 sm:p-3.5 bg-slate-900/40 border border-slate-800 rounded-xl space-y-3">
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                <span dir="ltr" className="unicode-bidi-isolate">Domain Architecture</span>
-              </label>
+              <div className="flex items-center gap-2">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
+                  <span dir="ltr" className="unicode-bidi-isolate">Domain Architecture</span>
+                </label>
+                {domainMode === 'custom' && !isEnterprisePaid && (
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+                    <Lock className="h-2.5 w-2.5" />
+                    <span>Enterprise Only</span>
+                  </span>
+                )}
+              </div>
               <div className="flex bg-[#030712] border border-slate-800 rounded-lg p-0.5 text-[11px] shrink-0">
                 <button
                   type="button"
-                  onClick={() => setDomainMode('subdomain')}
+                  onClick={() => handleDomainModeSelect('subdomain')}
                   className={`px-3 py-1 rounded-md transition-colors ${
                     domainMode === 'subdomain'
                       ? 'bg-cyan-600 text-white font-bold shadow-sm'
@@ -286,13 +492,14 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                 </button>
                 <button
                   type="button"
-                  onClick={() => setDomainMode('custom')}
-                  className={`px-3 py-1 rounded-md transition-colors ${
+                  onClick={() => handleDomainModeSelect('custom')}
+                  className={`px-3 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
                     domainMode === 'custom'
                       ? 'bg-cyan-600 text-white font-bold shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
+                  {!isEnterprisePaid && <Lock className="h-3 w-3 text-amber-400" />}
                   <span dir="ltr" className="inline-block unicode-bidi-isolate">Custom Domain</span>
                 </button>
               </div>
@@ -328,21 +535,34 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             {/* Custom Domain Input (Conditional) */}
             {domainMode === 'custom' && (
               <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
-                <div>
+                <div className="flex items-center justify-between">
                   <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                     <span>🌐</span>
                     <span dir="ltr" className="unicode-bidi-isolate">Dedicated Custom Domain</span>
                   </label>
-                  <input
-                    type="text"
-                    dir="ltr"
-                    value={customDomain}
-                    onChange={(e) => setCustomDomain(e.target.value)}
-                    placeholder="erp.company.com"
-                    className="w-full px-3 py-2 bg-[#030712] border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
-                    required={domainMode === 'custom'}
-                  />
+                  {!isEnterprisePaid && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpgradeTriggerReason('custom_domain');
+                        setShowUpgradeModal(true);
+                      }}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 underline"
+                    >
+                      <span>Upgrade to Unlock</span>
+                      <ArrowRight className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
+                <input
+                  type="text"
+                  dir="ltr"
+                  value={customDomain}
+                  onChange={(e) => setCustomDomain(e.target.value)}
+                  placeholder="erp.company.com"
+                  className="w-full px-3 py-2 bg-[#030712] border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
+                  required={domainMode === 'custom'}
+                />
                 <div className="p-2.5 bg-[#030712] border border-cyan-500/20 rounded-lg text-[10px] text-slate-400 space-y-1">
                   <div className="text-cyan-300 font-semibold flex flex-wrap items-center gap-1">
                     <span>⚡</span>
@@ -395,14 +615,22 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           <div className="pt-2 border-t border-slate-800/80">
             <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-xl border border-slate-800">
               <div className="pr-2">
-                <span className="text-xs font-bold text-slate-200 block">External Database Hosting</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-200 block">External Database Hosting</span>
+                  {!isEnterprisePaid && (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" />
+                      <span>Enterprise</span>
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] text-slate-400">Bring your own PostgreSQL instance (Dedicated Data Residency)</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer shrink-0">
                 <input
                   type="checkbox"
                   checked={useExternalDb}
-                  onChange={(e) => setUseExternalDb(e.target.checked)}
+                  onChange={(e) => handleToggleExternalDb(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-600"></div>
@@ -411,9 +639,23 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
 
             {useExternalDb && (
               <div className="mt-3 p-3 sm:p-3.5 bg-[#030712] border border-cyan-500/20 rounded-xl space-y-3">
-                <div className="text-[11px] font-semibold text-cyan-400 flex flex-wrap items-center gap-1.5">
-                  <span>🔒</span>
-                  <span>External PostgreSQL Credentials (TLS Encrypted)</span>
+                <div className="flex items-center justify-between">
+                  <div className="text-[11px] font-semibold text-cyan-400 flex flex-wrap items-center gap-1.5">
+                    <span>🔒</span>
+                    <span>External PostgreSQL Credentials (TLS Encrypted)</span>
+                  </div>
+                  {!isEnterprisePaid && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUpgradeTriggerReason('external_db');
+                        setShowUpgradeModal(true);
+                      }}
+                      className="text-[10px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 underline"
+                    >
+                      <span>Verify License</span>
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
@@ -511,15 +753,232 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl py-3 px-4 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-cyan-950/40"
-          >
-            {loading ? 'Provisioning Cloud Framework Matrix...' : 'Deploy Secure Workspace Infrastructure'}
-          </button>
+          {/* Gated Deployment Button */}
+          {isEnterpriseGated ? (
+            <button
+              type="button"
+              onClick={() => {
+                setUpgradeTriggerReason(domainMode === 'custom' ? 'custom_domain' : 'external_db');
+                setShowUpgradeModal(true);
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-700/80 text-amber-400 border border-amber-500/40 rounded-xl py-3 px-4 text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-black/60"
+            >
+              <Lock className="h-4 w-4 text-amber-400 shrink-0" />
+              <span>Upgrade & Verify Payment to Deploy Enterprise Workspace</span>
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white rounded-xl py-3 px-4 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-cyan-950/40"
+            >
+              {loading ? 'Provisioning Cloud Framework Matrix...' : 'Deploy Secure Workspace Infrastructure'}
+            </button>
+          )}
         </form>
       </div>
+
+      {/* Enterprise Upgrade & Payment Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-lg bg-[#090f1c] border border-cyan-500/30 rounded-2xl p-5 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 text-left">
+            {/* Close Button */}
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute end-4 top-4 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Modal Header */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                  <span>Enterprise Grade Subscription</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Required
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.
+                </p>
+              </div>
+            </div>
+
+            {/* Included Features Pill Matrix */}
+            <div className="my-4 p-3 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2 text-xs">
+              <div className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
+                Included in Enterprise Grade:
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                <div className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>Dedicated Custom Domain & SSL</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>External PostgreSQL Residency</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>White-Label Branding & Logos</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                  <span>24/7 Dedicated Support & 99.99% SLA</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pricing Tag */}
+            <div className="p-3 bg-gradient-to-r from-cyan-950/40 to-blue-950/40 rounded-xl border border-cyan-500/20 flex items-center justify-between mb-4">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Enterprise Annual Plan</div>
+                <div className="text-lg font-black text-white font-mono">
+                  SAR 4,999 <span className="text-xs text-slate-400 font-normal">/ year</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] text-emerald-400 font-bold block">Instant Verification</span>
+                <span className="text-[9px] text-slate-400 font-mono">Tax Invoice Included</span>
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div className="space-y-3">
+              <div className="flex bg-[#030712] border border-slate-800 rounded-lg p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCheckoutMethod('card')}
+                  className={`flex-1 py-1.5 rounded-md font-bold transition-colors flex items-center justify-center gap-1.5 ${
+                    checkoutMethod === 'card'
+                      ? 'bg-cyan-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span>Mada / Credit Card</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCheckoutMethod('bank_transfer')}
+                  className={`flex-1 py-1.5 rounded-md font-bold transition-colors flex items-center justify-center gap-1.5 ${
+                    checkoutMethod === 'bank_transfer'
+                      ? 'bg-cyan-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>Saudi Bank Wire (سداد)</span>
+                </button>
+              </div>
+
+              {checkoutMethod === 'card' ? (
+                <div className="p-3 bg-[#030712] border border-slate-800 rounded-xl space-y-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Card Number (Mada / Visa / MasterCard)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="4000 1234 5678 9010"
+                      value={cardNumber}
+                      onChange={(e) => setCardNumber(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                        Expiry Date
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="MM/YY"
+                        value={cardExpiry}
+                        onChange={(e) => setCardExpiry(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                        CVV / CVC
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="•••"
+                        maxLength={4}
+                        value={cardCvc}
+                        onChange={(e) => setCardCvc(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-[#030712] border border-slate-800 rounded-xl space-y-2 text-xs">
+                  <div className="text-[11px] font-bold text-slate-300">
+                    {SAUDI_BANK_DETAILS.bankName}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
+                    IBAN: <span className="text-white font-bold select-all">{SAUDI_BANK_DETAILS.iban}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400">
+                    Beneficiary: {SAUDI_BANK_DETAILS.accountName}
+                  </div>
+                  <div className="pt-2 border-t border-slate-800">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                      Wire Transfer Reference Number (رقم الحوالة)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. TRX-88421098"
+                      value={bankWireRef}
+                      onChange={(e) => setBankWireRef(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Verification and Pay Action Button */}
+            <div className="mt-5 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(false)}
+                className="px-4 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs text-slate-300 font-semibold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSimulatePayment}
+                disabled={isVerifyingPayment}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs transition-all flex items-center gap-2 shadow-lg shadow-amber-950/40 cursor-pointer disabled:opacity-50"
+              >
+                {isVerifyingPayment ? (
+                  <>
+                    <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-950 border-t-transparent" />
+                    <span>Verifying Enterprise Payment...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-3.5 w-3.5" />
+                    <span>Verify Payment & Unlock Enterprise</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default TenantRegistrationView;

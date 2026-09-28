@@ -486,7 +486,7 @@ def get_corporate_cv_payload(
     return {
         "meta": {
             "profile_title": f"Corporate Profile & Prequalification Dossier — {company.name}",
-            "standard": "GLOBAL-STD-2026.1 / ISO-21500",
+            "standard": "ISO-21500 / ENTERPRISE-STD",
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "generated_by": tenant_ctx.user.full_name or tenant_ctx.user.email,
             "tenant_id": str(target_company_id),
@@ -634,7 +634,7 @@ def download_corporate_cv_pdf(
         headers={
             "Content-Disposition": disposition,
             "Content-Length": str(len(pdf_bytes)),
-            "X-Enterprise-Standard": "GLOBAL-STD-2026.1",
+            "X-Enterprise-Standard": "ISO-21500 / ENTERPRISE-STD",
         },
     )
 

@@ -8,6 +8,7 @@ import {
   Download,
   CheckCircle2,
 } from 'lucide-react';
+import { HoverIcon } from '../common/HoverIcon';
 
 export interface BulkActionItem {
   id: string;
@@ -84,7 +85,9 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
         {/* Selection Count Badge */}
         <div className="flex items-center gap-2 pr-3 border-r border-slate-700/80 shrink-0">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30">
-            <CheckSquare className="h-4 w-4" />
+            <HoverIcon className="h-4 w-4">
+              <CheckSquare className="h-full w-full" />
+            </HoverIcon>
           </div>
           <div className="text-xs font-mono font-bold tracking-tight">
             <span className="text-sky-400 font-black">{count}</span>{' '}
@@ -123,12 +126,16 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
                 type="button"
                 onClick={() => handleActionClick(action)}
                 disabled={action.disabled || isProcessing}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0 ${btnClass}`}
+                className={`group flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shrink-0 ${btnClass}`}
               >
                 {React.isValidElement(action.icon) ? (
-                  action.icon
+                  <HoverIcon className="h-3.5 w-3.5 shrink-0">
+                    {action.icon}
+                  </HoverIcon>
                 ) : action.icon ? (
-                  React.createElement(action.icon as React.ComponentType<{ className?: string }>, { className: 'h-3.5 w-3.5 shrink-0' })
+                  <HoverIcon className="h-3.5 w-3.5 shrink-0">
+                    {React.createElement(action.icon as React.ComponentType<{ className?: string }>, { className: 'h-full w-full' })}
+                  </HoverIcon>
                 ) : null}
                 <span>{action.label}</span>
               </button>
@@ -142,9 +149,11 @@ export const BulkActionBar: React.FC<BulkActionBarProps> = ({
           onClick={onClearSelection}
           disabled={isProcessing}
           title={isRTL ? 'إلغاء التحديد' : 'Clear selection'}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors shrink-0 ml-1 cursor-pointer"
+          className="group flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-colors shrink-0 ml-1 cursor-pointer"
         >
-          <X className="h-4 w-4" />
+          <HoverIcon className="h-4 w-4">
+            <X className="h-full w-full" />
+          </HoverIcon>
         </button>
       </aside>
 

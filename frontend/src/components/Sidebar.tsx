@@ -706,7 +706,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         isDriverMode ? 'bg-[#F05627] text-white shadow-xs' : 'bg-slate-800 text-blue-300'
                       }`}
                     >
-                      <Truck className="h-3.5 w-3.5" />
+                      <HoverIcon className="h-3.5 w-3.5">
+                        <Truck className="h-full w-full" />
+                      </HoverIcon>
                     </div>
                     <div>
                       <span className="block text-[11px] font-black text-white">
@@ -739,14 +741,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   type="button"
                   onClick={handleToggleDriverView}
-                  className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
+                  className={`group flex h-8 w-8 items-center justify-center rounded-xl border transition-all ${
                     isDriverMode
                       ? 'border-orange-400 bg-[#F05627] text-white shadow-sm'
                       : 'border-slate-700 bg-slate-800/80 text-slate-400 hover:text-white'
                   }`}
                   title={isAr ? 'تبديل وضع السائقين' : 'Driver Mode'}
                 >
-                  <Truck className="h-4 w-4" />
+                  <HoverIcon className="h-4 w-4">
+                    <Truck className="h-full w-full" />
+                  </HoverIcon>
                 </button>
               </div>
             )}
@@ -807,9 +811,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
                           )}
                           {isCatExpanded ? (
-                            <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
+                            <HoverIcon className="h-3.5 w-3.5 text-slate-500">
+                              <ChevronUp className="h-full w-full" />
+                            </HoverIcon>
                           ) : (
-                            <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
+                            <HoverIcon className="h-3.5 w-3.5 text-slate-500">
+                              <ChevronDown className="h-full w-full" />
+                            </HoverIcon>
                           )}
                         </div>
                       </button>

@@ -31,6 +31,7 @@ import {
   FileCode,
   Eye,
 } from 'lucide-react';
+import { HoverIcon } from '../../components/common/HoverIcon';
 import { useApp } from '../../context/AppContext';
 import {
   erpApi,
@@ -422,7 +423,7 @@ export const CorporateVault: React.FC = () => {
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-sky-500/10 text-sky-400 border border-sky-500/20 whitespace-nowrap shrink-0">
                 <ShieldCheck className="w-3 h-3 shrink-0" />
-                {isAr ? 'معيار GLOBAL-STD-2026.1 / ISO-21500' : 'GLOBAL-STD-2026.1 / ISO-21500'}
+                {isAr ? 'معيار الامتثال والحوكمة المؤسسية / ISO-21500' : 'Enterprise Compliance Standard / ISO-21500'}
               </span>
 
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shrink-0 ${
@@ -491,14 +492,20 @@ export const CorporateVault: React.FC = () => {
             >
               {isGeneratingPdf ? (
                 <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <HoverIcon className="w-3.5 h-3.5">
+                    <RefreshCw className="h-full w-full animate-spin" />
+                  </HoverIcon>
                   <span>{isAr ? 'جاري التجميع...' : 'Compiling...'}</span>
                 </>
               ) : (
                 <>
-                  <Award className="w-3.5 h-3.5 text-amber-300" />
+                  <HoverIcon className="w-3.5 h-3.5">
+                    <Award className="h-full w-full text-amber-300" />
+                  </HoverIcon>
                   <span>{isAr ? 'توليد الملف المؤسسي (Enterprise Profile)' : 'Generate Corporate Profile (Enterprise)'}</span>
-                  <Download className="w-3 h-3 opacity-70 group-hover:opacity-100" />
+                  <HoverIcon className="w-3 h-3 opacity-70 group-hover:opacity-100">
+                    <Download className="h-full w-full" />
+                  </HoverIcon>
                 </>
               )}
             </button>
@@ -507,23 +514,27 @@ export const CorporateVault: React.FC = () => {
             <button
               onClick={() => handleGeneratePdf(false)}
               disabled={isGeneratingPdf}
-              className={`p-1.5 rounded-lg border transition-all flex items-center justify-center ${
+              className={`group p-1.5 rounded-lg border transition-all flex items-center justify-center ${
                 isDark
                   ? 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300 hover:text-white'
                   : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
               }`}
               title={isAr ? 'تحميل مباشر كملف PDF' : 'Download file directly'}
             >
-              <FileText className="w-3.5 h-3.5" />
+              <HoverIcon className="w-3.5 h-3.5">
+                <FileText className="h-full w-full" />
+              </HoverIcon>
             </button>
 
             {/* Register Document Button */}
             {canMutate && (
               <button
                 onClick={() => setIsUploadModalOpen(true)}
-                className="px-2.5 py-1.5 rounded-lg font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                className="group px-2.5 py-1.5 rounded-lg font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <HoverIcon className="w-3.5 h-3.5">
+                  <Plus className="h-full w-full" />
+                </HoverIcon>
                 <span>{isAr ? 'تسجيل وثيقة' : 'Register Document'}</span>
               </button>
             )}
@@ -532,14 +543,16 @@ export const CorporateVault: React.FC = () => {
             <button
               onClick={() => loadData(true)}
               disabled={isRefreshing}
-              className={`p-1.5 rounded-lg border transition-all ${
+              className={`group p-1.5 rounded-lg border transition-all ${
                 isDark
                   ? 'bg-slate-800/80 hover:bg-slate-700/80 border-slate-700 text-slate-300'
                   : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700'
               }`}
               title={isAr ? 'تحديث البيانات' : 'Refresh'}
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
+              <HoverIcon className="w-3.5 h-3.5">
+                <RefreshCw className={`h-full w-full ${isRefreshing ? 'animate-spin text-sky-400' : ''}`} />
+              </HoverIcon>
             </button>
           </div>
         </div>
@@ -963,10 +976,12 @@ export const CorporateVault: React.FC = () => {
                           {isAdmin && doc.verification_status !== 'VERIFIED' && (
                             <button
                               onClick={() => handleQuickVerify(doc, 'VERIFIED')}
-                              className="neo-action-btn neo-btn-verify"
+                              className="group neo-action-btn neo-btn-verify"
                               title={isAr ? 'اعتماد الوثيقة فورياً' : 'Approve & Verify'}
                             >
-                              <Check className="w-2.5 h-2.5" />
+                              <HoverIcon className="w-2.5 h-2.5">
+                                <Check className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
                         </div>
@@ -978,20 +993,24 @@ export const CorporateVault: React.FC = () => {
                           {canMutate && (
                             <button
                               onClick={() => openEditModal(doc)}
-                              className="neo-action-btn neo-btn-edit"
+                              className="group neo-action-btn neo-btn-edit"
                               title={isAr ? 'تعديل البيانات' : 'Edit details'}
                             >
-                              <Edit3 className="w-2.5 h-2.5" />
+                              <HoverIcon className="w-2.5 h-2.5">
+                                <Edit3 className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
 
                           {canMutate && (
                             <button
                               onClick={() => setDeletingDoc(doc)}
-                              className="neo-action-btn neo-btn-delete"
+                              className="group neo-action-btn neo-btn-delete"
                               title={isAr ? 'حذف الوثيقة' : 'Delete'}
                             >
-                              <Trash2 className="w-2.5 h-2.5" />
+                              <HoverIcon className="w-2.5 h-2.5">
+                                <Trash2 className="h-full w-full" />
+                              </HoverIcon>
                             </button>
                           )}
                         </div>
@@ -1029,9 +1048,12 @@ export const CorporateVault: React.FC = () => {
               </div>
               <button
                 onClick={() => setIsUploadModalOpen(false)}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                className="group p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title={isAr ? 'إغلاق' : 'Close'}
               >
-                <X className="w-4 h-4" />
+                <HoverIcon className="w-4 h-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             </div>
 
@@ -1092,7 +1114,7 @@ export const CorporateVault: React.FC = () => {
                     type="text"
                     value={uploadForm.title}
                     onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-                    placeholder={isAr ? 'مثال: السجل التجاري الموحد 2026' : 'e.g. Commercial Registration Certificate'}
+                    placeholder={isAr ? 'مثال: السجل التجاري الموحد' : 'e.g. Commercial Registration Certificate'}
                     className="w-full py-2.5 px-3 rounded-xl text-xs bg-slate-800 border border-slate-700 text-slate-200 outline-none focus:border-sky-500"
                     required
                   />
@@ -1219,9 +1241,12 @@ export const CorporateVault: React.FC = () => {
               </div>
               <button
                 onClick={() => setEditingDoc(null)}
-                className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+                className="group p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title={isAr ? 'إغلاق' : 'Close'}
               >
-                <X className="w-4 h-4" />
+                <HoverIcon className="w-4 h-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             </div>
 

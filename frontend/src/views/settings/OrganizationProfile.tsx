@@ -24,8 +24,12 @@ import {
   ExternalLink,
   ChevronUp,
   Globe,
+  X,
+  Palette,
 } from 'lucide-react';
+import { HoverIcon } from '../../components/common/HoverIcon';
 import { CustomDomainWizard } from '../../components/platform/CustomDomainWizard';
+import { TenantBrandingCustomizer } from '../../components/settings/TenantBrandingCustomizer';
 import { useApp } from '../../context/AppContext';
 import {
   erpApi,
@@ -57,7 +61,7 @@ export const OrganizationProfile: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [expandedNodes, setExpandedNodes] = useState<Record<string, boolean>>({});
-  const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'branches' | 'cost_centers' | 'purchasing_orgs' | 'custom_domains'>('all');
+  const [activeTabFilter, setActiveTabFilter] = useState<'all' | 'branches' | 'cost_centers' | 'purchasing_orgs' | 'custom_domains' | 'branding'>('all');
 
   // Modal states
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -470,7 +474,7 @@ export const OrganizationProfile: React.FC = () => {
               <button
                 type="button"
                 onClick={() => toggleNode(node.id)}
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                className={`group flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
                   isDark
                     ? 'border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300'
                     : 'border-slate-200 bg-slate-100 hover:bg-slate-200 text-slate-700'
@@ -478,9 +482,13 @@ export const OrganizationProfile: React.FC = () => {
                 title={isExpanded ? (isAr ? 'طي' : 'Collapse') : isAr ? 'توسيع' : 'Expand'}
               >
                 {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
+                  <HoverIcon className="h-4 w-4">
+                    <ChevronDown className="h-full w-full" />
+                  </HoverIcon>
                 ) : (
-                  <ChevronRight className={`h-4 w-4 ${isAr ? 'rotate-180' : ''}`} />
+                  <HoverIcon className="h-4 w-4">
+                    <ChevronRight className={`h-full w-full ${isAr ? 'rotate-180' : ''}`} />
+                  </HoverIcon>
                 )}
               </button>
 
@@ -576,14 +584,16 @@ export const OrganizationProfile: React.FC = () => {
                         isRoot,
                       })
                     }
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
+                    className={`group flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
                       isDark
                         ? 'border-teal-700/60 bg-teal-950/40 hover:bg-teal-900/60 text-teal-300'
                         : 'border-teal-200 bg-teal-50 hover:bg-teal-100 text-teal-800'
                     }`}
                     title={isAr ? 'إضافة فرع تشغيلي جديد تحت هذا الكيان' : 'Add Child Branch'}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <HoverIcon className="h-3.5 w-3.5">
+                      <Plus className="h-full w-full" />
+                    </HoverIcon>
                     <span>{isAr ? 'فرع' : 'Branch'}</span>
                   </button>
 
@@ -597,14 +607,16 @@ export const OrganizationProfile: React.FC = () => {
                         isRoot,
                       })
                     }
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
+                    className={`group flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
                       isDark
                         ? 'border-emerald-700/60 bg-emerald-950/40 hover:bg-emerald-900/60 text-emerald-300'
                         : 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800'
                     }`}
                     title={isAr ? 'إضافة مركز تكلفة مالي' : 'Add Cost Center'}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <HoverIcon className="h-3.5 w-3.5">
+                      <Plus className="h-full w-full" />
+                    </HoverIcon>
                     <span>{isAr ? 'مركز تكلفة' : 'Cost Center'}</span>
                   </button>
 
@@ -618,14 +630,16 @@ export const OrganizationProfile: React.FC = () => {
                         isRoot,
                       })
                     }
-                    className={`flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
+                    className={`group flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors border ${
                       isDark
                         ? 'border-purple-700/60 bg-purple-950/40 hover:bg-purple-900/60 text-purple-300'
                         : 'border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800'
                     }`}
                     title={isAr ? 'إضافة منظمة مشتريات وتوريد' : 'Add Purchasing Org'}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <HoverIcon className="h-3.5 w-3.5">
+                      <Plus className="h-full w-full" />
+                    </HoverIcon>
                     <span>{isAr ? 'منظمة مشتريات' : 'Purchasing Org'}</span>
                   </button>
 
@@ -634,10 +648,12 @@ export const OrganizationProfile: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleDeleteBranch(node.id, node.name)}
-                      className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                      className="group p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                       title={isAr ? 'حذف الفرع' : 'Delete Branch'}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <HoverIcon className="h-4 w-4">
+                        <Trash2 className="h-full w-full" />
+                      </HoverIcon>
                     </button>
                   )}
                 </div>
@@ -702,10 +718,12 @@ export const OrganizationProfile: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleDeleteCostCenter(cc.id, cc.name)}
-                            className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                            className="group p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                             title={isAr ? 'حذف مركز التكلفة' : 'Delete Cost Center'}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <Trash2 className="h-full w-full" />
+                            </HoverIcon>
                           </button>
                         )}
                       </div>
@@ -726,7 +744,7 @@ export const OrganizationProfile: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <ShoppingCart className="h-4 w-4 text-purple-400" />
                       <span className="text-xs font-bold text-purple-400 uppercase tracking-wider">
-                        {isAr ? 'منظمات المشتريات والتوريد' : 'Purchasing Organizations (MM / S2P)'}
+                        {isAr ? 'منظمات المشتريات والتوريد' : 'Purchasing Organizations (Procurement / S2P)'}
                       </span>
                       <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.2 rounded-full font-mono">
                         {filteredPurchasingOrgs.length}
@@ -769,10 +787,12 @@ export const OrganizationProfile: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => handleDeletePurchasingOrg(po.id, po.name)}
-                            className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                            className="group p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
                             title={isAr ? 'حذف منظمة المشتريات' : 'Delete Purchasing Org'}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <HoverIcon className="h-3.5 w-3.5">
+                              <Trash2 className="h-full w-full" />
+                            </HoverIcon>
                           </button>
                         )}
                       </div>
@@ -818,11 +838,11 @@ export const OrganizationProfile: React.FC = () => {
                   }`}
                 >
                   {isAr
-                    ? 'الهيكل التنظيمي للمنشأة (Enterprise Organizational Management)'
-                    : 'Enterprise Organization Profile'}
+                    ? 'الهيكل التنظيمي للمنشأة وإدارة الكيانات'
+                    : 'Enterprise Organizational Management'}
                 </h1>
-                <span className="text-xs font-mono font-bold bg-[#F05627]/10 text-[#F05627] border border-[#F05627]/30 px-2 py-0.5 rounded-full">
-                  Phase 7
+                <span className="text-xs font-mono font-bold bg-[#F05627]/10 text-[#F05627] border border-[#F05627]/30 px-2.5 py-0.5 rounded-full">
+                  {isAr ? 'الهيكل المؤسسي' : 'Organizational Hierarchy'}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-3xl leading-relaxed">
@@ -861,14 +881,33 @@ export const OrganizationProfile: React.FC = () => {
               type="button"
               onClick={() => fetchTree(true)}
               disabled={isRefreshing}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition-colors ${
+              className={`group flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-xl border transition-colors ${
                 isDark
                   ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
                   : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
               }`}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <HoverIcon className="h-3.5 w-3.5">
+                <RefreshCw className={`h-full w-full ${isRefreshing ? 'animate-spin' : ''}`} />
+              </HoverIcon>
               <span>{isAr ? 'تحديث' : 'Refresh'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTabFilter('branding')}
+              className={`group flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl border transition-all ${
+                activeTabFilter === 'branding'
+                  ? 'border-[#F05627] bg-[#F05627] text-white shadow-md shadow-[#F05627]/20'
+                  : isDark
+                  ? 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-800'
+              }`}
+            >
+              <HoverIcon className="h-3.5 w-3.5">
+                <Palette className="h-full w-full text-cyan-400 group-hover:text-white" />
+              </HoverIcon>
+              <span>{isAr ? 'تخصيص الهوية والشعار' : 'Branding & Theme'}</span>
             </button>
 
             {/* Super Admin Top-Level Company Code Creation */}
@@ -882,9 +921,11 @@ export const OrganizationProfile: React.FC = () => {
                     isRoot: true,
                   })
                 }
-                className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-md shadow-indigo-600/20 transition-all"
+                className="group flex items-center gap-1.5 text-xs font-bold px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-md shadow-indigo-600/20 transition-all"
               >
-                <Plus className="h-4 w-4" />
+                <HoverIcon className="h-4 w-4">
+                  <Plus className="h-full w-full" />
+                </HoverIcon>
                 <span>{isAr ? 'إضافة كيان رئيسي (Company Code)' : 'Add Company Code'}</span>
               </button>
             )}
@@ -978,9 +1019,12 @@ export const OrganizationProfile: React.FC = () => {
             <button
               type="button"
               onClick={() => setSearchTerm('')}
-              className="absolute end-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              className="group absolute end-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              title={isAr ? 'مسح البحث' : 'Clear search'}
             >
-              ✕
+              <HoverIcon className="h-3.5 w-3.5">
+                <X className="h-full w-full" />
+              </HoverIcon>
             </button>
           )}
         </div>
@@ -994,6 +1038,7 @@ export const OrganizationProfile: React.FC = () => {
               { id: 'cost_centers', labelAr: 'مراكز التكلفة', labelEn: 'Cost Centers' },
               { id: 'purchasing_orgs', labelAr: 'منظمات الشراء', labelEn: 'Purchasing Orgs' },
               { id: 'custom_domains', labelAr: 'النطاق المخصص وSSL', labelEn: 'Custom Domains & SSL' },
+              { id: 'branding', labelAr: 'تخصيص الهوية والمظهر', labelEn: 'Tenant Branding & Theme' },
             ] as const
           ).map((tab) => (
             <button
@@ -1014,12 +1059,56 @@ export const OrganizationProfile: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Interactive Hierarchical Tree Container or Custom Domains Management */}
+      {/* Quick Tenant Branding & Theme Shortcut Banner for All Elements View */}
+      {activeTabFilter === 'all' && (
+        <div
+          className={`rounded-2xl p-4 sm:p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all ${
+            isDark
+              ? 'bg-gradient-to-r from-[#090f1c] via-[#0d1527] to-[#090f1c] border-slate-800 shadow-md'
+              : 'bg-white border-slate-200 shadow-sm'
+          }`}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-3 rounded-xl bg-[#F05627]/10 border border-[#F05627]/30 text-[#F05627] shrink-0">
+              <Palette className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-bold text-slate-100">
+                  {isAr ? 'تخصيص شعار ومظهر المنشأة' : 'Tenant Branding & Theme Customization'}
+                </h4>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                  {isAr ? 'تخصيص الواجهة' : 'Branding'}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5 max-w-xl">
+                {isAr
+                  ? 'قم برفع شعار منشأتك وضبط ألوان السمة الرئيسية وخلفية القائمة الجانبية لتخصيص بيئة العمل والمستندات.'
+                  : 'Upload corporate logo and adjust primary theme and dark sidebar accents for your workspace and official printouts.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTabFilter('branding')}
+            className="group flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl bg-[#F05627] hover:bg-[#F05627]/90 text-white shadow-md shadow-[#F05627]/20 transition-all shrink-0 cursor-pointer"
+          >
+            <HoverIcon className="h-3.5 w-3.5">
+              <Sparkles className="h-full w-full" />
+            </HoverIcon>
+            <span>{isAr ? 'تخصيص الشعار والمظهر ←' : 'Customize Branding & Theme →'}</span>
+          </button>
+        </div>
+      )}
+
+      {/* 4. Interactive Hierarchical Tree Container, Custom Domains Management, or Tenant Branding Customizer */}
       {activeTabFilter === 'custom_domains' ? (
         <CustomDomainWizard
           tenantId={currentCompany?.id || ''}
           tenantSlug={currentCompany?.slug || 'tenant'}
         />
+      ) : activeTabFilter === 'branding' ? (
+        <TenantBrandingCustomizer />
       ) : (
         <div
           className={`rounded-2xl p-4 sm:p-6 border min-h-[400px] ${
@@ -1079,9 +1168,12 @@ export const OrganizationProfile: React.FC = () => {
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="group text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+                title={isAr ? 'إغلاق' : 'Close'}
               >
-                ✕
+                <HoverIcon className="h-4 w-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             </div>
 
@@ -1214,15 +1306,18 @@ export const OrganizationProfile: React.FC = () => {
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-emerald-400" />
                 <h3 className="text-base font-bold">
-                  {isAr ? 'إضافة مركز تكلفة مالي جديد' : 'Add Cost Center (CO)'}
+                  {isAr ? 'إضافة مركز تكلفة مالي جديد' : 'Add Cost Center (Finance)'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="group text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+                title={isAr ? 'إغلاق' : 'Close'}
               >
-                ✕
+                <HoverIcon className="h-4 w-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             </div>
 
@@ -1378,15 +1473,18 @@ export const OrganizationProfile: React.FC = () => {
               <div className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5 text-purple-400" />
                 <h3 className="text-base font-bold">
-                  {isAr ? 'إضافة منظمة مشتريات وتوريد' : 'Add Purchasing Organization (MM)'}
+                  {isAr ? 'إضافة منظمة مشتريات وتوريد' : 'Add Purchasing Organization (Procurement)'}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-slate-400 hover:text-white p-1 rounded-lg"
+                className="group text-slate-400 hover:text-white p-1 rounded-lg transition-colors"
+                title={isAr ? 'إغلاق' : 'Close'}
               >
-                ✕
+                <HoverIcon className="h-4 w-4">
+                  <X className="h-full w-full" />
+                </HoverIcon>
               </button>
             </div>
 

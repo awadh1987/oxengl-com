@@ -342,53 +342,53 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         </div>
 
         {/* Live Auto-Calculated Metrics Bar (Real-Time Summary) */}
-        <div className="mt-4 grid grid-cols-2 gap-2.5 rounded-2xl border border-orange-100 bg-gradient-to-r from-orange-50/80 via-amber-50/50 to-slate-50 p-3 sm:grid-cols-5">
-          <div className="rounded-xl border border-white/80 bg-white/90 p-2 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 rounded-2xl border border-orange-200/60 dark:border-slate-800 bg-gradient-to-r from-orange-50/80 via-amber-50/50 to-slate-50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-950 p-3 sm:grid-cols-5">
+          <div className="rounded-xl border border-white/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
               {isAr ? `الفاقد (${uom})` : `Wastage (${uom})`}
             </span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className={`text-xs font-black ${qtyWastage > 0 ? 'text-rose-600' : 'text-slate-700'}`}>
+              <span className={`text-xs font-black ${qtyWastage > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-200'}`}>
                 {qtyWastage.toFixed(2)}
               </span>
-              <span className="text-[10px] text-slate-500 font-bold">{uom}</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold">{uom}</span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/80 bg-white/90 p-2 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">
+          <div className="rounded-xl border border-white/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
               {isAr ? 'نسبة الفاقد %' : 'Wastage %'}
             </span>
             <div className="flex items-baseline gap-1 mt-0.5">
-              <span className={`text-xs font-black ${isExcessLoss ? 'text-rose-600' : 'text-emerald-600'}`}>
+              <span className={`text-xs font-black ${isExcessLoss ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 {wastagePercentage}%
               </span>
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/80 bg-white/90 p-2 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">
+          <div className="rounded-xl border border-white/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
               {isAr ? 'ضريبة القيمة المضافة 15%' : 'VAT 15%'}
             </span>
-            <div className="text-xs font-black text-orange-950 font-mono mt-0.5">
+            <div className="text-xs font-black text-orange-950 dark:text-orange-400 font-mono mt-0.5">
               {formatCurrency(vatAmount, language)}
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/80 bg-white/90 p-2 shadow-2xs">
-            <span className="text-[10px] font-bold text-slate-500 block">
+          <div className="rounded-xl border border-white/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2 shadow-2xs">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
               {isAr ? 'إجمالي المبيعات' : 'Total Sales'}
             </span>
-            <div className="text-xs font-black text-neutral-950 font-mono mt-0.5">
+            <div className="text-xs font-black text-neutral-950 dark:text-slate-100 font-mono mt-0.5">
               {formatCurrency(totalSales, language)}
             </div>
           </div>
 
-          <div className="rounded-xl border border-white/80 bg-white/90 p-2 shadow-2xs col-span-2 sm:col-span-1">
-            <span className="text-[10px] font-bold text-slate-500 block">
+          <div className="rounded-xl border border-white/80 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 p-2 shadow-2xs col-span-2 sm:col-span-1">
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block">
               {isAr ? 'صافي الربح التشغيلي' : 'Operating Profit'}
             </span>
-            <div className={`text-xs font-black font-mono mt-0.5 ${netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+            <div className={`text-xs font-black font-mono mt-0.5 ${netProfit >= 0 ? 'text-emerald-700 dark:text-emerald-400' : 'text-rose-700 dark:text-rose-400'}`}>
               {formatCurrency(netProfit, language)}
             </div>
           </div>
@@ -397,29 +397,29 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         {/* Main Form Body */}
         <form noValidate onSubmit={handleSubmit} className="mt-4 space-y-4">
           {/* Group 1: Logistics & Identification */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
-            <div className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <Truck className="h-3.5 w-3.5 text-orange-600" />
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
+            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Truck className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'بيانات الشاحنة ومزود الخدمة وتاريخ التحميل' : 'Logistics, Service Supplier & Date'}</span>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {/* 1. تاريخ التحميل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'تاريخ التحميل *' : 'Loading Date *'}
                 </label>
                 <input
                   type="date"
                   value={loadingDate}
                   onChange={(e) => setLoadingDate(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
               {/* 2. رقم الشاحنة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم الشاحنة *' : 'Truck Number *'}
                 </label>
                 <input
@@ -427,21 +427,21 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   placeholder="مثال: 7842-ق أ د"
                   value={truckNo}
                   onChange={(e) => setTruckNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold font-mono text-slate-800 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold font-mono text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
               {/* 3. اسم الناقل - المقاول */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم مزود الخدمة اللوجستية *' : 'Service Supplier Name *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setQuickAddType('Transporter')}
                     title={isAr ? 'إضافة مزود خدمة جديد سريعاً' : 'Quick add service supplier'}
-                    className="flex items-center gap-1 rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 hover:bg-orange-100 transition-colors"
+                    className="flex items-center gap-1 rounded-md bg-orange-50 dark:bg-orange-950/40 border border-orange-200/50 dark:border-orange-800/40 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors"
                   >
                     <Plus className="h-2.5 w-2.5" />
                     <span>{isAr ? 'جديد' : 'New'}</span>
@@ -450,10 +450,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 <select
                   value={transporterName}
                   onChange={(e) => handleTransporterChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {transporters.map((t) => (
-                    <option key={t.id} value={t.transporterName}>
+                    <option key={t.id} value={t.transporterName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                       {t.transporterName} ({t.driverName})
                     </option>
                   ))}
@@ -462,7 +462,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 4. رقم تذكرة الميزان */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم تذكرة الميزان' : 'Scale Ticket Number'}
                   <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
                 </label>
@@ -472,16 +472,16 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
                   value={scaleTicketNo}
                   onChange={(e) => setScaleTicketNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono font-bold text-slate-500 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Group 2: Dispatch Origin, Invoices & Customer Consignee */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
-            <div className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-              <Building className="h-3.5 w-3.5 text-orange-600" />
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
+            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Building className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'أطراف العملية وفواتير التحميل والاستلام' : 'Parties & Commercial Invoices'}</span>
             </div>
 
@@ -489,14 +489,14 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               {/* 5. مصدر التحميل - الكسارة */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'منشأة الإرسال / مصدر التحميل *' : 'Origin / Dispatch Facility *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setQuickAddType('Crusher')}
                     title={isAr ? 'إضافة مورد مواد خام سريعاً' : 'Quick add raw materials supplier'}
-                    className="flex items-center gap-1 rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 hover:bg-orange-100 transition-colors"
+                    className="flex items-center gap-1 rounded-md bg-orange-50 dark:bg-orange-950/40 border border-orange-200/50 dark:border-orange-800/40 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors"
                   >
                     <Plus className="h-2.5 w-2.5" />
                     <span>{isAr ? 'جديد' : 'New'}</span>
@@ -506,10 +506,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   required
                   value={loadingSource}
                   onChange={(e) => setLoadingSource(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {crushers.map((c) => (
-                    <option key={c.id} value={c.crusherName}>
+                    <option key={c.id} value={c.crusherName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                       {c.crusherName}
                     </option>
                   ))}
@@ -518,7 +518,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 6. رقم فاتورة التحميل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم فاتورة التحميل' : 'Loading Invoice Number'}
                   <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
                 </label>
@@ -528,21 +528,21 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
                   value={loadingInvoiceNo}
                   onChange={(e) => setLoadingInvoiceNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-500 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
                 />
               </div>
 
               {/* 7. العميل المستلم */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'العميل المستلم *' : 'Receiving Customer *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setQuickAddType('Customer')}
                     title={isAr ? 'إضافة عميل جديد سريعاً' : 'Quick add client'}
-                    className="flex items-center gap-1 rounded-md bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 hover:bg-orange-100 transition-colors"
+                    className="flex items-center gap-1 rounded-md bg-orange-50 dark:bg-orange-950/40 border border-orange-200/50 dark:border-orange-800/40 px-1.5 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors"
                   >
                     <Plus className="h-2.5 w-2.5" />
                     <span>{isAr ? 'جديد' : 'New'}</span>
@@ -551,10 +551,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 <select
                   value={destinationCustomer}
                   onChange={(e) => setDestinationCustomer(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-800 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {customers.map((cust) => (
-                    <option key={cust.id} value={cust.customerName}>
+                    <option key={cust.id} value={cust.customerName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                       {cust.customerName}
                     </option>
                   ))}
@@ -563,7 +563,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 8. رقم فاتورة الاستلام */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم فاتورة الاستلام' : 'Receipt Invoice Number'}
                   <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
                 </label>
@@ -573,20 +573,20 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
                   value={receiptInvoiceNo}
                   onChange={(e) => setReceiptInvoiceNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-mono text-slate-500 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Group 3: Material & Scale Weights */}
-          <div className="rounded-2xl border border-orange-100 bg-orange-50/40 p-3.5 space-y-3">
-            <div className="text-xs font-black text-orange-950 flex items-center justify-between">
+          <div className="rounded-2xl border border-orange-200/60 dark:border-orange-900/40 bg-orange-50/40 dark:bg-orange-950/20 p-3.5 space-y-3">
+            <div className="text-xs font-black text-orange-950 dark:text-orange-200 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Package className="h-3.5 w-3.5 text-orange-600" />
+                <Package className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                 <span>{isAr ? `نوع المادة ووحدة القياس وأوزان الميزان (${uom})` : `Material, UOM & Scale Weights (${uom})`}</span>
               </div>
-              <span className="text-[10px] font-bold text-orange-700 bg-orange-100 px-2 py-0.5 rounded-md">
+              <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/50 px-2 py-0.5 rounded-md border border-orange-300/40 dark:border-orange-800/50">
                 {isAr ? 'حساب الفاقد ونسبته آلياً' : 'Auto Wastage Calculation'}
               </span>
             </div>
@@ -595,14 +595,14 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               {/* 9. نوع المادة */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'نوع المادة *' : 'Material Type *'}
                   </label>
                   <button
                     type="button"
                     onClick={() => setQuickAddType('Material')}
                     title={isAr ? 'إضافة مادة جديدة' : 'Quick add material'}
-                    className="flex items-center gap-1 rounded-md bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 hover:bg-orange-200 transition-colors"
+                    className="flex items-center gap-1 rounded-md bg-orange-100 dark:bg-orange-900/40 border border-orange-300/40 dark:border-orange-800/50 px-1.5 py-0.5 text-[10px] font-bold text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800/60 transition-colors"
                   >
                     <Plus className="h-2.5 w-2.5" />
                     <span>{isAr ? 'جديد' : 'New'}</span>
@@ -611,10 +611,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 <select
                   value={materialType}
                   onChange={(e) => handleMaterialChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 >
                   {materials.map((m) => (
-                    <option key={m.id} value={m.nameAr}>
+                    <option key={m.id} value={m.nameAr} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                       {m.nameAr}
                     </option>
                   ))}
@@ -623,16 +623,16 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* وحدة القياس (UOM) */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'وحدة القياس (UOM) *' : 'Unit of Measure (UOM) *'}
                 </label>
                 <select
                   value={uom}
                   onChange={(e) => setUom(e.target.value as UOMType)}
-                  className="w-full rounded-xl border border-orange-300 bg-white px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-orange-300 dark:border-orange-900/50 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:outline-none"
                 >
                   {SUPPORTED_UOMS.map((u) => (
-                    <option key={u.value} value={u.value}>
+                    <option key={u.value} value={u.value} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                       {isAr ? u.labelAr : u.labelEn}
                     </option>
                   ))}
@@ -641,7 +641,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 10. الوزن المحمل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? `الوزن المحمل (${uom}) *` : `Loaded Weight (${uom}) *`}
                 </label>
                 <input
@@ -656,13 +656,13 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                       setCrusherPurchaseCostInput(Number((val * purchaseUnitPrice).toFixed(2)));
                     }
                   }}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
               {/* 11. الوزن المستلم */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? `الوزن المستلم (${uom}) *` : `Received Weight (${uom}) *`}
                 </label>
                 <input
@@ -677,29 +677,29 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                       setSalesAmountInput(Number((val * sellingUnitPrice).toFixed(2)));
                     }
                   }}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
             </div>
           </div>
 
           {/* Group 4: Financial Valuation (Sales, Purchase Cost & Paid to Crusher) */}
-          <div className="rounded-2xl border border-slate-200/80 bg-slate-50/40 p-3.5 space-y-3">
-            <div className="text-xs font-black text-slate-800 flex items-center justify-between">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
+            <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Coins className="h-3.5 w-3.5 text-orange-600" />
+                <Coins className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
                 <span>{isAr ? 'القيم المالية، التكاليف والمبيعات' : 'Financial Values & Costs'}</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">
                 {isAr ? 'سعر الطن الافتراضي بيع/شراء: ' : 'Rates: '}
-                <span className="font-bold text-slate-700">{sellingUnitPrice} / {purchaseUnitPrice} ر.س</span>
+                <span className="font-bold text-slate-700 dark:text-slate-300">{sellingUnitPrice} / {purchaseUnitPrice} ر.س</span>
               </span>
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {/* 12. قيمة المبيعات بدون ضريبة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'قيمة المبيعات بدون ضريبة (ر.س) *' : 'Sales Amount Excl. VAT (SAR) *'}
                 </label>
                 <input
@@ -708,13 +708,13 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   min="0"
                   value={salesAmountInput}
                   onChange={(e) => setSalesAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-orange-950 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
               {/* 13. تكلفة الشراء من الكسارة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'تكلفة الشراء من مورد المواد الخام (ر.س) *' : 'Raw Materials Supplier Cost (SAR) *'}
                 </label>
                 <input
@@ -723,13 +723,13 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   min="0"
                   value={crusherPurchaseCostInput}
                   onChange={(e) => setCrusherPurchaseCostInput(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
 
               {/* 14. المسدد للكسارة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'المسدد لمورد المواد الخام (ر.س)' : 'Paid to Raw Materials Supplier (SAR)'}
                 </label>
                 <input
@@ -739,7 +739,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   placeholder="0"
                   value={crusherPaymentInput}
                   onChange={(e) => setCrusherPaymentInput(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
               </div>
             </div>
@@ -748,7 +748,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
           {/* Group 5: 15. ملاحظات (Notes) & Attachments */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-xs font-bold text-slate-700">
+              <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                 {isAr ? 'ملاحظات وتفاصيل إضافية' : 'Notes & Additional Remarks'}
               </label>
               <textarea
@@ -756,20 +756,20 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 placeholder={isAr ? 'أدخل أي ملاحظات خاصة بالسائق أو جودة المادة أو موقع التفريغ...' : 'Enter any notes about driver, material quality, or site conditions...'}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs text-slate-800 focus:border-orange-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
               />
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3 flex flex-col justify-between">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-3 flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'المستندات والمرفقات الثبوتية' : 'Supporting Attachments'}
                 </span>
-                <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+                <span className="rounded-md bg-orange-50 dark:bg-orange-950/40 border border-orange-200/50 dark:border-orange-800/40 px-2 py-0.5 text-[10px] font-bold text-orange-700 dark:text-orange-400">
                   {attachments.length} {isAr ? 'مرفق' : 'files'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                 {isAr
                   ? 'إرفاق صورة تذكرة الميزان، بوليصة الشحن، أو إشعار الاستلام المعتمد'
                   : 'Attach weighbridge scale slip, bill of lading, or receipt stamp'}
@@ -777,7 +777,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsAttachmentModalOpen(true)}
-                className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-200 bg-white px-3 py-1.5 text-xs font-bold text-orange-700 shadow-2xs hover:bg-orange-50 transition-colors"
+                className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-xl border border-orange-200/80 dark:border-orange-900/60 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-bold text-orange-700 dark:text-orange-400 shadow-2xs hover:bg-orange-50 dark:hover:bg-slate-800 transition-colors"
               >
                 <Paperclip className="h-3.5 w-3.5" />
                 <span>{isAr ? 'إدارة المرفقات والمسح الضوئي' : 'Manage Attachments'}</span>
@@ -786,17 +786,17 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
           </div>
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+          <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
             >
               {isAr ? 'إلغاء' : 'Cancel'}
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-6 py-2 text-xs font-black text-white shadow-md shadow-orange-200 hover:opacity-95 transition-opacity"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-6 py-2 text-xs font-black text-white shadow-md shadow-orange-950/20 hover:opacity-95 transition-opacity"
             >
               <CheckCircle2 className="h-4 w-4" />
               <span>

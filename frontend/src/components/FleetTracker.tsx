@@ -623,7 +623,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
             <div>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 <h2 className="text-xl font-black tracking-tight text-white">
-                  {isAr ? 'بوابة البث اللاسلكي وتتبع الأسطول الميداني' : 'Phase 4: Cold-Chain Telemetry Radar Grid'}
+                  {isAr ? 'بوابة البث اللاسلكي وتتبع الأسطول الميداني' : 'Cold-Chain Telemetry Radar Grid'}
                 </h2>
                 <span
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-black uppercase tracking-wider whitespace-nowrap shrink-0 ${

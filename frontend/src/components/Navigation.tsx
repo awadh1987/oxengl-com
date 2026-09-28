@@ -172,7 +172,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               <div>
                 <span className="text-lg font-bold tracking-tight text-white">OxenGL</span>
                 <span className="ml-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
-                  Phase 1 Enterprise
+                  Enterprise ERP
                 </span>
                 <p className="text-[11px] text-slate-400">Global ERP Logistics</p>
               </div>
