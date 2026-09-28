@@ -9,6 +9,8 @@ import {
   Sparkles,
   Database,
   ShieldCheck,
+  Shield,
+  CheckCircle2,
   Lock,
   Receipt,
   Cpu,
@@ -302,11 +304,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'finance-chart',
-        labelAr: 'دليل الحسابات الشجري',
+        labelAr: 'دليل الحسابات (Chart of Accounts)',
         labelEn: 'Chart of Accounts',
         path: '/finance/chart',
         icon: Network,
-        roles: ['Admin', 'COO', 'Accountant', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
         badge: '5-Deep',
       },
       {
@@ -333,8 +335,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Annual Audit Closing',
         path: '/finance/audit-closing',
         icon: FileCheck2,
-        roles: ['Admin', 'COO', 'Accountant', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
         badge: 'Audit',
+      },
+      {
+        id: 'ai-insights',
+        labelAr: 'مدقق العمليات والمالية الذكي',
+        labelEn: 'AI Financial Auditor',
+        path: '/finance/ai-auditor',
+        icon: Sparkles,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
+        badge: 'AI',
       },
 
       // 5. Human Resources & Payroll
@@ -348,23 +359,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'HRMS',
       },
 
-      // 4. System Governance
+      // 6. System Governance & Settings (Consolidated from Settings Popover)
+      {
+        id: 'executive-admin',
+        labelAr: 'الموافقات التنفيذية والتدقيق',
+        labelEn: 'Executive Approvals & Audit',
+        path: '/settings/approvals',
+        icon: CheckCircle2,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
+        badge:
+          kpis.pendingApprovalsCount > 0
+            ? `${kpis.pendingApprovalsCount} ${isAr ? 'معلق' : 'Req'}`
+            : null,
+        highlight: true,
+      },
       {
         id: 'master-data',
-        labelAr: 'البيانات المرجعية والمستخدمين',
-        labelEn: 'Master Data & Users',
+        labelAr: 'البيانات الرئيسية (Master Data & RBAC)',
+        labelEn: 'Master Data & RBAC',
         path: '/settings/master-data',
         icon: Database,
-        roles: ['Admin', 'COO', 'Super_Admin'],
-        badge: null,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
+        badge: 'RBAC',
       },
       {
         id: 'billing',
-        labelAr: 'اشتراك المنصة والفوترة',
-        labelEn: 'SaaS Subscription & Billing',
+        labelAr: 'خطة الاشتراك والفوترة',
+        labelEn: 'Subscription & Billing',
         path: '/settings/billing',
         icon: CreditCard,
-        roles: ['Admin', 'COO', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
         badge: 'SaaS',
       },
       {
@@ -372,7 +396,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelAr: 'أتمتة وسير العمليات',
         labelEn: 'Workflow Automation',
         icon: Cpu,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest'],
         badge: 'BPM',
       },
       {
@@ -381,30 +405,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Design Studio & AI',
         path: '/dev-studio',
         icon: Palette,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest'],
         badge: 'Dev',
       },
       {
-        id: 'executive-admin',
-        labelAr: 'لوحة الإدارة والاعتمادات',
-        labelEn: 'Executive Approvals & Audit',
-        path: '/settings/approvals',
-        icon: ShieldCheck,
-        roles: ['Admin', 'COO', 'Super_Admin'],
-        badge:
-          kpis.pendingApprovalsCount > 0
-            ? `${kpis.pendingApprovalsCount} ${isAr ? 'معلق' : 'Req'}`
-            : null,
-        highlight: true,
+        id: 'tenant-settings',
+        labelAr: 'إعدادات المنشأة والمستأجر',
+        labelEn: 'Tenant Settings & Domains',
+        path: '/settings/tenant',
+        icon: Shield,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
+        badge: 'RLS',
       },
       {
-        id: 'tenant-settings',
-        labelAr: 'إدارة المنشأة والنطاقات',
-        labelEn: 'Tenant Admin & Domains',
-        path: '/settings/tenant',
-        icon: Globe,
-        roles: ['Admin', 'COO', 'Super_Admin'],
-        badge: 'RLS',
+        id: 'organization-profile',
+        labelAr: 'الهيكل التنظيمي والفروع',
+        labelEn: 'Enterprise Org Profile',
+        path: '/settings/organization',
+        icon: FolderTree,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
+        badge: 'Hierarchy',
       },
       {
         id: 'corporate-vault',
@@ -412,17 +432,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Corporate Compliance Vault',
         path: '/compliance/vault',
         icon: FileCheck2,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
         badge: 'Standard',
-      },
-      {
-        id: 'organization-profile',
-        labelAr: 'الهيكل التنظيمي للمنشأة والفروع',
-        labelEn: 'Enterprise Organization Profile',
-        path: '/settings/organization',
-        icon: FolderTree,
-        roles: ['Admin', 'COO', 'Super_Admin'],
-        badge: 'Hierarchy',
       },
       ...(currentUser?.role === 'Super_Admin' || authTier === 'master'
         ? [
@@ -470,7 +481,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelAr: 'المالية ودفتر الأستاذ',
         labelEn: 'Finance & GL',
         icon: Receipt,
-        itemIds: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing'],
+        itemIds: [
+          'invoicing',
+          'vouchers',
+          'finance-chart',
+          'finance-trial-balance',
+          'financial-reports',
+          'finance-audit-closing',
+          'ai-insights',
+        ],
       },
       {
         id: 'hr',
@@ -481,20 +500,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'governance',
-        labelAr: 'الحوكمة والامتثال',
-        labelEn: 'Governance & Compliance',
+        labelAr: 'الحوكمة وإعدادات النظام',
+        labelEn: 'Governance & Settings',
         icon: ShieldCheck,
-        // 'ai-insights' intentionally omitted — canonical entry is the top sub-nav ribbon
-        // (/finance/ai-auditor). The floating AIAssistantWidget drawer is the secondary entry.
         itemIds: [
-          'corporate-vault',
-          'organization-profile',
+          'executive-admin',
           'master-data',
+          'tenant-settings',
+          'organization-profile',
+          'corporate-vault',
           'billing',
           'workflow-builder',
           'design-studio',
-          'executive-admin',
-          'tenant-settings',
           'admin-hub',
         ],
       },
@@ -512,7 +529,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       hr: false,
       governance: false,
     };
-    const found = categories.find((c) => c.itemIds.includes(activeTab));
+    const found = categories.find((c) => c.itemIds.includes(activeTab) || (activeTab === 'approvals' && c.itemIds.includes('executive-admin')));
     if (found) {
       initial[found.id] = true;
     } else {
@@ -523,7 +540,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Auto-Expand: Automatically expand category containing the active route
   useEffect(() => {
-    const activeCategory = categories.find((c) => c.itemIds.includes(activeTab));
+    const activeCategory = categories.find((c) => c.itemIds.includes(activeTab) || (activeTab === 'approvals' && c.itemIds.includes('executive-admin')));
     if (activeCategory) {
       setExpandedCategories((prev) => ({
         ...prev,
@@ -552,7 +569,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     // Conditionally hide navigation tabs based on active permissions
     const activeRole = currentUser?.role ?? 'Guest';
     items = items.filter((item) => {
-      if (activeRole === 'Super_Admin') return true;
+      if (activeRole === 'Super_Admin' || activeRole === 'Owner') return true;
       return item.roles.includes(activeRole);
     });
 
@@ -837,7 +854,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   if (catItems.length === 0) return null;
 
                   const isCatExpanded = Boolean(expandedCategories[cat.id]);
-                  const hasActiveChild = cat.itemIds.includes(activeTab);
+                  const hasActiveChild =
+                    cat.itemIds.includes(activeTab) ||
+                    (activeTab === 'approvals' && cat.itemIds.includes('executive-admin'));
                   const CatIcon = cat.icon;
 
                   return (
@@ -897,8 +916,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       {isCatExpanded && (
                         <div className="p-1 space-y-0.5 border-t border-slate-800/60 bg-slate-950/40">
                           {catItems.map((item) => {
-                            const isAllowed = item.roles.includes(currentUser?.role ?? 'Guest');
-                            const isActive = activeTab === item.id;
+                            const userRole = currentUser?.role ?? 'Guest';
+                            const isAllowed =
+                              userRole === 'Super_Admin' || userRole === 'Owner' || item.roles.includes(userRole);
+                            const isActive =
+                              activeTab === item.id ||
+                              (item.id === 'executive-admin' && activeTab === 'approvals');
                             const catIconClass =
                               cat.id === 'core'
                                 ? 'neo-icon-core'
@@ -990,8 +1013,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <div key={cat.id} className="w-full space-y-1 pb-1 border-b border-slate-800/80">
                       {catItems.map((item) => {
-                        const isAllowed = item.roles.includes(currentUser?.role ?? 'Guest');
-                        const isActive = activeTab === item.id;
+                        const userRole = currentUser?.role ?? 'Guest';
+                        const isAllowed =
+                          userRole === 'Super_Admin' || userRole === 'Owner' || item.roles.includes(userRole);
+                        const isActive =
+                          activeTab === item.id ||
+                          (item.id === 'executive-admin' && activeTab === 'approvals');
                         const label = isAr ? item.labelAr : item.labelEn;
 
                         if (!isAllowed) {
