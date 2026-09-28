@@ -27,9 +27,9 @@
   - [x] Verify build with `npm run build`.
 - [x] **Hotfix & Deploy**
   - [x] Fix missing `Receipt` import in `frontend/src/components/Navbar.tsx`.
-  - [ ] Run `npm run build`.
-  - [ ] Copy dist to `oxengl_frontend_container:/usr/share/nginx/html/`.
-  - [ ] Restart Nginx container.
+  - [x] Run `npm run build`.
+  - [x] Copy dist to `oxengl_frontend_container:/usr/share/nginx/html/`.
+  - [x] Restart Nginx container.
 
 ---
 
