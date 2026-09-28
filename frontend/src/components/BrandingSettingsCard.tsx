@@ -1,11 +1,21 @@
 import React, { useState, useRef } from 'react';
+import { TenantAvatar } from './TenantAvatar';
 
 interface BrandingSettingsCardProps {
   tenantId: string;
+  currentLogoUrl?: string | null;
+  tenantName?: string;
+  primaryColor?: string;
   onUploadSuccess: (newLogoUrl: string) => void;
 }
 
-export const BrandingSettingsCard: React.FC<BrandingSettingsCardProps> = ({ tenantId, onUploadSuccess }) => {
+export const BrandingSettingsCard: React.FC<BrandingSettingsCardProps> = ({
+  tenantId,
+  currentLogoUrl,
+  tenantName,
+  primaryColor,
+  onUploadSuccess,
+}) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -44,10 +54,19 @@ export const BrandingSettingsCard: React.FC<BrandingSettingsCardProps> = ({ tena
   };
 
   return (
-    <div className="w-full max-w-md bg-[#090f1c] border border-slate-800/80 rounded-2xl p-6 shadow-xl font-sans">
-      <div className="mb-4">
-        <h3 className="text-sm font-bold tracking-wide text-slate-200 uppercase">Tenant White-Labeling</h3>
-        <p className="text-xs text-slate-500 mt-1">Upload a custom workspace logo to completely hide platform branding marks</p>
+    <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl font-sans">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-bold tracking-wide text-slate-200 uppercase">Tenant White-Labeling</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Upload a custom workspace logo to replace platform branding</p>
+        </div>
+        <TenantAvatar
+          logoUrl={currentLogoUrl}
+          name={tenantName}
+          primaryColor={primaryColor}
+          size="md"
+          showGlow={true}
+        />
       </div>
 
       <div
@@ -63,8 +82,8 @@ export const BrandingSettingsCard: React.FC<BrandingSettingsCardProps> = ({ tena
         onClick={() => fileInputRef.current?.click()}
         className={`w-full border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 select-none ${
           isDragging 
-            ? 'border-cyan-500 bg-cyan-500/5 text-cyan-400' 
-            : 'border-slate-800 bg-[#030712] hover:border-slate-700 text-slate-400'
+            ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400' 
+            : 'border-slate-800 bg-slate-950 hover:border-slate-700 text-slate-400'
         }`}
       >
         <input 
@@ -80,8 +99,8 @@ export const BrandingSettingsCard: React.FC<BrandingSettingsCardProps> = ({ tena
           <p className="text-xs font-mono text-cyan-400 animate-pulse">Streaming binary matrix down to disk...</p>
         ) : (
           <div className="space-y-1">
-            <p className="text-xs font-medium text-slate-300">Drag and drop your asset block here, or <span className="text-cyan-400">browse</span></p>
-            <p className="text-[10px] text-slate-600 font-mono">PNG, JPEG, or WEBP up to 2MB</p>
+            <p className="text-xs font-medium text-slate-300">Drag and drop your asset block here, or <span className="text-cyan-400 font-semibold">browse</span></p>
+            <p className="text-[10px] text-slate-500 font-mono">PNG, JPEG, or WEBP up to 2MB</p>
           </div>
         )}
       </div>

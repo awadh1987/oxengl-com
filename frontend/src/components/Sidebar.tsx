@@ -33,6 +33,7 @@ import {
   X,
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
+import { TenantAvatar } from './TenantAvatar';
 import { HoverIcon } from './common/HoverIcon';
 
 export type ActiveTab =
@@ -633,8 +634,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 isCollapsed ? 'justify-center' : 'justify-between px-1'
               }`}
             >
-              {!isCollapsed && (
-                <div className="flex items-center gap-1.5 overflow-hidden">
+              {!isCollapsed ? (
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <TenantAvatar
+                    tenant={currentCompany}
+                    name={sidebarCompanyName}
+                    logoUrl={sidebarLogoUrl}
+                    primaryColor={sidebarPrimaryColor}
+                    size="xs"
+                    showGlow={true}
+                    title={sidebarCompanyName}
+                  />
                   <span className="text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase truncate">
                     {isDriverMode
                       ? isAr
@@ -644,6 +654,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       ? 'بوابة الملاحة الرئيسية'
                       : 'Navigation'}
                   </span>
+                </div>
+              ) : (
+                <div className="flex justify-center pb-1">
+                  <TenantAvatar
+                    tenant={currentCompany}
+                    name={sidebarCompanyName}
+                    logoUrl={sidebarLogoUrl}
+                    primaryColor={sidebarPrimaryColor}
+                    size="xs"
+                    showGlow={true}
+                    title={sidebarCompanyName}
+                  />
                 </div>
               )}
 
@@ -699,28 +721,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {!isCollapsed ? (
               <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2 shadow-xs transition-all">
                 <div className="flex items-center gap-2.5 overflow-hidden">
-                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950 flex items-center justify-center">
-                    {sidebarLogoUrl ? (
-                      <img
-                        src={sidebarLogoUrl}
-                        alt={sidebarCompanyName}
-                        className="h-full w-full object-contain p-0.5"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`${sidebarLogoUrl ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
-                      style={{
-                        background: `linear-gradient(135deg, ${sidebarPrimaryColor}, #1e293b)`,
-                      }}
-                    >
-                      {(sidebarCompanyName.charAt(0) || 'O').toUpperCase()}
-                    </div>
-                  </div>
+                  <TenantAvatar
+                    tenant={currentCompany}
+                    name={sidebarCompanyName}
+                    logoUrl={sidebarLogoUrl}
+                    primaryColor={sidebarPrimaryColor}
+                    size="sm"
+                    showGlow={true}
+                    title={sidebarCompanyName}
+                  />
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-slate-100 leading-tight">
@@ -740,28 +749,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="flex justify-center py-0.5"
                 title={`${sidebarCompanyName} (${sidebarTier})`}
               >
-                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950 flex items-center justify-center shadow-xs">
-                  {sidebarLogoUrl ? (
-                    <img
-                      src={sidebarLogoUrl}
-                      alt={sidebarCompanyName}
-                      className="h-full w-full object-contain p-0.5"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                        if (fallback) fallback.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <div
-                    className={`${sidebarLogoUrl ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
-                    style={{
-                      background: `linear-gradient(135deg, ${sidebarPrimaryColor}, #1e293b)`,
-                    }}
-                  >
-                    {(sidebarCompanyName.charAt(0) || 'O').toUpperCase()}
-                  </div>
-                </div>
+                <TenantAvatar
+                  tenant={currentCompany}
+                  name={sidebarCompanyName}
+                  logoUrl={sidebarLogoUrl}
+                  primaryColor={sidebarPrimaryColor}
+                  size="sm"
+                  showGlow={true}
+                  title={`${sidebarCompanyName} (${sidebarTier})`}
+                />
               </div>
             )}
 

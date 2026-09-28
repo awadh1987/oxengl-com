@@ -5,6 +5,7 @@ import { UserRole } from '../types';
 
 import { BrandLogo } from '../components/BrandLogo';
 import { PlatformLogo } from '../components/PlatformLogo';
+import { TenantAvatar } from '../components/TenantAvatar';
 import { LoginButton } from '../components/LoginButton';
 import { NotificationTopBar } from '../components/NotificationTopBar';
 import {
@@ -715,26 +716,14 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                       {/* Top Row: Monogram / Logo & Badges */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          {tenantLogoUrl ? (
-                            <img
-                              src={tenantLogoUrl}
-                              alt={tenant.name}
-                              className="h-11 w-11 rounded-2xl object-cover border border-gray-700 bg-gray-800 p-0.5"
-                              onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                                const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                                if (fallback) fallback.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className={`h-11 w-11 items-center justify-center rounded-2xl text-white font-black text-sm shadow-md ${tenantLogoUrl ? 'hidden' : 'flex'}`}
-                            style={{
-                              background: `linear-gradient(135deg, ${tenantThemeColor}, #111827)`
-                            }}
-                          >
-                            {(tenant.name || 'T').charAt(0).toUpperCase()}
-                          </div>
+                          <TenantAvatar
+                            logoUrl={tenantLogoUrl}
+                            name={tenant.name}
+                            primaryColor={tenantThemeColor}
+                            size="lg"
+                            showGlow={true}
+                            title={tenant.name}
+                          />
                           <div>
                             <span
                               className="text-[10px] font-mono font-bold tracking-wider uppercase"

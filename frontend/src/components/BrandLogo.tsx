@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { isApexDomain } from '../utils/subdomain';
+import { extractTenantMonogram } from '../utils/monogram';
 
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'hero';
@@ -165,13 +166,13 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
               if (fallback) fallback.style.display = 'flex';
             }}
           />
-          <span style={{ background: `linear-gradient(135deg, ${effectivePrimaryColor}, ${effectiveSecondaryColor})` }} className="hidden h-full w-full items-center justify-center rounded-[0.85rem] text-lg font-black text-white">
-            {effectiveNameEn.slice(0, 1).toUpperCase()}
+          <span style={{ background: `linear-gradient(135deg, ${effectivePrimaryColor}, ${effectiveSecondaryColor})` }} className="hidden h-full w-full items-center justify-center rounded-[0.85rem] text-sm font-black text-white">
+            {extractTenantMonogram(effectiveNameEn || effectiveNameAr)}
           </span>
         </div>
       ) : useTenantFallback ? (
-        <div style={{ width: currentSize.icon, height: currentSize.icon, background: `linear-gradient(135deg, ${effectivePrimaryColor}, ${effectiveSecondaryColor})` }} className="flex shrink-0 items-center justify-center rounded-2xl text-lg font-black text-white shadow-xs ring-1 ring-neutral-900/15">
-          {effectiveNameEn.slice(0, 1).toUpperCase()}
+        <div style={{ width: currentSize.icon, height: currentSize.icon, background: `linear-gradient(135deg, ${effectivePrimaryColor}, ${effectiveSecondaryColor})` }} className="flex shrink-0 items-center justify-center rounded-2xl text-sm font-black text-white shadow-xs ring-1 ring-neutral-900/15">
+          {extractTenantMonogram(effectiveNameEn || effectiveNameAr)}
         </div>
       ) : (
         <svg

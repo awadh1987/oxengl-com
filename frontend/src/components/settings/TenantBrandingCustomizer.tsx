@@ -17,6 +17,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { HoverIcon } from '../common/HoverIcon';
+import { TenantAvatar } from '../TenantAvatar';
 import { useApp } from '../../context/AppContext';
 import { erpApi } from '../../services/api';
 
@@ -543,23 +544,13 @@ export const TenantBrandingCustomizer: React.FC = () => {
                       {/* Mock Topbar */}
                       <div className="h-11 border-b border-slate-800/80 px-3 flex items-center justify-between bg-slate-950/60">
                         <div className="flex items-center gap-2.5">
-                          {logoUrl ? (
-                            <div className="h-7 w-7 rounded-md bg-slate-900 border border-slate-700/80 flex items-center justify-center p-0.5 overflow-hidden">
-                              <img
-                                src={logoUrl}
-                                alt="Logo Nav"
-                                style={{ transform: `scale(${logoScale / 100})` }}
-                                className="max-h-full max-w-full object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className="h-7 w-7 rounded-md flex items-center justify-center text-white text-xs font-bold"
-                              style={{ backgroundColor: primaryColor }}
-                            >
-                              <Building2 className="h-4 w-4" />
-                            </div>
-                          )}
+                          <TenantAvatar
+                            logoUrl={logoUrl}
+                            name={companyDisplayName}
+                            primaryColor={primaryColor}
+                            size="sm"
+                            showGlow={true}
+                          />
                           <div className="flex flex-col">
                             <span className="text-xs font-bold text-white truncate max-w-[130px]">
                               {companyDisplayName}
@@ -645,12 +636,11 @@ export const TenantBrandingCustomizer: React.FC = () => {
                             />
                           </div>
                         ) : (
-                          <div
-                            className="h-10 w-10 rounded-lg flex items-center justify-center text-white"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            <Building2 className="h-5 w-5" />
-                          </div>
+                          <TenantAvatar
+                            name={companyDisplayName}
+                            primaryColor={primaryColor}
+                            size="md"
+                          />
                         )}
                       </div>
                       <div className="mt-3 flex items-center justify-between text-[10px] text-slate-500">
@@ -675,9 +665,16 @@ export const TenantBrandingCustomizer: React.FC = () => {
                           className="max-h-24 max-w-40 object-contain drop-shadow-xl"
                         />
                       ) : (
-                        <div className="flex flex-col items-center gap-2 text-slate-500">
-                          <ImageIcon className="h-10 w-10 stroke-1" />
-                          <span className="text-[11px]">{isAr ? 'لا يوجد شعار محمل' : 'No logo uploaded'}</span>
+                        <div className="flex flex-col items-center gap-2">
+                          <TenantAvatar
+                            name={companyDisplayName}
+                            primaryColor={primaryColor}
+                            size="2xl"
+                            showGlow={true}
+                          />
+                          <span className="text-[11px] text-slate-400 font-medium mt-1">
+                            {isAr ? 'شارة الهوية الحركية (Monogram)' : 'Dynamic Monogram Avatar'}
+                          </span>
                         </div>
                       )}
                     </div>

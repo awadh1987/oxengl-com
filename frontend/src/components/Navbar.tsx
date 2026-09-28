@@ -33,6 +33,7 @@ import { TENANT_PALETTES } from '../theme/designTokens';
 import { BrandLogo } from './BrandLogo';
 import { PlatformLogo } from './PlatformLogo';
 import { UserAvatar } from './UserAvatar';
+import { TenantAvatar } from './TenantAvatar';
 import { HoverIcon } from './common/HoverIcon';
 import { isApexDomain, getSubdomain, getEffectiveDomainIdentifier, isCustomDomain } from '../utils/subdomain';
 
@@ -321,36 +322,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
       <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Dynamic Logo Asset Rendering Container */}
+          {/* Dynamic Tenant Branding: Logo with strict fallback to Monogram Avatar Badge */}
           {isTenant ? (
-            tenantLogoUrl ? (
-              <div className="relative h-7 w-7 shrink-0">
-                <img 
-                  src={tenantLogoUrl} 
-                  alt={`${tenantDisplayName} Logo`} 
-                  className="h-7 w-7 object-contain rounded-lg bg-slate-900 p-0.5 border border-slate-800 shrink-0"
-                  onError={(e) => {
-                    (e.currentTarget as HTMLElement).style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                    if (fallback) fallback.style.display = 'flex';
-                  }}
-                />
-                <div
-                  className="hidden h-7 w-7 items-center justify-center rounded-lg text-xs font-black text-white shadow-xs border border-slate-700"
-                  style={{ background: `linear-gradient(135deg, ${effectiveCompany?.uiPrimaryColor || '#F05627'}, #1e293b)` }}
-                >
-                  {(tenantDisplayName || 'T').charAt(0).toUpperCase()}
-                </div>
-              </div>
-            ) : (
-              <div
-                style={{ background: `linear-gradient(135deg, ${effectiveCompany?.uiPrimaryColor || '#F05627'}, #1e293b)` }}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black text-white shadow-xs border border-slate-700 shrink-0"
-                title={tenantDisplayName}
-              >
-                {(tenantDisplayName || 'T').charAt(0).toUpperCase()}
-              </div>
-            )
+            <TenantAvatar
+              tenant={effectiveCompany}
+              logoUrl={tenantLogoUrl}
+              name={tenantDisplayName}
+              size="sm"
+              showGlow={true}
+              title={tenantDisplayName}
+            />
           ) : (
             /* Global Platform Master Logo strictly displayed on apex domain / unauthenticated / master portal routes */
             <div className="flex h-7 w-7 items-center justify-center shrink-0">

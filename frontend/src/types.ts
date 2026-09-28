@@ -1,5 +1,13 @@
 export type UserRole = 'Super_Admin' | 'Owner' | 'Admin' | 'COO' | 'Accountant' | 'Data_Entry' | 'Read_Only' | 'Guest';
 
+export interface TenantBrandingContext {
+  custom_logo?: boolean;
+  logo_url?: string | null;
+  primary_color?: string;
+  theme_mode?: string;
+  [key: string]: any;
+}
+
 export interface Company {
   id: string;
   parentId?: string | null;
@@ -26,6 +34,7 @@ export interface Company {
   ui_logo_url?: string | null;
   logo_url?: string | null;
   logoUrl?: string | null;
+  branding_context?: TenantBrandingContext | null;
   wallpaper_url?: string | null;
   background_url?: string | null;
   uiBackgroundUrl?: string | null;

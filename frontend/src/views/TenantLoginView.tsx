@@ -25,6 +25,8 @@ import {
 } from '../utils/subdomain';
 import { useNavigate } from '../hooks/useNavigate';
 import { setAuthSession, isValidUUID } from '../services/api';
+import { TenantAvatar } from '../components/TenantAvatar';
+import { TenantBrandingContext } from '../types';
 
 
 interface TenantLoginViewProps {
@@ -48,6 +50,7 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
   const [tenantSlug, setTenantSlug] = useState(forcedSlug || '');
   const [slugValidated, setSlugValidated] = useState(Boolean(forcedSlug));
   const [validatedTarget, setValidatedTarget] = useState<string | null>(null);
+  const [brandingContext, setBrandingContext] = useState<TenantBrandingContext | null>(null);
 
   const matchedCompany = companies?.find((c) => c.slug?.toLowerCase() === tenantSlug.toLowerCase()) || (currentCompany?.slug?.toLowerCase() === tenantSlug.toLowerCase() ? currentCompany : null);
   const matchedLogo = matchedCompany?.logo_url || matchedCompany?.uiLogoUrl || (matchedCompany as any)?.ui_logo_url;
@@ -140,6 +143,13 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
         }
       } catch (err) {
         console.warn('Tenant URL parsing warning:', err);
+      }
+
+      if (data?.branding_context) {
+        setBrandingContext({
+          ...data.branding_context,
+          name: data.name || cleanSlug,
+        });
       }
 
       setValidatedTarget(data.target || cleanSlug);
@@ -425,31 +435,18 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
           {/* STEP 2 FORM: User Credentials */}
           {step === 2 && (
             <form noValidate onSubmit={handleCredentialAuth} className="space-y-4">
-              {/* Verified Workspace Badge */}
+              {/* Verified Workspace Badge with Dynamic Tenant Branding */}
               <div className="flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-emerald-950/20 px-3.5 py-2.5">
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-emerald-500/40 bg-slate-950 flex items-center justify-center">
-                    {matchedLogo ? (
-                      <img
-                        src={matchedLogo}
-                        alt={matchedName}
-                        className="h-full w-full object-contain p-0.5"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                          if (fallback) fallback.style.display = 'flex';
-                        }}
-                      />
-                    ) : null}
-                    <div
-                      className={`${matchedLogo ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
-                      style={{
-                        background: `linear-gradient(135deg, ${matchedColor}, #064e3b)`,
-                      }}
-                    >
-                      {(matchedName.charAt(0) || 'T').toUpperCase()}
-                    </div>
-                  </div>
+                  <TenantAvatar
+                    brandingContext={brandingContext}
+                    tenant={matchedCompany}
+                    logoUrl={brandingContext?.logo_url || matchedLogo}
+                    name={brandingContext?.name || matchedName}
+                    primaryColor={brandingContext?.primary_color || matchedColor}
+                    size="md"
+                    showGlow={true}
+                  />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
@@ -458,9 +455,9 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
                         {tenantSlug}
                       </span>
                     </div>
-                    {matchedCompany?.name && (
+                    {((brandingContext as any)?.name || matchedCompany?.name) && (
                       <p className="text-[11px] text-slate-300 font-semibold truncate">
-                        {matchedCompany.name}
+                        {(brandingContext as any)?.name || matchedCompany?.name}
                       </p>
                     )}
                   </div>

@@ -503,9 +503,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       maxCostCenters: company.max_cost_centers,
       themeMode: company.theme_mode,
       uiPrimaryColor: company.ui_primary_color,
-      uiSecondaryColor: company.ui_secondary_color,
       uiLogoUrl: company.ui_logo_url,
       logo_url: company.ui_logo_url || (company as any).logo_url,
+      branding_context: (company as any).branding_context || {
+        custom_logo: Boolean(company.ui_logo_url || (company as any).logo_url),
+        logo_url: company.ui_logo_url || (company as any).logo_url || null,
+        primary_color: company.ui_primary_color || (company as any).primary_color || '#F05627',
+        theme_mode: company.theme_mode || 'CUSTOM',
+      },
     }));
     setCompanies(mapped);
     setCurrentCompany((selected) => {
@@ -525,6 +530,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           slug: activeDomain,
           currency: 'SAR',
           subscriptionTier: 'ENTERPRISE',
+          branding_context: {
+            custom_logo: false,
+            logo_url: null,
+            primary_color: '#F05627',
+            theme_mode: 'CUSTOM',
+          },
         };
       }
       const activeTenantId = localStorage.getItem('oxengl_tenant_id') || localStorage.getItem('tenant_id') || currentUser?.companyId;
