@@ -35,6 +35,7 @@ import {
   Boxes,
   FileSpreadsheet,
   TrendingUp,
+  Receipt,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { TENANT_PALETTES } from '../theme/designTokens';
