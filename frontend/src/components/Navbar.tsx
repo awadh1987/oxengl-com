@@ -308,22 +308,35 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Dynamic Logo Asset Rendering Container */}
-          {isTenant && tenantLogoUrl ? (
-            <div className="relative h-7 w-7 shrink-0">
-              <img 
-                src={tenantLogoUrl} 
-                alt={`${tenantDisplayName} Logo`} 
-                className="h-7 w-7 object-contain rounded bg-slate-900 p-0.5 border border-slate-800 shrink-0"
-                onError={(e) => {
-                  (e.currentTarget as HTMLElement).style.display = 'none';
-                  const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                  if (fallback) fallback.style.display = 'flex';
-                }}
-              />
-              <div className="hidden h-7 w-7 items-center justify-center">
-                <BrandLogo size="sm" showText={false} forcePlatformLogo={true} />
+          {isTenant ? (
+            tenantLogoUrl ? (
+              <div className="relative h-7 w-7 shrink-0">
+                <img 
+                  src={tenantLogoUrl} 
+                  alt={`${tenantDisplayName} Logo`} 
+                  className="h-7 w-7 object-contain rounded-lg bg-slate-900 p-0.5 border border-slate-800 shrink-0"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLElement).style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
+                />
+                <div
+                  className="hidden h-7 w-7 items-center justify-center rounded-lg text-xs font-black text-white shadow-xs border border-slate-700"
+                  style={{ background: `linear-gradient(135deg, ${effectiveCompany?.uiPrimaryColor || '#F05627'}, #1e293b)` }}
+                >
+                  {(tenantDisplayName || 'T').charAt(0).toUpperCase()}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div
+                style={{ background: `linear-gradient(135deg, ${effectiveCompany?.uiPrimaryColor || '#F05627'}, #1e293b)` }}
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-black text-white shadow-xs border border-slate-700 shrink-0"
+                title={tenantDisplayName}
+              >
+                {(tenantDisplayName || 'T').charAt(0).toUpperCase()}
+              </div>
+            )
           ) : (
             /* Global Platform Master Logo strictly displayed on apex domain / unauthenticated / master portal routes */
             <div className="flex h-7 w-7 items-center justify-center shrink-0">

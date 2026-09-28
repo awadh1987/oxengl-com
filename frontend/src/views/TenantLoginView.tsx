@@ -32,7 +32,7 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
   onNavigate,
   forcedSlug,
 }) => {
-  const { language, setLanguage, loginTenant } = useApp();
+  const { language, setLanguage, loginTenant, companies, currentCompany } = useApp();
   const isAr = language === 'ar';
   const navigate = useNavigate();
 
@@ -40,6 +40,11 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
   const [tenantSlug, setTenantSlug] = useState(forcedSlug || '');
   const [slugValidated, setSlugValidated] = useState(Boolean(forcedSlug));
   const [validatedTarget, setValidatedTarget] = useState<string | null>(null);
+
+  const matchedCompany = companies?.find((c) => c.slug?.toLowerCase() === tenantSlug.toLowerCase()) || (currentCompany?.slug?.toLowerCase() === tenantSlug.toLowerCase() ? currentCompany : null);
+  const matchedLogo = matchedCompany?.logo_url || matchedCompany?.uiLogoUrl || (matchedCompany as any)?.ui_logo_url;
+  const matchedName = matchedCompany?.name || tenantSlug;
+  const matchedColor = matchedCompany?.uiPrimaryColor || '#10b981';
 
   const [identity, setIdentity] = useState('');
   const [password, setPassword] = useState('');
@@ -387,17 +392,50 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
           {step === 2 && (
             <form noValidate onSubmit={handleCredentialAuth} className="space-y-4">
               {/* Verified Workspace Badge */}
-              <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2.5">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-emerald-400" />
-                  <span className="font-mono text-xs font-bold text-emerald-300">
-                    {tenantSlug}
-                  </span>
+              <div className="flex items-center justify-between rounded-2xl border border-emerald-500/30 bg-emerald-950/20 px-3.5 py-2.5">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl border border-emerald-500/40 bg-slate-950 flex items-center justify-center">
+                    {matchedLogo ? (
+                      <img
+                        src={matchedLogo}
+                        alt={matchedName}
+                        className="h-full w-full object-contain p-0.5"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`${matchedLogo ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
+                      style={{
+                        background: `linear-gradient(135deg, ${matchedColor}, #064e3b)`,
+                      }}
+                    >
+                      {(matchedName.charAt(0) || 'T').toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="font-mono text-xs font-bold text-emerald-300 truncate">
+                        {tenantSlug}
+                      </span>
+                    </div>
+                    {matchedCompany?.name && (
+                      <p className="text-[11px] text-slate-300 font-semibold truncate">
+                        {matchedCompany.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
+
                 <button
                   type="button"
                   onClick={handleResetStep}
-                  className="text-[11px] font-semibold text-slate-400 hover:text-white underline transition"
+                  className="text-[11px] font-semibold text-slate-400 hover:text-white underline transition shrink-0 ms-2"
                 >
                   {isAr ? 'تغيير' : 'Change'}
                 </button>

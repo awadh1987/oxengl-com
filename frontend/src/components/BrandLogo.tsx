@@ -50,9 +50,10 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const isApex = typeof window !== 'undefined' ? isApexDomain() : true;
   const isApexRootPortal = isApex && typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '');
 
-  // Only allow custom tenant logos when explicitly authenticated inside a tenant-scoped session or route,
-  // or on a tenant subdomain, and forcePlatformLogo is NOT set, and not on apex root portal.
-  const allowTenantLogo = !forcePlatformLogo && !isApexRootPortal && (isTenantScoped || !isApex);
+  // Allow custom tenant logos when explicitly passed via props, or when authenticated inside a tenant-scoped session or route,
+  // or on a tenant subdomain, provided forcePlatformLogo is NOT set.
+  const hasExplicitTenantProps = Boolean(propCustomLogoUrl || propCompanyNameAr || propCompanyNameEn);
+  const allowTenantLogo = !forcePlatformLogo && (hasExplicitTenantProps || (!isApexRootPortal && (isTenantScoped || !isApex)));
 
   const envPlatformLogo = typeof import.meta !== 'undefined' ? (import.meta as any).env?.VITE_PLATFORM_LOGO_URL : undefined;
   const platformLogoUrl =
@@ -69,17 +70,24 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
   const effectiveLogoUrl = (rawLogoUrl && rawLogoUrl !== '/oxengl-logo.svg') ? rawLogoUrl : null;
   const effectiveNameAr = allowTenantLogo
     ? (propCompanyNameAr ?? currentCompany?.name_ar ?? currentCompany?.company_name_ar ?? currentCompany?.name ?? appBrandConfig?.companyNameAr ?? 'أوكسين جي إل')
-    : 'أوكسين جي إل';
+    : (propCompanyNameAr ?? 'أوكسين جي إل');
   const effectiveNameEn = allowTenantLogo
     ? (propCompanyNameEn ?? currentCompany?.company_name ?? currentCompany?.name ?? appBrandConfig?.companyNameEn ?? 'OxenGL Enterprise')
-    : 'OxenGL Enterprise';
+    : (propCompanyNameEn ?? 'OxenGL Enterprise');
   const effectivePrimaryColor = allowTenantLogo
     ? (propPrimaryColor ?? currentCompany?.uiPrimaryColor ?? appBrandConfig?.primaryColor ?? '#F05627')
-    : '#F05627';
+    : (propPrimaryColor ?? '#F05627');
   const effectiveSecondaryColor = allowTenantLogo
     ? (propSecondaryColor ?? currentCompany?.uiSecondaryColor ?? appBrandConfig?.secondaryColor ?? '#1A1A1A')
-    : '#1A1A1A';
-  const useTenantFallback = allowTenantLogo && Boolean(propCompanyNameEn || propCompanyNameAr || propPrimaryColor || propSecondaryColor);
+    : (propSecondaryColor ?? '#1A1A1A');
+  const useTenantFallback = allowTenantLogo && Boolean(
+    propCompanyNameEn ||
+    propCompanyNameAr ||
+    propPrimaryColor ||
+    propSecondaryColor ||
+    currentCompany?.name ||
+    appBrandConfig?.companyNameEn
+  );
 
   const sizeMap = {
     sm: { icon: 32, textAr: 'text-xs', textEn: 'text-[9px]' },

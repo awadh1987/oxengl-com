@@ -237,6 +237,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
       // Localhost or direct IP preview mode
       localStorage.setItem('oxengl_tenant_slug', tenant.slug);
       localStorage.setItem('oxengl_tenant_id', tenant.id);
+      localStorage.setItem('tenant_slug', tenant.slug);
+      localStorage.setItem('tenant_id', tenant.id);
       const matchedComp = companies.find((c) => c.slug === tenant.slug || c.id === tenant.id);
       if (matchedComp) {
         setCurrentCompany(matchedComp);
@@ -687,6 +689,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                   tenant.ui_primary_color ||
                   '#F97316';
 
+                const tenantLogoUrl = tenant.logo_url || (tenant as any).ui_logo_url || (tenant as any).uiLogoUrl || null;
+
                 return (
                   <div
                     key={tenant.id}
@@ -712,9 +716,9 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                       {/* Top Row: Monogram / Logo & Badges */}
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                          {tenant.logo_url ? (
+                          {tenantLogoUrl ? (
                             <img
-                              src={tenant.logo_url}
+                              src={tenantLogoUrl}
                               alt={tenant.name}
                               className="h-11 w-11 rounded-2xl object-cover border border-gray-700 bg-gray-800 p-0.5"
                               onError={(e) => {
@@ -725,7 +729,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                             />
                           ) : null}
                           <div
-                            className={`h-11 w-11 items-center justify-center rounded-2xl text-white font-black text-sm shadow-md ${tenant.logo_url ? 'hidden' : 'flex'}`}
+                            className={`h-11 w-11 items-center justify-center rounded-2xl text-white font-black text-sm shadow-md ${tenantLogoUrl ? 'hidden' : 'flex'}`}
                             style={{
                               background: `linear-gradient(135deg, ${tenantThemeColor}, #111827)`
                             }}

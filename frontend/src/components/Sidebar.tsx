@@ -132,6 +132,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const [availableViews, setAvailableViews] = useState<string[] | null>(null);
 
+  const sidebarLogoUrl = currentCompany?.logo_url || currentCompany?.uiLogoUrl || (currentCompany as any)?.ui_logo_url || null;
+  const sidebarCompanyName = currentCompany?.name || currentUser?.companyName || (isAr ? 'منظومة أوكسن السحابية' : 'OxenGL Enterprise');
+  const sidebarPrimaryColor = currentCompany?.uiPrimaryColor || '#F05627';
+  const sidebarTier = currentCompany?.subscriptionTier || (isAr ? 'مرخص' : 'LICENSED');
+
   // Fetch tenant configurations using active X-Tenant-ID header
   useEffect(() => {
     const activeTenantId =
@@ -689,6 +694,76 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Active Organization Branding / Avatar Badge */}
+            {!isCollapsed ? (
+              <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-2 shadow-xs transition-all">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950 flex items-center justify-center">
+                    {sidebarLogoUrl ? (
+                      <img
+                        src={sidebarLogoUrl}
+                        alt={sidebarCompanyName}
+                        className="h-full w-full object-contain p-0.5"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                          const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                          if (fallback) fallback.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className={`${sidebarLogoUrl ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
+                      style={{
+                        background: `linear-gradient(135deg, ${sidebarPrimaryColor}, #1e293b)`,
+                      }}
+                    >
+                      {(sidebarCompanyName.charAt(0) || 'O').toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-slate-100 leading-tight">
+                      {sidebarCompanyName}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                      <span className="text-[10px] font-mono font-semibold text-slate-400 uppercase truncate">
+                        {sidebarTier}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex justify-center py-0.5"
+                title={`${sidebarCompanyName} (${sidebarTier})`}
+              >
+                <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950 flex items-center justify-center shadow-xs">
+                  {sidebarLogoUrl ? (
+                    <img
+                      src={sidebarLogoUrl}
+                      alt={sidebarCompanyName}
+                      className="h-full w-full object-contain p-0.5"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                        const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                        if (fallback) fallback.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className={`${sidebarLogoUrl ? 'hidden' : 'flex'} h-full w-full items-center justify-center text-xs font-black text-white`}
+                    style={{
+                      background: `linear-gradient(135deg, ${sidebarPrimaryColor}, #1e293b)`,
+                    }}
+                  >
+                    {(sidebarCompanyName.charAt(0) || 'O').toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Driver View Banner */}
             {!isCollapsed ? (
