@@ -16,16 +16,12 @@ import {
   Rows3,
   Rows4,
   Check,
-  CheckCircle2,
-  CreditCard,
-  Database,
   Truck,
   FileText,
   Sparkles,
   Thermometer,
   ExternalLink,
   Network,
-  FolderTree,
   FileCheck2,
   ChevronDown,
   ChevronUp,
@@ -536,119 +532,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span className="text-[10px] font-mono text-neutral-400">
                     {isolationTelemetry.cloudLatencyMs}ms
                   </span>
-                </div>
-
-                {/* System Governance Shortcuts */}
-                <div className="mb-3 space-y-1.5 border-b pb-3 border-neutral-100 dark:border-slate-800">
-                  <label className="text-[11px] font-semibold text-neutral-500 dark:text-slate-400">
-                    {isAr ? 'حوكمة وإدارة النظام' : 'System Governance'}
-                  </label>
-                  <div className="flex flex-col gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('approvals');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>{isAr ? 'الموافقات التنفيذية والتدقيق' : 'Executive Approvals'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/settings/approvals</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('billing');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <CreditCard className="h-3.5 w-3.5 text-blue-500" />
-                        <span>{isAr ? 'خطة الاشتراك والفوترة' : 'Subscription & Billing'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/settings/billing</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('master-data');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Database className="h-3.5 w-3.5 text-amber-500" />
-                        <span>{isAr ? 'البيانات الرئيسية (Master Data & RBAC)' : 'Master Data & RBAC'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/settings/master-data</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('finance-chart');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Network className="h-3.5 w-3.5 text-orange-500" />
-                        <span>{isAr ? 'دليل الحسابات (Chart of Accounts)' : 'Chart of Accounts'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/finance/chart</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('tenant-settings');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Shield className="h-3.5 w-3.5 text-orange-500" />
-                        <span>{isAr ? 'إعدادات المنشأة والمستأجر' : 'Tenant Settings'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/settings/tenant</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('organization-profile');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FolderTree className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>{isAr ? 'الهيكل التنظيمي والفروع' : 'Enterprise Org Profile'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/settings/organization</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onNavigateTab?.('corporate-vault');
-                        setShowSettings(false);
-                      }}
-                      className="flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <FileCheck2 className="h-3.5 w-3.5 text-emerald-500" />
-                        <span>{isAr ? 'خزينة الامتثال والوثائق المؤسسية' : 'Corporate Compliance Vault'}</span>
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-400">/compliance/vault</span>
-                    </button>
-                  </div>
                 </div>
 
                 {/* Theme Mode Toggle (Light / Dark) */}
