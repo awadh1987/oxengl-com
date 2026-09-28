@@ -6,9 +6,9 @@
 ---
 
 ## Current Status
-- **Current Phase:** Phase 1 - Unified Dark Theme Overhaul (Completed)
-- **State:** Build passed, artifacts deployed to Docker containers, Nginx reloaded, clean verification. Awaiting user approval to proceed to Phase 2.
-- **Last Sync / Commit:** Phase 1 Full Completion Checkpoint
+- **Current Phase:** Phase 2 - Enterprise Tier Gating (Completed)
+- **State:** Gating logic, visual locks (`opacity-50 pointer-events-none cursor-not-allowed` + Lock icons and banners), downgrade reactive state reset, and registration payload sanitization implemented. Build passed cleanly (`npm run build`), deployed to `oxengl_frontend_container`, Nginx reloaded, HTTPS 200 OK verified. Awaiting user approval to proceed to Phase 3.
+- **Last Sync / Commit:** Phase 2 Full Completion Checkpoint
 
 ---
 
@@ -23,10 +23,12 @@
   - [x] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
   - [x] Standardize core views (`TenantLandingHubView.tsx`, `TransporterPerformanceView.tsx`, `FleetMaintenanceView.tsx`, `CrusherLedgerView.tsx`, `ProcurementView.tsx`, `HRMSView.tsx`, `TenantBillingView.tsx`, `SuperAdminCockpitView.tsx`, `FinancialReportsView.tsx`, `FinanceReportsView.tsx`, `SuperAdminFinancialHubView.tsx`).
   - [x] Standardize all modal surfaces and tokens (`designTokens.ts`, `CrusherPaymentModal.tsx`, `AddEmployeeModal.tsx`, `InvoiceExportShareModal.tsx`, `NewPurchaseOrderModal.tsx`, `MultiAttachmentModal.tsx`, `FleetTracker.tsx`, `ThemeDensityToolbar.tsx`, `CsvImportModal.tsx`, `DailyOperationsModal.tsx`, `CreateVoucherModal.tsx`, `DynamicEmailLauncherModal.tsx`, `QuickAddEntityModal.tsx`, `ScaleTicketViewerModal.tsx`, `AIAssistantWidget.tsx`).
-- [ ] **Phase 2: Enterprise Tier Gating (Registration View)**
-  - Gate "External Database Hosting" and "Custom Domain" configurations for Standard/Professional tiers.
-  - UI visual locking (`opacity-50 pointer-events-none` + lock icons).
-  - Clear React form state on tier downgrade.
+- [x] **Phase 2: Enterprise Tier Gating (Registration View)**
+  - [x] Strictly gate "External Database Hosting" and "Custom Domain" configurations for Standard/Professional tiers.
+  - [x] UI visual locking (`opacity-50 pointer-events-none cursor-not-allowed` + `Lock` icons and enterprise lock banners).
+  - [x] Clear React form state on tier downgrade (`useEffect` + imperative resets in `handleSelectTier`).
+  - [x] Payload sanitization in `handleRegistration` to never transmit gated fields for non-enterprise tiers.
+  - [x] Provide alias export `frontend/src/views/RegisterView.tsx` -> `TenantRegistrationView.tsx`.
 - [ ] **Phase 3: Dynamic Tenant Branding**
   - Monogram avatar utility (1-2 uppercase letters with styled circular badge).
   - Custom logo rendering from `branding_context`.
@@ -37,6 +39,8 @@
 ## Modified Files Log
 *Tracking file changes across iterations.*
 - `agent_recovery_state.md`
+- `frontend/src/views/RegisterView.tsx`
+- `frontend/src/views/TenantRegistrationView.tsx`
 - `frontend/src/index.css`
 - `frontend/src/App.tsx`
 - `frontend/src/components/Navbar.tsx`

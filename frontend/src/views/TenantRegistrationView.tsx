@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { redirectToTenantSubdomain, getRootDomain, isLocalhost } from '../utils/subdomain';
 import {
   Lock,
@@ -71,9 +71,28 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   const [cardCvc, setCardCvc] = useState<string>('');
   const [bankWireRef, setBankWireRef] = useState<string>('');
 
+  const isEnterpriseTier = subscriptionTier === 'enterprise';
+
   // Strict enterprise gating check
   const requiresEnterprise = domainMode === 'custom' || useExternalDb;
-  const isEnterpriseGated = requiresEnterprise && (!isEnterprisePaid || subscriptionTier !== 'enterprise');
+  const isEnterpriseGated = requiresEnterprise && (!isEnterprisePaid || !isEnterpriseTier);
+
+  // STRICT REACT COMPONENT STATE ENFORCEMENT:
+  // If the user selects Standard or Professional (or downgrades from Enterprise),
+  // immediately purge any input values and reset domain/DB toggles.
+  useEffect(() => {
+    if (subscriptionTier !== 'enterprise') {
+      setDomainMode('subdomain');
+      setCustomDomain('');
+      setUseExternalDb(false);
+      setExternalDbHost('');
+      setExternalDbPort('');
+      setExternalDbName('');
+      setExternalDbUser('');
+      setExternalDbPassword('');
+      setExternalDbSslMode('prefer');
+    }
+  }, [subscriptionTier]);
 
   const cleanDomain = (d: string) => {
     let clean = d.trim().toLowerCase();
@@ -82,30 +101,65 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   };
 
   const handleDomainModeSelect = (mode: 'subdomain' | 'custom') => {
-    if (mode === 'custom' && (!isEnterprisePaid || subscriptionTier !== 'enterprise')) {
-      setError("Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.");
-      setUpgradeTriggerReason('custom_domain');
-      setShowUpgradeModal(true);
+    if (mode === 'custom') {
+      if (subscriptionTier !== 'enterprise') {
+        setError("Custom Domain routing is strictly exclusive to Enterprise Grade workspaces. Please upgrade tier to unlock.");
+        setUpgradeTriggerReason('custom_domain');
+        setShowUpgradeModal(true);
+        return;
+      }
+      if (!isEnterprisePaid) {
+        setError("Custom Domain routing requires Enterprise payment verification. Please complete payment to proceed.");
+        setUpgradeTriggerReason('custom_domain');
+        setShowUpgradeModal(true);
+        return;
+      }
     }
     setDomainMode(mode);
   };
 
   const handleToggleExternalDb = (checked: boolean) => {
-    if (checked && (!isEnterprisePaid || subscriptionTier !== 'enterprise')) {
-      setError("Custom Domain and Dedicated Database Hosting require an Enterprise Grade subscription. Please upgrade and complete payment to proceed.");
-      setUpgradeTriggerReason('external_db');
-      setShowUpgradeModal(true);
+    if (checked) {
+      if (subscriptionTier !== 'enterprise') {
+        setError("Dedicated External Database Hosting is strictly exclusive to Enterprise Grade workspaces. Please upgrade tier to unlock.");
+        setUpgradeTriggerReason('external_db');
+        setShowUpgradeModal(true);
+        return;
+      }
+      if (!isEnterprisePaid) {
+        setError("Dedicated External Database Hosting requires Enterprise payment verification. Please complete payment to proceed.");
+        setUpgradeTriggerReason('external_db');
+        setShowUpgradeModal(true);
+        return;
+      }
     }
     setUseExternalDb(checked);
   };
 
   const handleSelectTier = (tier: 'standard' | 'professional' | 'enterprise') => {
-    if (tier === 'enterprise' && !isEnterprisePaid) {
-      setUpgradeTriggerReason('tier_select');
-      setShowUpgradeModal(true);
+    if (tier === 'enterprise') {
+      if (!isEnterprisePaid) {
+        setUpgradeTriggerReason('tier_select');
+        setShowUpgradeModal(true);
+        return;
+      }
+      setSubscriptionTier('enterprise');
       return;
     }
+
+    // Downgrade to Standard or Professional:
+    // Strictly clear all enterprise inputs and reset toggles
     setSubscriptionTier(tier);
+    setDomainMode('subdomain');
+    setCustomDomain('');
+    setUseExternalDb(false);
+    setExternalDbHost('');
+    setExternalDbPort('');
+    setExternalDbName('');
+    setExternalDbUser('');
+    setExternalDbPassword('');
+    setExternalDbSslMode('prefer');
+    setError(null);
   };
 
   const handleSimulatePayment = () => {
@@ -137,15 +191,17 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
 
     setLoading(true);
 
-    const resolvedCustomDomain = domainMode === 'custom' && customDomain.trim()
+    const resolvedCustomDomain = isEnterpriseTier && domainMode === 'custom' && customDomain.trim()
       ? cleanDomain(customDomain)
       : undefined;
 
-    if (domainMode === 'custom' && !resolvedCustomDomain) {
+    if (domainMode === 'custom' && isEnterpriseTier && !resolvedCustomDomain) {
       setError("Please specify a valid custom domain (e.g. erp.yourdomain.com).");
       setLoading(false);
       return;
     }
+
+    const resolvedUseExternalDb = isEnterpriseTier && useExternalDb;
 
     try {
       const response = await fetch('/api/v1/auth/register-tenant', {
@@ -159,13 +215,13 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           admin_email: formData.email.trim(),
           admin_password: adminPassword,
           password: adminPassword,
-          use_external_db: useExternalDb,
-          external_db_host: useExternalDb ? externalDbHost.trim() : undefined,
-          external_db_port: useExternalDb ? parseInt(externalDbPort, 10) || 5432 : undefined,
-          external_db_name: useExternalDb ? externalDbName.trim() : undefined,
-          external_db_user: useExternalDb ? externalDbUser.trim() : undefined,
-          external_db_password: useExternalDb ? externalDbPassword : undefined,
-          external_db_sslmode: useExternalDb ? externalDbSslMode : undefined,
+          use_external_db: resolvedUseExternalDb,
+          external_db_host: resolvedUseExternalDb ? externalDbHost.trim() : undefined,
+          external_db_port: resolvedUseExternalDb ? parseInt(externalDbPort, 10) || 5432 : undefined,
+          external_db_name: resolvedUseExternalDb ? externalDbName.trim() : undefined,
+          external_db_user: resolvedUseExternalDb ? externalDbUser.trim() : undefined,
+          external_db_password: resolvedUseExternalDb ? externalDbPassword : undefined,
+          external_db_sslmode: resolvedUseExternalDb ? externalDbSslMode : undefined,
           subscription_tier: subscriptionTier,
           is_enterprise_paid: isEnterprisePaid,
           payment_reference: enterprisePaymentRef || undefined,
@@ -303,8 +359,8 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] erp-viewport-root bg-[#030712] flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
-      <div className="w-full max-w-lg bg-[#090f1c] border border-slate-800/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl relative transition-all">
+    <div className="min-h-screen min-h-[100dvh] erp-viewport-root bg-slate-950 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
+      <div className="w-full max-w-lg bg-slate-900 border border-slate-800/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl relative transition-all">
         {/* Header with Navigation */}
         <div className="flex items-center justify-between mb-4 sm:mb-5">
           <div className="text-left">
@@ -326,7 +382,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
         </div>
 
         {/* Subscription Tier Ribbon */}
-        <div className="mb-5 p-3 rounded-xl bg-[#030712] border border-slate-800 space-y-2">
+        <div className="mb-5 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
               Workspace Subscription Grade
@@ -465,20 +521,25 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
           </div>
 
           {/* Domain Architecture Selection */}
-          <div className="p-3 sm:p-3.5 bg-slate-900/40 border border-slate-800 rounded-xl space-y-3">
+          <div className="p-3 sm:p-3.5 bg-slate-900/60 border border-slate-800 rounded-xl space-y-3">
             <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
                   <span dir="ltr" className="unicode-bidi-isolate">Domain Architecture</span>
                 </label>
-                {domainMode === 'custom' && !isEnterprisePaid && (
+                {subscriptionTier !== 'enterprise' ? (
+                  <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+                    <Lock className="h-2.5 w-2.5" />
+                    <span>Enterprise Locked</span>
+                  </span>
+                ) : !isEnterprisePaid ? (
                   <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
                     <Lock className="h-2.5 w-2.5" />
                     <span>Enterprise Only</span>
                   </span>
-                )}
+                ) : null}
               </div>
-              <div className="flex bg-[#030712] border border-slate-800 rounded-lg p-0.5 text-[11px] shrink-0">
+              <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-[11px] shrink-0">
                 <button
                   type="button"
                   onClick={() => handleDomainModeSelect('subdomain')}
@@ -492,25 +553,47 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                 </button>
                 <button
                   type="button"
+                  disabled={subscriptionTier !== 'enterprise'}
                   onClick={() => handleDomainModeSelect('custom')}
                   className={`px-3 py-1 rounded-md transition-colors flex items-center gap-1.5 ${
                     domainMode === 'custom'
                       ? 'bg-cyan-600 text-white font-bold shadow-sm'
                       : 'text-slate-400 hover:text-slate-200'
+                  } ${
+                    subscriptionTier !== 'enterprise'
+                      ? 'opacity-50 pointer-events-none cursor-not-allowed'
+                      : ''
                   }`}
                 >
-                  {!isEnterprisePaid && <Lock className="h-3 w-3 text-amber-400" />}
+                  {(!isEnterprisePaid || subscriptionTier !== 'enterprise') && <Lock className="h-3 w-3 text-amber-400" />}
                   <span dir="ltr" className="inline-block unicode-bidi-isolate">Custom Domain</span>
                 </button>
               </div>
             </div>
+
+            {/* Visual Lock Notification for Custom Domain */}
+            {subscriptionTier !== 'enterprise' && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-amber-300 text-[11px]">
+                  <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span>Custom Domain configuration is strictly gated for <strong>Enterprise Tier</strong>.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTier('enterprise')}
+                  className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline shrink-0 cursor-pointer"
+                >
+                  Upgrade to Unlock
+                </button>
+              </div>
+            )}
 
             {/* Internal Slug */}
             <div>
               <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                 <span dir="ltr" className="unicode-bidi-isolate">Workspace Internal Slug</span>
               </label>
-              <div className="flex rounded-xl bg-[#030712] border border-slate-800 focus-within:border-cyan-500 overflow-hidden transition-colors">
+              <div className="flex rounded-xl bg-slate-950 border border-slate-800 focus-within:border-cyan-500 overflow-hidden transition-colors">
                 <input
                   type="text"
                   dir="ltr"
@@ -534,7 +617,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
 
             {/* Custom Domain Input (Conditional) */}
             {domainMode === 'custom' && (
-              <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
+              <div className={`pt-2 border-t border-slate-800/80 space-y-2.5 ${subscriptionTier !== 'enterprise' ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
                   <label className="block text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                     <span>🌐</span>
@@ -557,13 +640,14 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                 <input
                   type="text"
                   dir="ltr"
+                  disabled={subscriptionTier !== 'enterprise'}
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value)}
                   placeholder="erp.company.com"
-                  className="w-full px-3 py-2 bg-[#030712] border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
+                  className="w-full px-3 py-2 bg-slate-950 border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                   required={domainMode === 'custom'}
                 />
-                <div className="p-2.5 bg-[#030712] border border-cyan-500/20 rounded-lg text-[10px] text-slate-400 space-y-1">
+                <div className="p-2.5 bg-slate-950 border border-cyan-500/20 rounded-lg text-[10px] text-slate-400 space-y-1">
                   <div className="text-cyan-300 font-semibold flex flex-wrap items-center gap-1">
                     <span>⚡</span>
                     <span>DNS Target:</span>
@@ -589,7 +673,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               placeholder="admin@company.com"
-              className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
+              className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
               required
             />
           </div>
@@ -606,7 +690,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
               placeholder="••••••••••••"
-              className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
+              className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
               required
             />
           </div>
@@ -617,19 +701,25 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               <div className="pr-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-200 block">External Database Hosting</span>
-                  {!isEnterprisePaid && (
+                  {subscriptionTier !== 'enterprise' ? (
+                    <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" />
+                      <span>Enterprise Locked</span>
+                    </span>
+                  ) : !isEnterprisePaid ? (
                     <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center gap-1">
                       <Lock className="h-2.5 w-2.5" />
                       <span>Enterprise</span>
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <span className="text-[10px] text-slate-400">Bring your own PostgreSQL instance (Dedicated Data Residency)</span>
               </div>
-              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <label className={`relative inline-flex items-center shrink-0 ${subscriptionTier !== 'enterprise' ? 'opacity-50 pointer-events-none cursor-not-allowed' : 'cursor-pointer'}`}>
                 <input
                   type="checkbox"
-                  checked={useExternalDb}
+                  disabled={subscriptionTier !== 'enterprise'}
+                  checked={subscriptionTier === 'enterprise' && useExternalDb}
                   onChange={(e) => handleToggleExternalDb(e.target.checked)}
                   className="sr-only peer"
                 />
@@ -637,8 +727,25 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               </label>
             </div>
 
+            {/* Visual Lock Notification for External DB */}
+            {subscriptionTier !== 'enterprise' && (
+              <div className="mt-2.5 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs">
+                <div className="flex items-center gap-2 text-amber-300 text-[11px]">
+                  <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                  <span>Dedicated External PostgreSQL Hosting is strictly gated for <strong>Enterprise Tier</strong>.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleSelectTier('enterprise')}
+                  className="text-[11px] font-bold text-amber-400 hover:text-amber-200 underline shrink-0 cursor-pointer"
+                >
+                  Upgrade to Unlock
+                </button>
+              </div>
+            )}
+
             {useExternalDb && (
-              <div className="mt-3 p-3 sm:p-3.5 bg-[#030712] border border-cyan-500/20 rounded-xl space-y-3">
+              <div className={`mt-3 p-3 sm:p-3.5 bg-slate-950 border border-cyan-500/20 rounded-xl space-y-3 ${subscriptionTier !== 'enterprise' ? 'opacity-50 pointer-events-none' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div className="text-[11px] font-semibold text-cyan-400 flex flex-wrap items-center gap-1.5">
                     <span>🔒</span>
@@ -666,11 +773,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     <input
                       type="text"
                       dir="ltr"
+                      disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbHost}
                       onChange={(e) => setExternalDbHost(e.target.value)}
                       placeholder="db.company.com or 10.0.0.5"
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
-                      required={useExternalDb}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
+                      required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -680,10 +788,11 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     <input
                       type="number"
                       dir="ltr"
+                      disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbPort}
                       onChange={(e) => setExternalDbPort(e.target.value)}
                       placeholder="5432"
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                     />
                   </div>
                 </div>
@@ -695,11 +804,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                   <input
                     type="text"
                     dir="ltr"
+                    disabled={subscriptionTier !== 'enterprise'}
                     value={externalDbName}
                     onChange={(e) => setExternalDbName(e.target.value)}
                     placeholder="company_enterprise_db"
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
-                    required={useExternalDb}
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
+                    required={useExternalDb && subscriptionTier === 'enterprise'}
                   />
                 </div>
 
@@ -711,11 +821,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     <input
                       type="text"
                       dir="ltr"
+                      disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbUser}
                       onChange={(e) => setExternalDbUser(e.target.value)}
                       placeholder="postgres_admin"
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
-                      required={useExternalDb}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
+                      required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
                   </div>
                   <div>
@@ -725,11 +836,12 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     <input
                       type="password"
                       dir="ltr"
+                      disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbPassword}
                       onChange={(e) => setExternalDbPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
-                      required={useExternalDb}
+                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
+                      required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
                   </div>
                 </div>
@@ -739,9 +851,10 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     <span dir="ltr" className="unicode-bidi-isolate">SSL / TLS Mode</span>
                   </label>
                   <select
+                    disabled={subscriptionTier !== 'enterprise'}
                     value={externalDbSslMode}
                     onChange={(e) => setExternalDbSslMode(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none transition-colors"
+                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-200 outline-none transition-colors disabled:cursor-not-allowed"
                   >
                     <option value="prefer">prefer (Attempt SSL, fallback to plain)</option>
                     <option value="require">require (Enforce TLS / SSL)</option>
@@ -781,7 +894,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
       {/* Enterprise Upgrade & Payment Modal */}
       {showUpgradeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-lg bg-[#090f1c] border border-cyan-500/30 rounded-2xl p-5 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 text-left">
+          <div className="w-full max-w-lg bg-slate-900 border border-cyan-500/30 rounded-2xl p-5 sm:p-7 shadow-2xl relative animate-in fade-in zoom-in-95 duration-200 text-left">
             {/* Close Button */}
             <button
               type="button"
@@ -850,7 +963,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
 
             {/* Payment Method Selector */}
             <div className="space-y-3">
-              <div className="flex bg-[#030712] border border-slate-800 rounded-lg p-0.5 text-xs">
+              <div className="flex bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-xs">
                 <button
                   type="button"
                   onClick={() => setCheckoutMethod('card')}
@@ -878,7 +991,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               </div>
 
               {checkoutMethod === 'card' ? (
-                <div className="p-3 bg-[#030712] border border-slate-800 rounded-xl space-y-2.5">
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2.5">
                   <div>
                     <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                       Card Number (Mada / Visa / MasterCard)
@@ -920,7 +1033,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                   </div>
                 </div>
               ) : (
-                <div className="p-3 bg-[#030712] border border-slate-800 rounded-xl space-y-2 text-xs">
+                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2 text-xs">
                   <div className="text-[11px] font-bold text-slate-300">
                     {SAUDI_BANK_DETAILS.bankName}
                   </div>
