@@ -280,7 +280,7 @@ export const TenantBillingView: React.FC = () => {
         {/* Active Plan Card */}
         <div
           className={`rounded-2xl border p-5 transition-all ${
-            isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -318,7 +318,7 @@ export const TenantBillingView: React.FC = () => {
         {/* User Seats Quota Meter */}
         <div
           className={`rounded-2xl border p-5 transition-all ${
-            isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -379,7 +379,7 @@ export const TenantBillingView: React.FC = () => {
         {/* Fleet Assets Quota Meter */}
         <div
           className={`rounded-2xl border p-5 transition-all ${
-            isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -421,7 +421,7 @@ export const TenantBillingView: React.FC = () => {
         {/* Cloud Storage Meter */}
         <div
           className={`rounded-2xl border p-5 transition-all ${
-            isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'
           }`}
         >
           <div className="flex items-center justify-between">
@@ -455,7 +455,7 @@ export const TenantBillingView: React.FC = () => {
       {/* Architectural Capabilities Status Bar */}
       <div
         className={`rounded-2xl border p-4 ${
-          isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200 bg-slate-50'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-slate-50'
         }`}
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3 mb-3">
@@ -582,7 +582,7 @@ export const TenantBillingView: React.FC = () => {
       {/* Plan Catalog & Multi-Grade Upgrade Matrix */}
       <div
         className={`rounded-3xl border p-6 shadow-sm ${
-          isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}
       >
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -883,7 +883,7 @@ export const TenantBillingView: React.FC = () => {
       {/* Chronological SaaS Invoices Table */}
       <div
         className={`rounded-3xl border p-6 shadow-sm ${
-          isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -1000,7 +1000,7 @@ export const TenantBillingView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
           <div
             className={`w-full max-w-2xl rounded-3xl border p-6 shadow-2xl overflow-y-auto max-h-[90vh] ${
-              isDark ? 'border-slate-800 bg-[#0B132B]' : 'border-slate-200 bg-white text-slate-900'
+              isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white text-slate-900'
             }`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
@@ -1259,7 +1259,7 @@ export const TenantBillingView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <div
             className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl ${
-              isDark ? 'border-slate-800 bg-[#0B132B]' : 'border-slate-200 bg-white text-slate-900'
+              isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white text-slate-900'
             }`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">

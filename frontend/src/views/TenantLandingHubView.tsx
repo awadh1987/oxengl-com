@@ -132,7 +132,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
       dir="ltr"
       className={`min-h-dvh erp-viewport-root pb-16 font-sans transition-colors ${
         isDark
-          ? 'bg-[#0b0d19] text-slate-100 selection:bg-orange-500 selection:text-white'
+          ? 'bg-slate-950 text-slate-200 selection:bg-orange-500 selection:text-white'
           : 'bg-slate-50 text-slate-900 selection:bg-orange-500 selection:text-white'
       }`}
     >
@@ -140,7 +140,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
       <header
         className={`sticky top-0 z-30 border-b backdrop-blur-xl ${
           isDark
-            ? 'border-slate-800/80 bg-[#0e1324]/90'
+            ? 'border-slate-800/80 bg-slate-950/90'
             : 'border-slate-200 bg-white/90 shadow-xs'
         } px-4 py-3.5 sm:px-6`}
       >
@@ -178,7 +178,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
           <div
             className={`relative overflow-hidden rounded-3xl border p-7 sm:p-9 shadow-2xl backdrop-blur-xl ${
               isDark
-                ? 'border-slate-800 bg-gradient-to-br from-[#141726] via-[#101424] to-[#0c0e1b]'
+                ? 'border-slate-800 bg-gradient-to-br from-slate-900 via-slate-900/90 to-slate-950'
                 : 'border-slate-200 bg-white'
             }`}
           >
@@ -225,11 +225,11 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
             </div>
           </div>
 
-          {/* Revenue & Profit Hero Card (Dark Slate #141726) */}
+          {/* Revenue & Profit Hero Card (Dark Slate bg-slate-900) */}
           <div
             className={`flex flex-col justify-between rounded-3xl border p-7 shadow-2xl backdrop-blur-xl ${
               isDark
-                ? 'border-slate-800 bg-[#141726]'
+                ? 'border-slate-800 bg-slate-900'
                 : 'border-slate-200 bg-white'
             }`}
           >
@@ -311,9 +311,9 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
           ].map((metric) => (
             <article
               key={metric.label}
-              className={`rounded-2xl border p-5 transition-all hover:scale-[1.01] ${
+              className={`rounded-2xl border p-5 transition-all duration-300 hover:scale-[1.01] ${
                 isDark
-                  ? 'border-slate-800 bg-[#141726]/90'
+                  ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-slate-700 hover:shadow-[0_0_15px_rgba(14,165,233,0.25)]'
                   : 'border-slate-200 bg-white shadow-xs'
               }`}
             >
@@ -329,7 +329,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
         {/* Quick Access Command Hub */}
         <section
           className={`rounded-3xl border p-6 shadow-xl ${
-            isDark ? 'border-slate-800 bg-[#141726]/80' : 'border-slate-200 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900 text-slate-200' : 'border-slate-200 bg-white'
           }`}
         >
           <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
@@ -350,9 +350,9 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
                   key={action.tab}
                   type="button"
                   onClick={() => onNavigateToTab(action.tab)}
-                  className={`group flex items-center gap-3.5 rounded-2xl border p-4 text-left transition-all ${
+                  className={`group flex items-center gap-3.5 rounded-2xl border p-4 text-left transition-all duration-300 cursor-pointer ${
                     isDark
-                      ? 'border-slate-800 bg-[#0e1222] hover:border-slate-600 hover:bg-[#12182c]'
+                      ? 'border-slate-800 bg-slate-950/70 hover:border-sky-500/50 hover:shadow-[0_0_15px_rgba(14,165,233,0.35)]'
                       : 'border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300'
                   }`}
                 >
@@ -404,9 +404,9 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
                   key={module.label}
                   type="button"
                   onClick={() => onNavigateToTab(module.tab)}
-                  className={`group rounded-2xl border p-5 text-left transition-all hover:scale-[1.01] ${
+                  className={`group rounded-2xl border p-5 text-left transition-all duration-300 hover:scale-[1.01] cursor-pointer ${
                     isDark
-                      ? 'border-slate-800 bg-[#141726]/90 hover:border-orange-500/60 hover:bg-[#181c30]'
+                      ? 'border-slate-800 bg-slate-900 text-slate-200 hover:border-orange-500/60 hover:bg-slate-800/80 hover:shadow-[0_0_15px_rgba(249,115,22,0.4)]'
                       : 'border-slate-200 bg-white hover:border-orange-500 shadow-xs'
                   }`}
                 >
@@ -430,7 +430,7 @@ export const TenantLandingHubView: React.FC<TenantLandingHubViewProps> = ({ onNa
         <section
           className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 text-xs ${
             isDark
-              ? 'border-slate-800 bg-[#141726]/60 text-slate-300'
+              ? 'border-slate-800 bg-slate-900/80 text-slate-300 shadow-sm'
               : 'border-slate-200 bg-white text-slate-700'
           }`}
         >

@@ -571,7 +571,7 @@ How can I assist you with your operations today?`,
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 40, scale: 0.95 }}
               transition={{ duration: 0.2, ease: 'easeOut' }}
-              className={`fixed z-50 flex flex-col overflow-hidden rounded-3xl border border-orange-200/80 bg-white shadow-2xl shadow-neutral-950/20 transition-all dark:border-slate-800 dark:bg-[#141726] ${
+              className={`fixed z-50 flex flex-col overflow-hidden rounded-3xl border border-orange-200/80 bg-white shadow-2xl shadow-neutral-950/20 transition-all dark:border-slate-800 dark:bg-slate-900 ${
                 isExpanded
                   ? 'inset-4 md:inset-8'
                   : `bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6 ${
@@ -700,7 +700,7 @@ How can I assist you with your operations today?`,
               </div>
 
               {/* Chat Message Scrollable Container */}
-              <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 bg-gradient-to-b from-slate-50/30 to-white dark:from-slate-900/50 dark:to-[#141726]">
+              <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 bg-gradient-to-b from-slate-50/30 to-white dark:from-slate-900/50 dark:to-slate-900">
                 {messages.map((msg) => {
                   const isUser = msg.role === 'user';
                   return (

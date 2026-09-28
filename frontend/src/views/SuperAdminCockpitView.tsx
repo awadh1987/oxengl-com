@@ -77,7 +77,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
       )}
 
       <aside
-        className={`erp-sidebar-drawer fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-[#0B132B] p-4 shadow-2xl transition-transform md:static md:translate-x-0 ${
+        className={`erp-sidebar-drawer fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-slate-950 p-4 shadow-2xl transition-transform md:static md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >

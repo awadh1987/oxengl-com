@@ -203,12 +203,12 @@ export const TENANT_PALETTES: Record<TenantColorTheme, TenantThemePalette> = {
 };
 
 export const OXENGL_DARK_THEME = {
-  bgGradient: 'linear-gradient(180deg, #0b0d19 0%, #111322 100%)',
-  bgSolid: '#0b0d19',
-  bgSurface: '#141726',
-  bgSurfaceElevated: '#1a1f33',
-  bgCard: 'rgba(20, 23, 38, 0.75)',
-  bgGlass: 'rgba(15, 19, 34, 0.65)',
+  bgGradient: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',
+  bgSolid: '#020617',
+  bgSurface: '#0f172a',
+  bgSurfaceElevated: '#1e293b',
+  bgCard: 'rgba(15, 23, 42, 0.75)',
+  bgGlass: 'rgba(2, 6, 23, 0.65)',
   borderSubtle: 'rgba(255, 255, 255, 0.08)',
   borderHover: 'rgba(255, 255, 255, 0.16)',
   borderLuminous: 'rgba(99, 102, 241, 0.35)',

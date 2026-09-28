@@ -148,7 +148,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
   return (
     <div className="space-y-6 px-3 sm:px-4 md:px-6 py-6 w-full max-w-7xl mx-auto">
       {/* Top Banner */}
-      <div className="rounded-3xl border border-blue-900/40 bg-gradient-to-r from-[#0B132B] via-blue-950/60 to-slate-950 p-6 shadow-2xl">
+      <div className="rounded-3xl border border-blue-900/40 bg-gradient-to-r from-slate-900 via-blue-950/60 to-slate-950 p-6 shadow-2xl">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/25">
@@ -201,7 +201,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       {/* Global Financial KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* MRR Card */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B]/90 p-5 shadow-lg">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Monthly Recurring Revenue</span>
             <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -220,7 +220,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
         </div>
 
         {/* ARR Card */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B]/90 p-5 shadow-lg">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Annual Run Rate (ARR)</span>
             <div className="h-8 w-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
@@ -239,7 +239,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
         </div>
 
         {/* Active Subscribers Card */}
-        <div className="rounded-2xl border border-slate-800 bg-[#0B132B]/90 p-5 shadow-lg">
+        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Paid Tenants</span>
             <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
@@ -281,7 +281,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       </div>
 
       {/* Pending Bank Wire Verification Queue (Priority Operational Section) */}
-      <div className="rounded-3xl border border-amber-500/40 bg-[#0B132B] p-6 shadow-xl">
+      <div className="rounded-3xl border border-amber-500/40 bg-slate-900 p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-4">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -366,7 +366,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       </div>
 
       {/* Contractual Custom Limits & Architectural Overrides Drawer/Panel */}
-      <div className="rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-xl">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4 mb-5">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -504,7 +504,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       </div>
 
       {/* Complete Financial Audit Ledger */}
-      <div className="rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-xl">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-4">
           <div>
             <h2 className="text-base font-black text-white">Central SaaS Invoices & Revenue Ledger</h2>
@@ -631,7 +631,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       {/* Verification & Settlement Modal */}
       {verifyingInvoice && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-2xl text-slate-100">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl text-slate-100">
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-base font-black text-white">Verify Corporate Bank Wire Receipt</h3>

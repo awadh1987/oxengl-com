@@ -378,7 +378,7 @@ export const FleetMaintenanceView: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400">{isAr ? 'أوامر الصيانة' : 'Work Orders'}</span>
             <div className="h-8 w-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
@@ -391,7 +391,7 @@ export const FleetMaintenanceView: React.FC = () => {
           </p>
         </div>
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400">{isAr ? 'إجمالي تكلفة الصيانة' : 'Maintenance Spend'}</span>
             <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
@@ -404,7 +404,7 @@ export const FleetMaintenanceView: React.FC = () => {
           <p className="mt-1 text-[11px] text-slate-400">{isAr ? 'قطع غيار وعمالة ورش' : 'Parts & labor combined'}</p>
         </div>
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400">{isAr ? 'استهلاك الوقود' : 'Fuel Consumed'}</span>
             <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
@@ -419,7 +419,7 @@ export const FleetMaintenanceView: React.FC = () => {
           </p>
         </div>
 
-        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-5 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-400">{isAr ? 'فحوصات السلامة الميدانية' : 'Driver Safety Audits'}</span>
             <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -492,7 +492,7 @@ export const FleetMaintenanceView: React.FC = () => {
       {/* TAB 1: Work Orders */}
       {activeTab === 'maintenance' && (
         <div className={`rounded-3xl border p-6 shadow-xs ${
-          isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}>
           <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-xs">
@@ -569,7 +569,7 @@ export const FleetMaintenanceView: React.FC = () => {
       {/* TAB 2: Fuel Telemetry */}
       {activeTab === 'fuel' && (
         <div className={`rounded-3xl border p-6 shadow-xs ${
-          isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}>
           <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-xs">
@@ -634,7 +634,7 @@ export const FleetMaintenanceView: React.FC = () => {
       {/* TAB 3: Inspections */}
       {activeTab === 'inspections' && (
         <div className={`rounded-3xl border p-6 shadow-xs ${
-          isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}>
           <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-xs">
@@ -697,7 +697,7 @@ export const FleetMaintenanceView: React.FC = () => {
           <form
             onSubmit={handleCreateOrder}
             className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl space-y-4 ${
-              isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200 bg-white'
+              isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
             }`}
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -827,7 +827,7 @@ export const FleetMaintenanceView: React.FC = () => {
           <form
             onSubmit={handleCreateFuel}
             className={`w-full max-w-lg rounded-3xl border p-6 shadow-2xl space-y-4 ${
-              isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200 bg-white'
+              isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
             }`}
           >
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

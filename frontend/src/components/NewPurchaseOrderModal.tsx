@@ -123,7 +123,7 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div
         className={`w-full max-w-xl rounded-3xl border shadow-2xl transition-all ${
-          isDark ? 'border-slate-800 bg-[#141726] text-white' : 'border-slate-200 bg-white text-slate-900'
+          isDark ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
         }`}
       >
         {/* Header */}

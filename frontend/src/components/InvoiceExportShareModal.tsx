@@ -340,7 +340,7 @@ IBAN: ${brandConfig.iban}
     >
       <div
         id="invoice-export-share-modal"
-        className="relative my-8 w-full max-w-4xl overflow-hidden rounded-3xl bg-white dark:bg-[#141726] shadow-2xl border border-slate-200 dark:border-slate-800 transition-colors"
+        className="relative my-8 w-full max-w-4xl overflow-hidden rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 transition-colors"
       >
         {/* Modal Top Header */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-slate-900 px-6 py-5 text-white">

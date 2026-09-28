@@ -262,7 +262,7 @@ export const HRMSView: React.FC = () => {
       {/* Top Header Card */}
       <div
         className={`flex flex-col justify-between gap-4 rounded-3xl border p-6 shadow-xs transition-colors sm:flex-row sm:items-center ${
-          isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
         }`}
       >
         <div className="flex items-center gap-3">
@@ -319,7 +319,7 @@ export const HRMSView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
-            isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
           }`}
         >
           <span className="text-[11px] font-semibold text-slate-500">
@@ -331,7 +331,7 @@ export const HRMSView: React.FC = () => {
         </div>
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
-            isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
           }`}
         >
           <span className="text-[11px] font-semibold text-slate-500">
@@ -343,7 +343,7 @@ export const HRMSView: React.FC = () => {
         </div>
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
-            isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
           }`}
         >
           <span className="text-[11px] font-semibold text-slate-500">
@@ -355,7 +355,7 @@ export const HRMSView: React.FC = () => {
         </div>
         <div
           className={`rounded-2xl border p-4 shadow-xs ${
-            isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
           }`}
         >
           <span className="text-[11px] font-semibold text-slate-500">
@@ -370,7 +370,7 @@ export const HRMSView: React.FC = () => {
       {/* Filter and Tab Bar */}
       <div
         className={`flex flex-col gap-3 rounded-2xl border p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between ${
-          isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
         }`}
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -449,7 +449,7 @@ export const HRMSView: React.FC = () => {
       {/* Main Tab Views */}
       <div
         className={`rounded-3xl border shadow-xs overflow-hidden ${
-          isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200/80 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
         }`}
       >
         {/* Tab 1: Employees Directory */}

@@ -131,7 +131,7 @@ Phone: +966 11 482 9900 | info@meayon.sa`;
     >
       <div
         id="dynamic-email-launcher-modal"
-        className="w-full max-w-lg overflow-hidden rounded-3xl bg-white dark:bg-[#141726] shadow-2xl border border-slate-200 dark:border-slate-800 transition-colors"
+        className="w-full max-w-lg overflow-hidden rounded-3xl bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 transition-colors"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-slate-900 px-6 py-4 text-white">

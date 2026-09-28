@@ -713,7 +713,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
 
       {/* KPI Metric Matrix */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
-        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'الأسطول المتتبع' : 'Tracked Fleet'}</span>
             <Truck className="h-4 w-4 text-orange-500" />
@@ -722,7 +722,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
           <p className="text-[11px] text-slate-400 mt-0.5">{vehicles.length} Active Transponders</p>
         </div>
 
-        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'في المسار (تشغيل)' : 'In-Transit'}</span>
             <Gauge className="h-4 w-4 text-emerald-500" />
@@ -731,7 +731,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
           <p className="text-[11px] text-slate-400 mt-0.5">{((runningCount / (vehicles.length || 1)) * 100).toFixed(0)}% Fleet Active</p>
         </div>
 
-        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'ضمن المواصفة' : 'Within Spec (≤4.2°C)'}</span>
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
@@ -740,7 +740,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
           <p className="text-[11px] text-slate-400 mt-0.5">Emerald Green Beacons</p>
         </div>
 
-        <div className={`rounded-2xl border p-4 ${breachedCount > 0 ? 'border-rose-900/60 bg-rose-950/20' : isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'}`}>
+        <div className={`rounded-2xl border p-4 ${breachedCount > 0 ? 'border-rose-900/60 bg-rose-950/20' : isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
           <div className="flex items-center justify-between text-xs font-bold">
             <span className={breachedCount > 0 ? 'text-rose-400' : 'text-slate-400'}>
               {isAr ? 'تجاوزات التبريد' : 'Breaches (>4.2°C)'}
@@ -751,7 +751,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
           <p className="text-[11px] text-slate-400 mt-0.5">Flashing Crimson Alert</p>
         </div>
 
-        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white shadow-xs'}`}>
+        <div className={`rounded-2xl border p-4 ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white shadow-xs'}`}>
           <div className="flex items-center justify-between text-slate-400 text-xs font-bold">
             <span>{isAr ? 'متوسط السرعة' : 'Fleet Avg Speed'}</span>
             <Activity className="h-4 w-4 text-blue-500" />
@@ -796,7 +796,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Column: Vehicle List & Telemetry Cards */}
         <div className="lg:col-span-7 space-y-4">
-          <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'}`}>
+          <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4">
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -937,7 +937,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
         <div className="lg:col-span-5 space-y-4">
           {/* Selected Vehicle Card with Cold Chain Vitals */}
           {selectedVehicle && (
-            <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'}`}>
+            <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
               <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4 text-orange-500" />
@@ -1015,7 +1015,7 @@ export const FleetTracker: React.FC<FleetTrackerProps> = ({
           )}
 
           {/* Real-time WebSocket Telemetry Log Console */}
-          <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-[#141726]/90' : 'border-slate-200 bg-white'}`}>
+          <div className={`rounded-3xl border p-5 shadow-xs ${isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'}`}>
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 mb-3">
               <div className="flex items-center gap-2">
                 <Radio className="h-4 w-4 text-emerald-500" />

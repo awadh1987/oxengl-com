@@ -39,7 +39,7 @@ export const ScaleTicketViewerModal: React.FC<ScaleTicketViewerModalProps> = ({
     >
       <div
         id="scale-ticket-viewer"
-        className="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] p-6 shadow-2xl transition-colors"
+        className="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-colors"
       >
         {/* Top bar */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

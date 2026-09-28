@@ -207,7 +207,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
       aria-labelledby="create-voucher-title"
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/70 p-4 backdrop-blur-xs"
     >
-      <div className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] shadow-2xl transition-colors">
+      <div className="relative w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl transition-colors">
         {/* Modal Header */}
         <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-gradient-to-r from-slate-900 via-neutral-950 to-slate-900 px-6 py-4 text-white">
           <div className="flex items-center gap-3">

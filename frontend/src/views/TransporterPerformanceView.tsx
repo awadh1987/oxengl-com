@@ -229,7 +229,7 @@ export const TransporterPerformanceView: React.FC = () => {
   return (
     <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="transporter-performance-view">
       {/* Header Banner & Action Bar */}
-      <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] p-5 shadow-xs transition-colors sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs transition-colors sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-orange-600 dark:text-orange-400">
             {isAr ? 'دفتر العمليات التشغيلية' : 'Operational ledger'}
@@ -299,7 +299,7 @@ export const TransporterPerformanceView: React.FC = () => {
           return (
             <article
               key={card.title}
-              className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] p-4 shadow-xs transition-colors"
+              className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs transition-colors"
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{card.title}</span>
@@ -312,7 +312,7 @@ export const TransporterPerformanceView: React.FC = () => {
       </section>
 
       {/* Table Section with Enclosed w-full overflow-x-auto container and Pagination */}
-      <section className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] shadow-xs transition-colors">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs transition-colors">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-5 py-4">
           <div>
             <h2 className="text-sm font-black text-slate-900 dark:text-white">

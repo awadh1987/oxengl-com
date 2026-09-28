@@ -188,7 +188,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
   return (
     <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Header Card & Controls */}
-      <div className="rounded-3xl border border-slate-800 bg-[#0B132B] p-6 shadow-xl relative overflow-hidden text-white no-print">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl relative overflow-hidden text-white no-print">
         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 via-indigo-500 to-amber-500" />
 
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

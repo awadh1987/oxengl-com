@@ -137,7 +137,7 @@ export const CrusherLedgerView: React.FC = () => {
       {/* Header Banner & Action Bar */}
       <header
         className={`flex flex-col gap-4 rounded-2xl border p-5 shadow-xs transition-colors sm:flex-row sm:items-center sm:justify-between ${
-          isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200 bg-white'
+          isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}
       >
         <div>
@@ -218,7 +218,7 @@ export const CrusherLedgerView: React.FC = () => {
                     ? 'border-orange-500 bg-orange-950/30 ring-1 ring-orange-500/50'
                     : 'border-orange-400 bg-orange-50/60 ring-1 ring-orange-300'
                   : isDark
-                  ? 'border-slate-800 bg-[#141726] hover:border-slate-700'
+                  ? 'border-slate-800 bg-slate-900 hover:border-slate-700'
                   : 'border-slate-200 bg-white hover:border-slate-300'
               }`}
             >
@@ -263,7 +263,7 @@ export const CrusherLedgerView: React.FC = () => {
       {selected && (
         <section
           className={`rounded-2xl border shadow-xs transition-colors ${
-            isDark ? 'border-slate-800 bg-[#141726]' : 'border-slate-200 bg-white'
+            isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
           }`}
         >
           <div className="flex flex-col gap-3 border-b border-slate-100 dark:border-slate-800 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">

@@ -300,7 +300,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
     >
       <div
         id="daily-operations-modal"
-        className="relative my-6 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] p-6 shadow-2xl transition-all"
+        className="relative my-6 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-all"
       >
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">

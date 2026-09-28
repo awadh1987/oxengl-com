@@ -125,7 +125,7 @@ export const ThemeDensityToolbar: React.FC<{ compact?: boolean }> = ({ compact =
             <div
               className={`absolute right-0 top-full z-50 mt-2 w-72 origin-top-right rounded-2xl border p-2 shadow-2xl backdrop-blur-xl ${
                 isDark
-                  ? 'border-slate-800 bg-[#0e1324]/95 text-slate-200 shadow-black/80'
+                  ? 'border-slate-800 bg-slate-900/98 text-slate-200 shadow-black/80'
                   : 'border-slate-200 bg-white/95 text-slate-800 shadow-slate-400/20'
               }`}
             >

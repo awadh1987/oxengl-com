@@ -482,7 +482,7 @@ export const CsvImportModal: React.FC<CsvImportModalProps> = ({
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div
-        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#141726] shadow-2xl overflow-hidden transition-colors"
+        className="relative flex max-h-[92vh] w-full max-w-4xl flex-col rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden transition-colors"
         id="csv-import-modal-container"
       >
         {/* Header */}
