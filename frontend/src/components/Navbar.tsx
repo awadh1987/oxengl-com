@@ -313,7 +313,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
       id="main-app-header"
       className={`sticky top-0 z-30 grid grid-cols-[1fr_auto] items-center gap-2 border-b px-3 py-1 sm:px-4 backdrop-blur-md transition-all ${
         isDark
-          ? 'border-slate-800 bg-[#0e1324]/95 text-slate-100'
+          ? 'border-slate-800 bg-slate-950/95 text-slate-200 shadow-sm'
           : 'border-neutral-200/80 bg-white/95 text-neutral-900'
       }`}
     >
@@ -405,11 +405,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               setShowSettings(!showSettings);
               setShowNotifications(false);
             }}
-            className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
+            className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-all duration-300 ${
               showSettings
-                ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400'
+                ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.35)]'
                 : isDark
-                ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white'
+                ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-sky-500/60 hover:text-white hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]'
                 : 'border-neutral-200 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
             }`}
             title={isAr ? 'إعدادات العرض والمظهر' : 'Display & Theme Settings'}
@@ -429,9 +429,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               <div
                 className={`absolute top-11 ${
                   isAr ? 'left-0' : 'right-0'
-                } z-50 w-72 origin-top-right rounded-2xl border p-3 shadow-xl backdrop-blur-xl transition-all ${
+                } z-50 w-72 origin-top-right rounded-2xl border p-3 shadow-2xl backdrop-blur-xl transition-all ${
                   isDark
-                    ? 'border-slate-800 bg-[#0e1324]/95 text-slate-100 shadow-black/80'
+                    ? 'border-slate-800 bg-slate-900/98 text-slate-200 shadow-black/80'
                     : 'border-neutral-200 bg-white/95 text-neutral-900 shadow-xl'
                 }`}
               >
@@ -682,11 +682,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               setShowNotifications(!showNotifications);
               setShowSettings(false);
             }}
-            className={`group relative flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-colors ${
+            className={`group relative flex h-7.5 w-7.5 items-center justify-center rounded-lg border transition-all duration-300 ${
               showNotifications
-                ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400'
+                ? 'border-orange-500 bg-orange-50 text-[#F05627] dark:border-orange-500/80 dark:bg-orange-950/40 dark:text-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.35)]'
                 : isDark
-                ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white'
+                ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-sky-500/60 hover:text-white hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]'
                 : 'border-neutral-200 bg-neutral-50 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
             }`}
             title={isAr ? 'التنبيهات والإشعارات' : 'Notifications'}
@@ -710,9 +710,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
               <div
                 className={`absolute top-11 ${
                   isAr ? 'left-0' : 'right-0'
-                } z-50 w-88 rounded-2xl border p-4 shadow-xl backdrop-blur-xl ${
+                } z-50 w-88 rounded-2xl border p-4 shadow-2xl backdrop-blur-xl transition-all ${
                   isDark
-                    ? 'border-slate-800 bg-[#0e1324]/95 text-slate-100 shadow-black/80'
+                    ? 'border-slate-800 bg-slate-900/98 text-slate-200 shadow-black/80'
                     : 'border-neutral-200 bg-white/95 text-neutral-900 shadow-xl'
                 }`}
               >
@@ -842,9 +842,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
         <button
           id="nav-lang-toggle-btn"
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-          className={`group flex h-7.5 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-colors ${
+          className={`group flex h-7.5 items-center gap-1.5 rounded-lg border px-2 text-[11px] font-semibold transition-all duration-300 ${
             isDark
-              ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-slate-700 hover:text-white'
+              ? 'border-slate-800 bg-slate-900 text-slate-300 hover:border-sky-500/60 hover:text-white hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]'
               : 'border-neutral-200 bg-neutral-50 text-neutral-700 hover:bg-neutral-100'
           }`}
           title={isAr ? 'Switch to English' : 'التحويل للغة العربية'}
@@ -894,9 +894,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
                 void signOutAuth();
                 onLogout();
               }}
-              className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-colors ${
+              className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-all duration-300 ${
                 isDark
-                  ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'
+                  ? 'text-slate-400 hover:bg-slate-800 hover:text-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]'
                   : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700'
               }`}
               title={isAr ? 'تسجيل الخروج' : 'Logout'}
