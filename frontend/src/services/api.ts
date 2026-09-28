@@ -718,7 +718,84 @@ export function getActiveCompanyId(explicitId?: string): string | null {
 
   if (typeof window === 'undefined') return null;
 
-  // 2. Direct localStorage storage keys
+  const effectiveDomain = getEffectiveDomainIdentifier();
+
+  // 2. If on a tenant workspace / custom domain, prioritize matching domain metadata
+  if (effectiveDomain) {
+    const rawCompany = localStorage.getItem('oxengl_current_company');
+    if (rawCompany) {
+      try {
+        const c = JSON.parse(rawCompany);
+        const matchesDomain =
+          c?.slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
+          c?.custom_domain?.toLowerCase() === effectiveDomain.toLowerCase() ||
+          c?.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
+        if (matchesDomain && isValidUUID(c?.id)) {
+          return c.id.trim();
+        }
+      } catch {}
+    }
+
+    const token = getAuthToken();
+    if (token) {
+      const claims = decodeJwtClaims(token);
+      if (claims) {
+        const matchesDomain =
+          claims.tenant_slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
+          claims.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
+        const cand = claims.company_id || claims.tenant_id || claims.companyId || claims.tenantId;
+        if (matchesDomain && isValidUUID(cand)) {
+          return cand.trim();
+        }
+      }
+    }
+
+    const rawUser = localStorage.getItem('oxengl_user') || localStorage.getItem('currentUser');
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        const matchesDomain =
+          u?.tenant_slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
+          u?.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
+        const cand = u?.company_id || u?.companyId || u?.tenant_id || u?.tenantId || u?.company?.id;
+        if (matchesDomain && isValidUUID(cand)) {
+          return cand.trim();
+        }
+      } catch {}
+    }
+
+    // Direct localStorage storage keys - only use if on this tenant's slug or saved company matches
+    const storedSlug = localStorage.getItem(OXENGL_TENANT_SLUG_KEY) || localStorage.getItem('tenant_slug');
+    if (storedSlug && storedSlug.toLowerCase() === effectiveDomain.toLowerCase()) {
+      const directKeys = [OXENGL_TENANT_ID_KEY, 'tenant_id', 'company_id', 'oxengl_tenant_uuid', 'active_company_id'];
+      for (const key of directKeys) {
+        const val = localStorage.getItem(key);
+        if (isValidUUID(val)) {
+          return val.trim();
+        }
+      }
+    }
+
+    // On a tenant domain, if local storage contains a stale mismatching tenant UUID, return null
+    // so downstream requests rely on backend Host header resolution instead of corrupting context.
+    return null;
+  }
+
+  // 3. Stored company object in localStorage (on apex or platform domain)
+  const rawCompany = localStorage.getItem('oxengl_current_company');
+  if (rawCompany) {
+    try {
+      const c = JSON.parse(rawCompany);
+      const candidates = [c?.id, c?.company_id, c?.tenant_id, c?.uuid];
+      for (const cand of candidates) {
+        if (isValidUUID(cand)) {
+          return cand.trim();
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Direct localStorage storage keys (on apex or platform domain)
   const directKeys = [
     OXENGL_TENANT_ID_KEY,
     'tenant_id',
@@ -733,7 +810,7 @@ export function getActiveCompanyId(explicitId?: string): string | null {
     }
   }
 
-  // 3. Decoded JWT claims from active session token
+  // 5. Decoded JWT claims from active session token
   const token = getAuthToken();
   if (token) {
     const claims = decodeJwtClaims(token);
@@ -746,7 +823,6 @@ export function getActiveCompanyId(explicitId?: string): string | null {
       ];
       for (const cand of candidates) {
         if (isValidUUID(cand)) {
-          // Cache validated UUID in localStorage for subsequent synchronous access
           try {
             localStorage.setItem(OXENGL_TENANT_ID_KEY, cand.trim());
             localStorage.setItem('tenant_id', cand.trim());
@@ -758,7 +834,7 @@ export function getActiveCompanyId(explicitId?: string): string | null {
     }
   }
 
-  // 4. Stored user objects in localStorage
+  // 6. Stored user objects in localStorage
   const userKeys = ['oxengl_user', 'meayon_user', 'currentUser'];
   for (const key of userKeys) {
     const raw = localStorage.getItem(key);
@@ -781,27 +857,13 @@ export function getActiveCompanyId(explicitId?: string): string | null {
     }
   }
 
-  // 5. Stored company object in localStorage
-  const rawCompany = localStorage.getItem('oxengl_current_company');
-  if (rawCompany) {
-    try {
-      const c = JSON.parse(rawCompany);
-      const candidates = [c?.id, c?.company_id, c?.tenant_id, c?.uuid];
-      for (const cand of candidates) {
-        if (isValidUUID(cand)) {
-          return cand.trim();
-        }
-      }
-    } catch {}
-  }
-
   return null;
 }
 
 export function getTenantSlug(): string | null {
   if (typeof window === 'undefined') return null;
-  const subdomain = getSubdomain();
-  if (subdomain) return subdomain;
+  const effectiveDomain = getEffectiveDomainIdentifier();
+  if (effectiveDomain) return effectiveDomain;
   const stored = localStorage.getItem(OXENGL_TENANT_SLUG_KEY) || localStorage.getItem('tenant_slug');
   if (stored) return stored;
   const token = getAuthToken();
@@ -820,7 +882,7 @@ export function setAuthSession(token: string, tier: 'master' | 'tenant', tenantS
   localStorage.setItem('token', token);
   localStorage.setItem('access_token', token);
   localStorage.setItem(OXENGL_AUTH_TIER_KEY, tier);
-  const effectiveSlug = tenantSlug || getSubdomain();
+  const effectiveSlug = tenantSlug || getEffectiveDomainIdentifier();
   if (effectiveSlug) {
     localStorage.setItem(OXENGL_TENANT_SLUG_KEY, effectiveSlug);
     localStorage.setItem('tenant_slug', effectiveSlug);
@@ -859,17 +921,21 @@ export function clearAuthSession(): void {
   localStorage.removeItem(OXENGL_AUTH_TOKEN_KEY);
   localStorage.removeItem('token');
   localStorage.removeItem('access_token');
+  localStorage.removeItem('oxengl_auth_jwt');
   localStorage.removeItem(OXENGL_AUTH_TIER_KEY);
   localStorage.removeItem(OXENGL_TENANT_SLUG_KEY);
   localStorage.removeItem('tenant_slug');
   localStorage.removeItem(OXENGL_TENANT_ID_KEY);
   localStorage.removeItem('tenant_id');
   localStorage.removeItem('company_id');
+  localStorage.removeItem('oxengl_tenant_uuid');
+  localStorage.removeItem('active_company_id');
   localStorage.removeItem('oxengl_current_company');
-  localStorage.removeItem('role');
-  localStorage.removeItem('oxengl_session_active');
   localStorage.removeItem('oxengl_user');
   localStorage.removeItem('meayon_user');
+  localStorage.removeItem('currentUser');
+  localStorage.removeItem('role');
+  localStorage.removeItem('oxengl_session_active');
 }
 
 const apiBaseUrl = typeof window === 'undefined' ? '' : window.location.origin;

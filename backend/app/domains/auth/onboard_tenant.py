@@ -416,11 +416,13 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
     hashed_pwd = pwd_context.hash(raw_password)
 
     try:
-        # 1. Enforce safety validation check against the newly indexed slug field
+        # 1. Enforce safety validation check against both ResCompany and MasterTenant
+        from backend.models import MasterTenant
         existing_tenant = db.query(ResCompany).filter(
             (ResCompany.domain_slug == slug_cleaned) | (ResCompany.slug == slug_cleaned)
         ).first()
-        if existing_tenant:
+        existing_master = db.query(MasterTenant).filter(MasterTenant.slug == slug_cleaned).first()
+        if existing_tenant or existing_master:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Workspace domain slug is already allocated to another enterprise account."
@@ -603,19 +605,32 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
         try:
             with db.begin_nested():
                 unique_mobile = phone_number or f"+9665{uuid.uuid4().int % 90000000 + 10000000:08d}"
-                db.execute(text('''
-                    INSERT INTO master_tenants (id, name, slug, custom_domain, owner_full_name, owner_email, owner_mobile, status, subscription_tier, max_users, max_storage_gb)
-                    VALUES (:id, :name, :slug, :custom_domain, :owner_name, :owner_email, :mobile, 'active', 'standard', 10, 25)
-                    ON CONFLICT (id) DO UPDATE SET slug = :slug, status = 'active', name = :name, custom_domain = :custom_domain;
-                '''), {
-                    "id": company_uuid,
-                    "name": company_name_en or company_name_ar,
-                    "slug": slug_cleaned,
-                    "custom_domain": clean_custom_domain,
-                    "owner_name": company_name_en or company_name_ar,
-                    "owner_email": norm_email,
-                    "mobile": unique_mobile,
-                })
+                existing_mt = db.query(MasterTenant).filter(
+                    (MasterTenant.id == company_uuid) | (MasterTenant.slug == slug_cleaned)
+                ).first()
+                if not existing_mt:
+                    existing_mt = MasterTenant(
+                        id=company_uuid,
+                        name=company_name_en or company_name_ar or slug_cleaned,
+                        slug=slug_cleaned,
+                        custom_domain=clean_custom_domain,
+                        owner_full_name=company_name_en or company_name_ar or "Administrator",
+                        owner_email=norm_email,
+                        owner_mobile=unique_mobile,
+                        status="active",
+                        subscription_tier="standard",
+                        max_users=10,
+                        max_storage_gb=25,
+                    )
+                    db.add(existing_mt)
+                else:
+                    if existing_mt.id != company_uuid:
+                        existing_mt.id = company_uuid
+                    existing_mt.name = company_name_en or company_name_ar or existing_mt.name
+                    existing_mt.slug = slug_cleaned
+                    existing_mt.custom_domain = clean_custom_domain or existing_mt.custom_domain
+                    existing_mt.status = "active"
+                    existing_mt.is_active = True
                 db.execute(text('''
                     INSERT INTO tenant_users (id, email, mobile_number, first_name, last_name, password_hash, role, is_active)
                     VALUES (:id, :email, :mobile, :first_name, :last_name, :pwd, 'admin', true)

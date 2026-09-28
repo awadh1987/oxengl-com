@@ -76,8 +76,15 @@ def deploy_register_new_tenant(
     hashed_pwd = pwd_context.hash(raw_password)
 
     # 1. Collision check
-    existing = db.execute(select(ResCompany).where(ResCompany.slug == slug_cleaned)).scalar_one_or_none()
-    if existing:
+    existing = db.execute(
+        select(ResCompany).where(
+            (ResCompany.slug == slug_cleaned) | (ResCompany.domain_slug == slug_cleaned)
+        )
+    ).scalar_one_or_none()
+    existing_master = db.execute(
+        select(MasterTenant).where(MasterTenant.slug == slug_cleaned)
+    ).scalar_one_or_none()
+    if existing or existing_master:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Workspace domain slug is already allocated to another enterprise account."
@@ -232,6 +239,8 @@ def deploy_register_new_tenant(
                 )
                 db.add(existing_mt)
             else:
+                if existing_mt.id != company_uuid:
+                    existing_mt.id = company_uuid
                 existing_mt.status = "active"
                 existing_mt.name = company_name
 

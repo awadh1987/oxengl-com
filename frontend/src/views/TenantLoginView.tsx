@@ -24,6 +24,7 @@ import {
   redirectToTenantWorkspace,
 } from '../utils/subdomain';
 import { useNavigate } from '../hooks/useNavigate';
+import { setAuthSession, isValidUUID } from '../services/api';
 
 
 interface TenantLoginViewProps {
@@ -204,15 +205,28 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
       }
 
       if (res?.access_token) {
+        const effectiveSlug = res.tenant_slug || tenantSlug;
+        const tenantCid = (res as any)?.company_id || (res as any)?.tenant_id || res.user?.company_id || res.user?.tenant_id;
+
+        // Synchronize central auth session and tenant UUID storage
+        setAuthSession(res.access_token, 'tenant', effectiveSlug, tenantCid);
         localStorage.setItem('token', res.access_token);
-        localStorage.setItem('tenant_slug', res.tenant_slug || tenantSlug);
+        localStorage.setItem('access_token', res.access_token);
+        localStorage.setItem('tenant_slug', effectiveSlug);
         localStorage.setItem('role', res.role || res.user?.role || 'admin');
+        if (tenantCid && isValidUUID(tenantCid)) {
+          localStorage.setItem('oxengl_tenant_id', tenantCid);
+          localStorage.setItem('tenant_id', tenantCid);
+          localStorage.setItem('company_id', tenantCid);
+        }
+        if (res.user) {
+          localStorage.setItem('oxengl_user', JSON.stringify(res.user));
+        }
 
         if (onLoginSuccess) {
           onLoginSuccess();
         }
 
-        const effectiveSlug = res.tenant_slug || tenantSlug;
         const customDomain = (res as any)?.custom_domain || (res as any)?.domain || matchedCompany?.custom_domain;
 
         // Strictly enforce absolute URL redirection upon successful authentication

@@ -110,6 +110,15 @@ def get_active_company_id(
     if requested_uuid:
         comp = db.get(ResCompany, requested_uuid)
         if comp is None:
+            from backend.models import MasterTenant
+            req_master = db.get(MasterTenant, requested_uuid)
+            if req_master:
+                comp = db.query(ResCompany).filter(
+                    (ResCompany.slug == req_master.slug)
+                    | (ResCompany.domain_slug == req_master.slug)
+                ).first()
+
+        if comp is None:
             if is_super_admin:
                 first_row = db.query(ResCompany.id).order_by(ResCompany.created_at.asc()).first()
                 effective_id = current_user.company_id or (first_row[0] if first_row else None)
@@ -119,6 +128,8 @@ def get_active_company_id(
                         detail="Active company was not found",
                     )
                 cid = effective_id
+            elif not request.query_params.get("company_id") and not request.query_params.get("tenant_id") and current_user.company_id:
+                cid = current_user.company_id
             else:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
@@ -150,10 +161,19 @@ def get_active_company_id(
         or user_role in ["super_admin", "superadmin", "owner", "tenant_owner", "company_owner", "admin", "ceo", "executive"]
     )
     if not is_exec_role and current_user.company_id and cid != current_user.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Authenticated user is not authorized for this company",
-        )
+        user_comp = db.get(ResCompany, current_user.company_id)
+        is_same = False
+        if user_comp and comp:
+            if user_comp.id == comp.id or user_comp.slug == comp.slug or user_comp.domain_slug == comp.domain_slug:
+                is_same = True
+        if not is_same:
+            if not request.query_params.get("company_id") and not request.query_params.get("tenant_id"):
+                cid = current_user.company_id
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Authenticated user is not authorized for this company",
+                )
 
     # Dynamic Context Injection into request.state
     request.state.company_id = cid

@@ -223,7 +223,10 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
         if master:
             if not company:
                 company = db.query(ResCompany).filter(
-                    (ResCompany.id == master.id) | (ResCompany.slug == master.slug)
+                    (ResCompany.id == master.id)
+                    | (ResCompany.slug == master.slug)
+                    | (ResCompany.domain_slug == master.slug)
+                    | (func.lower(func.trim(ResCompany.custom_domain)) == func.lower(func.trim(clean_host)))
                 ).first()
 
             if company and master.custom_domain and not company.custom_domain:
@@ -233,11 +236,12 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                 except Exception:
                     db.rollback()
 
+            canonical_id = str(company.id if company else master.id)
             result = {
-                "tenant_id": str(master.id),
-                "company_id": str(company.id if company else master.id),
+                "tenant_id": canonical_id,
+                "company_id": canonical_id,
                 "tenant_slug": master.slug,
-                "name": master.name,
+                "name": company.name if company else master.name,
                 "custom_domain": clean_host,
                 "is_custom_domain": not (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")),
                 "logo_url": company.ui_logo_url or company.logo_url if company else None,
@@ -277,6 +281,15 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
     finally:
         if should_close_db and db:
             db.close()
+
+
+def invalidate_domain_cache(host: Optional[str] = None) -> None:
+    """Invalidates the in-memory domain resolution cache for a specific host or all hosts."""
+    with _DOMAIN_CACHE_LOCK:
+        if host:
+            _DOMAIN_CACHE.pop(host.lower().strip(), None)
+        else:
+            _DOMAIN_CACHE.clear()
 
 
 class HostHeaderMiddleware(BaseHTTPMiddleware):

@@ -799,12 +799,29 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         #         },
         #     )
 
+        # Resolve canonical company ID from ResCompany
+        canonical_cid = tenant.id
+        try:
+            matched_comp = master_db.query(ResCompany).filter(
+                (ResCompany.id == tenant.id)
+                | (ResCompany.slug == tenant.slug)
+                | (ResCompany.domain_slug == tenant.slug)
+                | (
+                    func.lower(func.trim(ResCompany.custom_domain))
+                    == func.lower(func.trim(getattr(tenant, "custom_domain", "") or ""))
+                )
+            ).first()
+            if matched_comp:
+                canonical_cid = matched_comp.id
+        except Exception:
+            pass
+
         token = issue_two_tier_jwt(
             tier="tenant",
             user_id=user.id,
             identity=user.email,
             role=user.role,
-            tenant_id=tenant.id,
+            tenant_id=canonical_cid,
             tenant_slug=tenant.slug,
         )
         return {
@@ -812,8 +829,8 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             "token_type": "bearer",
             "tier": "tenant",
             "role": user.role,
-            "company_id": str(tenant.id),
-            "tenant_id": str(tenant.id),
+            "company_id": str(canonical_cid),
+            "tenant_id": str(canonical_cid),
             "tenant_slug": tenant.slug,
             "domain_slug": tenant.slug,
             "user": {
@@ -822,8 +839,8 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                 "mobile": user.mobile_number,
                 "fullName": f"{user.first_name} {user.last_name}",
                 "role": user.role,
-                "company_id": str(tenant.id),
-                "tenant_id": str(tenant.id),
+                "company_id": str(canonical_cid),
+                "tenant_id": str(canonical_cid),
                 "tenant_slug": tenant.slug,
                 "domain_slug": tenant.slug,
             },

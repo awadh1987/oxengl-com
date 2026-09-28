@@ -25,6 +25,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from fastapi import Depends, Header, HTTPException, Query, Request, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -714,27 +715,93 @@ def get_tenant_context(
     if is_super_admin:
         effective_company_id = requested_uuid if requested_uuid else user_cid
     elif requested_uuid and str(requested_uuid) != str(user_cid):
-        # Validate if caller has explicit branch scope or administrative authority over this descendant branch
-        is_accessible = False
-        scope_ids_raw = getattr(current_user, "branch_scope_ids", None)
-        if scope_ids_raw and str(requested_uuid) in str(scope_ids_raw):
-            is_accessible = True
-        elif user_role in (OWNER, ADMIN, "company_admin", "ceo", "coo", "executive"):
-            curr = db.query(ResCompany).filter(ResCompany.id == requested_uuid).first()
-            visited = set()
-            while curr and curr.parent_id and curr.id not in visited:
-                visited.add(curr.id)
-                if curr.parent_id == user_cid:
-                    is_accessible = True
-                    break
-                curr = db.query(ResCompany).filter(ResCompany.id == curr.parent_id).first()
+        # 1. First, check if requested_uuid and user_cid actually resolve to the SAME tenant!
+        # (e.g. MasterTenant vs ResCompany alias, or matching slug / domain)
+        is_same_tenant = False
+        from backend.models import MasterTenant, ResCompany
 
-        if not is_accessible:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Multi-tenant isolation violation: Access to data of another company or tenant is strictly prohibited.",
-            )
-        effective_company_id = requested_uuid
+        req_comp = db.get(ResCompany, requested_uuid)
+        if not req_comp:
+            req_master = db.get(MasterTenant, requested_uuid)
+            if req_master:
+                req_comp = db.query(ResCompany).filter(
+                    (ResCompany.slug == req_master.slug)
+                    | (ResCompany.domain_slug == req_master.slug)
+                    | (
+                        ResCompany.custom_domain.isnot(None)
+                        & (func.lower(func.trim(ResCompany.custom_domain)) == func.lower(func.trim(getattr(req_master, "custom_domain", "") or "")))
+                    )
+                ).first()
+
+        user_comp = db.get(ResCompany, user_cid)
+        if not user_comp:
+            user_master = db.get(MasterTenant, user_cid)
+            if user_master:
+                user_comp = db.query(ResCompany).filter(
+                    (ResCompany.slug == user_master.slug)
+                    | (ResCompany.domain_slug == user_master.slug)
+                    | (
+                        ResCompany.custom_domain.isnot(None)
+                        & (func.lower(func.trim(ResCompany.custom_domain)) == func.lower(func.trim(getattr(user_master, "custom_domain", "") or "")))
+                    )
+                ).first()
+
+        if req_comp and user_comp:
+            if req_comp.id == user_comp.id:
+                is_same_tenant = True
+            elif req_comp.slug and req_comp.slug == user_comp.slug:
+                is_same_tenant = True
+            elif req_comp.domain_slug and req_comp.domain_slug == user_comp.domain_slug:
+                is_same_tenant = True
+            elif (
+                req_comp.custom_domain
+                and user_comp.custom_domain
+                and req_comp.custom_domain.strip().lower() == user_comp.custom_domain.strip().lower()
+            ):
+                is_same_tenant = True
+
+        if is_same_tenant:
+            effective_company_id = user_cid
+        else:
+            # 2. Validate if caller has explicit branch scope or administrative authority over this descendant branch
+            is_accessible = False
+            scope_ids_raw = getattr(current_user, "branch_scope_ids", None)
+            if scope_ids_raw and str(requested_uuid) in str(scope_ids_raw):
+                is_accessible = True
+            elif user_role in (OWNER, ADMIN, "company_admin", "ceo", "coo", "executive"):
+                curr = req_comp
+                visited = set()
+                while curr and curr.parent_id and curr.id not in visited:
+                    visited.add(curr.id)
+                    if curr.parent_id == user_cid:
+                        is_accessible = True
+                        break
+                    curr = db.query(ResCompany).filter(ResCompany.id == curr.parent_id).first()
+
+            # 3. Graceful fallback for Stale Client Headers:
+            # If requested_uuid was supplied solely via client headers (not an explicit query param),
+            # and the user is authenticated in their assigned company (or browsing on their company's domain),
+            # do not trigger a 403 isolation error over stale browser storage. Fall back to user_cid!
+            if not is_accessible and not query_company_id and not query_tenant_id:
+                if state_cid and (str(state_cid) == str(user_cid) or (user_comp and str(state_cid) == str(user_comp.id))):
+                    logger.info(
+                        f"Stale client header UUID={requested_uuid} ignored; defaulting to host/user tenant {user_cid}"
+                    )
+                    effective_company_id = user_cid
+                    is_accessible = True
+                elif not state_cid:
+                    logger.info(
+                        f"Stale client header UUID={requested_uuid} ignored on apex domain; defaulting to authenticated user tenant {user_cid}"
+                    )
+                    effective_company_id = user_cid
+                    is_accessible = True
+
+            if not is_accessible:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Multi-tenant isolation violation: Access to data of another company or tenant is strictly prohibited.",
+                )
+            effective_company_id = effective_company_id if is_accessible and effective_company_id is not None else requested_uuid
     else:
         effective_company_id = user_cid
 

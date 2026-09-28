@@ -147,7 +147,8 @@ def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_
     existing_comp = db.query(ResCompany).filter(
         or_(ResCompany.slug == clean_slug, ResCompany.domain_slug == clean_slug)
     ).first()
-    if existing_comp:
+    existing_master = db.query(MasterTenant).filter(MasterTenant.slug == clean_slug).first()
+    if existing_comp or existing_master:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Tenant slug '{clean_slug}' is already registered.",
@@ -188,6 +189,16 @@ def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_
         max_storage_gb=1000 if tier == "enterprise" else 100,
     )
     db.add(master)
+
+    # 3. Synchronize public.tenants table for legacy layer consistency
+    try:
+        from sqlalchemy import text
+        db.execute(
+            text("INSERT INTO tenants (id, company_name, schema_name, is_active, created_at) VALUES (:id, :name, :schema, true, NOW()) ON CONFLICT (id) DO UPDATE SET company_name = :name, schema_name = :schema"),
+            {"id": new_id, "name": payload.name, "schema": clean_slug}
+        )
+    except Exception:
+        pass
 
     db.commit()
     db.refresh(company)

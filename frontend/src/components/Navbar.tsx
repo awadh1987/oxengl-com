@@ -34,7 +34,7 @@ import { BrandLogo } from './BrandLogo';
 import { PlatformLogo } from './PlatformLogo';
 import { UserAvatar } from './UserAvatar';
 import { HoverIcon } from './common/HoverIcon';
-import { isApexDomain, getSubdomain } from '../utils/subdomain';
+import { isApexDomain, getSubdomain, getEffectiveDomainIdentifier, isCustomDomain } from '../utils/subdomain';
 
 export interface SystemAlert {
   id: string;
@@ -228,9 +228,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
   const isMasterAdmin = authTier === 'master' || currentUser?.role === 'Super_Admin';
   const currentTenantId = !isMasterAdmin ? (tenantId || currentCompany?.id || localStorage.getItem('oxengl_tenant_id') || '') : tenantId;
   const isTenantScoped = Boolean((authTier === 'tenant' || tenantId || currentTenantId) && !isMasterAdmin);
-  const activeSubdomain = typeof window !== 'undefined' ? getSubdomain() : null;
+  const activeDomain = typeof window !== 'undefined' ? getEffectiveDomainIdentifier() : null;
   const isApex = typeof window !== 'undefined' ? isApexDomain() : true;
-  const isTenantDomain = !isApex && Boolean(activeSubdomain);
+  const isTenantDomain = !isApex && Boolean(activeDomain);
   const isTenant = isTenantDomain || isTenantScoped || Boolean(tenantSlug) || Boolean(currentTenantId);
 
   // Match the company from currentCompany, companies list, or tenant context
@@ -239,9 +239,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
     if (currentCompany && currentCompany.name && currentCompany.name.toLowerCase() !== (currentCompany.slug || '').toLowerCase()) {
       return currentCompany;
     }
-    const targetSlug = (activeSubdomain || tenantSlug || '').toLowerCase();
+    const targetSlug = (activeDomain || tenantSlug || '').toLowerCase();
     if (targetSlug && companies.length > 0) {
-      const match = companies.find((c) => c.slug?.toLowerCase() === targetSlug);
+      const match = companies.find(
+        (c) =>
+          c.slug?.toLowerCase() === targetSlug ||
+          (c as any).domain_slug?.toLowerCase() === targetSlug ||
+          (c as any).custom_domain?.toLowerCase() === targetSlug ||
+          (c as any).domain?.toLowerCase() === targetSlug
+      );
       if (match) return match;
     }
     if (currentTenantId && companies.length > 0) {
@@ -249,7 +255,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
       if (match) return match;
     }
     return currentCompany;
-  }, [currentCompany, companies, activeSubdomain, tenantSlug, currentTenantId, currentUser?.companyId]);
+  }, [currentCompany, companies, activeDomain, tenantSlug, currentTenantId, currentUser?.companyId]);
 
   // Synchronize context if effectiveCompany has the authentic tenant name from companies registry
   useEffect(() => {
