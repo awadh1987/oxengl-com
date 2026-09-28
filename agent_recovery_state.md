@@ -20,7 +20,7 @@
   - [x] Implement interactive Tailwind hover glow effects (`erp-glow-btn`, `erp-card-interactive`, `erp-card-elevated`) in `index.css`.
   - [x] Standardize `App.tsx` shell, domain switcher ribbon, and main container.
   - [x] Standardize `Navbar.tsx` surfaces, headers, and interactive glow buttons.
-  - [ ] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
+  - [x] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
   - [ ] Standardize common views and modals.
 - [ ] **Phase 2: Enterprise Tier Gating (Registration View)**
   - Gate "External Database Hosting" and "Custom Domain" configurations for Standard/Professional tiers.

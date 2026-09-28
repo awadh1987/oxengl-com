@@ -614,7 +614,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <aside
         id="app-sidebar-navigation"
-        className={`erp-sidebar-drawer fixed inset-y-0 start-0 z-40 flex h-full h-dvh flex-col justify-between border-e border-slate-800 bg-[#0B132B] text-slate-100 shadow-2xl transition-all duration-300 ease-in-out md:static md:z-auto md:h-[calc(100dvh-4.5rem)] ${
+        className={`erp-sidebar-drawer fixed inset-y-0 start-0 z-40 flex h-full h-dvh flex-col justify-between border-e border-slate-800 bg-slate-950 text-slate-200 shadow-2xl transition-all duration-300 ease-in-out md:static md:z-auto md:h-[calc(100dvh-4.5rem)] ${
           isCollapsed ? 'md:w-16' : 'md:w-64'
         } ${
           isOpenMobile
@@ -653,7 +653,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     type="button"
                     onClick={onCloseMobile}
-                    className="group flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-xs md:hidden cursor-pointer"
+                    className="group flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-rose-500 hover:bg-rose-500 hover:text-white transition-all duration-300 shadow-xs hover:shadow-[0_0_12px_rgba(244,63,94,0.4)] md:hidden cursor-pointer"
                     title={isAr ? 'إغلاق القائمة' : 'Close Menu'}
                   >
                     <HoverIcon className="h-4 w-4">
@@ -667,7 +667,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   id="sidebar-collapse-toggle-btn"
                   onClick={toggleCollapsed}
-                  className="group hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all shadow-xs cursor-pointer"
+                  className="group hidden md:flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700/80 bg-slate-800/80 text-slate-300 hover:border-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-300 shadow-xs hover:shadow-[0_0_12px_rgba(249,115,22,0.45)] cursor-pointer"
                   title={
                     isCollapsed
                       ? isAr
@@ -847,16 +847,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <div
                       key={cat.id}
-                      className="rounded-xl border border-slate-800/80 bg-slate-900/30 overflow-hidden"
+                      className="rounded-xl border border-slate-800/80 bg-slate-900/50 overflow-hidden"
                     >
                       {/* Accordion Section Header with Classic Enterprise Icon Badge */}
                       <button
                         type="button"
                         onClick={() => toggleCategory(cat.id)}
-                        className={`group flex w-full items-center justify-between px-2.5 py-1.5 text-xs font-bold transition-all ${
+                        className={`group flex w-full items-center justify-between px-2.5 py-1.5 text-xs font-bold transition-all duration-300 ${
                           hasActiveChild
                             ? 'bg-slate-800/80 text-orange-400'
-                            : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'
+                            : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 hover:shadow-[0_0_10px_rgba(14,165,233,0.2)]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -883,7 +883,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                         <div className="flex items-center gap-1.5">
                           {hasActiveChild && (
-                            <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.8)]" />
                           )}
                           {isCatExpanded ? (
                             <HoverIcon className="h-3.5 w-3.5 text-slate-500">
@@ -899,7 +899,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                       {/* Accordion Children Items */}
                       {isCatExpanded && (
-                        <div className="p-1 space-y-0.5 border-t border-slate-800/60 bg-slate-950/20">
+                        <div className="p-1 space-y-0.5 border-t border-slate-800/60 bg-slate-950/40">
                           {catItems.map((item) => {
                             const isAllowed = item.roles.includes(currentUser?.role ?? 'Guest');
                             const isActive = activeTab === item.id;
@@ -924,12 +924,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               <button
                                 key={item.id}
                                 onClick={() => handleNavigate(item)}
-                                className={`group flex w-full items-center justify-between rounded px-2 py-1 text-xs font-semibold transition-all cursor-pointer ${
+                                className={`group flex w-full items-center justify-between rounded px-2 py-1 text-xs font-semibold transition-all duration-300 cursor-pointer ${
                                   isActive
-                                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs'
+                                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs hover:shadow-[0_0_15px_rgba(249,115,22,0.5)]'
                                     : item.highlight
-                                    ? 'bg-amber-400/10 text-amber-300 hover:bg-amber-400/20'
-                                    : 'text-slate-300 hover:bg-slate-800/70 hover:text-white'
+                                    ? 'bg-amber-400/10 text-amber-300 hover:bg-amber-400/20 hover:shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                                    : 'text-slate-300 hover:bg-slate-800/70 hover:text-white hover:shadow-[0_0_12px_rgba(14,165,233,0.35)]'
                                 }`}
                               >
                                 <div className="flex items-center gap-1.5 truncate">
@@ -1007,10 +1007,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             key={item.id}
                             onClick={() => handleNavigate(item)}
                             title={`${label}${item.badge ? ` [${item.badge}]` : ''}`}
-                            className={`group relative flex h-7.5 w-7.5 mx-auto items-center justify-center rounded border transition-all cursor-pointer ${
+                            className={`group relative flex h-7.5 w-7.5 mx-auto items-center justify-center rounded border transition-all duration-300 cursor-pointer ${
                               isActive
-                                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md border-orange-400'
-                                : `${railCatIconClass} hover:opacity-90`
+                                ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md border-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.5)]'
+                                : `${railCatIconClass} hover:opacity-90 hover:shadow-[0_0_12px_rgba(14,165,233,0.35)]`
                             }`}
                           >
                             {renderIconNode(
