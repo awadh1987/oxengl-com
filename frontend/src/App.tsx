@@ -891,6 +891,9 @@ function AppContent() {
         onOpenExportPrintModal={() => setIsExportPrintModalOpen(true)}
         onLogout={leaveWorkspace}
         onNavigateTab={(tab) => navigateToTab(tab as any)}
+        activeTab={activeTab}
+        selectedDomain={selectedDomain}
+        onSelectDomain={setSelectedDomain}
       />}
 
       {activeTab !== 'hub' && (() => {

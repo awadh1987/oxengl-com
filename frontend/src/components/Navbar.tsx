@@ -27,6 +27,18 @@ import {
   Network,
   FolderTree,
   FileCheck2,
+  ChevronDown,
+  ChevronUp,
+  Landmark,
+  Radio,
+  Wrench,
+  Scale,
+  Building2,
+  Layers,
+  ShoppingCart,
+  Boxes,
+  FileSpreadsheet,
+  TrendingUp,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { TENANT_PALETTES } from '../theme/designTokens';
@@ -55,14 +67,23 @@ export interface SystemAlert {
   targetTab: string;
 }
 
-interface NavbarProps {
+export interface NavbarProps {
   onOpenAIModal?: () => void;
   onOpenExportPrintModal?: () => void;
   onLogout?: () => void;
   onNavigateTab?: (tab: string) => void;
+  activeTab?: string;
+  selectedDomain?: 'Operations & Logistics' | 'Finance, Accounting & Control';
+  onSelectDomain?: (domain: 'Operations & Logistics' | 'Finance, Accounting & Control') => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  onLogout,
+  onNavigateTab,
+  activeTab,
+  selectedDomain: selectedDomainProp,
+  onSelectDomain: onSelectDomainProp,
+}) => {
   const {
     currentUser,
     language,
@@ -84,7 +105,95 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
     tenantId,
     tenantSlug,
     authTier,
+    isDriverMode,
   } = useApp();
+
+  const [internalDomain, setInternalDomain] = useState<'Operations & Logistics' | 'Finance, Accounting & Control'>(() => {
+    if (selectedDomainProp) return selectedDomainProp;
+    if (activeTab) {
+      if (['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab)) {
+        return 'Finance, Accounting & Control';
+      }
+    }
+    return 'Operations & Logistics';
+  });
+
+  const [isOpsExpanded, setIsOpsExpanded] = useState<boolean>(true);
+  const [isFinanceExpanded, setIsFinanceExpanded] = useState<boolean>(true);
+
+  const activeNavDomain = selectedDomainProp ?? internalDomain;
+
+  const handleDomainSelect = (domain: 'Operations & Logistics' | 'Finance, Accounting & Control') => {
+    if (onSelectDomainProp) {
+      onSelectDomainProp(domain);
+    } else {
+      setInternalDomain(domain);
+    }
+  };
+
+  useEffect(() => {
+    if (!activeTab) return;
+    const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab);
+    const isOps = ['operations', 'fleet-map', 'maintenance', 'transporters', 'crushers', 'customs', 'planning', 'procurement', 'inventory', 'dashboard'].includes(activeTab);
+    if (isFinance && activeNavDomain !== 'Finance, Accounting & Control') {
+      handleDomainSelect('Finance, Accounting & Control');
+      setIsFinanceExpanded(true);
+    } else if (isOps && activeNavDomain !== 'Operations & Logistics') {
+      handleDomainSelect('Operations & Logistics');
+      setIsOpsExpanded(true);
+    }
+  }, [activeTab]);
+
+  const handleDomainClick = (domain: 'Operations & Logistics' | 'Finance, Accounting & Control') => {
+    if (activeNavDomain === domain) {
+      if (domain === 'Operations & Logistics') {
+        setIsOpsExpanded((prev) => !prev);
+      } else {
+        setIsFinanceExpanded((prev) => !prev);
+      }
+    } else {
+      handleDomainSelect(domain);
+      if (domain === 'Operations & Logistics') {
+        setIsOpsExpanded(true);
+        const isOps = ['operations', 'fleet-map', 'maintenance', 'transporters', 'crushers', 'customs', 'planning', 'procurement', 'inventory'].includes(activeTab || '');
+        if (!isOps) onNavigateTab?.('operations');
+      } else {
+        setIsFinanceExpanded(true);
+        const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab || '');
+        if (!isFinance) onNavigateTab?.('invoicing');
+      }
+    }
+  };
+
+  // Sub-navigation definition for Operations & Logistics
+  const opsSubItems = useMemo(() => {
+    const rawItems = [
+      { id: 'operations', labelAr: 'سجل العمليات اليومية', labelEn: 'Daily Operations Logs', icon: Truck },
+      { id: 'fleet-map', labelAr: 'رادار وخريطة الأسطول', labelEn: 'Fleet Radar & GPS', icon: Radio },
+      { id: 'maintenance', labelAr: 'صيانة الأسطول والوقود', labelEn: 'Fleet Maintenance & Fuel', icon: Wrench },
+      { id: 'transporters', labelAr: 'موردي الخدمات والتسويات', labelEn: 'Service Suppliers', icon: Scale },
+      { id: 'crushers', labelAr: 'موردي المواد وحساباتهم', labelEn: 'Material Suppliers', icon: Building2 },
+      { id: 'customs', labelAr: 'لوحة التخليص الجمركي', labelEn: 'Customs Clearance', icon: Globe },
+      { id: 'planning', labelAr: 'إدارة التخطيط والتشغيل', labelEn: 'Planning & Charters', icon: Layers },
+      { id: 'procurement', labelAr: 'المشتريات وسلسلة التوريد', labelEn: 'Procurement & S2P', icon: ShoppingCart },
+      { id: 'inventory', labelAr: 'المخزون والتقييم المالي', labelEn: 'Inventory & Valuation', icon: Boxes },
+    ];
+    if (isDriverMode) {
+      return rawItems.filter((i) => i.id === 'operations' || i.id === 'transporters');
+    }
+    return rawItems;
+  }, [isDriverMode]);
+
+  // Sub-navigation definition for Finance, Accounting & Control
+  const financeSubItems = useMemo(() => [
+    { id: 'invoicing', labelAr: 'الفوترة الضريبية', labelEn: 'ZATCA Invoicing', icon: FileSpreadsheet },
+    { id: 'vouchers', labelAr: 'السندات المالية', labelEn: 'Financial Vouchers', icon: Receipt },
+    { id: 'finance-chart', labelAr: 'دليل الحسابات', labelEn: 'Chart of Accounts', icon: Network },
+    { id: 'financial-reports', labelAr: 'التقارير المالية المجمعة', labelEn: 'Financial Reports Engine', icon: TrendingUp },
+    { id: 'finance-trial-balance', labelAr: 'ميزان المراجعة', labelEn: 'Trial Balance', icon: Scale },
+    { id: 'finance-audit-closing', labelAr: 'الإقفال السنوي والتدقيق', labelEn: 'Annual Audit Closing', icon: FileCheck2 },
+    { id: 'ai-insights', labelAr: 'مدقق العمليات والمالية الذكي', labelEn: 'AI Financial Auditor', icon: Sparkles },
+  ], []);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -312,14 +421,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
   return (
     <header
       id="main-app-header"
-      className={`sticky top-0 z-30 grid grid-cols-[1fr_auto] items-center gap-2 border-b px-3 py-1 sm:px-4 backdrop-blur-md transition-all ${
+      className={`sticky top-0 z-30 flex flex-col border-b px-3 py-1 sm:px-4 backdrop-blur-md transition-all ${
         isDark
           ? 'border-slate-800 bg-slate-950/95 text-slate-200 shadow-sm'
           : 'border-neutral-200/80 bg-white/95 text-neutral-900'
       }`}
     >
-      {/* Left Section: Essentials Context (Logo, Subtitle, Tenant Selector, System Latency/Status) */}
-      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      {/* Top Row: Identity & Primary Controls */}
+      <div className="flex w-full items-center justify-between gap-2">
+        {/* Left Section: Essentials Context (Logo, Subtitle, Tenant Selector, System Latency/Status) */}
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
         {/* Brand Logo & Tagline */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Dynamic Tenant Branding: Logo with strict fallback to Monogram Avatar Badge */}
@@ -889,6 +1000,156 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogout, onNavigateTab }) => {
           )}
         </div>
       </div>
+    </div>
+
+      {/* Bottom Row: Stacked Horizontal Domain Tabs (Phase 2) */}
+      {!isDriverMode && (
+        <div
+          id="header-domain-navigation"
+          className="flex w-full flex-col gap-1 border-t border-slate-200/60 dark:border-slate-800/80 pt-1 pb-0.5"
+          dir={isAr ? 'rtl' : 'ltr'}
+        >
+          {/* Main Domain Tab 1: Operations & Logistics */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                id="header-domain-tab-ops"
+                onClick={() => handleDomainClick('Operations & Logistics')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-black transition-all duration-200 cursor-pointer ${
+                  activeNavDomain === 'Operations & Logistics'
+                    ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs hover:shadow-[0_0_12px_rgba(249,115,22,0.4)]'
+                    : isDark
+                    ? 'bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                }`}
+              >
+                <Truck className="h-3 w-3 shrink-0" />
+                <span>{isAr ? '🚛 العمليات واللوجستيات' : '🚛 Operations & Logistics'}</span>
+                <span
+                  className={`text-[9.5px] px-1 rounded font-bold ${
+                    activeNavDomain === 'Operations & Logistics'
+                      ? 'bg-white/20 text-white'
+                      : isDark
+                      ? 'bg-slate-800 text-slate-400'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {opsSubItems.length}
+                </span>
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform duration-200 ${
+                    activeNavDomain === 'Operations & Logistics' && isOpsExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {activeNavDomain === 'Operations & Logistics' && (
+                <div className="hidden sm:flex items-center gap-1 text-[9.5px] text-orange-400 font-mono">
+                  <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                  <span>{isAr ? 'شاشات التشغيل والأسطول نشطة' : 'Operations & Logistics Active'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Collapsible Sub-Navigation List */}
+            {activeNavDomain === 'Operations & Logistics' && isOpsExpanded && (
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+                {opsSubItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => onNavigateTab?.(item.id)}
+                      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50 shadow-xs'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <Icon className="h-2.5 w-2.5 shrink-0" />
+                      <span>{isAr ? item.labelAr : item.labelEn}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Main Domain Tab 2: Finance, Accounting & Control */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                id="header-domain-tab-finance"
+                onClick={() => handleDomainClick('Finance, Accounting & Control')}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-black transition-all duration-200 cursor-pointer ${
+                  activeNavDomain === 'Finance, Accounting & Control'
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs hover:shadow-[0_0_12px_rgba(139,92,246,0.4)]'
+                    : isDark
+                    ? 'bg-slate-900/90 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200'
+                }`}
+              >
+                <Landmark className="h-3 w-3 shrink-0" />
+                <span>{isAr ? '📊 المالية والمحاسبة والرقابة' : '📊 Finance, Accounting & Control'}</span>
+                <span
+                  className={`text-[9.5px] px-1 rounded font-bold ${
+                    activeNavDomain === 'Finance, Accounting & Control'
+                      ? 'bg-white/20 text-white'
+                      : isDark
+                      ? 'bg-slate-800 text-slate-400'
+                      : 'bg-slate-200 text-slate-600'
+                  }`}
+                >
+                  {financeSubItems.length}
+                </span>
+                <ChevronDown
+                  className={`h-3 w-3 transition-transform duration-200 ${
+                    activeNavDomain === 'Finance, Accounting & Control' && isFinanceExpanded ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {activeNavDomain === 'Finance, Accounting & Control' && (
+                <div className="hidden sm:flex items-center gap-1 text-[9.5px] text-violet-400 font-mono">
+                  <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                  <span>{isAr ? 'شاشات المالية ودفتر الأستاذ نشطة' : 'Finance & Control Active'}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Collapsible Sub-Navigation List */}
+            {activeNavDomain === 'Finance, Accounting & Control' && isFinanceExpanded && (
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
+                {financeSubItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => onNavigateTab?.(item.id)}
+                      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                        isActive
+                          ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50 shadow-xs'
+                          : isDark
+                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
+                      }`}
+                    >
+                      <Icon className="h-2.5 w-2.5 shrink-0" />
+                      <span>{isAr ? item.labelAr : item.labelEn}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 };

@@ -5,7 +5,8 @@
  */
 
 import React from 'react';
-import { Navbar } from '../Navbar';
+import { Navbar, NavbarProps } from '../Navbar';
 
 export { Navbar as TopHeader };
+export type { NavbarProps as TopHeaderProps };
 export default Navbar;
