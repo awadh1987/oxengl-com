@@ -1,62 +1,32 @@
 # Agent Recovery State & Execution Checkpoint
 
 ## Active Specification
-**Platform UI, Branding, and Enterprise Gating Specification** (`docs/platform-ui-branding-upgrade-spec.md`)
+**UI Menu Consolidation & Layout Overhaul** (`docs/docs/ui-menu-consolidation-spec.md`)
 
 ---
 
 ## Current Status
-- **Current Phase:** Phase 3 - Dynamic Tenant Branding (Completed)
-- **State:** Monogram avatar utility (`extractTenantMonogram`, `getTenantAvatarGradient`), sleek circular colored badge component (`TenantAvatar`), logo integration, strict fallback logic (`logo_url` -> `onError` -> dynamic monogram avatar), and cross-component integration across Navbar, Sidebar, TenantLoginView, LandingPageView, BrandLogo, BrandingSettingsCard, TenantBrandingCustomizer, AppContext, and types.ts implemented. Build passed cleanly (`npm run build`), artifacts synced to `oxengl_frontend_container`, Nginx reloaded, HTTPS 200 OK verified.
-- **Last Sync / Commit:** Phase 3 Full Completion Checkpoint
+- **Current Phase:** Phase 1: Unified Standard Sidebar (Planned - Awaiting Approval)
+- **State:** Read and analyzed `docs/docs/ui-menu-consolidation-spec.md`. Mapped all popover routing items from `Navbar.tsx` (Master Data & RBAC, Chart of Accounts, Tenant Settings, Enterprise Org Profile, Executive Approvals, Subscription & Billing, Corporate Compliance Vault) to the canonical sidebar tree. Prepared `frontend/src/components/layout/Sidebar.tsx` architecture. Ready for user approval to execute Phase 1.
+- **Last Sync / Commit:** Checkpoint prior to Phase 1 execution.
 
 ---
 
 ## Phase Breakdown
-- [x] **Phase 1: Unified Dark Theme Overhaul**
-  - [x] Standardize base application backgrounds to `bg-slate-950` in `index.css`.
-  - [x] Standardize cards, modals, and elevated surfaces to `bg-slate-900` in `index.css`.
-  - [x] Standardize text contrast to `text-slate-200` (primary) and `text-slate-400` (secondary) with `border-slate-800`.
-  - [x] Implement interactive Tailwind hover glow effects (`erp-glow-btn`, `erp-card-interactive`, `erp-card-elevated`) in `index.css`.
-  - [x] Standardize `App.tsx` shell, domain switcher ribbon, and main container.
-  - [x] Standardize `Navbar.tsx` surfaces, headers, and interactive glow buttons.
-  - [x] Standardize `Sidebar.tsx` drawer, categories, and rail buttons.
-  - [x] Standardize core views (`TenantLandingHubView.tsx`, `TransporterPerformanceView.tsx`, `FleetMaintenanceView.tsx`, `CrusherLedgerView.tsx`, `ProcurementView.tsx`, `HRMSView.tsx`, `TenantBillingView.tsx`, `SuperAdminCockpitView.tsx`, `FinancialReportsView.tsx`, `FinanceReportsView.tsx`, `SuperAdminFinancialHubView.tsx`).
-  - [x] Standardize all modal surfaces and tokens (`designTokens.ts`, `CrusherPaymentModal.tsx`, `AddEmployeeModal.tsx`, `InvoiceExportShareModal.tsx`, `NewPurchaseOrderModal.tsx`, `MultiAttachmentModal.tsx`, `FleetTracker.tsx`, `ThemeDensityToolbar.tsx`, `CsvImportModal.tsx`, `DailyOperationsModal.tsx`, `CreateVoucherModal.tsx`, `DynamicEmailLauncherModal.tsx`, `QuickAddEntityModal.tsx`, `ScaleTicketViewerModal.tsx`, `AIAssistantWidget.tsx`).
-- [x] **Phase 2: Enterprise Tier Gating (Registration View)**
-  - [x] Strictly gate "External Database Hosting" and "Custom Domain" configurations for Standard/Professional tiers.
-  - [x] UI visual locking (`opacity-50 pointer-events-none cursor-not-allowed` + `Lock` icons and enterprise lock banners).
-  - [x] Clear React form state on tier downgrade (`useEffect` + imperative resets in `handleSelectTier`).
-  - [x] Payload sanitization in `handleRegistration` to never transmit gated fields for non-enterprise tiers.
-  - [x] Provide alias export `frontend/src/views/RegisterView.tsx` -> `TenantRegistrationView.tsx`.
-- [x] **Phase 3: Dynamic Tenant Branding**
-  - [x] Monogram avatar utility extracting 1-2 uppercase letters with styled circular badge (`frontend/src/utils/monogram.ts`, `frontend/src/utils/branding.ts`).
-  - [x] Sleek circular badge component with dynamic gradient and glow (`frontend/src/components/TenantAvatar.tsx`).
-  - [x] Custom logo rendering from `branding_context` / `tenant`.
-  - [x] Strict rendering fallback logic: `logo_url` -> `onError` -> Monogram Avatar badge.
-  - [x] Integration across `Navbar.tsx`, `Sidebar.tsx`, `TenantLoginView.tsx`, `LandingPageView.tsx`, `BrandLogo.tsx`, `TenantBrandingCustomizer.tsx`, `BrandingSettingsCard.tsx`, and `Navbar.tsx` (legacy).
-  - [x] Extended `types.ts` (`TenantBrandingContext`) and `AppContext.tsx` company state mapping.
+- [ ] **Phase 1: Unified Standard Sidebar**
+  - [ ] Consolidate core navigation links into a single, unified left sidebar (`frontend/src/components/layout/Sidebar.tsx` and `frontend/src/components/Sidebar.tsx`).
+  - [ ] Extract routing items hidden inside the System & Settings popover (Master Data & RBAC `/settings/master-data`, Chart of Accounts `/finance/chart`, Tenant Settings `/settings/tenant`, Enterprise Org Profile `/settings/organization`, Executive Approvals `/settings/approvals`, Subscription & Billing `/settings/billing`, Corporate Compliance Vault `/compliance/vault`).
+  - [ ] Integrate extracted items cleanly into the primary sidebar tree with proper role permissions, badges, icons, and bilingual labels.
+  - [ ] Ensure seamless collapsed rail, expanded drawer, and mobile drawer accessibility.
+- [ ] **Phase 2: Stacked Horizontal Domain Tabs (Header)**
+  - [ ] Refactor Domain Switcher in `TopHeader.tsx` / `Navbar.tsx`.
+  - [ ] Place two main domain tabs ("Operations & Logistics" and "Finance, Accounting & Control") in the top header, stacked vertically using `flex-col`.
+  - [ ] Implement horizontal collapsible sub-navigation lists expanding horizontally below active domain tab.
+- [ ] **Phase 3: Cleanup & Build**
+  - [ ] Remove legacy standalone domain switcher ribbons and redundant popover links.
+  - [ ] Verify build with `npm run build`.
 
 ---
 
-## Modified Files Log
-*Tracking file changes across iterations.*
+## Modified Files Log (UI Menu Consolidation)
 - `agent_recovery_state.md`
-- `frontend/src/utils/monogram.ts`
-- `frontend/src/utils/branding.ts`
-- `frontend/src/components/TenantAvatar.tsx`
-- `frontend/src/types.ts`
-- `frontend/src/context/AppContext.tsx`
-- `frontend/src/components/Navbar.tsx`
-- `frontend/src/components/Sidebar.tsx`
-- `frontend/src/components/BrandLogo.tsx`
-- `frontend/src/components/BrandingSettingsCard.tsx`
-- `frontend/src/components/settings/TenantBrandingCustomizer.tsx`
-- `frontend/src/views/TenantLoginView.tsx`
-- `frontend/src/views/LandingPageView.tsx`
-- `frontend/src/Navbar.tsx`
-- `frontend/src/views/RegisterView.tsx`
-- `frontend/src/views/TenantRegistrationView.tsx`
-- `frontend/src/index.css`
-- `frontend/src/App.tsx`
-- `frontend/src/theme/designTokens.ts`
