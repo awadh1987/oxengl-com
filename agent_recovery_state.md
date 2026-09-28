@@ -6,9 +6,9 @@
 ---
 
 ## Current Status
-- **Current Phase:** Bugfix: Receipt Icon Missing Import & Container Deployment
-- **State:** Fixed `Uncaught ReferenceError: Receipt is not defined` by adding `Receipt` to the `lucide-react` import list in `frontend/src/components/Navbar.tsx`. Running production build (`npm run build`), deploying generated dist files to container `oxengl_frontend_container:/usr/share/nginx/html/`, and restarting Nginx container.
-- **Last Sync / Commit:** Fix missing Receipt import in Navbar.tsx.
+- **Current Phase:** Bugfix: Restored "Governance & Compliance" and "Finance & GL" Navigation Groups in Sidebar
+- **State:** Successfully restored missing navigation groups ("Governance & Compliance" and "Finance & GL") in `frontend/src/components/Sidebar.tsx`. Fixed `availableViews` filter bug to ensure Owner/Super_Admin roles bypass restriction and module-to-view mapping is respected. Explicitly granted `Owner` access across all sidebar items. Built production bundle (`npm run build`), deployed dist files to `oxengl_frontend_container:/usr/share/nginx/html/`, and restarted containers.
+- **Last Sync / Commit:** Restored Governance & Compliance and Finance & GL in Sidebar with Owner role access.
 
 ---
 
@@ -25,11 +25,18 @@
 - [x] **Phase 3: Cleanup & Build**
   - [x] Remove legacy standalone domain switcher ribbons and redundant popover links.
   - [x] Verify build with `npm run build`.
-- [x] **Hotfix & Deploy**
+- [x] **Hotfix & Deployment 1: Missing Receipt Icon**
   - [x] Fix missing `Receipt` import in `frontend/src/components/Navbar.tsx`.
   - [x] Run `npm run build`.
   - [x] Copy dist to `oxengl_frontend_container:/usr/share/nginx/html/`.
   - [x] Restart Nginx container.
+- [x] **Hotfix & Deployment 2: Restored Missing Sidebar Groups (Governance & Compliance, Finance & GL)**
+  - [x] Add 'Owner' role across all sidebar items in `frontend/src/components/Sidebar.tsx`.
+  - [x] Prevent `availableViews` module filter from stripping granular views for `Owner` and `Super_Admin`.
+  - [x] Expand high-level modules to concrete child views when present.
+  - [x] Rename category label to "Governance & Compliance" / "الحوكمة والامتثال".
+  - [x] Default expand Core Operations, Finance & GL, and Governance & Compliance.
+  - [x] Successfully ran `npm run build`, pushed dist to `oxengl_frontend_container:/usr/share/nginx/html/`, and restarted Nginx & frontend containers.
 
 ---
 

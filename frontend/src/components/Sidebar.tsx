@@ -173,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (response.ok) {
           const data = await response.json();
           const views =
-            data?.settings?.modules || data?.settings?.available_views || data?.availableViews;
+            data?.settings?.available_views || data?.availableViews;
           if (Array.isArray(views) && views.length > 0) {
             setAvailableViews(views);
           }
@@ -194,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelAr: 'لوحة القيادة والمؤشرات',
         labelEn: 'Executive Dashboard',
         icon: LayoutDashboard,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only'],
         badge: isAr ? 'رئيسي' : 'Core',
       },
       {
@@ -203,7 +203,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Planning Department',
         path: '/operations/planning',
         icon: Layers,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only'],
         badge: 'Tier 1-3',
       },
       {
@@ -212,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Daily Operations Entry',
         path: '/operations/daily',
         icon: Truck,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only'],
         badge: isDriverMode ? (isAr ? 'نشط' : 'Active') : null,
       },
       {
@@ -221,7 +221,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Customs Clearance',
         path: '/operations/customs',
         icon: Globe,
-        roles: ['Super_Admin', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
         badge: 'ZATCA P2',
       },
 
@@ -232,7 +232,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Procurement & S2P',
         path: '/operations/procurement',
         icon: ShoppingCart,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
         badge: 'S2P',
       },
       {
@@ -241,7 +241,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Inventory & Valuation',
         path: '/operations/inventory',
         icon: Boxes,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
         badge: 'GL',
       },
 
@@ -252,7 +252,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Live Fleet Radar & Map',
         path: '/operations/fleet-map',
         icon: Radio,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only'],
         badge: isAr ? 'رادار حي' : 'Live GPS',
       },
       {
@@ -261,7 +261,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Fleet Maintenance & Fuel',
         path: '/operations/fleet-maintenance',
         icon: Wrench,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
         badge: isAr ? 'أوامر ووقود' : 'Fleet Ops',
       },
       {
@@ -270,7 +270,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Service Suppliers',
         path: '/operations/transporters',
         icon: Scale,
-        roles: ['Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
         badge: isAr ? 'تتبع الفاقد' : 'Wastage',
       },
       {
@@ -279,7 +279,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Material Suppliers',
         path: '/operations/crushers',
         icon: Building2,
-        roles: ['Admin', 'COO', 'Accountant', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
         badge: null,
       },
 
@@ -290,7 +290,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Customer Invoicing (ZATCA)',
         path: '/finance/invoices',
         icon: FileSpreadsheet,
-        roles: ['Admin', 'COO', 'Accountant', 'Guest', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Guest', 'Read_Only'],
         badge: 'ZATCA',
       },
       {
@@ -299,7 +299,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Payment & Receipt Vouchers',
         path: '/finance/vouchers',
         icon: Receipt,
-        roles: ['Admin', 'COO', 'Accountant', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
         badge: isAr ? 'سندات' : 'Vouchers',
       },
       {
@@ -317,7 +317,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Trial Balance',
         path: '/finance/trial-balance',
         icon: Scale,
-        roles: ['Admin', 'COO', 'Accountant', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
         badge: 'GL',
       },
       {
@@ -326,7 +326,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Financial Reports Engine',
         path: '/finance/reports',
         icon: TrendingUp,
-        roles: ['Admin', 'COO', 'Accountant', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
         badge: 'P&L / BS',
       },
       {
@@ -355,7 +355,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Human Resources (HR)',
         path: '/operations/hr',
         icon: Users,
-        roles: ['Admin', 'COO', 'Accountant', 'Read_Only', 'Super_Admin'],
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
         badge: 'HRMS',
       },
 
@@ -500,8 +500,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'governance',
-        labelAr: 'الحوكمة وإعدادات النظام',
-        labelEn: 'Governance & Settings',
+        labelAr: 'الحوكمة والامتثال',
+        labelEn: 'Governance & Compliance',
         icon: ShieldCheck,
         itemIds: [
           'executive-admin',
@@ -522,18 +522,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Accordion open/close state with Auto-Expand of category containing activeTab
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {
-      core: false,
+      core: true,
       procurement: false,
       logistics: false,
-      finance: false,
+      finance: true,
       hr: false,
-      governance: false,
+      governance: true,
     };
     const found = categories.find((c) => c.itemIds.includes(activeTab) || (activeTab === 'approvals' && c.itemIds.includes('executive-admin')));
     if (found) {
       initial[found.id] = true;
-    } else {
-      initial.core = true;
     }
     return initial;
   });
@@ -559,17 +557,55 @@ export const Sidebar: React.FC<SidebarProps> = ({
   // Filter items by tenant/role
   const filteredMenuItems = useMemo(() => {
     let items = allMenuItems;
-    if (availableViews && availableViews.length > 0) {
-      items = items.filter((item) => availableViews.includes(item.id));
+    const activeRole = currentUser?.role ?? 'Guest';
+    const isOwnerOrSuper = activeRole === 'Super_Admin' || activeRole === 'Owner';
+
+    // If availableViews is explicitly set and user is not Owner/Super_Admin (Owner/Super_Admin always has full access)
+    if (availableViews && availableViews.length > 0 && !isOwnerOrSuper) {
+      const allowedViewIds = new Set<string>();
+      const moduleChildIds: Record<string, string[]> = {
+        operations: ['dashboard', 'planning', 'operations', 'customs'],
+        procurement: ['procurement', 'inventory'],
+        fleet: ['fleet-map', 'maintenance', 'transporters', 'crushers'],
+        finance: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing', 'ai-insights'],
+        hr: ['hr'],
+        customs: ['customs'],
+        analytics: ['financial-reports', 'ai-insights', 'dashboard'],
+      };
+
+      availableViews.forEach((v) => {
+        allowedViewIds.add(v);
+        if (moduleChildIds[v]) {
+          moduleChildIds[v].forEach((id) => allowedViewIds.add(id));
+        }
+      });
+
+      // Always allow governance views for Admin/COO
+      if (activeRole === 'Admin' || activeRole === 'COO') {
+        const govIds = [
+          'executive-admin',
+          'master-data',
+          'tenant-settings',
+          'organization-profile',
+          'corporate-vault',
+          'billing',
+          'workflow-builder',
+          'design-studio',
+          'admin-hub',
+        ];
+        govIds.forEach((id) => allowedViewIds.add(id));
+      }
+
+      items = items.filter((item) => allowedViewIds.has(item.id));
     }
+
     if (isDriverMode) {
       items = items.filter((item) => item.id === 'operations' || item.id === 'transporters');
     }
 
     // Conditionally hide navigation tabs based on active permissions
-    const activeRole = currentUser?.role ?? 'Guest';
     items = items.filter((item) => {
-      if (activeRole === 'Super_Admin' || activeRole === 'Owner') return true;
+      if (isOwnerOrSuper) return true;
       return item.roles.includes(activeRole);
     });
 
