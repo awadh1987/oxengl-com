@@ -21,6 +21,7 @@ import {
   Layers,
   Radio,
   Network,
+  Landmark,
   Scale,
   FileCheck2,
   ShoppingCart,
@@ -50,6 +51,7 @@ export type ActiveTab =
   | 'invoicing'
   | 'sales-receivables'
   | 'vouchers'
+  | 'financial-hub'
   | 'finance-chart'
   | 'finance-trial-balance'
   | 'financial-reports'
@@ -317,6 +319,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: isAr ? 'ذمم' : 'AR',
       },
       {
+        id: 'financial-hub',
+        labelAr: 'مركز التحليلات المالية (GL & ZATCA)',
+        labelEn: 'Financial & GL Analytics Hub',
+        path: '/finance/analytics-hub',
+        icon: Landmark,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
+        badge: 'Hub',
+        highlight: true,
+      },
+      {
         id: 'vouchers',
         labelAr: 'سندات القبض والصرف',
         labelEn: 'Payment & Receipt Vouchers',
@@ -515,6 +527,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelEn: 'Finance & GL',
         icon: Receipt,
         itemIds: [
+          'financial-hub',
           'invoicing',
           'sales-receivables',
           'vouchers',

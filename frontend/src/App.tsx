@@ -58,6 +58,7 @@ const FinancialReportsView = React.lazy(() => import('./views/FinancialReportsVi
 const VendorPortalView = React.lazy(() => import('./views/VendorPortalView').then(m => ({ default: m.VendorPortalView })));
 const SalesReceivablesDashboard = React.lazy(() => import('./views/SalesReceivablesDashboard').then(m => ({ default: m.SalesReceivablesDashboard })));
 const DataObservabilityView = React.lazy(() => import('./views/DataObservabilityView').then(m => ({ default: m.DataObservabilityView })));
+const FinancialAnalyticsHubView = React.lazy(() => import('./views/FinancialAnalyticsHubView').then(m => ({ default: m.FinancialAnalyticsHubView })));
 
 const ViewLoadingFallback = () => (
   <div className="flex min-h-[400px] w-full flex-col items-center justify-center p-12 text-center">
@@ -95,6 +96,8 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   // Finance Ribbon
   '/finance/invoices': 'invoicing',
   '/finance/sales-receivables': 'sales-receivables',
+  '/finance/analytics-hub': 'financial-hub',
+  '/finance/financial-hub': 'financial-hub',
   '/finance/vouchers': 'vouchers',
   '/finance/chart': 'finance-chart',
   '/finance/trial-balance': 'financial-reports',
@@ -155,6 +158,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
 
   invoicing: '/finance/invoices',
   'sales-receivables': '/finance/sales-receivables',
+  'financial-hub': '/finance/analytics-hub',
   vouchers: '/finance/vouchers',
   'finance-chart': '/finance/chart',
   'finance-trial-balance': '/finance/trial-balance',
@@ -796,6 +800,7 @@ function AppContent() {
     maintenance: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     invoicing: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only', 'Guest'],
     'sales-receivables': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
+    'financial-hub': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     vouchers: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     billing: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     crushers: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
@@ -857,6 +862,8 @@ function AppContent() {
         return <CustomerInvoicingView />;
       case 'sales-receivables':
         return <SalesReceivablesDashboard />;
+      case 'financial-hub':
+        return <FinancialAnalyticsHubView />;
       case 'vouchers':
         return <FinancialVouchersView />;
       case 'finance-chart':
