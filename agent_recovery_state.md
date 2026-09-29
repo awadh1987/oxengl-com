@@ -6,9 +6,9 @@
 ---
 
 ## Current Status
-- **Current Phase:** Frontend Compilation & Type Integrity Verification (`tsc --noEmit` & `npm run build`)
-- **State:** Successfully resolved 41 TypeScript compilation errors across 15 files (including `isAr` scoping, `activeDomain` identifier resolution in `Navbar.tsx`, and user credential type assertions in `TenantLoginView.tsx`). Exported `AppContext` and `useAppSafe` in `AppContext.tsx`. Ran `npm run lint` (`tsc --noEmit`) with 0 errors, generated production build (`npm run build`), deployed dist assets to `oxengl_frontend_container:/usr/share/nginx/html/`, reloaded Nginx, and committed/pushed cleanly to `origin/main`.
-- **Last Sync / Commit:** `d4ad4da` (`fix(frontend): resolve batch isAr compile errors and complete clean production bundle`).
+- **Current Phase:** Bugfix: Restored "Governance & Compliance" and "Finance & GL" Navigation Groups in Sidebar
+- **State:** Successfully restored missing navigation groups ("Governance & Compliance" and "Finance & GL") in `frontend/src/components/Sidebar.tsx`. Fixed `availableViews` filter bug to ensure Owner/Super_Admin roles bypass restriction and module-to-view mapping is respected. Explicitly granted `Owner` access across all sidebar items. Built production bundle (`npm run build`), deployed dist files to `oxengl_frontend_container:/usr/share/nginx/html/`, and restarted containers.
+- **Last Sync / Commit:** Restored Governance & Compliance and Finance & GL in Sidebar with Owner role access.
 
 ---
 

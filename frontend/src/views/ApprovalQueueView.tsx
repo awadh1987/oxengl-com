@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAppSafe } from '../context/AppContext';
 import {
   CheckCircle2,
   XCircle,
@@ -35,8 +34,6 @@ export interface ApprovalItem {
 }
 
 export const ApprovalQueueView: React.FC = () => {
-  const app = useAppSafe();
-  const isAr = (app?.language || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'ar' : 'en')).startsWith('ar');
   const [items, setItems] = useState<ApprovalItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');

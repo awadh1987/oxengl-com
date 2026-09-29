@@ -377,7 +377,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     (isAr ? effectiveCompany?.name_ar : effectiveCompany?.name_en) ||
     (currentUser as any)?.companyName ||
     (isAr ? brandConfig?.companyNameAr : brandConfig?.companyNameEn) ||
-    (activeDomain ? `${activeDomain.toUpperCase()} Workspace` : (tenantSlug ? `${tenantSlug.toUpperCase()} Workspace` : (isAr ? 'منظومة أوكسن السحابية' : 'OxenGL Enterprise Cloud')));
+    (activeSubdomain ? `${activeSubdomain.toUpperCase()} Workspace` : (tenantSlug ? `${tenantSlug.toUpperCase()} Workspace` : (isAr ? 'منظومة أوكسن السحابية' : 'OxenGL Enterprise Cloud')));
 
   const tenantLogoUrl =
     effectiveCompany?.logo_url ||

@@ -322,7 +322,7 @@ export interface ToastMessage {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
-export const AppContext = createContext<AppContextType | null>(null);
+const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -3089,8 +3089,3 @@ export const useApp = () => {
   }
   return context;
 };
-
-export const useAppSafe = () => {
-  return useContext(AppContext);
-};
-

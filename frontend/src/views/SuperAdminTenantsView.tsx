@@ -4,7 +4,6 @@ import {
   CheckCircle2, XCircle, ArrowRight, Shield, Layers, HardDrive, Activity,
   CheckSquare, Check, Download
 } from 'lucide-react';
-import { useAppSafe } from '../context/AppContext';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 import { erpApi } from '../services/api';
@@ -25,8 +24,6 @@ interface TenantItem {
 }
 
 export const SuperAdminTenantsView: React.FC = () => {
-  const app = useAppSafe();
-  const isAr = (app?.language || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'ar' : 'en')).startsWith('ar');
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

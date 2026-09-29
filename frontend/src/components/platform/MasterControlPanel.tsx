@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAppSafe } from '../../context/AppContext';
 import {
   Activity,
   Shield,
@@ -56,8 +55,6 @@ interface FeatureFlags {
 }
 
 export const MasterControlPanel: React.FC = () => {
-  const app = useAppSafe();
-  const isAr = (app?.language || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'ar' : 'en')).startsWith('ar');
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({});

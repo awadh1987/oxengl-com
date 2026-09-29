@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { redirectToTenantSubdomain, getRootDomain, isLocalhost } from '../utils/subdomain';
-import { useAppSafe } from '../context/AppContext';
-import i18n from '../i18n';
 import {
   Lock,
   ShieldCheck,
@@ -30,9 +28,6 @@ const SAUDI_BANK_DETAILS = {
 };
 
 export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ onSuccess }) => {
-  const app = useAppSafe();
-  const isAr = (app?.language || i18n?.language || 'ar').startsWith('ar');
-
   const navigate = (path: string) => {
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
