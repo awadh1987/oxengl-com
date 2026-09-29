@@ -268,6 +268,19 @@ async def approve_and_execute(
                 )
                 print(f"-> [Inventory Valuation] Audited {valuation_result.get('warehouses_audited')} warehouses, total: {valuation_result.get('total_valuation')} SAR")
 
+            # 8. Procurement-to-Pay: Autonomous Three-Way Matching
+            elif action_name == "P2PMatchSchema":
+                print(f"-> [P2P Module] Executing Autonomous Three-Way Match: {data}")
+                from backend.app.domains.procurement.p2p import execute_p2p_match
+                p2p_result = execute_p2p_match(
+                    po_reference=data.get("po_reference", "ALL"),
+                    price_tolerance=data.get("price_tolerance_pct", 2.0),
+                    qty_tolerance=data.get("qty_tolerance_pct", 0.0),
+                    company_id=company_id,
+                    db=db,
+                )
+                print(f"-> [P2P Match] Audited {p2p_result.get('summary', {}).get('total_orders', 0)} orders, matched: {p2p_result.get('summary', {}).get('matched', 0)}")
+
             else:
                 raise ValueError(f"Unrecognized AI action schema: {action_name}")
 
@@ -289,5 +302,8 @@ async def approve_and_execute(
     if action_name == "InventoryValuationSchema" and "valuation_result" in locals() and valuation_result:
         response_data["valuation_report"] = valuation_result
         response_data["message"] = valuation_result.get("audit_narrative")
+    if action_name == "P2PMatchSchema" and "p2p_result" in locals() and p2p_result:
+        response_data["p2p_report"] = p2p_result
+        response_data["message"] = p2p_result.get("audit_narrative")
 
     return response_data

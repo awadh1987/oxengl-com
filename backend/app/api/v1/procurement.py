@@ -1636,3 +1636,107 @@ def award_tender_and_generate_po(
         currency=new_po.currency,
     )
 
+
+# ==============================================================================
+# P2P Three-Way Matching REST Endpoints
+# ==============================================================================
+
+class P2PMatchRequest(BaseModel):
+    po_reference: str = Field(default="ALL", description="PO number, vendor name, or 'ALL'")
+    price_tolerance_pct: float = Field(default=2.0, description="Max price variance % before hold")
+    qty_tolerance_pct: float = Field(default=0.0, description="Max qty variance % before hold")
+
+
+@router.post(
+    "/p2p/match",
+    dependencies=[Depends(enforce_abac("WRITE"))],
+)
+def execute_p2p_match_endpoint(
+    payload: P2PMatchRequest,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+):
+    """
+    Executes autonomous three-way matching across all POs or a specific reference.
+    Returns detailed line-level match results with discrepancy flags.
+    """
+    from backend.app.domains.procurement.p2p import execute_p2p_match
+
+    company_id = None
+    if x_tenant_id:
+        try:
+            tid = uuid.UUID(x_tenant_id)
+            company = db.execute(
+                select(core_models.ResCompany).where(core_models.ResCompany.id == tid)
+            ).scalar_one_or_none()
+            if company:
+                company_id = company.id
+        except Exception:
+            pass
+
+    result = execute_p2p_match(
+        po_reference=payload.po_reference,
+        price_tolerance=payload.price_tolerance_pct,
+        qty_tolerance=payload.qty_tolerance_pct,
+        company_id=company_id,
+        db=db,
+    )
+
+    return result
+
+
+@router.get(
+    "/p2p/summary",
+    dependencies=[Depends(enforce_abac("READ"))],
+)
+def get_p2p_summary(
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+):
+    """
+    Returns aggregated P2P match summary for dashboard KPIs.
+    """
+    from backend.app.domains.procurement.p2p import execute_p2p_match
+
+    company_id = None
+    if x_tenant_id:
+        try:
+            company_id = uuid.UUID(x_tenant_id)
+        except Exception:
+            pass
+
+    result = execute_p2p_match(
+        po_reference="ALL",
+        company_id=company_id,
+        db=db,
+    )
+
+    summary = result.get("summary", {})
+    matches = result.get("match_results", [])
+
+    # Aggregate KPIs
+    total_po_value = sum(m.get("po_total", 0) for m in matches)
+    total_inv_value = sum(m.get("invoice_total", 0) for m in matches)
+    total_flags = sum(len(m.get("discrepancy_flags", [])) for m in matches)
+    avg_confidence = (
+        sum(m.get("match_confidence", 0) for m in matches) / len(matches)
+        if matches else 0
+    )
+
+    return {
+        "kpis": {
+            "total_orders": len(matches),
+            "matched": summary.get("matched", 0),
+            "on_hold": summary.get("on_hold", 0),
+            "match_rate_pct": round(
+                summary.get("matched", 0) / max(len(matches), 1) * 100, 1
+            ),
+            "total_po_value_sar": round(total_po_value, 2),
+            "total_invoice_value_sar": round(total_inv_value, 2),
+            "total_discrepancy_flags": total_flags,
+            "avg_match_confidence": round(avg_confidence, 1),
+        },
+        "match_results": matches,
+        "audit_narrative": result.get("audit_narrative", ""),
+    }
+

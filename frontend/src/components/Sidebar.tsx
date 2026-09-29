@@ -63,6 +63,7 @@ export type ActiveTab =
   | 'tenant-settings'
   | 'approvals'
   | 'procurement'
+  | 'procurement-p2p'
   | 'inventory'
   | 'hr'
   | 'mfa'
@@ -235,6 +236,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         icon: ShoppingCart,
         roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
         badge: 'S2P',
+      },
+      {
+        id: 'procurement-p2p',
+        labelAr: 'المطابقة الثلاثية (P2P)',
+        labelEn: '3-Way Match (P2P)',
+        path: '/operations/procurement-p2p',
+        icon: FileCheck2,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
+        badge: 'AI',
+        highlight: true,
       },
       {
         id: 'inventory',
@@ -477,7 +488,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         labelAr: 'المشتريات وسلسلة التوريد',
         labelEn: 'Procurement & S2P',
         icon: ShoppingCart,
-        itemIds: ['procurement', 'inventory'],
+        itemIds: ['procurement', 'procurement-p2p', 'inventory'],
       },
       {
         id: 'logistics',
@@ -576,7 +587,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       const allowedViewIds = new Set<string>();
       const moduleChildIds: Record<string, string[]> = {
         operations: ['dashboard', 'planning', 'operations', 'customs'],
-        procurement: ['procurement', 'inventory'],
+        procurement: ['procurement', 'procurement-p2p', 'inventory'],
         fleet: ['fleet-map', 'maintenance', 'transporters', 'crushers'],
         finance: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing', 'ai-insights'],
         hr: ['hr'],

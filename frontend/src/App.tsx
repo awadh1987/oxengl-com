@@ -49,6 +49,7 @@ const SuperAdminAnalyticsView = React.lazy(() => import('./views/SuperAdminAnaly
 const ResetPasswordView = React.lazy(() => import('./views/ResetPasswordView').then(m => ({ default: m.ResetPasswordView })));
 const ForgotPasswordView = React.lazy(() => import('./views/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ProcurementView = React.lazy(() => import('./views/ProcurementView').then(m => ({ default: m.ProcurementView })));
+const ProcurementP2PView = React.lazy(() => import('./views/ProcurementP2PView').then(m => ({ default: m.ProcurementP2PView })));
 const InventoryView = React.lazy(() => import('./views/InventoryView').then(m => ({ default: m.InventoryView })));
 const HRMSView = React.lazy(() => import('./views/HRMSView').then(m => ({ default: m.HRMSView })));
 const OrganizationProfile = React.lazy(() => import('./views/settings/OrganizationProfile').then(m => ({ default: m.OrganizationProfile })));
@@ -86,6 +87,7 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   '/operations/customs': 'customs',
   '/operations/planning': 'planning',
   '/operations/procurement': 'procurement',
+  '/operations/procurement-p2p': 'procurement-p2p',
   '/operations/inventory': 'inventory',
   '/operations/hr': 'hr',
 
@@ -127,6 +129,7 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   '/operations': 'operations',
   '/planning': 'planning',
   '/procurement': 'procurement',
+  '/procurement-p2p': 'procurement-p2p',
   '/inventory': 'inventory',
   '/hr': 'hr',
   '/customs': 'customs',
@@ -144,6 +147,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   customs: '/operations/customs',
   planning: '/operations/planning',
   procurement: '/operations/procurement',
+  'procurement-p2p': '/operations/procurement-p2p',
   hr: '/operations/hr',
 
   invoicing: '/finance/invoices',
@@ -185,6 +189,7 @@ export const getTabFromPath = (path: string): ActiveTab => {
   if (cleanPath.startsWith('/operations/crushers')) return 'crushers';
   if (cleanPath.startsWith('/operations/customs')) return 'customs';
   if (cleanPath.startsWith('/operations/planning')) return 'planning';
+  if (cleanPath.startsWith('/operations/procurement-p2p') || cleanPath.startsWith('/procurement-p2p')) return 'procurement-p2p';
   if (cleanPath.startsWith('/operations/procurement') || cleanPath.startsWith('/procurement')) return 'procurement';
   if (cleanPath.startsWith('/operations/inventory') || cleanPath.startsWith('/inventory')) return 'inventory';
   if (cleanPath.startsWith('/operations/hr') || cleanPath.startsWith('/hr')) return 'hr';
@@ -805,6 +810,7 @@ function AppContent() {
     'finance-audit-closing': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     approvals: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     procurement: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
+    'procurement-p2p': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
     inventory: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
     hr: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     mfa: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
@@ -825,6 +831,8 @@ function AppContent() {
         return <ApprovalQueueView />;
       case 'procurement':
         return <ProcurementView />;
+      case 'procurement-p2p':
+        return <ProcurementP2PView />;
       case 'inventory':
         return <InventoryView />;
       case 'hr':

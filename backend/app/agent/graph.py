@@ -15,6 +15,7 @@ try:
         CustomerInvoiceSchema,
         EmployeeLeaveSchema,
         InventoryValuationSchema,
+        P2PMatchSchema,
     )
 except (ImportError, ModuleNotFoundError):
     from backend.app.agent.schemas import (
@@ -25,6 +26,7 @@ except (ImportError, ModuleNotFoundError):
         CustomerInvoiceSchema,
         EmployeeLeaveSchema,
         InventoryValuationSchema,
+        P2PMatchSchema,
     )
 
 # 1. Define the Global State
@@ -46,7 +48,9 @@ def classify_intent(state: AgentState):
 def select_schema_for_prompt(prompt: str, route: str):
     text = f"{prompt} {route}".lower()
     
-    if re.search(r"\b(valuation|costing|fifo|weighted average|standard cost|audit.*inventory|inventory.*value|stock.*valuation)\b", text):
+    if re.search(r"\b(3.way|three.way|p2p|procure.*pay|match.*po|match.*invoice|match.*grn|vendor.*match|procurement.*match)\b", text):
+        return P2PMatchSchema, "P2PMatchSchema", "Procurement-to-Pay (P2P)"
+    elif re.search(r"\b(valuation|costing|fifo|weighted average|standard cost|audit.*inventory|inventory.*value|stock.*valuation)\b", text):
         return InventoryValuationSchema, "InventoryValuationSchema", "Inventory & Valuation"
     elif re.search(r"\b(voucher|journal voucher|journal entry|payment|expense|accounting|ledger|depreciation)\b", text) or "finance" in route.lower():
         return JournalVoucherSchema, "JournalVoucherSchema", "Financial Controller"
@@ -163,6 +167,28 @@ def draft_payload(state: AgentState):
                     valuation_method=val_method,
                     audit_focus="variance_reconciliation" if "variance" in user_prompt.lower() else "comprehensive"
                 )
+            elif action_name == "P2PMatchSchema":
+                po_ref = "ALL"
+                po_match = re.search(r"(PO-[A-Za-z0-9-]+)", user_prompt, re.I)
+                if po_match:
+                    po_ref = po_match.group(1)
+                elif "qiddiya" in user_prompt.lower():
+                    po_ref = "Qiddiya"
+                elif "kharj" in user_prompt.lower():
+                    po_ref = "Kharj"
+                elif "neom" in user_prompt.lower():
+                    po_ref = "NEOM"
+
+                price_tol = 2.0
+                tol_match = re.search(r"(\d+\.?\d*)\s*%\s*(?:tolerance|threshold)", user_prompt, re.I)
+                if tol_match:
+                    price_tol = float(tol_match.group(1))
+
+                generated_payload = P2PMatchSchema(
+                    po_reference=po_ref,
+                    price_tolerance_pct=price_tol,
+                    qty_tolerance_pct=0.0,
+                )
             else:
                 generated_payload = JournalVoucherSchema(
                     description=user_prompt or "Financial Voucher Transaction",
@@ -190,6 +216,21 @@ def draft_payload(state: AgentState):
             audit_narrative = report.get("audit_narrative")
         except Exception as e:
             print(f"[Agent] Inventory valuation calculation error in graph: {e}")
+
+    # Automatically execute P2P three-way matching for P2P queries
+    if action_name == "P2PMatchSchema":
+        try:
+            from backend.app.domains.procurement.p2p import execute_p2p_match
+            p2p_data = generated_payload.model_dump()
+            p2p_report = execute_p2p_match(
+                po_reference=p2p_data.get("po_reference", "ALL"),
+                price_tolerance=p2p_data.get("price_tolerance_pct", 2.0),
+                qty_tolerance=p2p_data.get("qty_tolerance_pct", 0.0),
+            )
+            draft_dict["p2p_report"] = p2p_report
+            audit_narrative = p2p_report.get("audit_narrative")
+        except Exception as e:
+            print(f"[Agent] P2P match calculation error in graph: {e}")
 
     return {
         "draft_payload": draft_dict,

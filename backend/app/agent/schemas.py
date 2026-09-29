@@ -46,3 +46,9 @@ class InventoryValuationSchema(BaseModel):
     warehouse_id: str = Field(default="ALL", description="Target warehouse name, code or ID (e.g. 'Qiddiya', 'WH-MAIN', 'ALL')")
     valuation_method: str = Field(default="FIFO", description="Valuation algorithm: 'FIFO', 'WEIGHTED_AVERAGE', or 'STANDARD_COST'")
     audit_focus: str = Field(default="comprehensive", description="Audit focus: 'comprehensive', 'reconciliation', or 'variance'")
+
+# 8. Procurement-to-Pay (P2P) & Three-Way Matching
+class P2PMatchSchema(BaseModel):
+    po_reference: str = Field(default="ALL", description="PO number, vendor name, or 'ALL' to match all orders (e.g. 'PO-2026-09-QID001', 'Qiddiya')")
+    price_tolerance_pct: float = Field(default=2.0, description="Maximum allowable price variance percentage before flagging discrepancy")
+    qty_tolerance_pct: float = Field(default=0.0, description="Maximum allowable quantity variance percentage (0 = exact match required)")

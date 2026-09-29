@@ -2335,3 +2335,84 @@ export interface ApiVendorPortalUser {
   email: string;
 }
 
+
+// ==============================================================================
+// P2P Three-Way Matching Engine Interfaces
+// ==============================================================================
+
+export interface P2PMatchLineDetail {
+  line_number: number;
+  description: string;
+  po_qty: number;
+  po_unit_price: number;
+  po_line_total: number;
+  grn_qty_received: number;
+  invoice_qty: number;
+  invoice_unit_price: number;
+  invoice_line_total: number;
+  qty_variance: number;
+  price_variance: number;
+  price_variance_pct: number;
+  status: 'MATCHED' | 'QTY_SHORT' | 'PRICE_OVER' | 'HOLD';
+}
+
+export interface P2PDiscrepancyFlag {
+  flag_id: string;
+  severity: 'INFO' | 'WARNING' | 'CRITICAL';
+  category: string;
+  description: string;
+  expected_value: string;
+  actual_value: string;
+  variance: string;
+  recommendation: string;
+}
+
+export interface P2PMatchResult {
+  match_id: string;
+  po_number: string;
+  po_id: string;
+  grn_number: string;
+  grn_id: string;
+  invoice_number: string;
+  vendor_name: string;
+  vendor_id: string;
+  overall_status: 'MATCHED' | 'HOLD_DISCREPANCY' | 'PENDING';
+  match_confidence: number;
+  currency: string;
+  po_total: number;
+  grn_received_value: number;
+  invoice_total: number;
+  tax_amount: number;
+  total_billed: number;
+  total_qty_ordered: number;
+  total_qty_received: number;
+  total_qty_invoiced: number;
+  qty_fill_rate: number;
+  price_variance_sar: number;
+  price_variance_pct: number;
+  qty_variance_units: number;
+  price_tolerance_pct: number;
+  qty_tolerance_pct: number;
+  line_matches: P2PMatchLineDetail[];
+  discrepancy_flags: P2PDiscrepancyFlag[];
+  matched_by: string;
+  matched_at: string;
+  narrative: string;
+  resolution_action: string;
+  journal_entry_id?: string;
+}
+
+export interface P2PSummaryResponse {
+  kpis: {
+    total_orders: number;
+    matched: number;
+    on_hold: number;
+    match_rate_pct: number;
+    total_po_value_sar: number;
+    total_invoice_value_sar: number;
+    total_discrepancy_flags: number;
+    avg_match_confidence: number;
+  };
+  match_results: P2PMatchResult[];
+  audit_narrative: string;
+}
