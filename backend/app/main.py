@@ -463,7 +463,15 @@ app.include_router(procurement_router)
 app.include_router(inventory_router)
 app.include_router(finance_router)
 app.include_router(reports_router)
-app.include_router(data_observability_router)
+try:
+    from backend.app.api.v1.data_observability import router as data_observability_router
+    app.include_router(data_observability_router)
+except (ImportError, ModuleNotFoundError):
+    try:
+        from app.api.v1.data_observability import router as data_observability_router
+        app.include_router(data_observability_router)
+    except Exception:
+        pass  # data_observability is optional
 from backend.app.domains.finance import audit_export
 app.include_router(audit_export.router)
 app.include_router(logistics_router)
