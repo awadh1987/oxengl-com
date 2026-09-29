@@ -47,6 +47,7 @@ export type ActiveTab =
   | 'fleet-map'
   | 'billing'
   | 'invoicing'
+  | 'sales-receivables'
   | 'vouchers'
   | 'finance-chart'
   | 'finance-trial-balance'
@@ -294,6 +295,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'ZATCA',
       },
       {
+        id: 'sales-receivables',
+        labelAr: 'المبيعات والذمم المدينة',
+        labelEn: 'Sales & Receivables',
+        path: '/finance/sales-receivables',
+        icon: TrendingUp,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
+        badge: isAr ? 'ذمم' : 'AR',
+      },
+      {
         id: 'vouchers',
         labelAr: 'سندات القبض والصرف',
         labelEn: 'Payment & Receipt Vouchers',
@@ -483,6 +493,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         icon: Receipt,
         itemIds: [
           'invoicing',
+          'sales-receivables',
           'vouchers',
           'finance-chart',
           'finance-trial-balance',

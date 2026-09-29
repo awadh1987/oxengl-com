@@ -55,6 +55,7 @@ const OrganizationProfile = React.lazy(() => import('./views/settings/Organizati
 const CorporateVault = React.lazy(() => import('./views/settings/CorporateVault').then(m => ({ default: m.CorporateVault })));
 const FinancialReportsView = React.lazy(() => import('./views/FinancialReportsView').then(m => ({ default: m.FinancialReportsView })));
 const VendorPortalView = React.lazy(() => import('./views/VendorPortalView').then(m => ({ default: m.VendorPortalView })));
+const SalesReceivablesDashboard = React.lazy(() => import('./views/SalesReceivablesDashboard').then(m => ({ default: m.SalesReceivablesDashboard })));
 
 const ViewLoadingFallback = () => (
   <div className="flex min-h-[400px] w-full flex-col items-center justify-center p-12 text-center">
@@ -90,6 +91,7 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
 
   // Finance Ribbon
   '/finance/invoices': 'invoicing',
+  '/finance/sales-receivables': 'sales-receivables',
   '/finance/vouchers': 'vouchers',
   '/finance/chart': 'finance-chart',
   '/finance/trial-balance': 'financial-reports',
@@ -145,6 +147,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   hr: '/operations/hr',
 
   invoicing: '/finance/invoices',
+  'sales-receivables': '/finance/sales-receivables',
   vouchers: '/finance/vouchers',
   'finance-chart': '/finance/chart',
   'finance-trial-balance': '/finance/trial-balance',
@@ -187,6 +190,7 @@ export const getTabFromPath = (path: string): ActiveTab => {
   if (cleanPath.startsWith('/operations/hr') || cleanPath.startsWith('/hr')) return 'hr';
 
   if (cleanPath.startsWith('/finance/invoices')) return 'invoicing';
+  if (cleanPath.startsWith('/finance/sales-receivables')) return 'sales-receivables';
   if (cleanPath.startsWith('/finance/vouchers')) return 'vouchers';
   if (cleanPath.startsWith('/finance/chart')) return 'finance-chart';
   if (cleanPath.startsWith('/finance/reports') || cleanPath.startsWith('/finance/trial-balance') || cleanPath.startsWith('/finance/income-statement') || cleanPath.startsWith('/finance/balance-sheet')) return 'financial-reports';
@@ -225,6 +229,7 @@ export const tenantNavigation: {
 
   // 2. Finance, Accounting & Control Ribbon
   { id: 'invoicing', path: '/finance/invoices', labelAr: 'الفوترة الضريبية', labelEn: 'ZATCA Invoicing', icon: FileSpreadsheet, group: 'Finance, Accounting & Control' },
+  { id: 'sales-receivables', path: '/finance/sales-receivables', labelAr: 'المبيعات والذمم', labelEn: 'Sales & Receivables', icon: TrendingUp, group: 'Finance, Accounting & Control' },
   { id: 'vouchers', path: '/finance/vouchers', labelAr: 'السندات المالية', labelEn: 'Financial Vouchers', icon: Receipt, group: 'Finance, Accounting & Control' },
   { id: 'finance-chart', path: '/finance/chart', labelAr: 'شجرة الحسابات', labelEn: 'Chart of Accounts', icon: Landmark, group: 'Finance, Accounting & Control' },
   { id: 'financial-reports', path: '/finance/reports', labelAr: 'التقارير المالية المجمعة', labelEn: 'Financial Reports Engine', icon: TrendingUp, group: 'Finance, Accounting & Control' },
@@ -298,7 +303,7 @@ function AppContent() {
     const tab = typeof window !== 'undefined' ? getTabFromPath(window.location.pathname) : 'operations';
     const item = tenantNavigation.find(n => n.id === tab);
     if (item?.group) return item.group;
-    if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'vouchers' || tab === 'ai-insights') {
+    if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
       return 'Finance, Accounting & Control';
     }
     return 'Operations & Logistics';
@@ -310,7 +315,7 @@ function AppContent() {
     const navItem = tenantNavigation.find(n => n.id === tab);
     if (navItem) {
       setSelectedDomain(navItem.group);
-    } else if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'vouchers' || tab === 'ai-insights') {
+    } else if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
       setSelectedDomain('Finance, Accounting & Control');
     } else {
       setSelectedDomain('Operations & Logistics');
@@ -780,6 +785,7 @@ function AppContent() {
     operations: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     maintenance: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     invoicing: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only', 'Guest'],
+    'sales-receivables': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     vouchers: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     billing: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     crushers: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
@@ -835,6 +841,8 @@ function AppContent() {
         return <FleetMapView />;
       case 'invoicing':
         return <CustomerInvoicingView />;
+      case 'sales-receivables':
+        return <SalesReceivablesDashboard />;
       case 'vouchers':
         return <FinancialVouchersView />;
       case 'finance-chart':
