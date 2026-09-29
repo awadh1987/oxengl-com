@@ -254,6 +254,20 @@ async def approve_and_execute(
                     })
                     db.commit()
 
+            # 7. Inventory & Valuation Module: Multi-Warehouse Valuation Audit
+            elif action_name == "InventoryValuationSchema":
+                print(f"-> [Inventory Module] Executing Multi-Warehouse Valuation Audit: {data}")
+                from backend.app.domains.inventory.valuation import calculate_inventory_valuation
+                wh_ref = data.get("warehouse_id", "ALL")
+                method = data.get("valuation_method", "FIFO")
+                valuation_result = calculate_inventory_valuation(
+                    warehouse_id=wh_ref,
+                    valuation_method=method,
+                    company_id=company_id,
+                    db=db,
+                )
+                print(f"-> [Inventory Valuation] Audited {valuation_result.get('warehouses_audited')} warehouses, total: {valuation_result.get('total_valuation')} SAR")
+
             else:
                 raise ValueError(f"Unrecognized AI action schema: {action_name}")
 
@@ -272,5 +286,8 @@ async def approve_and_execute(
     if action_name == "CustomerInvoiceSchema" and "inv_result" in locals() and inv_result:
         response_data["zatca"] = inv_result.get("zatca")
         response_data["invoice_number"] = inv_result.get("invoice_number")
+    if action_name == "InventoryValuationSchema" and "valuation_result" in locals() and valuation_result:
+        response_data["valuation_report"] = valuation_result
+        response_data["message"] = valuation_result.get("audit_narrative")
 
     return response_data

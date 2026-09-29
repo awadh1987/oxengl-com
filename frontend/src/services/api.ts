@@ -1746,6 +1746,29 @@ export const erpApi = {
     request<ApiProduct[]>('/api/inventory/products', companyId),
   getInventoryValuationSummary: (companyId?: string) =>
     request<ApiInventoryValuationSummary>('/api/inventory/valuation', companyId),
+  getMultiWarehouseValuation: (params?: { warehouseId?: string; valuationMethod?: string; companyId?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.warehouseId) sp.append('warehouse_id', params.warehouseId);
+    if (params?.valuationMethod) sp.append('valuation_method', params.valuationMethod);
+    if (params?.companyId) sp.append('company_id', params.companyId);
+    const qs = sp.toString() ? `?${sp.toString()}` : '';
+    return request<ApiMultiWarehouseValuationReport>(`/api/inventory/valuation/multi-warehouse${qs}`, params?.companyId);
+  },
+  calculateInventoryValuation: (payload: { warehouse_id?: string; valuation_method?: string; company_id?: string }) =>
+    request<ApiMultiWarehouseValuationReport>('/api/inventory/valuation/calculate', payload.company_id, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  sendAgentPrompt: (payload: { prompt: string; current_route: string; thread_id: string; screen_context?: any }, companyId?: string) =>
+    request<any>('/api/v1/agent/interact', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  executeAgentAction: (payload: { thread_id: string; approved: boolean }, companyId?: string) =>
+    request<any>('/api/v1/agent/execute', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 
   // Financial Reporting & Analytics Engine (Phase 10)
   getAnalyticsTrialBalance: (params?: { companyId?: string; tenantId?: string; fromDate?: string; toDate?: string }) => {
@@ -2083,6 +2106,64 @@ export interface ApiInventoryValuationSummary {
   total_items: number;
   posted_movements: number;
   pending_movements: number;
+}
+
+export interface ApiFifoLayer {
+  lot_number: string;
+  received_date: string;
+  remaining_qty: number;
+  unit_cost: number;
+  layer_total_value: number;
+}
+
+export interface ApiItemValuationDetail {
+  item_id: string;
+  sku: string;
+  name: string;
+  category: string;
+  quantity_on_hand: number;
+  unit_of_measure: string;
+  valuation_method: string;
+  effective_unit_cost: number;
+  total_valuation: number;
+  standard_cost: number;
+  cost_variance: number;
+  variance_percentage: number;
+  fifo_layers: ApiFifoLayer[];
+}
+
+export interface ApiWarehouseValuationSummary {
+  warehouse_id: string;
+  warehouse_code: string;
+  warehouse_name: string;
+  is_active: boolean;
+  total_items_count: number;
+  total_quantity_on_hand: number;
+  total_valuation_sar: number;
+}
+
+export interface ApiMethodComparison {
+  fifo_valuation_sar: number;
+  weighted_average_sar: number;
+  standard_cost_sar: number;
+  variance_fifo_vs_wac_sar: number;
+  variance_fifo_vs_standard_sar: number;
+}
+
+export interface ApiMultiWarehouseValuationReport {
+  warehouse_ref: string;
+  warehouse_name: string;
+  valuation_method: string;
+  currency: string;
+  total_quantity: number;
+  total_valuation: number;
+  warehouses_audited: number;
+  items_count: number;
+  breakdown_by_item: ApiItemValuationDetail[];
+  breakdown_by_warehouse: ApiWarehouseValuationSummary[];
+  method_comparison: ApiMethodComparison;
+  audit_narrative: string;
+  timestamp: string;
 }
 
 export interface ApiProcurementBill {

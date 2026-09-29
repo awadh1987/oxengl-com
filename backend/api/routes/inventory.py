@@ -599,3 +599,58 @@ def get_inventory_valuation_summary(
         pending_movements=pending_count,
     )
 
+
+class ValuationCalculatePayload(BaseModel):
+    warehouse_id: Optional[str] = "ALL"
+    valuation_method: str = "FIFO"
+    company_id: Optional[uuid.UUID] = None
+
+
+@router.get("/valuation/multi-warehouse")
+def get_multi_warehouse_valuation(
+    warehouse_id: Optional[str] = Query("ALL", description="Warehouse ID, code, or name (e.g., 'Qiddiya', 'WH-MAIN', or 'ALL')"),
+    valuation_method: str = Query("FIFO", description="Valuation algorithm: 'FIFO', 'WEIGHTED_AVERAGE', or 'STANDARD_COST'"),
+    company_id: Optional[uuid.UUID] = None,
+    db: Session = Depends(get_db),
+    context: TenantContext = Depends(get_tenant_context),
+):
+    """
+    Computes real-time multi-warehouse inventory asset valuation.
+    Supports FIFO lot layers, Weighted Average, and Standard Costing with variance analysis.
+    """
+    try:
+        from backend.app.domains.inventory.valuation import InventoryValuationCalculator
+    except ImportError:
+        from app.domains.inventory.valuation import InventoryValuationCalculator
+
+    target_cid = company_id or context.company_id
+    report = InventoryValuationCalculator.calculate_valuation(
+        db=db,
+        warehouse_ref=warehouse_id,
+        valuation_method=valuation_method,
+        company_id=target_cid,
+    )
+    return report.model_dump()
+
+
+@router.post("/valuation/calculate")
+def calculate_valuation_on_demand(
+    payload: ValuationCalculatePayload,
+    db: Session = Depends(get_db),
+    context: TenantContext = Depends(get_tenant_context),
+):
+    """Run on-demand multi-warehouse inventory valuation calculation."""
+    try:
+        from backend.app.domains.inventory.valuation import InventoryValuationCalculator
+    except ImportError:
+        from app.domains.inventory.valuation import InventoryValuationCalculator
+
+    target_cid = payload.company_id or context.company_id
+    report = InventoryValuationCalculator.calculate_valuation(
+        db=db,
+        warehouse_ref=payload.warehouse_id,
+        valuation_method=payload.valuation_method,
+        company_id=target_cid,
+    )
+    return report.model_dump()
+

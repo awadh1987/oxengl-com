@@ -14,6 +14,7 @@ try:
         PurchaseOrderSchema,
         CustomerInvoiceSchema,
         EmployeeLeaveSchema,
+        InventoryValuationSchema,
     )
 except (ImportError, ModuleNotFoundError):
     from backend.app.agent.schemas import (
@@ -23,6 +24,7 @@ except (ImportError, ModuleNotFoundError):
         PurchaseOrderSchema,
         CustomerInvoiceSchema,
         EmployeeLeaveSchema,
+        InventoryValuationSchema,
     )
 
 # 1. Define the Global State
@@ -44,7 +46,9 @@ def classify_intent(state: AgentState):
 def select_schema_for_prompt(prompt: str, route: str):
     text = f"{prompt} {route}".lower()
     
-    if re.search(r"\b(voucher|journal voucher|journal entry|payment|expense|accounting|ledger|depreciation)\b", text) or "finance" in route.lower():
+    if re.search(r"\b(valuation|costing|fifo|weighted average|standard cost|audit.*inventory|inventory.*value|stock.*valuation)\b", text):
+        return InventoryValuationSchema, "InventoryValuationSchema", "Inventory & Valuation"
+    elif re.search(r"\b(voucher|journal voucher|journal entry|payment|expense|accounting|ledger|depreciation)\b", text) or "finance" in route.lower():
         return JournalVoucherSchema, "JournalVoucherSchema", "Financial Controller"
     elif re.search(r"\b(invoice|zatca|client invoice|customer invoice|bill client|sales)\b", text) or "sales" in route.lower() or "billing" in route.lower():
         return CustomerInvoiceSchema, "CustomerInvoiceSchema", "Sales & CRM"
@@ -71,7 +75,9 @@ def draft_payload(state: AgentState):
         model="anthropic/claude-3.5-sonnet",
         openai_api_key="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",
         openai_api_base="https://openrouter.ai/api/v1",
-        temperature=0
+        temperature=0,
+        request_timeout=3,
+        max_retries=1,
     )
     
     # Bind the selected Pydantic schema to force strict JSON generation
@@ -89,7 +95,9 @@ def draft_payload(state: AgentState):
                 openai_api_key="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",
                 openai_api_base="https://openrouter.ai/api/v1",
                 temperature=0,
-                max_tokens=1000
+                max_tokens=1000,
+                request_timeout=3,
+                max_retries=1,
             )
             structured_fallback = fallback_llm.with_structured_output(schema_cls, method="function_calling")
             generated_payload = structured_fallback.invoke(system_prompt)
@@ -133,6 +141,28 @@ def draft_payload(state: AgentState):
                     leave_type="Annual",
                     days_requested=int(num) if num > 0 else 3
                 )
+            elif action_name == "InventoryValuationSchema":
+                wh_name = "ALL"
+                if "qiddiya" in user_prompt.lower():
+                    wh_name = "Qiddiya"
+                elif "central" in user_prompt.lower() or "main" in user_prompt.lower() or "riyadh" in user_prompt.lower():
+                    wh_name = "WH-MAIN"
+                else:
+                    wh_match = re.search(r"(?:warehouse|depot|facility|site)\s*([A-Za-z0-9-]+)", user_prompt, re.I)
+                    if wh_match:
+                        wh_name = wh_match.group(1)
+
+                val_method = "FIFO"
+                if "weighted" in user_prompt.lower() or "wac" in user_prompt.lower() or "average" in user_prompt.lower():
+                    val_method = "WEIGHTED_AVERAGE"
+                elif "standard" in user_prompt.lower() or "std" in user_prompt.lower():
+                    val_method = "STANDARD_COST"
+
+                generated_payload = InventoryValuationSchema(
+                    warehouse_id=wh_name,
+                    valuation_method=val_method,
+                    audit_focus="variance_reconciliation" if "variance" in user_prompt.lower() else "comprehensive"
+                )
             else:
                 generated_payload = JournalVoucherSchema(
                     description=user_prompt or "Financial Voucher Transaction",
@@ -141,12 +171,30 @@ def draft_payload(state: AgentState):
                     expense_category="Fleet Fuel" if "fuel" in user_prompt.lower() else "Maintenance"
                 )
     
+    draft_dict = {
+        "action": action_name,
+        "data": generated_payload.model_dump()
+    }
+
+    # Automatically calculate real-time valuation metrics for valuation queries
+    audit_narrative = None
+    if action_name == "InventoryValuationSchema":
+        try:
+            from backend.app.domains.inventory.valuation import calculate_inventory_valuation
+            val_data = generated_payload.model_dump()
+            report = calculate_inventory_valuation(
+                warehouse_id=val_data.get("warehouse_id", "ALL"),
+                valuation_method=val_data.get("valuation_method", "FIFO"),
+            )
+            draft_dict["valuation_report"] = report
+            audit_narrative = report.get("audit_narrative")
+        except Exception as e:
+            print(f"[Agent] Inventory valuation calculation error in graph: {e}")
+
     return {
-        "draft_payload": {
-            "action": action_name,
-            "data": generated_payload.dict()
-        },
-        "execution_status": "awaiting_approval"
+        "draft_payload": draft_dict,
+        "execution_status": "awaiting_approval",
+        "message": audit_narrative,
     }
 
 # 4. Node: Execution (Commits to PostgreSQL)

@@ -40,3 +40,9 @@ class EmployeeLeaveSchema(BaseModel):
     employee_id: str = Field(description="ID or name of the employee")
     leave_type: str = Field(description="Type of leave: 'Annual', 'Sick', 'Unpaid'")
     days_requested: int = Field(description="Number of days requested")
+
+# 7. Inventory Valuation & Asset Tracking
+class InventoryValuationSchema(BaseModel):
+    warehouse_id: str = Field(default="ALL", description="Target warehouse name, code or ID (e.g. 'Qiddiya', 'WH-MAIN', 'ALL')")
+    valuation_method: str = Field(default="FIFO", description="Valuation algorithm: 'FIFO', 'WEIGHTED_AVERAGE', or 'STANDARD_COST'")
+    audit_focus: str = Field(default="comprehensive", description="Audit focus: 'comprehensive', 'reconciliation', or 'variance'")

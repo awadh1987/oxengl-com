@@ -472,3 +472,58 @@ def list_purchase_orders(
         })
     return results
 
+
+# ==============================================================================
+# Multi-Warehouse Valuation Endpoints
+# ==============================================================================
+
+@router.get("/valuation")
+def get_inventory_valuation_metrics(
+    warehouse_id: Optional[str] = None,
+    valuation_method: str = "FIFO",
+    x_company_id: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Computes real-time multi-warehouse inventory asset valuation.
+    Supports FIFO lot layers, Weighted Average (WAC), and Standard Costing.
+    """
+    try:
+        from backend.app.domains.inventory.valuation import InventoryValuationCalculator
+    except ImportError:
+        from app.domains.inventory.valuation import InventoryValuationCalculator
+
+    cid = uuid.UUID(x_company_id) if x_company_id else None
+    report = InventoryValuationCalculator.calculate_valuation(
+        db=db,
+        warehouse_ref=warehouse_id or "ALL",
+        valuation_method=valuation_method,
+        company_id=cid,
+    )
+    return report.model_dump()
+
+
+@router.post("/valuation/calculate")
+def calculate_inventory_valuation_action(
+    payload: dict,
+    x_company_id: Optional[str] = Header(None),
+    db: Session = Depends(get_db),
+):
+    """Calculates on-demand valuation across single or multi-warehouse assets."""
+    try:
+        from backend.app.domains.inventory.valuation import InventoryValuationCalculator
+    except ImportError:
+        from app.domains.inventory.valuation import InventoryValuationCalculator
+
+    cid = uuid.UUID(x_company_id) if x_company_id else None
+    wh_ref = payload.get("warehouse_id", "ALL")
+    val_method = payload.get("valuation_method", "FIFO")
+
+    report = InventoryValuationCalculator.calculate_valuation(
+        db=db,
+        warehouse_ref=wh_ref,
+        valuation_method=val_method,
+        company_id=cid,
+    )
+    return report.model_dump()
+

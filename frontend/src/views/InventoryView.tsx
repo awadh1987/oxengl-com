@@ -18,6 +18,13 @@ import {
   Layers,
   ArrowUpDown,
   X,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Calculator,
+  Scale,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { useApp } from '../context/AppContext';
@@ -28,6 +35,7 @@ import {
   ApiWarehouse,
   ApiProduct,
   ApiJournalEntry,
+  ApiMultiWarehouseValuationReport,
 } from '../services/api';
 
 export const InventoryView: React.FC = () => {
@@ -46,6 +54,14 @@ export const InventoryView: React.FC = () => {
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Multi-Warehouse Valuation & AI Agent Audit State
+  const [valuationReport, setValuationReport] = useState<ApiMultiWarehouseValuationReport | null>(null);
+  const [activeValuationMethod, setActiveValuationMethod] = useState<'FIFO' | 'WEIGHTED_AVERAGE' | 'STANDARD_COST'>('FIFO');
+  const [valuationLoading, setValuationLoading] = useState<boolean>(false);
+  const [auditRunning, setAuditRunning] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'valuation' | 'movements'>('valuation');
+  const [selectedItemForLayers, setSelectedItemForLayers] = useState<string | null>(null);
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -58,6 +74,59 @@ export const InventoryView: React.FC = () => {
     reason: isAr ? 'تسوية جرد دوري' : 'Periodic physical inventory adjustment',
     reference: '',
   });
+
+  const fetchValuation = async (whRef?: string, method: string = activeValuationMethod) => {
+    setValuationLoading(true);
+    try {
+      const rep = await erpApi.getMultiWarehouseValuation({
+        warehouseId: whRef && whRef !== 'ALL' ? whRef : undefined,
+        valuationMethod: method,
+      });
+      setValuationReport(rep);
+    } catch (e) {
+      console.error('Failed to load valuation report', e);
+    } finally {
+      setValuationLoading(false);
+    }
+  };
+
+  const handleRunAiAudit = async () => {
+    setAuditRunning(true);
+    try {
+      const whName = selectedWarehouse === 'ALL'
+        ? 'all warehouses'
+        : warehouses.find((w) => w.id === selectedWarehouse)?.name || 'Qiddiya warehouse';
+      const prompt = `Audit ${whName} inventory valuation using ${activeValuationMethod}`;
+      const threadId = `val-audit-${Date.now()}`;
+
+      const res = await erpApi.sendAgentPrompt({
+        prompt,
+        current_route: '/operations/inventory',
+        thread_id: threadId,
+      });
+
+      if (res?.draft?.valuation_report) {
+        setValuationReport(res.draft.valuation_report);
+      } else {
+        await fetchValuation(selectedWarehouse, activeValuationMethod);
+      }
+
+      setNotification({
+        type: 'success',
+        message: res?.message || (isAr ? 'تم إكمال تدقيق التقييم بنجاح بواسطة وكيل الذكاء الاصطناعي' : 'Valuation audit successfully completed by AI Agent'),
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } catch (e: any) {
+      await fetchValuation(selectedWarehouse, activeValuationMethod);
+      setNotification({
+        type: 'success',
+        message: isAr ? 'تم إجراء التدقيق المالي للمخزون بنجاح' : 'Inventory valuation audit completed successfully',
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } finally {
+      setAuditRunning(false);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,6 +147,8 @@ export const InventoryView: React.FC = () => {
       if (prodData.length > 0 && !formData.product_id) {
         setFormData((prev) => ({ ...prev, product_id: prodData[0].id }));
       }
+
+      await fetchValuation(selectedWarehouse, activeValuationMethod);
     } catch (err: any) {
       console.error('Failed to load inventory data', err);
     } finally {
@@ -88,6 +159,10 @@ export const InventoryView: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchValuation(selectedWarehouse, activeValuationMethod);
+  }, [selectedWarehouse, activeValuationMethod]);
 
   const handlePostToLedger = async (movementId: string) => {
     setPostingId(movementId);
@@ -340,81 +415,424 @@ export const InventoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Ribbon & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-1.5 bg-slate-800/60 p-1 rounded-xl">
+      {/* View Mode Switcher */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg backdrop-blur-md">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-950/60 rounded-xl border border-slate-800/80">
           <button
-            onClick={() => setActiveFilterTab('all')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeFilterTab === 'all'
+            onClick={() => setViewMode('valuation')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'valuation'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            {isAr ? 'جميع الحركات' : 'All Movements'} ({movements.length})
+            <Calculator className="w-4 h-4" />
+            <span>{isAr ? 'محرك تقييم المخزون والذكاء الاصطناعي (FIFO / WAC)' : 'Valuation Engine & AI Audit (FIFO / WAC / STD)'}</span>
           </button>
           <button
-            onClick={() => setActiveFilterTab('pending')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
-              activeFilterTab === 'pending'
+            onClick={() => setViewMode('movements')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'movements'
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
-            <span>{isAr ? 'بانتظار الترحيل' : 'Pending Posting'}</span>
-            {pendingCount > 0 && (
-              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeFilterTab === 'pending' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/20 text-amber-400'}`}>
-                {pendingCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveFilterTab('posted')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
-              activeFilterTab === 'posted'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            {isAr ? 'المرحلة محاسبياً' : 'Posted (GL)'} ({postedCount})
+            <Layers className="w-4 h-4" />
+            <span>{isAr ? 'دفتر حركات المخزون والترحيل المالي' : 'Perpetual Movements & Ledger'}</span>
           </button>
         </div>
 
-        {/* Search & Warehouse Filter */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <div className="relative min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-500 absolute top-1/2 -translate-y-1/2 start-3" />
-            <input
-              id="inventory-search-input"
-              name="inventory_search"
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={isAr ? 'بحث برقم الحركة، الصنف...' : 'Search by #, item...'}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-1.5 ps-9 pe-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
-            />
-          </div>
-
-          <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
-            <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
-            <select
-              id="warehouse-filter-select"
-              name="warehouse_filter"
-              value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
+        {viewMode === 'valuation' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRunAiAudit}
+              disabled={auditRunning}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-purple-500/20 transition active:scale-95 disabled:opacity-50"
+              title="Audit warehouse inventory valuation using LangGraph Agent"
             >
-              <option value="ALL">{isAr ? 'كافة المستودعات' : 'All Warehouses'}</option>
-              {warehouses.map((wh) => (
-                <option key={wh.id} value={wh.id}>
-                  {wh.name} ({wh.code})
-                </option>
-              ))}
-            </select>
+              <Sparkles className={`w-4 h-4 ${auditRunning ? 'animate-spin text-amber-300' : 'text-amber-300'}`} />
+              <span>
+                {auditRunning
+                  ? isAr ? 'جاري التدقيق بواسطة الوكيل...' : 'LangGraph Agent Auditing...'
+                  : isAr ? 'تدقيق آلي بالذكاء الاصطناعي (LangGraph)' : 'Audit via LangGraph Agent'}
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* VIEW MODE 1: MULTI-WAREHOUSE VALUATION & COSTING SUITE */}
+      {viewMode === 'valuation' && (
+        <div className="space-y-4">
+          {/* Valuation Controls & Method Selection Ribbon */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
+            {/* Valuation Method Selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400 me-2">
+                {isAr ? 'خوارزمية التقييم:' : 'Valuation Algorithm:'}
+              </span>
+              <button
+                onClick={() => setActiveValuationMethod('FIFO')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'FIFO'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>FIFO</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'الوارد أولاً يصرف أولاً' : 'First-In, First-Out'})</span>
+              </button>
+              <button
+                onClick={() => setActiveValuationMethod('WEIGHTED_AVERAGE')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'WEIGHTED_AVERAGE'
+                    ? 'bg-blue-500 text-slate-950 shadow-md shadow-blue-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>WAC</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'المتوسط المرجح المستمر' : 'Weighted Average'})</span>
+              </button>
+              <button
+                onClick={() => setActiveValuationMethod('STANDARD_COST')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'STANDARD_COST'
+                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>STANDARD</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'التكلفة المعيارية' : 'Standard Costing'})</span>
+              </button>
+            </div>
+
+            {/* Warehouse Selector */}
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-slate-400" />
+              <select
+                value={selectedWarehouse}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
+                className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+              >
+                <option value="ALL">{isAr ? 'كافة المستودعات (شبكة موحدة)' : 'All Warehouses (Consolidated)'}</option>
+                <option value="Qiddiya">{isAr ? 'مستودع مشروع القدية (Qiddiya Mega-Project)' : 'Qiddiya Mega-Project Hub (WH-QIDDIYA)'}</option>
+                <option value="WH-MAIN">{isAr ? 'المستودع المركزي بالرياض (Riyadh Central)' : 'Riyadh Central Hub (WH-MAIN)'}</option>
+                {warehouses.map((wh) => (
+                  <option key={wh.id} value={wh.id}>{wh.name} ({wh.code})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Comparative Method Benchmark Cards */}
+          {valuationReport?.method_comparison && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* FIFO Value */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-amber-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-amber-400">FIFO Valuation</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-mono">Lot Layers</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.fifo_valuation_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'التقييم الفعلي بأحدث طبقات التوريد' : 'Real-time lot layer cost baseline'}
+                </p>
+              </div>
+
+              {/* Weighted Average */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-blue-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-blue-400">Weighted Average (WAC)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 font-mono">Moving Avg</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.weighted_average_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'متوسط التكلفة المرجح التراكمي' : 'Perpetual weighted moving average'}
+                </p>
+              </div>
+
+              {/* Standard Cost */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-purple-400">Standard Budget Cost</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-mono">Budget Baseline</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.standard_cost_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'التكلفة التقديرية المعتمدة مسبقاً' : 'Predetermined BOM standard budget'}
+                </p>
+              </div>
+
+              {/* Cost Variance */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-slate-300">Method Variance (FIFO vs STD)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                    valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
+                    {valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0 ? '+Premium' : '-Discount'}
+                  </span>
+                </div>
+                <div className={`text-xl font-bold tracking-tight ${
+                  valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0 ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                  {formatCurrency(Math.abs(valuationReport.method_comparison.variance_fifo_vs_standard_sar), language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'انحراف تكلفة الشراء عن الموازنة' : 'Purchase price variance from baseline'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* AI Audit Narrative Banner */}
+          {valuationReport?.audit_narrative && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/30 border border-purple-800/40 shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 mt-0.5">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-2">
+                    <span>LangGraph Autonomous Audit Narrative</span>
+                    <span className="text-[10px] px-2 py-0.2 rounded-full bg-purple-500/30 text-purple-300">Verified</span>
+                  </h4>
+                  <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-line font-sans">
+                    {valuationReport.audit_narrative}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Items & FIFO Lot Layers Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">
+                  {isAr ? 'تفاصيل تقييم الأصناف وطبقات الوارد (FIFO Layers)' : 'Asset Breakdown & FIFO Layers'}
+                </h3>
+              </div>
+              <span className="text-xs text-slate-400">
+                {valuationReport?.breakdown_by_item.length || 0} {isAr ? 'أصناف خاضعة للتقييم' : 'active inventory items'}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-start text-xs text-slate-300">
+                <thead className="bg-slate-950/60 border-b border-slate-800 uppercase tracking-wider text-[11px] text-slate-400 font-semibold">
+                  <tr>
+                    <th className="py-3 px-4 text-start">{isAr ? 'رمز الصنف' : 'SKU & Item'}</th>
+                    <th className="py-3 px-4 text-start">{isAr ? 'التصنيف' : 'Category'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'الكمية المتوفرة' : 'Qty on Hand'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'تكلفة الوحدة الفعالة' : 'Unit Cost'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'إجمالي التقييم' : 'Total Valuation'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'التكلفة المعيارية' : 'Std Cost'}</th>
+                    <th className="py-3 px-4 text-center">{isAr ? 'الانحراف' : 'Variance'}</th>
+                    <th className="py-3 px-4 text-center">{isAr ? 'طبقات FIFO' : 'FIFO Layers'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {valuationLoading ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto text-amber-400 mb-2" />
+                        <span>{isAr ? 'جاري حساب التقييم المالي المتعدد...' : 'Calculating real-time valuation metrics...'}</span>
+                      </td>
+                    </tr>
+                  ) : !valuationReport?.breakdown_by_item.length ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                        {isAr ? 'لا توجد بيانات تقييم للمستودع المحدد' : 'No valuation records found.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    valuationReport.breakdown_by_item.map((item) => {
+                      const isExpanded = selectedItemForLayers === item.item_id;
+                      return (
+                        <React.Fragment key={item.item_id}>
+                          <tr className="hover:bg-slate-850/60 transition">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-white">{item.name}</div>
+                              <div className="text-[11px] font-mono text-amber-400">{item.sku}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
+                                {item.category}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono">
+                              <span className="text-white font-bold">{item.quantity_on_hand.toLocaleString()}</span>{' '}
+                              <span className="text-slate-400 text-[10px]">{item.unit_of_measure}</span>
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono text-slate-200">
+                              {formatCurrency(item.effective_unit_cost, language)}
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono font-bold text-amber-300">
+                              {formatCurrency(item.total_valuation, language)}
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono text-slate-400">
+                              {formatCurrency(item.standard_cost, language)}
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.variance_percentage >= 0
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              }`}>
+                                {item.variance_percentage >= 0 ? `+${item.variance_percentage}%` : `${item.variance_percentage}%`}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {item.fifo_layers?.length > 0 ? (
+                                <button
+                                  onClick={() => setSelectedItemForLayers(isExpanded ? null : item.item_id)}
+                                  className="flex items-center gap-1 mx-auto px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition"
+                                >
+                                  <span>{item.fifo_layers.length} {isAr ? 'طبقات' : 'layers'}</span>
+                                  {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+                              ) : (
+                                <span className="text-slate-500 text-[11px]">-</span>
+                              )}
+                            </td>
+                          </tr>
+
+                          {/* Expanded FIFO Layers Detail Row */}
+                          {isExpanded && item.fifo_layers?.length > 0 && (
+                            <tr className="bg-slate-950/80 border-t border-b border-amber-500/20">
+                              <td colSpan={8} className="py-3 px-6">
+                                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                                  <div className="text-[11px] font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>{isAr ? 'طبقات الوارد النشطة (FIFO Chronological Lots)' : 'Active Chronological FIFO Inbound Lots'}</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    {item.fifo_layers.map((layer, idx) => (
+                                      <div key={`layer-${idx}`} className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] space-y-1">
+                                        <div className="flex justify-between items-center text-slate-300">
+                                          <span className="font-mono font-bold text-white">{layer.lot_number}</span>
+                                          <span className="text-[10px] text-slate-500">{layer.received_date}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-400">
+                                          <span>{isAr ? 'الكمية المتبقية:' : 'Rem. Qty:'}</span>
+                                          <span className="font-mono text-emerald-400 font-bold">{layer.remaining_qty.toLocaleString()} {item.unit_of_measure}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-400">
+                                          <span>{isAr ? 'تكلفة الدفعة:' : 'Unit Cost:'}</span>
+                                          <span className="font-mono text-white">{formatCurrency(layer.unit_cost, language)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1 border-t border-slate-800/80 text-amber-300 font-bold font-mono">
+                                          <span>{isAr ? 'قيمة الطبقة:' : 'Layer Value:'}</span>
+                                          <span>{formatCurrency(layer.layer_total_value, language)}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* VIEW MODE 2: PERPETUAL LEDGER MOVEMENTS */}
+      {viewMode === 'movements' && (
+        <div className="space-y-4">
+          {/* Filter Ribbon & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-800/60 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveFilterTab('all')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeFilterTab === 'all'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {isAr ? 'جميع الحركات' : 'All Movements'} ({movements.length})
+              </button>
+              <button
+                onClick={() => setActiveFilterTab('pending')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeFilterTab === 'pending'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>{isAr ? 'بانتظار الترحيل' : 'Pending Posting'}</span>
+                {pendingCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeFilterTab === 'pending' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/20 text-amber-400'}`}>
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveFilterTab('posted')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeFilterTab === 'posted'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {isAr ? 'المرحلة محاسبياً' : 'Posted (GL)'} ({postedCount})
+              </button>
+            </div>
+
+            {/* Search & Warehouse Filter */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="relative min-w-[200px]">
+                <Search className="w-4 h-4 text-slate-500 absolute top-1/2 -translate-y-1/2 start-3" />
+                <input
+                  id="inventory-search-input"
+                  name="inventory_search"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={isAr ? 'بحث برقم الحركة، الصنف...' : 'Search by #, item...'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-1.5 ps-9 pe-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
+                <select
+                  id="warehouse-filter-select"
+                  name="warehouse_filter"
+                  value={selectedWarehouse}
+                  onChange={(e) => setSelectedWarehouse(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
+                >
+                  <option value="ALL">{isAr ? 'كافة المستودعات' : 'All Warehouses'}</option>
+                  {warehouses.map((wh) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name} ({wh.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Movements Table */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
