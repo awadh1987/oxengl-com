@@ -218,28 +218,12 @@ async def approve_and_execute(
                 })
                 db.commit()
 
-            # 5. Sales & CRM Module: ZATCA Customer Invoice
+            # 5. Sales & CRM Module: ZATCA Customer Invoice with Cryptographic Chaining
             elif action_name == "CustomerInvoiceSchema":
-                print(f"-> [Sales & CRM Module] Executing Customer Invoice Insert: {data}")
-                customer_name = data.get("customer_name", "Valued Client")
-                net_amt = Decimal(str(data.get("net_amount", 1000.0)))
-                tax_rate = Decimal(str(data.get("tax_rate", 15.0)))
-                vat_amt = (net_amt * tax_rate / Decimal("100")).quantize(Decimal("0.0001"))
-                grand_total = net_amt + vat_amt
-                
-                db.execute(text("""
-                    INSERT INTO customer_invoices (id, company_id, invoice_number, customer_name, issue_date, status, subtotal, vat_amount, grand_total, is_posted, created_at, updated_at)
-                    VALUES (:id, :company_id, :inv_num, :customer_name, NOW(), 'Issued', :subtotal, :vat_amount, :grand_total, FALSE, NOW(), NOW())
-                """), {
-                    "id": uuid.uuid4(),
-                    "company_id": company_id,
-                    "inv_num": f"INV-{uuid.uuid4().hex[:6].upper()}",
-                    "customer_name": customer_name,
-                    "subtotal": net_amt,
-                    "vat_amount": vat_amt,
-                    "grand_total": grand_total
-                })
-                db.commit()
+                print(f"-> [Sales & CRM Module] Executing Customer Invoice with ZATCA Phase 2 Chaining: {data}")
+                from app.crud.sales import create_invoice
+                inv_result = create_invoice(db, data, company_id=company_id)
+                print(f"-> [ZATCA Chaining] Invoice {inv_result['invoice_number']} created with Hash: {inv_result['zatca']['invoice_hash'][:20]}... PIH: {inv_result['zatca']['previous_invoice_hash'][:20]}...")
 
             # 6. HR & Payroll Module: Employee Leave Log
             elif action_name == "EmployeeLeaveSchema":
