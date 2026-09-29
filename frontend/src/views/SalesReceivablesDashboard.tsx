@@ -27,6 +27,7 @@ import {
   Calendar,
   Building2,
   Receipt,
+  Printer,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -390,6 +391,15 @@ export const SalesReceivablesDashboard: React.FC = () => {
             {isAr ? 'تصدير CSV' : 'Export CSV'}
           </button>
           <button
+            id="sr-export-excel-btn"
+            onClick={() => window.open('/api/v1/sales/invoices/export/excel', '_blank')}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700/60 bg-slate-800/70 px-3 py-1.5 text-xs font-bold text-slate-300 hover:bg-slate-700/70 hover:text-emerald-400 transition-all cursor-pointer backdrop-blur-sm"
+            title={isAr ? 'تصدير إكسل' : 'Export to Excel'}
+          >
+            <Download className="h-3.5 w-3.5 text-emerald-400" />
+            {isAr ? 'تصدير Excel' : 'Export Excel'}
+          </button>
+          <button
             id="sr-ai-generate-btn"
             onClick={() => setShowAiPrompt(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 px-3.5 py-1.5 text-xs font-extrabold text-white shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 hover:brightness-110 transition-all cursor-pointer"
@@ -687,6 +697,13 @@ export const SalesReceivablesDashboard: React.FC = () => {
                           title={isAr ? 'تحميل XML' : 'Download XML'}
                         >
                           <Download className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => window.open(`/api/v1/sales/invoices/${inv.id}/pdf`, '_blank')}
+                          className="rounded-md p-1.5 text-slate-500 hover:bg-slate-700/60 hover:text-blue-400 transition-all cursor-pointer"
+                          title={isAr ? 'تحميل فاتورة PDF' : 'Download PDF Invoice'}
+                        >
+                          <Printer className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>

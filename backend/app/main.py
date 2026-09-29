@@ -475,6 +475,15 @@ app.include_router(ai_router, prefix="/api/v1/ai")
 app.include_router(agent_router)
 app.include_router(zatca_router)
 app.include_router(zatca_router, prefix="/api/v1")
+try:
+	from backend.app.api import sales_exports
+	app.include_router(sales_exports.router)
+except (ImportError, ModuleNotFoundError):
+	try:
+		from app.api import sales_exports
+		app.include_router(sales_exports.router)
+	except Exception as _e:
+		logging.getLogger("uvicorn.error").warning(f"Failed to register sales_exports router: {_e}")
 app.include_router(planning_router, prefix="/api/tenant/planning")
 app.include_router(planning_router, prefix="/api/v1/planning")
 from backend.app.api.v1 import super_admin

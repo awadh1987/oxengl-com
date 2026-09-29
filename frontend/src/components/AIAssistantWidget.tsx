@@ -479,8 +479,7 @@ How can I assist you with your operations today?`,
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: data.message || (approved
-          ? (isAr ? 'تم اعتماد وتنفيذ العملية بنجاح في قاعدة البيانات.' : 'Action successfully committed to the database.');
-      setTimeout(() => window.location.reload(), 1500);
+          ? (isAr ? 'تم اعتماد وتنفيذ العملية بنجاح في قاعدة البيانات.' : 'Action successfully committed to the database.')
           : (isAr ? 'تم إلغاء تنفيذ العملية.' : 'Execution cancelled by user.')),
         modelUsed: 'OxenGL Operational Intelligence (LangGraph)',
         timestamp: new Date().toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
@@ -498,11 +497,13 @@ How can I assist you with your operations today?`,
       setMessages((prev) => [...prev, execMsg]);
       showToast?.(
         approved
-          ? (isAr ? 'تم تنفيذ واعتماد العملية في النظام بنجاح.' : 'Action successfully committed to database.');
-      setTimeout(() => window.location.reload(), 1500);
+          ? (isAr ? 'تم تنفيذ واعتماد العملية في النظام بنجاح.' : 'Action successfully committed to database.')
           : (isAr ? 'تم إلغاء المسودة.' : 'Draft cancelled.'),
         approved ? 'success' : 'info'
       );
+      if (approved) {
+        setTimeout(() => window.location.reload(), 1500);
+      }
     } catch (err) {
       console.error('Agent execute error:', err);
       const errMessage: Message = {
