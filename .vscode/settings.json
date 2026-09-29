@@ -8,11 +8,16 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "python.defaultInterpreterPath": "python",
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "python.pythonPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "python.analysis.autoSearchPaths": true,
     "python.analysis.extraPaths": [
         "${workspaceFolder}",
+        "${workspaceFolder}/backend",
         "${workspaceFolder}/Oxen-gl"
     ],
     "python.terminal.useEnvFile": true,
+    "python.envFile": "${workspaceFolder}/.env",
+    "python.terminal.activateEnvironment": true,
     "chat.editing.autoAcceptDelay": 3
 }
