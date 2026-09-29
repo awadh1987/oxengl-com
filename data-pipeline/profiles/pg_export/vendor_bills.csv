@@ -1,0 +1,1 @@
+id,tenant_id,company_id,invoice_number,vendor_id,purchase_order_id,goods_receipt_id,invoice_date,due_date,currency,amount,tax_amount,total_billed,match_status,discrepancy_details,is_posted,created_at,journal_entry_id

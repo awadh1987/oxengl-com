@@ -1,0 +1,250 @@
+{
+  "table": "finance_journal_entries",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/finance_journal_entries.csv",
+  "row_count": 11,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 11
+      },
+      "sample_values": [
+        "b9df054b-d3bc-4ca7-b852-91756fa953b7",
+        "be365c07-5c7b-4ef2-ae8a-67a5f2cb39fb",
+        "e02872f0-1457-4a62-bcc9-190d30a8ddb4",
+        "3dddd36c-1fa7-4595-83d6-d0df6fccffe1",
+        "f563d119-083d-49e3-9592-d851c7e667da"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 27.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 11
+      },
+      "sample_values": [
+        "7bcfe7f2-7b0b-477f-8fad-e45840130c59",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 11,
+      "null_count": 2,
+      "null_rate_pct": 18.2,
+      "distinct_count": 2,
+      "distinct_rate_pct": 22.2,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 9
+      },
+      "sample_values": [
+        "7bcfe7f2-7b0b-477f-8fad-e45840130c59",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "entry_number": {
+      "name": "entry_number",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 100.0,
+      "max_length": 27,
+      "min_length": 9,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 11
+      },
+      "sample_values": [
+        "JV-TEST-2777F8",
+        "JV-10984A83",
+        "INV-MOV-TEST-4279D7-1E9118",
+        "INV-MOV-SCRAP-A3D7D0-FD94FE",
+        "INV-MOV-TEST-1E7AFB-4FFA29"
+      ]
+    },
+    "entry_date": {
+      "name": "entry_date",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 11
+      },
+      "sample_values": [
+        "2026-09-29 00:52:55.798696+00",
+        "2026-09-29 01:09:04.521899+00",
+        "2026-09-29 04:53:02.01079+00",
+        "2026-09-29 04:53:02.081678+00",
+        "2026-09-29 05:02:46.34757+00"
+      ]
+    },
+    "description": {
+      "name": "description",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 90.9,
+      "max_length": 121,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 11
+      },
+      "sample_values": [
+        "Agent Voucher Test",
+        "Warehouse equipment maintenance",
+        "Inventory Adjustment MOV-TEST-4279D7 (ADJUSTMENT) for Test Structural Steel I-Beam at Test Regional Distribution Hub",
+        "Inventory Adjustment MOV-SCRAP-A3D7D0 (SCRAP) for Test Structural Steel I-Beam at \u0627\u0644\u0645\u0633\u062a\u0648\u062f\u0639 \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a \u0627\u0644\u0631\u0626\u064a\u0633\u064a / Central Hub",
+        "Inventory Adjustment MOV-TEST-1E7AFB (ADJUSTMENT) for Test Structural Steel I-Beam at Test Regional Distribution Hub"
+      ]
+    },
+    "total_debit": {
+      "name": "total_debit",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 45.5,
+      "max_length": 10,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 11
+      },
+      "sample_values": [
+        "1500.0000",
+        "7500.0000",
+        "2500.0000",
+        "600.0000",
+        "2500.0000"
+      ]
+    },
+    "total_credit": {
+      "name": "total_credit",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 45.5,
+      "max_length": 10,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 11
+      },
+      "sample_values": [
+        "1500.0000",
+        "7500.0000",
+        "2500.0000",
+        "600.0000",
+        "2500.0000"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 18.2,
+      "max_length": 7,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 11
+      },
+      "sample_values": [
+        "POSTED",
+        "POSTED",
+        "POSTED",
+        "POSTED",
+        "POSTED"
+      ]
+    },
+    "posted_by": {
+      "name": "posted_by",
+      "total_values": 11,
+      "null_count": 11,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 11,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 11
+      },
+      "sample_values": [
+        "2026-09-29 00:52:55.798696+00",
+        "2026-09-29 01:09:04.521899+00",
+        "2026-09-29 04:53:02.010794+00",
+        "2026-09-29 04:53:02.081682+00",
+        "2026-09-29 05:02:46.347574+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "posted_by",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "posted_by",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 0
+  }
+}

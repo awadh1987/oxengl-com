@@ -1,0 +1,1 @@
+id,tender_id,vendor_user_id,partner_id,bid_number,total_amount,currency,sealed_quote_hash,is_sealed,unsealed_at,status,technical_proposal,commercial_terms,delivery_lead_time_days,validity_period_days,sealed_envelope_data,evaluation_score,evaluation_notes,submission_timestamp,created_at,updated_at

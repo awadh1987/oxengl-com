@@ -1,0 +1,467 @@
+{
+  "table": "fleet_trips",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/fleet_trips.csv",
+  "row_count": 3,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "25b086aa-3576-4da8-b6cc-39d6bfb072cd",
+        "3dbabc79-621f-4494-a08f-734d297f92bb",
+        "a0f2f253-e2b6-4066-877a-62acd0f18161"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "trip_number": {
+      "name": "trip_number",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 11,
+      "min_length": 11,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "TRIP-78E968",
+        "TRIP-DB6BBF",
+        "TRIP-C75670"
+      ]
+    },
+    "vehicle_id": {
+      "name": "vehicle_id",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "driver_id": {
+      "name": "driver_id",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "origin_location": {
+      "name": "origin_location",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 66.7,
+      "max_length": 21,
+      "min_length": 11,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "Central Hub",
+        "Central Hub",
+        "Central Logistics Hub"
+      ]
+    },
+    "destination_location": {
+      "name": "destination_location",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 66.7,
+      "max_length": 12,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "Facility B",
+        "Quarry North",
+        "Quarry North"
+      ]
+    },
+    "cargo_description": {
+      "name": "cargo_description",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 13,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "Sand & Gravel",
+        "Aggregates",
+        "aggregates"
+      ]
+    },
+    "planned_weight_tons": {
+      "name": "planned_weight_tons",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 66.7,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 3
+      },
+      "sample_values": [
+        "20.0000",
+        "25.0000",
+        "25.0000"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "assigned",
+        "assigned",
+        "assigned"
+      ]
+    },
+    "scheduled_departure": {
+      "name": "scheduled_departure",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "actual_departure": {
+      "name": "actual_departure",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "actual_delivery": {
+      "name": "actual_delivery",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "current_latitude": {
+      "name": "current_latitude",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "current_longitude": {
+      "name": "current_longitude",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "speed_kmh": {
+      "name": "speed_kmh",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "last_gps_at": {
+      "name": "last_gps_at",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "notes": {
+      "name": "notes",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 33,
+      "min_length": 33,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "Truck ID: 3190 | Priority: Urgent",
+        "Truck ID: 3190 | Priority: Urgent",
+        "Truck ID: 3190 | Priority: Urgent"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-29 00:54:05.02091+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:02:34.086022+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-29 00:54:05.02091+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:02:34.086022+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "vehicle_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "vehicle_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "driver_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "driver_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "status",
+      "issue": "Single distinct value: assigned",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "scheduled_departure",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "scheduled_departure",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "actual_departure",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "actual_departure",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "actual_delivery",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "actual_delivery",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "current_latitude",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "current_latitude",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "current_longitude",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "current_longitude",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "speed_kmh",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "speed_kmh",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "last_gps_at",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "last_gps_at",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "notes",
+      "issue": "Single distinct value: Truck ID: 3190 | Priority: Urgent",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 9,
+    "warning": 9,
+    "info": 3
+  }
+}

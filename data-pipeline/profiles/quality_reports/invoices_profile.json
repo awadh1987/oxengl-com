@@ -1,0 +1,268 @@
+{
+  "table": "invoices",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/invoices.csv",
+  "row_count": 6,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 100.0,
+      "max_length": 2,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 6
+      },
+      "sample_values": [
+        "3",
+        "12",
+        "10",
+        "1",
+        "21"
+      ]
+    },
+    "invoice_number": {
+      "name": "invoice_number",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 100.0,
+      "max_length": 15,
+      "min_length": 15,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 6
+      },
+      "sample_values": [
+        "INV-ZERO-CAA826",
+        "INV-ZERO-644897",
+        "INV-TEST-A7047E",
+        "INV-TEST-25E362",
+        "INV-ZERO-B154CD"
+      ]
+    },
+    "total_amount": {
+      "name": "total_amount",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 33.3,
+      "max_length": 7,
+      "min_length": 4,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 6
+      },
+      "sample_values": [
+        "0.00",
+        "0.00",
+        "1150.00",
+        "1150.00",
+        "0.00"
+      ]
+    },
+    "currency": {
+      "name": "currency",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 16.7,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 6
+      },
+      "sample_values": [
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR"
+      ]
+    },
+    "payment_status": {
+      "name": "payment_status",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 33.3,
+      "max_length": 7,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 6
+      },
+      "sample_values": [
+        "pending",
+        "pending",
+        "paid",
+        "paid",
+        "pending"
+      ]
+    },
+    "moyasar_transaction_id": {
+      "name": "moyasar_transaction_id",
+      "total_values": 6,
+      "null_count": 6,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "payment_method": {
+      "name": "payment_method",
+      "total_values": 6,
+      "null_count": 6,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "paid_at": {
+      "name": "paid_at",
+      "total_values": 6,
+      "null_count": 6,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "public_token": {
+      "name": "public_token",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 6
+      },
+      "sample_values": [
+        "70d2a629-15bb-41b9-a44b-bcf944592775",
+        "70b861e7-a02d-4cba-838f-7c8c809931d6",
+        "d631ff5c-06a3-4f06-af3b-79ea4c31e73e",
+        "bf372d12-1c9b-40c4-9c30-08534a3707ba",
+        "2f2b6bab-6c6d-416f-80ce-75adad91638a"
+      ]
+    },
+    "journal_entry_id": {
+      "name": "journal_entry_id",
+      "total_values": 6,
+      "null_count": 6,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "is_posted": {
+      "name": "is_posted",
+      "total_values": 6,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 33.3,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 6
+      },
+      "sample_values": [
+        "f",
+        "f",
+        "t",
+        "t",
+        "f"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "currency",
+      "issue": "Single distinct value: SAR",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "moyasar_transaction_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "moyasar_transaction_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "payment_method",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "payment_method",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "paid_at",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "paid_at",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "journal_entry_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "journal_entry_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 4,
+    "warning": 4,
+    "info": 1
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "table": "exchange_rates",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/exchange_rates.csv",
+  "row_count": 1,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 1,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 1
+      },
+      "sample_values": [
+        "f58cbe10-1c95-4ca1-b3fe-69fbb1b03b74"
+      ]
+    },
+    "from_currency": {
+      "name": "from_currency",
+      "total_values": 1,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 1
+      },
+      "sample_values": [
+        "USD"
+      ]
+    },
+    "to_currency": {
+      "name": "to_currency",
+      "total_values": 1,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 1
+      },
+      "sample_values": [
+        "SAR"
+      ]
+    },
+    "rate": {
+      "name": "rate",
+      "total_values": 1,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 1
+      },
+      "sample_values": [
+        "3.750000"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 1,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 1
+      },
+      "sample_values": [
+        "2026-09-25 12:35:44.232785+00"
+      ]
+    }
+  },
+  "quality_flags": [],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 0
+  }
+}

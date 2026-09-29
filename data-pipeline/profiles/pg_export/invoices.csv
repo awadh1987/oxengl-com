@@ -1,0 +1,7 @@
+id,invoice_number,total_amount,currency,payment_status,moyasar_transaction_id,payment_method,paid_at,public_token,journal_entry_id,is_posted
+3,INV-ZERO-CAA826,0.00,SAR,pending,,,,70d2a629-15bb-41b9-a44b-bcf944592775,,f
+12,INV-ZERO-644897,0.00,SAR,pending,,,,70b861e7-a02d-4cba-838f-7c8c809931d6,,f
+10,INV-TEST-A7047E,1150.00,SAR,paid,,,,d631ff5c-06a3-4f06-af3b-79ea4c31e73e,,t
+1,INV-TEST-25E362,1150.00,SAR,paid,,,,bf372d12-1c9b-40c4-9c30-08534a3707ba,,t
+21,INV-ZERO-B154CD,0.00,SAR,pending,,,,2f2b6bab-6c6d-416f-80ce-75adad91638a,,f
+19,INV-TEST-3AACB0,1150.00,SAR,paid,,,,41f26645-670d-414e-92c1-e6655dbee4df,,t

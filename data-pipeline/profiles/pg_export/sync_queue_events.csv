@@ -1,0 +1,1 @@
+id,company_id,device_id,user_id,operation_id,entity_type,action,payload,sync_status,is_conflict,conflict_reason,client_timestamp,applied_at,server_response,created_at,updated_at

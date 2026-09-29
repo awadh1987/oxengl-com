@@ -1,0 +1,334 @@
+{
+  "table": "res_partners",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/res_partners.csv",
+  "row_count": 2,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "68595bc2-9895-4ca7-9d3e-2bb3fcb644da",
+        "fd01f6b9-0753-471d-9fa2-37bbe9f6105c"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 23,
+      "min_length": 21,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "Saudi Iron & Steel Co",
+        "Saudi Aramco Lubricants"
+      ]
+    },
+    "partner_type": {
+      "name": "partner_type",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "supplier",
+        "supplier"
+      ]
+    },
+    "email": {
+      "name": "email",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "phone": {
+      "name": "phone",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "tax_number": {
+      "name": "tax_number",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "commercial_registration": {
+      "name": "commercial_registration",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 2
+      },
+      "sample_values": [
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-29 00:55:49.87196+00",
+        "2026-09-29 01:03:45.882697+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-29 00:55:49.87196+00",
+        "2026-09-29 01:03:45.882697+00"
+      ]
+    },
+    "branch_scope_ids": {
+      "name": "branch_scope_ids",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "warehouse_scope_ids": {
+      "name": "warehouse_scope_ids",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "access_control_list": {
+      "name": "access_control_list",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "partner_type",
+      "issue": "Single distinct value: supplier",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "email",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "email",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "phone",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "phone",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "tax_number",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tax_number",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "commercial_registration",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "commercial_registration",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "branch_scope_ids",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "branch_scope_ids",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "warehouse_scope_ids",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "warehouse_scope_ids",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "access_control_list",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "access_control_list",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 7,
+    "warning": 7,
+    "info": 3
+  }
+}

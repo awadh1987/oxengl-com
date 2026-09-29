@@ -1,0 +1,1 @@
+id,company_id,trip_id,recipient_name,recipient_phone,latitude,longitude,altitude,accuracy_meters,digital_signature_data,encrypted_photo_urls,delivery_notes,delivered_at,created_at,updated_at

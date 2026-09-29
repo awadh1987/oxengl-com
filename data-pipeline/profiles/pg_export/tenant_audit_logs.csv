@@ -1,0 +1,15 @@
+id,tenant_id,action_type,actor,details,created_at
+e3f0867b-8c58-43e1-adca-870b70f6acac,,KEY_MIRRORED_OFFSITE,CRON_SYSTEM_DAEMON,"Master crypto vault key mirrored offsite (Local: /var/crypto/oxengl/offsite_key_mirror/master.key.mirror, SSECustomerAlgorithm: AES256, Cloud Bucket: oxengl-offsite-vault-primary).",2026-09-26 01:04:38.298372
+d85f12bf-6744-4c76-a7be-ccbf0ff5b1e5,,KEY_MIRRORED_OFFSITE,CRON_SYSTEM_DAEMON,"Master crypto vault key mirrored offsite (Local: /var/crypto/oxengl/offsite_key_mirror/master.key.mirror, SSECustomerAlgorithm: AES256, Cloud Bucket: oxengl-offsite-vault-primary).",2026-09-27 01:00:39.119089
+fe7a003f-6499-40e0-84b2-174ced2c2678,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:00:01.246116
+9f5f49c0-86e7-4d1b-9dec-a702a400678d,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:00:01.245983
+7dae2879-7267-405c-b71c-63b6f3f459df,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:01:27.19808
+0abad45a-f28c-4c12-9813-5e3d754810a6,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:01:27.197978
+0d445c2c-5245-4702-9c5d-00ee5d788c40,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:03:21.268665
+161e0db0-e662-43c2-ab1d-de54ac4dc223,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:03:21.268766
+d6f6aec8-f717-4aa9-a885-ab36602c38ec,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:03:48.487935
+4fee0020-ff6c-48e7-a1f0-ba0058843c40,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 19:03:48.487839
+62208c19-7a62-48aa-b15b-fde99b6348cc,,TENANT_PURGED,SUPERADMIN_OPERATOR,Tenant Oxen Logistics Co 67500f (oxen-67500f) purged. Pre-purge backup: /var/crypto/oxengl/backups/purge_oxen-67500f_20260928_040639.enc.tar.gz. Purged 4 dependent records.,2026-09-28 04:06:39.835566
+bae0f3c9-da6d-4850-81e7-477f2b4d9614,,SUPERADMIN_INVOICE_SETTLED,SUPERADMIN,Invoice SAAS-INV-202609-0058-4AA3 verified and settled. Payment ref: WIRE-UPG-e3888e. Plan: ENTERPRISE,2026-09-27 20:48:42.910113
+e7de840b-1bef-426c-9739-27168243b3b6,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 21:13:00.990093
+abcde311-ff54-4516-aaef-2cdbb2e509ac,,BULK_STATUS_UPDATE,PLATFORM_OPERATOR,"Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",2026-09-27 21:13:00.990353

@@ -1,0 +1,1 @@
+id,company_id,model_name,provider,endpoint_url,encrypted_api_key,rate_limit_rpm,rate_limit_tpm,permission_tier,max_risk_tier_allowed,is_active,created_at,updated_at

@@ -1,0 +1,131 @@
+-- OxenGL ERP — Staging: Customer Invoices (ZATCA Compliance Cleaning)
+-- ====================================================================
+-- Applies autocleaning rules to customer invoices:
+-- 1. UUID format validation
+-- 2. Arabic/English name encoding cleanup
+-- 3. ZATCA UUID format verification
+-- 4. Amount precision normalization (4-decimal SAR)
+-- 5. VAT consistency check (15% KSA standard)
+-- 6. Status normalization
+-- 7. Timestamp standardization
+
+config {
+  type: "table",
+  schema: "oxengl_staging",
+  name: "stg_customer_invoices",
+  description: "Autocleaned customer invoices with ZATCA compliance validation",
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id", "company_id", "invoice_number"]
+  }
+}
+
+SELECT
+  -- Primary Key: UUID validation
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  -- Foreign Key: Company ID
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(company_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(company_id AS STRING)
+    ELSE NULL
+  END AS company_id,
+
+  -- Invoice Number: Trim whitespace, nullify empty
+  NULLIF(TRIM(CAST(invoice_number AS STRING)), '') AS invoice_number,
+
+  -- Customer Name (AR/EN): Preserve encoding, trim whitespace only
+  NULLIF(TRIM(CAST(customer_name_ar AS STRING)), '') AS customer_name_ar,
+  NULLIF(TRIM(CAST(customer_name_en AS STRING)), '') AS customer_name_en,
+
+  -- Customer TIN (Tax ID): Validate format
+  CASE
+    WHEN REGEXP_CONTAINS(TRIM(CAST(customer_tax_id AS STRING)), r'^3\d{13}3$')
+    THEN TRIM(CAST(customer_tax_id AS STRING))
+    WHEN LENGTH(TRIM(CAST(customer_tax_id AS STRING))) > 0
+    THEN TRIM(CAST(customer_tax_id AS STRING))  -- Keep non-standard but non-empty
+    ELSE NULL
+  END AS customer_tax_id,
+
+  -- Financial Amounts: 4-decimal precision
+  ROUND(SAFE_CAST(subtotal AS NUMERIC), 4) AS subtotal,
+  ROUND(SAFE_CAST(vat_amount AS NUMERIC), 4) AS vat_amount,
+  ROUND(SAFE_CAST(total_amount AS NUMERIC), 4) AS total_amount,
+  ROUND(SAFE_CAST(discount_amount AS NUMERIC), 4) AS discount_amount,
+
+  -- VAT Rate: Validate 15% standard
+  SAFE_CAST(vat_rate AS NUMERIC) AS vat_rate,
+
+  -- VAT Consistency Check
+  CASE
+    WHEN ABS(SAFE_CAST(vat_amount AS NUMERIC) - ROUND(SAFE_CAST(subtotal AS NUMERIC) * 0.15, 2)) <= 1.0
+    THEN 'VALID'
+    ELSE 'VAT_MISMATCH'
+  END AS vat_consistency_flag,
+
+  -- Currency: Standardize
+  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+
+  -- ZATCA UUID: Format validation
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(zatca_uuid AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(zatca_uuid AS STRING)
+    ELSE NULL
+  END AS zatca_uuid,
+
+  -- ZATCA Status: Normalize to canonical values
+  CASE
+    WHEN UPPER(TRIM(CAST(zatca_status AS STRING))) IN ('CLEARED', 'CLEAR') THEN 'CLEARED'
+    WHEN UPPER(TRIM(CAST(zatca_status AS STRING))) IN ('REPORTED', 'REPORT') THEN 'REPORTED'
+    WHEN UPPER(TRIM(CAST(zatca_status AS STRING))) IN ('PENDING', 'DRAFT', 'SUBMITTED') THEN 'PENDING'
+    WHEN UPPER(TRIM(CAST(zatca_status AS STRING))) IN ('REJECTED', 'FAILED', 'ERROR') THEN 'REJECTED'
+    ELSE UPPER(TRIM(CAST(zatca_status AS STRING)))
+  END AS zatca_status,
+
+  -- Invoice Status: Normalize
+  CASE
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('POSTED', 'CONFIRMED', 'APPROVED') THEN 'POSTED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('DRAFT', 'PENDING') THEN 'DRAFT'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('CANCELLED', 'VOID', 'REVERSED') THEN 'CANCELLED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('PAID', 'SETTLED') THEN 'PAID'
+    ELSE UPPER(TRIM(CAST(status AS STRING)))
+  END AS status,
+
+  -- Invoice Type
+  UPPER(TRIM(CAST(invoice_type AS STRING))) AS invoice_type,
+
+  -- Timestamps: Normalize to UTC TIMESTAMP
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING))
+  ) AS created_at,
+
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(updated_at AS STRING))
+  ) AS updated_at,
+
+  -- Invoice Date
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(invoice_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(invoice_date AS STRING))
+  ) AS invoice_date,
+
+  -- Due Date
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(due_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(due_date AS STRING))
+  ) AS due_date,
+
+  -- Data Quality Metadata
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("customer_invoices")}
+WHERE id IS NOT NULL

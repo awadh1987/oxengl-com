@@ -1,0 +1,388 @@
+{
+  "table": "inventory_movements",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/inventory_movements.csv",
+  "row_count": 12,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 12,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 12
+      },
+      "sample_values": [
+        "969f44f0-a657-4c18-b1a3-32de9df7e62c",
+        "75d7a1dc-5d31-4cfa-aab9-0539fe2cbdb2",
+        "c9b78b25-12bd-429a-a078-fdbd71275480",
+        "4bc5b0a4-41a2-45e7-a127-993b9ced75fd",
+        "067f3898-0087-448a-a59a-b02b920b6e70"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 8.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 12
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 8.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 12
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "movement_number": {
+      "name": "movement_number",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 12,
+      "distinct_rate_pct": 100.0,
+      "max_length": 16,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 12
+      },
+      "sample_values": [
+        "TRF-7514F4",
+        "TRF-2E1CC4",
+        "TRF-42F516",
+        "MOV-TEST-4279D7",
+        "MOV-SCRAP-A3D7D0"
+      ]
+    },
+    "movement_type": {
+      "name": "movement_type",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 25.0,
+      "max_length": 10,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 12
+      },
+      "sample_values": [
+        "TRANSFER",
+        "TRANSFER",
+        "TRANSFER",
+        "ADJUSTMENT",
+        "SCRAP"
+      ]
+    },
+    "warehouse_id": {
+      "name": "warehouse_id",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 33.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 12
+      },
+      "sample_values": [
+        "3710b463-ff3c-456f-a641-4ac90b32a23d",
+        "3710b463-ff3c-456f-a641-4ac90b32a23d",
+        "3710b463-ff3c-456f-a641-4ac90b32a23d",
+        "d267ac03-0ec8-4201-8f0b-4d2f1c2f417a",
+        "3710b463-ff3c-456f-a641-4ac90b32a23d"
+      ]
+    },
+    "product_id": {
+      "name": "product_id",
+      "total_values": 12,
+      "null_count": 3,
+      "null_rate_pct": 25.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 33.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 9
+      },
+      "sample_values": [
+        "acdd70ee-4951-4e42-a3d6-f2adc2f00ec6",
+        "acdd70ee-4951-4e42-a3d6-f2adc2f00ec6",
+        "acdd70ee-4951-4e42-a3d6-f2adc2f00ec6",
+        "206ce12f-df6c-487f-b066-de38d964ae3d",
+        "acdd70ee-4951-4e42-a3d6-f2adc2f00ec6"
+      ]
+    },
+    "quantity": {
+      "name": "quantity",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 41.7,
+      "max_length": 8,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 12
+      },
+      "sample_values": [
+        "100.0000",
+        "100.0000",
+        "80.0000",
+        "10.0000",
+        "-4.0000"
+      ]
+    },
+    "unit_cost": {
+      "name": "unit_cost",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 12
+      },
+      "sample_values": [
+        "10.0000",
+        "10.0000",
+        "10.0000",
+        "250.0000",
+        "150.0000"
+      ]
+    },
+    "total_cost": {
+      "name": "total_cost",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 41.7,
+      "max_length": 9,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 12
+      },
+      "sample_values": [
+        "1000.0000",
+        "1000.0000",
+        "800.0000",
+        "2500.0000",
+        "600.0000"
+      ]
+    },
+    "reason": {
+      "name": "reason",
+      "total_values": 12,
+      "null_count": 3,
+      "null_rate_pct": 25.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 55.6,
+      "max_length": 46,
+      "min_length": 16,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 9
+      },
+      "sample_values": [
+        "Stock transfer request",
+        "Transfer SKU-123",
+        "Autonomous Stock Transfer for STL-442",
+        "Stock count physical verification surplus",
+        "Damaged materials written off to scrap expense"
+      ]
+    },
+    "reference": {
+      "name": "reference",
+      "total_values": 12,
+      "null_count": 9,
+      "null_rate_pct": 75.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 49,
+      "min_length": 31,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "From Warehouse A to Warehouse B | Item: STEEL-BAR",
+        "From Warehouse A to Warehouse B",
+        "Central Depot -> Dammam Warehouse"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 16.7,
+      "max_length": 9,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 12
+      },
+      "sample_values": [
+        "COMPLETED",
+        "COMPLETED",
+        "COMPLETED",
+        "POSTED",
+        "POSTED"
+      ]
+    },
+    "is_posted": {
+      "name": "is_posted",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 16.7,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 12
+      },
+      "sample_values": [
+        "f",
+        "f",
+        "f",
+        "t",
+        "t"
+      ]
+    },
+    "journal_entry_id": {
+      "name": "journal_entry_id",
+      "total_values": 12,
+      "null_count": 6,
+      "null_rate_pct": 50.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 6
+      },
+      "sample_values": [
+        "e02872f0-1457-4a62-bcc9-190d30a8ddb4",
+        "3dddd36c-1fa7-4595-83d6-d0df6fccffe1",
+        "7cf4bacd-a7df-4f64-87ab-f80e69262217",
+        "0930d45b-bbfd-474c-88e5-8f35dc4c61b9",
+        "f563d119-083d-49e3-9592-d851c7e667da"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 12,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 12
+      },
+      "sample_values": [
+        "2026-09-29 00:54:52.085423+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:03:07.164156+00",
+        "2026-09-29 04:53:01.507676+00",
+        "2026-09-29 04:53:02.049663+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 12,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 12,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 12
+      },
+      "sample_values": [
+        "2026-09-29 00:54:52.085423+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:03:07.164156+00",
+        "2026-09-29 04:53:01.999324+00",
+        "2026-09-29 04:53:02.071552+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "tenant_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "reference",
+      "issue": "High null rate: 75.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    }
+  ],
+  "quality_score": 95,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 1,
+    "info": 2
+  }
+}

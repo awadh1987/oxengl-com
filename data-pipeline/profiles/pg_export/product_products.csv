@@ -1,0 +1,4 @@
+id,company_id,sku,name,product_type,unit_of_measure,standard_cost,sale_price,is_active,created_at,updated_at
+acdd70ee-4951-4e42-a3d6-f2adc2f00ec6,df5dc940-2f26-4620-86fa-1012735b7ee5,SKU-72D845,Test Structural Steel I-Beam,storable,ton,250.0000,300.0000,t,2026-09-29 04:53:01.48689+00,2026-09-29 04:53:01.48689+00
+206ce12f-df6c-487f-b066-de38d964ae3d,df5dc940-2f26-4620-86fa-1012735b7ee5,SKU-910702,Test Structural Steel I-Beam,storable,ton,250.0000,300.0000,t,2026-09-29 04:58:48.977287+00,2026-09-29 04:58:48.977287+00
+852d9395-6c25-4c14-8d18-d1b56a5d040f,df5dc940-2f26-4620-86fa-1012735b7ee5,SKU-21D345,Test Structural Steel I-Beam,storable,ton,250.0000,300.0000,t,2026-09-29 05:02:45.903196+00,2026-09-29 05:02:45.903196+00

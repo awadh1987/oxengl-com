@@ -1,0 +1,468 @@
+{
+  "table": "zatca_logs",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/zatca_logs.csv",
+  "row_count": 5,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "b9b5c2e2-5cd3-4c30-b67a-7a9c63976112",
+        "b0bc1032-2066-438b-a210-a56ca6a2cc5f",
+        "d5a4395a-9aff-4a0c-9b6b-6fd1403aa9b4",
+        "7469eaeb-1a45-4b8f-814d-23cf67aa07f8",
+        "4a6b42cb-050b-43ab-8efe-d860ac54f362"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "tax_profile_id": {
+      "name": "tax_profile_id",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "invoice_id": {
+      "name": "invoice_id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "7e9f1813-c272-46b8-9462-5c211abee2d8",
+        "eb634b4d-d792-4f70-9520-d867c9e6adfc",
+        "d0ce0aaa-5a13-49fc-8313-4622631c7a34",
+        "25861b50-9916-4dc5-8ccb-3328812f415f",
+        "bf0518af-71ad-41d4-9efa-7f9ff626f921"
+      ]
+    },
+    "invoice_uuid": {
+      "name": "invoice_uuid",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "9240f566-baa9-4058-9ca5-77dfe10cec6f",
+        "13e9fead-50c5-4f14-9cf3-17ae799efedc",
+        "90c97827-0372-448a-915e-1d5dead67324",
+        "34c19730-6e19-4ce3-9252-4ff797eac85b",
+        "7e94f458-795d-4ab9-a9ea-efe4a0374db7"
+      ]
+    },
+    "invoice_hash": {
+      "name": "invoice_hash",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 44,
+      "min_length": 44,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "soRumWVT2lVku1c49mVdnbM9eKZHyKgDl3vVj0XXJvM=",
+        "LvJViuK4+CaJZvGUWQuQCNArJyB4gADCiTl9/7A0hNs=",
+        "rZ+v2XIxji1IUi6uNvgxDDdRdg0CMBeeUitlFCIehBU=",
+        "RboNaKmr7FCGvODFDUJFFg/4HbIirmHIeMLm45MWeyc=",
+        "YrAAyPmoIrW4RrONWTGdmXeFqd9+VLMGSYpDnjgYr1M="
+      ]
+    },
+    "previous_invoice_hash": {
+      "name": "previous_invoice_hash",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 88,
+      "min_length": 44,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "NWZlMWMwMmRhMjA3ZjBhMmQ1MTUzYTM4MGQ2NTY1M2MwODFjMzg4OTdhNzg2N2VlYzA4OWI5Mjc4NjVkZDJjNA==",
+        "soRumWVT2lVku1c49mVdnbM9eKZHyKgDl3vVj0XXJvM=",
+        "LvJViuK4+CaJZvGUWQuQCNArJyB4gADCiTl9/7A0hNs=",
+        "rZ+v2XIxji1IUi6uNvgxDDdRdg0CMBeeUitlFCIehBU=",
+        "RboNaKmr7FCGvODFDUJFFg/4HbIirmHIeMLm45MWeyc="
+      ]
+    },
+    "xml_payload": {
+      "name": "xml_payload",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 2051,
+      "min_length": 1998,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\" xmlns:cbc=\"urn:oasis:names:specification:ub",
+        "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\" xmlns:cbc=\"urn:oasis:names:specification:ub",
+        "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\" xmlns:cbc=\"urn:oasis:names:specification:ub",
+        "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\" xmlns:cbc=\"urn:oasis:names:specification:ub",
+        "<Invoice xmlns=\"urn:oasis:names:specification:ubl:schema:xsd:Invoice-2\" xmlns:cac=\"urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2\" xmlns:cbc=\"urn:oasis:names:specification:ub"
+      ]
+    },
+    "qr_code_payload": {
+      "name": "qr_code_payload",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 172,
+      "min_length": 168,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjI0OjQ5WgQINTc1MDAuMDAFBzc1MDAuMDAGLHNvUnVtV1ZUMmxWa3UxYzQ5bVZkbmJNOWVLWkh5S2dEbDN2VmowWFhKdk09",
+        "ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjI0OjQ5WgQIODYyNTAuMDAFCDExMjUwLjAwBixMdkpWaXVLNCtDYUpadkdVV1F1UUNOQXJKeUI0Z0FEQ2lUbDkvN0EwaE5zPQ==",
+        "ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjQ4OjI1WgQINTc1MDAuMDAFBzc1MDAuMDAGLHJaK3YyWEl4amkxSVVpNnVOdmd4RERkUmRnMENNQmVlVWl0bEZDSWVoQlU9",
+        "ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjQ5OjE2WgQINTc1MDAuMDAFBzc1MDAuMDAGLFJib05hS21yN0ZDR3ZPREZEVUpGRmcvNEhiSWlybUhJZU1MbTQ1TVdleWM9",
+        "ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAyOjM2OjAwWgQIMjc2MDAuMDAFBzM2MDAuMDAGLFlyQUF5UG1vSXJXNFJyT05XVEdkbVhlRnFkOStWTE1HU1lwRG5qZ1lyMU09"
+      ]
+    },
+    "cryptographic_stamp": {
+      "name": "cryptographic_stamp",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "submission_status": {
+      "name": "submission_status",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "CLEARED",
+        "CLEARED",
+        "CLEARED",
+        "CLEARED",
+        "CLEARED"
+      ]
+    },
+    "clearance_status": {
+      "name": "clearance_status",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "CLEARED",
+        "CLEARED",
+        "CLEARED",
+        "CLEARED",
+        "CLEARED"
+      ]
+    },
+    "reporting_status": {
+      "name": "reporting_status",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "REPORTED",
+        "REPORTED",
+        "REPORTED",
+        "REPORTED",
+        "REPORTED"
+      ]
+    },
+    "validation_errors": {
+      "name": "validation_errors",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "warning_messages": {
+      "name": "warning_messages",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "retry_count": {
+      "name": "retry_count",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 5
+      },
+      "sample_values": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    "last_attempt_at": {
+      "name": "last_attempt_at",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "response_payload": {
+      "name": "response_payload",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 5
+      },
+      "sample_values": [
+        "2026-09-29 01:24:49.51263+00",
+        "2026-09-29 01:24:49.538664+00",
+        "2026-09-29 01:48:25.073864+00",
+        "2026-09-29 01:49:16.52339+00",
+        "2026-09-29 02:36:00.14801+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "tax_profile_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tax_profile_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "cryptographic_stamp",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "cryptographic_stamp",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "submission_status",
+      "issue": "Single distinct value: CLEARED",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "clearance_status",
+      "issue": "Single distinct value: CLEARED",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "reporting_status",
+      "issue": "Single distinct value: REPORTED",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "validation_errors",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "validation_errors",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "warning_messages",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "warning_messages",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "retry_count",
+      "issue": "Single distinct value: 0",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "last_attempt_at",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "last_attempt_at",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "response_payload",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "response_payload",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 6,
+    "warning": 6,
+    "info": 5
+  }
+}

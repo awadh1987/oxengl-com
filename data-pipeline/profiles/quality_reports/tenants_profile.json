@@ -1,0 +1,151 @@
+{
+  "table": "tenants",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/tenants.csv",
+  "row_count": 49,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 49
+      },
+      "sample_values": [
+        "fe6aaacc-36e2-4939-bd6b-50c287766257",
+        "9ab216ab-4be3-440c-ae40-648cf5c3740a",
+        "ff90891f-850c-4570-b2f0-f7109559e742",
+        "12be11a7-120d-402a-9552-20c40cd2e763",
+        "a3acd662-0e4d-4c20-b709-d3ab9337fc79"
+      ]
+    },
+    "company_name": {
+      "name": "company_name",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 48,
+      "distinct_rate_pct": 98.0,
+      "max_length": 36,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "Quantum Logistics Test Group c9348a",
+        "Quantum Logistics Test Group ad1e64",
+        "Quantum Logistics Test Group 3c00aa",
+        "Quantum Logistics Test Group b68fd0",
+        "Contrac Global bd49fd"
+      ]
+    },
+    "schema_name": {
+      "name": "schema_name",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 23,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "quantum-test-c9348a",
+        "quantum-test-ad1e64",
+        "quantum-test-3c00aa",
+        "quantum-test-b68fd0",
+        "contrac-bd49fd"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 2.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 49
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 47,
+      "distinct_rate_pct": 95.9,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 49
+      },
+      "sample_values": [
+        "2026-09-27 06:31:23.880016+00",
+        "2026-09-27 06:40:24.768886+00",
+        "2026-09-27 06:40:56.045425+00",
+        "2026-09-27 06:41:36.72765+00",
+        "2026-09-27 06:41:37.440881+00"
+      ]
+    },
+    "logo_url": {
+      "name": "logo_url",
+      "total_values": 49,
+      "null_count": 49,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "logo_url",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "logo_url",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 1
+  }
+}

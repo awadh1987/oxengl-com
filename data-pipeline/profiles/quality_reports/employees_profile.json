@@ -1,0 +1,247 @@
+{
+  "table": "employees",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/employees.csv",
+  "row_count": 3,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "4b376425-a37f-42d5-8385-ba264b3ea4a1",
+        "fddd1273-ef5f-4612-a113-2e886c1a4234",
+        "d951bd47-87b9-4582-a576-661125755264"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+        "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+        "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+      ]
+    },
+    "user_id": {
+      "name": "user_id",
+      "total_values": 3,
+      "null_count": 3,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "employee_code": {
+      "name": "employee_code",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 14,
+      "min_length": 14,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "EMP-TST-BEFCC7",
+        "EMP-TST-EB1386",
+        "EMP-TST-A8E238"
+      ]
+    },
+    "first_name": {
+      "name": "first_name",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 4,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "\u062e\u0627\u0644\u062f",
+        "\u062e\u0627\u0644\u062f",
+        "\u062e\u0627\u0644\u062f"
+      ]
+    },
+    "last_name": {
+      "name": "last_name",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 20,
+      "min_length": 20,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "\u0628\u0646 \u0639\u0628\u062f \u0627\u0644\u0639\u0632\u064a\u0632 \u0627\u0644\u0632\u0627\u0645\u0644",
+        "\u0628\u0646 \u0639\u0628\u062f \u0627\u0644\u0639\u0632\u064a\u0632 \u0627\u0644\u0632\u0627\u0645\u0644",
+        "\u0628\u0646 \u0639\u0628\u062f \u0627\u0644\u0639\u0632\u064a\u0632 \u0627\u0644\u0632\u0627\u0645\u0644"
+      ]
+    },
+    "department": {
+      "name": "department",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 18,
+      "min_length": 18,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "\u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629",
+        "\u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629",
+        "\u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629"
+      ]
+    },
+    "base_salary": {
+      "name": "base_salary",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 3
+      },
+      "sample_values": [
+        "13500.00",
+        "13500.00",
+        "13500.00"
+      ]
+    },
+    "hire_date": {
+      "name": "hire_date",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 66.7,
+      "max_length": 10,
+      "min_length": 10,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-25",
+        "2026-09-26",
+        "2026-09-26"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 3
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "tenant_id",
+      "issue": "Single distinct value: a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "user_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "user_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "first_name",
+      "issue": "Single distinct value: \u062e\u0627\u0644\u062f",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "last_name",
+      "issue": "Single distinct value: \u0628\u0646 \u0639\u0628\u062f \u0627\u0644\u0639\u0632\u064a\u0632 \u0627\u0644\u0632\u0627\u0645\u0644",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "department",
+      "issue": "Single distinct value: \u0627\u0644\u0639\u0645\u0644\u064a\u0627\u062a \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a\u0629",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "base_salary",
+      "issue": "Single distinct value: 13500.00",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 6
+  }
+}

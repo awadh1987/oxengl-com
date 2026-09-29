@@ -1,0 +1,143 @@
+-- OxenGL ERP — Reusable Cleaning Macros for Dataform SQLX
+-- =========================================================
+-- These macros implement the data-autocleaning skill rules for
+-- BigQuery SQL transformations across all ERP domains.
+
+-- UUID Validation: Verify standard UUID v4 format
+-- Returns NULL for malformed UUIDs, preserving valid ones
+js {
+  function clean_uuid(col) {
+    return `CASE
+      WHEN REGEXP_CONTAINS(CAST(${col} AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+      THEN CAST(${col} AS STRING)
+      ELSE NULL
+    END`;
+  }
+
+  // Trim and nullify empty strings
+  function clean_string(col) {
+    return `NULLIF(TRIM(CAST(${col} AS STRING)), '')`;
+  }
+
+  // Safe numeric cast with 4-decimal precision (financial)
+  function clean_decimal(col) {
+    return `SAFE_CAST(${col} AS NUMERIC)`;
+  }
+
+  // Safe timestamp normalization (handles multiple PG formats)
+  function clean_timestamp(col) {
+    return `COALESCE(
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(${col} AS STRING)),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S%Ez', CAST(${col} AS STRING)),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(${col} AS STRING)),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S', CAST(${col} AS STRING)),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(${col} AS STRING)),
+      SAFE.PARSE_TIMESTAMP('%Y-%m-%d', CAST(${col} AS STRING))
+    )`;
+  }
+
+  // Safe date parsing
+  function clean_date(col) {
+    return `COALESCE(
+      SAFE.PARSE_DATE('%Y-%m-%d', CAST(${col} AS STRING)),
+      SAFE.PARSE_DATE('%d/%m/%Y', CAST(${col} AS STRING)),
+      SAFE.PARSE_DATE('%m/%d/%Y', CAST(${col} AS STRING))
+    )`;
+  }
+
+  // Email validation
+  function clean_email(col) {
+    return `CASE
+      WHEN REGEXP_CONTAINS(LOWER(TRIM(${col})), r'^[a-z0-9._%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}$')
+      THEN LOWER(TRIM(${col}))
+      ELSE NULL
+    END`;
+  }
+
+  // Saudi phone normalization (+966...)
+  function clean_phone_sa(col) {
+    return `CASE
+      WHEN ${col} IS NULL THEN NULL
+      WHEN REGEXP_CONTAINS(TRIM(${col}), r'^\\+966') THEN TRIM(${col})
+      WHEN REGEXP_CONTAINS(TRIM(${col}), r'^05') THEN CONCAT('+966', SUBSTR(TRIM(${col}), 2))
+      WHEN REGEXP_CONTAINS(TRIM(${col}), r'^966') THEN CONCAT('+', TRIM(${col}))
+      ELSE TRIM(${col})
+    END`;
+  }
+
+  // ZATCA status normalization
+  function clean_zatca_status(col) {
+    return `CASE
+      WHEN UPPER(TRIM(${col})) IN ('CLEARED', 'CLEAR') THEN 'CLEARED'
+      WHEN UPPER(TRIM(${col})) IN ('REPORTED', 'REPORT') THEN 'REPORTED'
+      WHEN UPPER(TRIM(${col})) IN ('PENDING', 'DRAFT', 'SUBMITTED') THEN 'PENDING'
+      WHEN UPPER(TRIM(${col})) IN ('REJECTED', 'FAILED', 'ERROR') THEN 'REJECTED'
+      ELSE UPPER(TRIM(${col}))
+    END`;
+  }
+
+  // GPS coordinate validation (latitude)
+  function clean_latitude(col) {
+    return `CASE
+      WHEN SAFE_CAST(${col} AS FLOAT64) BETWEEN -90 AND 90
+      THEN SAFE_CAST(${col} AS FLOAT64)
+      ELSE NULL
+    END`;
+  }
+
+  // GPS coordinate validation (longitude)
+  function clean_longitude(col) {
+    return `CASE
+      WHEN SAFE_CAST(${col} AS FLOAT64) BETWEEN -180 AND 180
+      THEN SAFE_CAST(${col} AS FLOAT64)
+      ELSE NULL
+    END`;
+  }
+
+  // Positive-only numeric validation (quantities, prices)
+  function clean_positive_numeric(col) {
+    return `CASE
+      WHEN SAFE_CAST(${col} AS NUMERIC) > 0 THEN SAFE_CAST(${col} AS NUMERIC)
+      ELSE NULL
+    END`;
+  }
+
+  // Non-negative numeric (allows zero)
+  function clean_nonneg_numeric(col) {
+    return `CASE
+      WHEN SAFE_CAST(${col} AS NUMERIC) >= 0 THEN SAFE_CAST(${col} AS NUMERIC)
+      ELSE NULL
+    END`;
+  }
+
+  // Saudi VAT calculation validation (15%)
+  function validate_vat_15(subtotal_col, vat_col) {
+    return `CASE
+      WHEN ABS(SAFE_CAST(${vat_col} AS NUMERIC) - ROUND(SAFE_CAST(${subtotal_col} AS NUMERIC) * 0.15, 2)) <= 1.0
+      THEN 'VALID'
+      ELSE 'VAT_MISMATCH'
+    END`;
+  }
+
+  // JSON safe parsing
+  function clean_json(col) {
+    return `SAFE.PARSE_JSON(CAST(${col} AS STRING))`;
+  }
+
+  return {
+    clean_uuid,
+    clean_string,
+    clean_decimal,
+    clean_timestamp,
+    clean_date,
+    clean_email,
+    clean_phone_sa,
+    clean_zatca_status,
+    clean_latitude,
+    clean_longitude,
+    clean_positive_numeric,
+    clean_nonneg_numeric,
+    validate_vat_15,
+    clean_json,
+  };
+}
