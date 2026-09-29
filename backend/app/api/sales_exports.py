@@ -6,13 +6,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-try:
-    from backend.database import get_db
-except (ImportError, ModuleNotFoundError):
-    try:
-        from database import get_db
-    except (ImportError, ModuleNotFoundError):
-        from app.db.session import get_db
+from backend.database import get_db
 
 router = APIRouter(prefix="/api/v1/sales/invoices", tags=["Sales Exports"])
 
@@ -33,6 +27,7 @@ def export_invoices_excel(db: Session = Depends(get_db)):
 
         wb = openpyxl.Workbook()
         ws = wb.active
+        assert ws is not None
         ws.title = "Customer Invoices"
 
         headers = ["Invoice Number", "Customer Name", "Customer VAT", "Issue Date", "Status", "Subtotal (SAR)", "VAT (15%)", "Grand Total (SAR)"]
@@ -46,20 +41,25 @@ def export_invoices_excel(db: Session = Depends(get_db)):
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
         for r in rows:
+            m = r._mapping
+            issue_date = m["issue_date"]
             ws.append([
-                r.invoice_number or "",
-                r.customer_name or "",
-                r.customer_tax_number or "N/A",
-                str(r.issue_date.strftime("%Y-%m-%d %H:%M")) if hasattr(r.issue_date, 'strftime') and r.issue_date else (str(r.issue_date) if r.issue_date else ""),
-                r.status or "",
-                float(r.subtotal) if r.subtotal is not None else 0.0,
-                float(r.vat_amount) if r.vat_amount is not None else 0.0,
-                float(r.grand_total) if r.grand_total is not None else 0.0,
+                m["invoice_number"] or "",
+                m["customer_name"] or "",
+                m["customer_tax_number"] or "N/A",
+                str(issue_date.strftime("%Y-%m-%d %H:%M")) if hasattr(issue_date, 'strftime') and issue_date else (str(issue_date) if issue_date else ""),
+                m["status"] or "",
+                float(m["subtotal"]) if m["subtotal"] is not None else 0.0,
+                float(m["vat_amount"]) if m["vat_amount"] is not None else 0.0,
+                float(m["grand_total"]) if m["grand_total"] is not None else 0.0,
             ])
 
         for col in ws.columns:
             max_len = max(len(str(cell.value or "")) for cell in col)
-            col_letter = get_column_letter(col[0].column)
+            col_idx = col[0].column
+            if col_idx is None:
+                continue
+            col_letter = get_column_letter(col_idx)
             ws.column_dimensions[col_letter].width = max(max_len + 4, 14)
 
         output = io.BytesIO()
@@ -97,9 +97,11 @@ def download_invoice_pdf(invoice_id: str, db: Session = Depends(get_db)):
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    inv = invoice._mapping
+
     zatca_log = db.execute(
         text("SELECT qr_code_payload, invoice_hash FROM zatca_logs WHERE invoice_id = :id ORDER BY created_at DESC LIMIT 1"),
-        {"id": invoice.id}
+        {"id": inv["id"]}
     ).fetchone()
 
     # Generate PDF using ReportLab
@@ -117,14 +119,14 @@ def download_invoice_pdf(invoice_id: str, db: Session = Depends(get_db)):
     # Header
     title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=20, textColor=colors.HexColor('#1e293b'), spaceAfter=6)
     story.append(Paragraph("Tax Invoice / فاتورة ضريبية", title_style))
-    story.append(Paragraph(f"<b>Invoice Number:</b> {invoice.invoice_number}", styles['Normal']))
-    story.append(Paragraph(f"<b>Issue Date:</b> {invoice.issue_date}", styles['Normal']))
+    story.append(Paragraph(f"<b>Invoice Number:</b> {inv['invoice_number']}", styles['Normal']))
+    story.append(Paragraph(f"<b>Issue Date:</b> {inv['issue_date']}", styles['Normal']))
     story.append(Spacer(1, 12))
 
     # Party Info Table
     data = [
         [Paragraph("<b>Seller:</b> Myon Economic Co Ltd<br/><b>VAT ID:</b> 310123456700003", styles['Normal']),
-         Paragraph(f"<b>Customer:</b> {invoice.customer_name}<br/><b>Customer VAT:</b> {invoice.customer_tax_number or 'N/A'}", styles['Normal'])]
+         Paragraph(f"<b>Customer:</b> {inv['customer_name']}<br/><b>Customer VAT:</b> {inv['customer_tax_number'] or 'N/A'}", styles['Normal'])]
     ]
     t = Table(data, colWidths=[270, 270])
     t.setStyle(TableStyle([
@@ -136,13 +138,13 @@ def download_invoice_pdf(invoice_id: str, db: Session = Depends(get_db)):
     story.append(Spacer(1, 16))
 
     # Line Items / Totals Table
-    subtotal_val = float(invoice.subtotal) if invoice.subtotal is not None else 0.0
-    vat_val = float(invoice.vat_amount) if invoice.vat_amount is not None else 0.0
-    grand_val = float(invoice.grand_total) if invoice.grand_total is not None else 0.0
+    subtotal_val = float(inv["subtotal"]) if inv["subtotal"] is not None else 0.0
+    vat_val = float(inv["vat_amount"]) if inv["vat_amount"] is not None else 0.0
+    grand_val = float(inv["grand_total"]) if inv["grand_total"] is not None else 0.0
 
     totals_data = [
         ["Description", "Amount (SAR)"],
-        [f"{invoice.customer_name} - Services rendered", f"{subtotal_val:.2f}"],
+        [f"{inv['customer_name']} - Services rendered", f"{subtotal_val:.2f}"],
         ["Subtotal (Net)", f"{subtotal_val:.2f}"],
         ["VAT (15%)", f"{vat_val:.2f}"],
         ["Grand Total (SAR)", f"{grand_val:.2f}"]
@@ -157,17 +159,19 @@ def download_invoice_pdf(invoice_id: str, db: Session = Depends(get_db)):
     story.append(t2)
 
     # QR Code & Cryptographic Stamp
-    if zatca_log and zatca_log.qr_code_payload:
+    zl = zatca_log._mapping if zatca_log else None
+    if zl and zl["qr_code_payload"]:
         try:
-            qr_img = qrcode.make(zatca_log.qr_code_payload)
+            import qrcode.image.pil
+            qr_img = qrcode.make(zl["qr_code_payload"], image_factory=qrcode.image.pil.PilImage)
             qr_buffer = io.BytesIO()
             qr_img.save(qr_buffer, format="PNG")
             qr_buffer.seek(0)
             story.append(Spacer(1, 14))
             story.append(RLImage(qr_buffer, width=110, height=110))
-            if zatca_log.invoice_hash:
+            if zl["invoice_hash"]:
                 story.append(Spacer(1, 4))
-                story.append(Paragraph(f"<b>ZATCA Hash:</b> <font size=7 color='#64748b'>{zatca_log.invoice_hash}</font>", styles['Normal']))
+                story.append(Paragraph(f"<b>ZATCA Hash:</b> <font size=7 color='#64748b'>{zl['invoice_hash']}</font>", styles['Normal']))
         except Exception:
             pass
     
@@ -177,5 +181,5 @@ def download_invoice_pdf(invoice_id: str, db: Session = Depends(get_db)):
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={invoice.invoice_number}.pdf"}
+        headers={"Content-Disposition": f"attachment; filename={inv['invoice_number']}.pdf"}
     )

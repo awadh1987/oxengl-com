@@ -8,8 +8,7 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
-    "python.pythonPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "python.defaultInterpreterPath": "/root/oxen-gl/backend/.venv/bin/python",
     "python.analysis.autoSearchPaths": true,
     "python.analysis.extraPaths": [
         "${workspaceFolder}",
@@ -19,5 +18,7 @@
     "python.terminal.useEnvFile": true,
     "python.envFile": "${workspaceFolder}/.env",
     "python.terminal.activateEnvironment": true,
-    "chat.editing.autoAcceptDelay": 3
+    "chat.editing.autoAcceptDelay": 3,
+    "files.autoSave": "afterDelay",
+    "editor.gotoLocation.alternativeReferenceCommand": "editor.action.referenceSearch.trigger"
 }
