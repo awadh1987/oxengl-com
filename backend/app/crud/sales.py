@@ -12,6 +12,10 @@ from app.services.zatca_crypto import (
     compute_invoice_hash,
     generate_zatca_phase2_qr,
 )
+try:
+    from app.services.ubl_builder import canonicalize_invoice
+except (ImportError, ModuleNotFoundError):
+    from backend.app.services.ubl_builder import canonicalize_invoice
 
 # Standard ZATCA Phase 2 genesis hash for the initial invoice in a chain
 ZATCA_GENESIS_HASH = "NWZlMWMwMmRhMjA3ZjBhMmQ1MTUzYTM4MGQ2NTY1M2MwODFjMzg4OTdhNzg2N2VlYzA4OWI5Mjc4NjVkZDJjNA=="
@@ -142,7 +146,8 @@ def create_invoice(
         vat_amount=vat_amount,
         grand_total=grand_total,
     )
-    invoice_hash = compute_invoice_hash(canonical_xml)
+    c14n_xml = canonicalize_invoice(canonical_xml)
+    invoice_hash = compute_invoice_hash(c14n_xml)
 
     # 6. Generate Phase 2 9-Tag TLV QR Code
     qr_code_b64 = generate_zatca_phase2_qr(
