@@ -27,8 +27,7 @@ chmod +x run_oxengl.sh scripts/commit_release.sh scripts/backup_db.sh
 ## 🚦 Endpoint Directory Summary Mappings
 - **Frontend Portal Interface:**   `http://localhost:3000` (or your active server domain)
 - **FastAPI Core OpenAPI Specs:**  `http://localhost:8000/docs`
-- **Super Admin Account Identity:** `admin@oxengl.com` / `OxenGL@2026Secure!`
-- **Myon Tenant Identity:**    `muath.salaih@meayon.com` / `Meayon123!`
+
 
 ## 🧪 Operational Commands & Testing Suite Runbook
 - **Run Complete Regression Suite (23/23 tests):** `PYTHONPATH=.:backend backend/.venv/bin/pytest backend/tests/ -v`
