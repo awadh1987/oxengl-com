@@ -109,7 +109,7 @@ export const OrganizationProfile: React.FC = () => {
     setModalError(null);
 
     try {
-      const data = await erpApi.getOrgTree();
+      const data = await erpApi.getOrgTree(undefined, currentCompany?.id);
       setTreeData(data || []);
 
       // Auto-expand all top-level roots by default
@@ -140,7 +140,7 @@ export const OrganizationProfile: React.FC = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isAr, showToast]);
+  }, [isAr, showToast, currentCompany?.id]);
 
   useEffect(() => {
     fetchTree();
@@ -260,7 +260,7 @@ export const OrganizationProfile: React.FC = () => {
       await erpApi.createOrgCompany({
         ...branchForm,
         parent_id: modalTarget?.companyId || null,
-      });
+      }, currentCompany?.id);
       showToast?.(
         isAr ? 'تم إنشاء الفرع بنجاح' : 'Operational branch provisioned successfully',
         'success'
@@ -295,7 +295,7 @@ export const OrganizationProfile: React.FC = () => {
         name: costCenterForm.name.trim(),
         description: costCenterForm.description.trim() || undefined,
         is_active: costCenterForm.is_active,
-      });
+      }, currentCompany?.id);
       showToast?.(
         isAr ? 'تم إضافة مركز التكلفة بنجاح' : 'Cost Center created successfully',
         'success'
@@ -332,7 +332,7 @@ export const OrganizationProfile: React.FC = () => {
         name: purchasingOrgForm.name.trim(),
         currency: purchasingOrgForm.currency || 'SAR',
         is_active: purchasingOrgForm.is_active,
-      });
+      }, currentCompany?.id);
       showToast?.(
         isAr ? 'تم إضافة منظمة المشتريات بنجاح' : 'Purchasing Organization created successfully',
         'success'
@@ -360,7 +360,7 @@ export const OrganizationProfile: React.FC = () => {
       return;
     }
     try {
-      await erpApi.deleteCostCenter(id);
+      await erpApi.deleteCostCenter(id, currentCompany?.id);
       showToast?.(isAr ? 'تم حذف مركز التكلفة' : 'Cost center deleted successfully', 'success');
       await fetchTree(true);
     } catch (err: any) {
@@ -379,7 +379,7 @@ export const OrganizationProfile: React.FC = () => {
       return;
     }
     try {
-      await erpApi.deletePurchasingOrg(id);
+      await erpApi.deletePurchasingOrg(id, currentCompany?.id);
       showToast?.(isAr ? 'تم حذف منظمة المشتريات' : 'Purchasing organization deleted successfully', 'success');
       await fetchTree(true);
     } catch (err: any) {
@@ -401,7 +401,7 @@ export const OrganizationProfile: React.FC = () => {
       return;
     }
     try {
-      await erpApi.deleteOrgCompany(id);
+      await erpApi.deleteOrgCompany(id, currentCompany?.id);
       showToast?.(isAr ? 'تم حذف الفرع بنجاح' : 'Branch de-provisioned successfully', 'success');
       await fetchTree(true);
     } catch (err: any) {

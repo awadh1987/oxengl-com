@@ -940,6 +940,41 @@ export function clearAuthSession(): void {
 
 const apiBaseUrl = typeof window === 'undefined' ? '' : window.location.origin;
 
+/**
+ * Debounced 401 session clearing to prevent cascading auth wipes.
+ * When parallel requests are in flight (e.g., Corporate Vault loads documents + CV payload
+ * simultaneously), a single transient 401 must NOT immediately destroy the session for
+ * the other in-flight requests. Instead, we debounce: only clear the session if no
+ * successful request arrives within 1.5 seconds of the first 401.
+ */
+let _pending401ClearTimer: ReturnType<typeof setTimeout> | null = null;
+let _is401SessionClearScheduled = false;
+
+function scheduleDebouncedSessionClear(): void {
+  if (_is401SessionClearScheduled) return; // Already scheduled, don't stack
+  _is401SessionClearScheduled = true;
+  _pending401ClearTimer = setTimeout(() => {
+    // Only clear if a fresh token hasn't been set in the meantime
+    const currentToken = getAuthToken();
+    if (!currentToken) {
+      clearAuthSession();
+    }
+    _is401SessionClearScheduled = false;
+    _pending401ClearTimer = null;
+  }, 1500);
+}
+
+function cancelDebouncedSessionClear(): void {
+  if (_pending401ClearTimer) {
+    clearTimeout(_pending401ClearTimer);
+    _pending401ClearTimer = null;
+  }
+  _is401SessionClearScheduled = false;
+}
+
+/** Tracks whether a 401 retry is already in progress for a given path to prevent infinite loops. */
+const _retryingPaths = new Set<string>();
+
 async function request<T>(path: string, companyId?: string, options?: RequestInit): Promise<T> {
   const token = getAuthToken();
   const activeTenantSlug = getTenantSlug();
@@ -962,6 +997,12 @@ async function request<T>(path: string, companyId?: string, options?: RequestIni
     headers,
     credentials: 'include',
   });
+
+  if (response.ok) {
+    // A successful response cancels any pending 401 session clear —
+    // the session is clearly still valid.
+    cancelDebouncedSessionClear();
+  }
 
   if (!response.ok) {
     let errorDetail = '';
@@ -1001,6 +1042,47 @@ async function request<T>(path: string, companyId?: string, options?: RequestIni
       }
     }
 
+    // 401 Single-Retry Strategy:
+    // If we have a valid token and this is the first attempt for this path,
+    // retry once. This handles transient JWT validation failures (e.g., clock skew,
+    // backend restart, or middleware race condition during parallel requests).
+    if (response.status === 401 && token && !_retryingPaths.has(path)) {
+      _retryingPaths.add(path);
+      try {
+        // Brief delay to let any concurrent token refresh settle
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const retryToken = getAuthToken();
+        if (retryToken) {
+          const retryHeaders: Record<string, string> = {
+            ...headers,
+            Authorization: `Bearer ${retryToken}`,
+          };
+          const retryActiveCompanyId = getActiveCompanyId(companyId);
+          if (retryActiveCompanyId) {
+            retryHeaders['X-Company-ID'] = retryActiveCompanyId;
+            retryHeaders['X-Tenant-ID'] = retryActiveCompanyId;
+          }
+          const retryResponse = await fetch(`${apiBaseUrl}${path}`, {
+            ...options,
+            headers: retryHeaders,
+            credentials: 'include',
+          });
+          if (retryResponse.ok) {
+            cancelDebouncedSessionClear();
+            _retryingPaths.delete(path);
+            if (retryResponse.status === 204) {
+              return undefined as T;
+            }
+            return retryResponse.json() as Promise<T>;
+          }
+        }
+      } catch {
+        // Retry failed silently, fall through to original error handling
+      } finally {
+        _retryingPaths.delete(path);
+      }
+    }
+
     // Global 401/403 Interceptor
     if (response.status === 401 || response.status === 403) {
       if (typeof window !== 'undefined') {
@@ -1010,7 +1092,10 @@ async function request<T>(path: string, companyId?: string, options?: RequestIni
           })
         );
         if (response.status === 401) {
-          clearAuthSession();
+          // Use debounced session clearing to prevent cascading auth wipe
+          // during parallel requests (e.g., Corporate Vault loads multiple
+          // endpoints simultaneously).
+          scheduleDebouncedSessionClear();
         }
       }
     }

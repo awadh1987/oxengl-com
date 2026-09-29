@@ -380,13 +380,20 @@ async def get_current_user(
     if auth_header and auth_header.credentials:
         token = auth_header.credentials
     else:
-        raw_header = request.headers.get("Authorization") or request.headers.get("x-auth-token")
+        raw_header = request.headers.get("Authorization") or request.headers.get("x-auth-token") or request.headers.get("authorization")
         if raw_header:
-            token = raw_header.replace("Bearer ", "").strip()
+            if raw_header.lower().startswith("bearer "):
+                token = raw_header[7:].strip()
+            else:
+                token = raw_header.strip()
         elif "token" in request.query_params:
             token = request.query_params.get("token")
         elif "access_token" in request.cookies:
             token = request.cookies.get("access_token")
+        elif "oxengl_token" in request.cookies:
+            token = request.cookies.get("oxengl_token")
+        elif "token" in request.cookies:
+            token = request.cookies.get("token")
 
     if not token:
         # Check if legacy test without auth token
@@ -489,7 +496,20 @@ async def get_current_user(
                 detail="Invalid token payload: Identity missing.",
             )
         resolved_id = uuid.UUID(str(sub)) if sub and len(str(sub)) == 36 else uuid.uuid4()
-        resolved_cid = uuid.UUID(str(token_tenant_id)) if token_tenant_id and len(str(token_tenant_id)) == 36 else None
+        resolved_cid: Optional[uuid.UUID] = None
+        if token_tenant_id:
+            try:
+                resolved_cid = uuid.UUID(str(token_tenant_id).strip())
+            except (ValueError, TypeError):
+                resolved_cid = None
+        # Fallback: resolve from request.state (set by HostHeaderMiddleware)
+        if not resolved_cid:
+            state_cid = getattr(request.state, "company_id", None) or getattr(request.state, "tenant_company_id", None)
+            if state_cid:
+                try:
+                    resolved_cid = uuid.UUID(str(state_cid).strip()) if not isinstance(state_cid, uuid.UUID) else state_cid
+                except (ValueError, TypeError):
+                    resolved_cid = None
         user = ResUser(
             id=resolved_id,
             email=email or f"user_{resolved_id.hex[:6]}@oxengl.me",
@@ -712,6 +732,7 @@ def get_tenant_context(
                 )
 
     # Multi-Tenant & Branch Isolation Enforcement (Super Admin bypasses strict equality):
+    effective_company_id: Optional[uuid.UUID] = None
     if is_super_admin:
         effective_company_id = requested_uuid if requested_uuid else user_cid
     elif requested_uuid and str(requested_uuid) != str(user_cid):
@@ -801,7 +822,7 @@ def get_tenant_context(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Multi-tenant isolation violation: Access to data of another company or tenant is strictly prohibited.",
                 )
-            effective_company_id = effective_company_id if is_accessible and effective_company_id is not None else requested_uuid
+            effective_company_id = effective_company_id if effective_company_id is not None else requested_uuid
     else:
         effective_company_id = user_cid
 
