@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import { useApp } from '../context/AppContext';
-import { getAuthToken, getTenantId } from '../services/api';
+import { getAuthToken, getTenantId, erpApi, ApiCustomerInvoice } from '../services/api';
 import {
   Radio,
   Activity,
@@ -19,12 +19,41 @@ import {
   Eye,
   Maximize2,
   Plus,
+  FileText,
+  Package,
+  ArrowRight,
+  XCircle,
+  Clock,
+  CheckCircle2,
+  Link2,
+  Sparkles,
 } from 'lucide-react';
 import { RegisterGpsTruckModal } from '../components/RegisterGpsTruckModal';
+import { formatCurrency } from '../utils/formatters';
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+interface LinkedSalesOrder {
+  invoiceNumber: string;
+  customerId: string;
+  customerNameAr: string;
+  customerNameEn: string;
+  cargoTypeAr: string;
+  cargoTypeEn: string;
+  grandTotal: number;
+  vatAmount: number;
+  zatcaStatus: 'Cleared' | 'Reported' | 'Pending' | 'Rejected';
+  invoiceStatus: 'Draft' | 'Approved' | 'Issued' | 'Cancelled';
+}
+
+interface DeliverySite {
+  nameAr: string;
+  nameEn: string;
+  lat: number;
+  lng: number;
+}
+
 interface TelemetryVehicleState {
   vehicleId: string;
   driverNameAr?: string;
@@ -39,6 +68,11 @@ interface TelemetryVehicleState {
   humidityPct: number;
   batteryVoltage: number;
   lastUpdated: number;
+  // Linked Sales Order / Dispatch
+  linkedOrder?: LinkedSalesOrder;
+  deliverySite?: DeliverySite;
+  dispatchStatus?: 'assigned' | 'in-transit' | 'delivered' | 'unassigned';
+  etaMinutes?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +84,30 @@ const LEAFLET_CSS_ID = 'leaflet-css-oxengl';
 const LEAFLET_JS_ID = 'leaflet-js-oxengl';
 const RIYADH_CENTER: [number, number] = [24.7136, 46.6753];
 const DEFAULT_ZOOM = 12;
+
+// Depot / Warehouse origin for route vectors
+const DEPOT_ORIGIN: DeliverySite = {
+  nameAr: 'مستودع أوكسن الرئيسي - الرياض',
+  nameEn: 'OxenGL Main Depot - Riyadh',
+  lat: 24.7136,
+  lng: 46.6753,
+};
+
+// Known customer delivery sites
+const DELIVERY_SITES: Record<string, DeliverySite> = {
+  qiddiya: { nameAr: 'مشروع القدية - البوابة الشرقية', nameEn: 'Qiddiya Project - East Gate', lat: 24.455, lng: 46.545 },
+  alkharj: { nameAr: 'محطة خرسانة يوني بيتون (طريق الخرج)', nameEn: 'Uni-Beton Batch Plant (Al-Kharj)', lat: 24.145, lng: 47.300 },
+  hair_quarry: { nameAr: 'كسارات الحاير الجنوبية', nameEn: "Al-Ha'ir South Quarry", lat: 24.348, lng: 46.752 },
+  weighbridge: { nameAr: 'محطة ميزان الرياض - الخرج المحوري', nameEn: 'Riyadh Weighbridge Axis', lat: 24.630, lng: 46.850 },
+};
+
+// Dispatch color mapping by status
+const DISPATCH_COLORS: Record<string, string> = {
+  assigned: '#f59e0b',
+  'in-transit': '#3b82f6',
+  delivered: '#10b981',
+  unassigned: '#64748b',
+};
 
 const INITIAL_VEHICLES: Record<string, TelemetryVehicleState> = {
   'V-1001': {
@@ -66,6 +124,21 @@ const INITIAL_VEHICLES: Record<string, TelemetryVehicleState> = {
     humidityPct: 45.2,
     batteryVoltage: 12.4,
     lastUpdated: Date.now(),
+    linkedOrder: {
+      invoiceNumber: 'INV-2026-09-1048',
+      customerId: 'CUST-001',
+      customerNameAr: 'شركة يوني بيتون للخرسانة الجاهزة',
+      customerNameEn: 'Uni-Beton Ready Mix Co.',
+      cargoTypeAr: 'حصى وركام خرساني',
+      cargoTypeEn: 'Concrete Aggregate',
+      grandTotal: 187500.00,
+      vatAmount: 28125.00,
+      zatcaStatus: 'Cleared',
+      invoiceStatus: 'Issued',
+    },
+    deliverySite: DELIVERY_SITES.alkharj,
+    dispatchStatus: 'in-transit',
+    etaMinutes: 42,
   },
   'V-1002': {
     vehicleId: 'V-1002',
@@ -81,6 +154,21 @@ const INITIAL_VEHICLES: Record<string, TelemetryVehicleState> = {
     humidityPct: 58.0,
     batteryVoltage: 12.1,
     lastUpdated: Date.now(),
+    linkedOrder: {
+      invoiceNumber: 'AI-2026-09-0033',
+      customerId: 'CUST-002',
+      customerNameAr: 'شركة القدية للترفيه والتطوير',
+      customerNameEn: 'Qiddiya Entertainment & Dev.',
+      cargoTypeAr: 'رمل مغسول وبحص أبيض',
+      cargoTypeEn: 'Washed Sand & White Gravel',
+      grandTotal: 312000.00,
+      vatAmount: 46800.00,
+      zatcaStatus: 'Reported',
+      invoiceStatus: 'Approved',
+    },
+    deliverySite: DELIVERY_SITES.qiddiya,
+    dispatchStatus: 'in-transit',
+    etaMinutes: 78,
   },
   'V-1003': {
     vehicleId: 'V-1003',
@@ -96,6 +184,21 @@ const INITIAL_VEHICLES: Record<string, TelemetryVehicleState> = {
     humidityPct: 44.0,
     batteryVoltage: 12.8,
     lastUpdated: Date.now(),
+    linkedOrder: {
+      invoiceNumber: 'LG-2026-09-0117',
+      customerId: 'CUST-003',
+      customerNameAr: 'مؤسسة الحاير للمقاولات والتشييد',
+      customerNameEn: "Al-Ha'ir Construction Est.",
+      cargoTypeAr: 'صخور بازلت مكسرة',
+      cargoTypeEn: 'Crushed Basalt Rock',
+      grandTotal: 95000.00,
+      vatAmount: 14250.00,
+      zatcaStatus: 'Cleared',
+      invoiceStatus: 'Issued',
+    },
+    deliverySite: DELIVERY_SITES.hair_quarry,
+    dispatchStatus: 'assigned',
+    etaMinutes: 25,
   },
   'V-1004': {
     vehicleId: 'V-1004',
@@ -111,6 +214,7 @@ const INITIAL_VEHICLES: Record<string, TelemetryVehicleState> = {
     humidityPct: 39.8,
     batteryVoltage: 12.5,
     lastUpdated: Date.now(),
+    dispatchStatus: 'unassigned',
   },
 };
 
@@ -164,6 +268,7 @@ function ensureLeafletAnimations() {
 function buildBeaconHtml(vehicle: TelemetryVehicleState, isSelected: boolean, _isAr: boolean): string {
   const breached = vehicle.tempCelsius > SLA_THRESHOLD;
   const color = breached ? '#ef4444' : '#10b981';
+  const dispatchColor = vehicle.dispatchStatus ? (DISPATCH_COLORS[vehicle.dispatchStatus] || '#64748b') : null;
   const ring = breached
     ? `<div style="position:absolute;top:50%;left:50%;width:28px;height:28px;border-radius:50%;border:2px solid #ef4444;animation:oxengl-ping 1.2s cubic-bezier(0,0,0.2,1) infinite;opacity:0.85;pointer-events:none;"></div>`
     : `<div style="position:absolute;top:50%;left:50%;width:24px;height:24px;border-radius:50%;border:1.5px solid #10b981;animation:oxengl-pulse 2s ease-in-out infinite;opacity:0.6;pointer-events:none;"></div>`;
@@ -171,8 +276,12 @@ function buildBeaconHtml(vehicle: TelemetryVehicleState, isSelected: boolean, _i
     ? `<div style="position:absolute;top:50%;left:50%;width:36px;height:36px;border-radius:50%;border:2px solid #f59e0b;pointer-events:none;"></div>`
     : '';
   const badge = breached ? ' 🚨' : '';
+  // Linked order sublabel
+  const orderTag = vehicle.linkedOrder
+    ? `<div dir="ltr" class="unicode-bidi-isolate" style="position:absolute;top:calc(50% + 14px);left:20px;white-space:nowrap;background:rgba(2,6,23,0.92);border:1px solid ${dispatchColor || '#3b82f6'}55;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:8px;font-weight:bold;color:${dispatchColor || '#3b82f6'};pointer-events:none;direction:ltr;unicode-bidi:isolate;">📦 ${vehicle.linkedOrder.invoiceNumber}</div>`
+    : '';
   const label = `<div dir="ltr" class="unicode-bidi-isolate" style="position:absolute;top:50%;left:20px;transform:translateY(-50%);white-space:nowrap;background:rgba(2,6,23,0.88);border:1px solid ${color}55;border-radius:6px;padding:2px 7px;font-family:monospace;font-size:10px;font-weight:bold;color:${color};pointer-events:none;direction:ltr;unicode-bidi:isolate;">${vehicle.vehicleId}${badge} +${vehicle.tempCelsius.toFixed(1)}°C</div>`;
-  return `<div style="position:relative;width:16px;height:16px;">${selectionRing}${ring}<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};"></div>${label}</div>`;
+  return `<div style="position:relative;width:16px;height:16px;">${selectionRing}${ring}<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:${color};box-shadow:0 0 8px ${color};"></div>${label}${orderTag}</div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,6 +462,50 @@ export const FleetMapView: React.FC = () => {
         L.marker([24.71, 46.675], { icon: poiIcon(isAr ? 'ميزان الخرج' : 'Al-Kharj Weighbridge', '#fbbf24') }).addTo(map);
         L.marker([24.685, 46.651], { icon: poiIcon(isAr ? 'كسارات الحاير' : "Al-Ha'ir Quarry", '#34d399') }).addTo(map);
         L.marker([24.755, 46.715], { icon: poiIcon(isAr ? 'بوابة الشرق' : 'East Gate Dammam Rd', '#60a5fa') }).addTo(map);
+
+        // ── Depot Origin Marker ──
+        const depotIcon = L.divIcon({
+          className: '',
+          html: `<div style="background:rgba(249,115,22,0.92);border:2px solid #fb923c;border-radius:8px;padding:3px 10px;font-size:10px;font-weight:900;color:white;font-family:monospace;white-space:nowrap;box-shadow:0 0 12px rgba(249,115,22,0.4);">🏭 ${isAr ? DEPOT_ORIGIN.nameAr : DEPOT_ORIGIN.nameEn}</div>`,
+          iconAnchor: [0, 0],
+        });
+        L.marker([DEPOT_ORIGIN.lat, DEPOT_ORIGIN.lng], { icon: depotIcon, zIndexOffset: 1000 }).addTo(map);
+
+        // ── Route Vectors: Depot → Vehicle → Delivery Site ──
+        Object.values(vehiclesRef.current).forEach((v) => {
+          if (!v.deliverySite || !v.linkedOrder) return;
+          const routeColor = DISPATCH_COLORS[v.dispatchStatus || 'unassigned'];
+
+          // Polyline: Depot → current vehicle position
+          L.polyline(
+            [[DEPOT_ORIGIN.lat, DEPOT_ORIGIN.lng], [v.lat, v.lng]],
+            { color: routeColor, weight: 2.5, opacity: 0.6, dashArray: '8, 6', className: 'dispatch-route-segment' }
+          ).addTo(map);
+
+          // Polyline: current vehicle position → delivery site
+          L.polyline(
+            [[v.lat, v.lng], [v.deliverySite.lat, v.deliverySite.lng]],
+            { color: routeColor, weight: 2, opacity: 0.4, dashArray: '4, 8', className: 'dispatch-route-remaining' }
+          ).addTo(map);
+
+          // Delivery site destination marker
+          const destIcon = L.divIcon({
+            className: '',
+            html: `<div style="background:rgba(2,6,23,0.92);border:1px solid ${routeColor}88;border-radius:6px;padding:2px 8px;font-size:9px;font-weight:bold;color:${routeColor};font-family:monospace;white-space:nowrap;">📦 ${isAr ? v.linkedOrder!.customerNameAr.slice(0, 25) : v.linkedOrder!.customerNameEn.slice(0, 25)} · ${v.linkedOrder!.invoiceNumber}</div>`,
+            iconAnchor: [0, 0],
+          });
+          L.marker([v.deliverySite.lat, v.deliverySite.lng], { icon: destIcon }).addTo(map);
+
+          // Destination circle pulse
+          L.circleMarker([v.deliverySite.lat, v.deliverySite.lng], {
+            radius: 6,
+            fillColor: routeColor,
+            fillOpacity: 0.3,
+            color: routeColor,
+            weight: 1.5,
+            opacity: 0.6,
+          }).addTo(map);
+        });
 
         const syncMarkers = (currentSelected: string) => {
           Object.values(vehiclesRef.current).forEach((v) => {
@@ -713,13 +866,27 @@ export const FleetMapView: React.FC = () => {
                 <Truck className="h-4 w-4 text-orange-500 shrink-0" />
                 <h3 dir="ltr" className="inline-block unicode-bidi-isolate font-bold text-sm text-white font-mono">{selectedVehicle.vehicleId}</h3>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                selectedVehicle.tempCelsius > SLA_THRESHOLD
-                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                  : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-              }`}>
-                {selectedVehicle.tempCelsius > SLA_THRESHOLD ? (isAr ? 'تجاوز حراري' : 'Breached') : (isAr ? 'مطابق للمواصفة' : 'Nominal')}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {selectedVehicle.dispatchStatus && selectedVehicle.dispatchStatus !== 'unassigned' && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap shrink-0"
+                    style={{
+                      backgroundColor: `${DISPATCH_COLORS[selectedVehicle.dispatchStatus]}22`,
+                      color: DISPATCH_COLORS[selectedVehicle.dispatchStatus],
+                      border: `1px solid ${DISPATCH_COLORS[selectedVehicle.dispatchStatus]}55`,
+                    }}>
+                    {selectedVehicle.dispatchStatus === 'in-transit' ? (isAr ? 'في الطريق' : 'In Transit') :
+                     selectedVehicle.dispatchStatus === 'assigned' ? (isAr ? 'معيّن' : 'Assigned') :
+                     selectedVehicle.dispatchStatus === 'delivered' ? (isAr ? 'تم التسليم' : 'Delivered') : ''}
+                  </span>
+                )}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
+                  selectedVehicle.tempCelsius > SLA_THRESHOLD
+                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                }`}>
+                  {selectedVehicle.tempCelsius > SLA_THRESHOLD ? (isAr ? 'تجاوز حراري' : 'Breached') : (isAr ? 'مطابق للمواصفة' : 'Nominal')}
+                </span>
+              </div>
             </div>
 
             <div className="space-y-3 text-xs">
@@ -737,6 +904,12 @@ export const FleetMapView: React.FC = () => {
                   {isAr ? selectedVehicle.destinationAr : selectedVehicle.destinationEn}
                 </span>
               </div>
+              {selectedVehicle.etaMinutes && (
+                <div className="flex justify-between text-slate-400">
+                  <span>{isAr ? 'الوصول المتوقع:' : 'ETA:'}</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-cyan-400">~{selectedVehicle.etaMinutes} min</span>
+                </div>
+              )}
               <div className="border-t border-slate-800 pt-2 flex justify-between text-slate-400">
                 <span>{isAr ? 'الإحداثيات:' : 'Coordinates:'}</span>
                 <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-[10px] text-slate-300">
@@ -764,6 +937,70 @@ export const FleetMapView: React.FC = () => {
             </div>
           </div>
 
+          {/* ── LINKED SALES ORDER / DISPATCH PANEL ── */}
+          {selectedVehicle.linkedOrder ? (
+            <div className="rounded-2xl border border-sky-800/40 bg-gradient-to-br from-slate-900 to-sky-950/30 p-4 shadow-lg">
+              <div className="flex items-center gap-2 border-b border-slate-800/60 pb-2.5 mb-3">
+                <Link2 className="h-3.5 w-3.5 text-sky-400 shrink-0" />
+                <h4 className="text-[11px] font-extrabold text-sky-300 uppercase tracking-wider">
+                  {isAr ? 'أمر مبيعات مرتبط' : 'Linked Sales Order'}
+                </h4>
+                {selectedVehicle.linkedOrder.invoiceNumber.startsWith('AI-') || selectedVehicle.linkedOrder.invoiceNumber.startsWith('LG-') ? (
+                  <span className="ml-auto text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/30">
+                    <Sparkles className="h-2.5 w-2.5 inline mr-0.5" />AI
+                  </span>
+                ) : null}
+              </div>
+              <div className="space-y-2.5 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span className="flex items-center gap-1"><FileText className="h-3 w-3 text-sky-500" />{isAr ? 'رقم الفاتورة:' : 'Invoice #:'}</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-bold text-sky-300">{selectedVehicle.linkedOrder.invoiceNumber}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>{isAr ? 'العميل:' : 'Customer:'}</span>
+                  <span className="font-bold text-white text-right max-w-[160px] truncate">
+                    {isAr ? selectedVehicle.linkedOrder.customerNameAr : selectedVehicle.linkedOrder.customerNameEn}
+                  </span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span className="flex items-center gap-1"><Package className="h-3 w-3 text-amber-500" />{isAr ? 'نوع البضاعة:' : 'Cargo:'}</span>
+                  <span className="font-medium text-amber-300 text-right max-w-[140px] truncate">
+                    {isAr ? selectedVehicle.linkedOrder.cargoTypeAr : selectedVehicle.linkedOrder.cargoTypeEn}
+                  </span>
+                </div>
+                <div className="border-t border-slate-800/40 pt-2 flex justify-between text-slate-400">
+                  <span>{isAr ? 'إجمالي الفاتورة:' : 'Invoice Total:'}</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono font-extrabold text-white">{formatCurrency(selectedVehicle.linkedOrder.grandTotal)}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>{isAr ? 'ضريبة القيمة المضافة:' : 'VAT Amount:'}</span>
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-amber-400">{formatCurrency(selectedVehicle.linkedOrder.vatAmount)}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-400">
+                  <span className="flex items-center gap-1"><ShieldCheck className="h-3 w-3 text-emerald-500" />{isAr ? 'حالة زاتكا:' : 'ZATCA:'}</span>
+                  <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${
+                    selectedVehicle.linkedOrder.zatcaStatus === 'Cleared' ? 'bg-emerald-500/15 text-emerald-400 ring-emerald-500/30' :
+                    selectedVehicle.linkedOrder.zatcaStatus === 'Reported' ? 'bg-sky-500/15 text-sky-400 ring-sky-500/30' :
+                    selectedVehicle.linkedOrder.zatcaStatus === 'Pending' ? 'bg-amber-500/15 text-amber-400 ring-amber-500/30' :
+                    'bg-rose-500/15 text-rose-400 ring-rose-500/30'
+                  }`}>
+                    {selectedVehicle.linkedOrder.zatcaStatus === 'Cleared' && <CheckCircle2 className="h-3 w-3" />}
+                    {selectedVehicle.linkedOrder.zatcaStatus === 'Reported' && <ArrowRight className="h-3 w-3" />}
+                    {selectedVehicle.linkedOrder.zatcaStatus === 'Pending' && <Clock className="h-3 w-3" />}
+                    {selectedVehicle.linkedOrder.zatcaStatus === 'Rejected' && <XCircle className="h-3 w-3" />}
+                    {selectedVehicle.linkedOrder.zatcaStatus}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-slate-800/50 bg-slate-900/40 p-4 text-center">
+              <Package className="h-5 w-5 text-slate-600 mx-auto mb-2" />
+              <p className="text-[11px] font-bold text-slate-500">{isAr ? 'لا يوجد أمر مبيعات مرتبط' : 'No linked sales order'}</p>
+              <p className="text-[10px] text-slate-600 mt-0.5">{isAr ? 'يمكن ربط أمر من لوحة المبيعات والذمم' : 'Assign from Sales & Receivables dashboard'}</p>
+            </div>
+          )}
+
           {/* Fleet Selector */}
           <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 space-y-2">
             <h4 className="text-xs font-bold text-slate-300 mb-2">
@@ -779,8 +1016,18 @@ export const FleetMapView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <span className={`h-2 w-2 rounded-full ${v.tempCelsius > SLA_THRESHOLD ? 'bg-rose-500 animate-ping' : 'bg-emerald-500'}`} />
                   <span dir="ltr" className="inline-block unicode-bidi-isolate font-bold font-mono">{v.vehicleId}</span>
+                  {v.linkedOrder && (
+                    <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                      {v.linkedOrder.invoiceNumber.slice(0, 16)}
+                    </span>
+                  )}
                 </div>
-                <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-[11px] text-slate-400">+{v.tempCelsius.toFixed(1)}°C • {v.speedKph} km/h</span>
+                <div className="flex items-center gap-1.5">
+                  {v.dispatchStatus && v.dispatchStatus !== 'unassigned' && (
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: DISPATCH_COLORS[v.dispatchStatus] }} />
+                  )}
+                  <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono text-[11px] text-slate-400">+{v.tempCelsius.toFixed(1)}°C • {v.speedKph} km/h</span>
+                </div>
               </button>
             ))}
           </div>
