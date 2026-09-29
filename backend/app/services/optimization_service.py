@@ -1,7 +1,10 @@
 import uuid
 import math
 from typing import List, Dict, Any
-from sqlalchemy.ext.asyncio import AsyncSession
+try:
+    from sqlalchemy.ext.asyncio import AsyncSession
+except (ImportError, Exception):
+    AsyncSession = Any  # type: ignore
 from sqlalchemy import select, update
 try:
     from ..domains.logistics.models import Waybill, DeliveryManifest, ManifestStop

@@ -1,4 +1,5 @@
 import uuid
+import json
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -65,6 +66,25 @@ async def process_agent_command(
     
     # Run the graph until it hits the breakpoint (awaiting_approval)
     result = oxengl_agent.invoke(initial_state, config=config)
+
+    # Persist draft state in Redis for cross-worker visibility
+    try:
+        try:
+            from backend.app.core.redis import redis_client
+        except (ImportError, ModuleNotFoundError):
+            from app.core.redis import redis_client
+        payload_data = result.get("draft_payload")
+        if payload_data:
+            cache_val = {
+                "action": payload_data.get("action"),
+                "data": payload_data.get("data"),
+                "draft_payload": payload_data,
+                "execution_status": result.get("execution_status"),
+                "tenant_id": current_user.get("tenant_id"),
+            }
+            await redis_client.set(f"oxengl:agent:thread:{request.thread_id}", json.dumps(cache_val), ex=3600)
+    except Exception as re:
+        print(f"[Agent] Redis caching notice: {re}")
     
     return {
         "status": result.get("execution_status"),
@@ -79,19 +99,42 @@ async def approve_and_execute(
     current_user: dict = Depends(get_current_user_context),
     db: Session = Depends(get_db)
 ):
+    if not request.approved:
+        try:
+            try:
+                from backend.app.core.redis import redis_client
+            except (ImportError, ModuleNotFoundError):
+                from app.core.redis import redis_client
+            await redis_client.delete(f"oxengl:agent:thread:{request.thread_id}")
+        except Exception:
+            pass
+        return {"status": "cancelled", "message": "Execution cancelled by user."}
+
     config = {"configurable": {"thread_id": request.thread_id}}
     
-    # Check current state of the thread
+    # Check current state of the thread in local worker memory
     current_state = oxengl_agent.get_state(config)
+    payload = None
+    if current_state and current_state.next and "execute" in current_state.next:
+        payload = current_state.values.get("draft_payload")
     
-    if not current_state.next or "execute" not in current_state.next:
+    # If not found in local memory (e.g. multi-worker load balancing), check Redis shared cache
+    if not payload:
+        try:
+            try:
+                from backend.app.core.redis import redis_client
+            except (ImportError, ModuleNotFoundError):
+                from app.core.redis import redis_client
+            raw_cache = await redis_client.get(f"oxengl:agent:thread:{request.thread_id}")
+            if raw_cache:
+                cached_json = json.loads(raw_cache)
+                payload = cached_json.get("draft_payload") or cached_json
+        except Exception as re:
+            print(f"[Agent] Redis thread lookup notice: {re}")
+
+    if not payload:
         raise HTTPException(status_code=400, detail="No pending execution found for this thread.")
     
-    if not request.approved:
-        return {"status": "cancelled", "message": "Execution cancelled by user."}
-    
-    # Extract the drafted payload from the state before resuming
-    payload = current_state.values.get("draft_payload")
     action_name = "unknown"
     
     if payload:
@@ -221,7 +264,13 @@ async def approve_and_execute(
             # 5. Sales & CRM Module: ZATCA Customer Invoice with Cryptographic Chaining
             elif action_name == "CustomerInvoiceSchema":
                 print(f"-> [Sales & CRM Module] Executing Customer Invoice with ZATCA Phase 2 Chaining: {data}")
-                from app.crud.sales import create_invoice
+                try:
+                    from ..crud.sales import create_invoice
+                except (ImportError, ModuleNotFoundError, ValueError):
+                    try:
+                        from backend.app.crud.sales import create_invoice
+                    except (ImportError, ModuleNotFoundError):
+                        from app.crud.sales import create_invoice
                 inv_result = create_invoice(db, data, company_id=company_id)
                 print(f"-> [ZATCA Chaining] Invoice {inv_result['invoice_number']} created with Hash: {inv_result['zatca']['invoice_hash'][:20]}... PIH: {inv_result['zatca']['previous_invoice_hash'][:20]}...")
 
@@ -284,12 +333,32 @@ async def approve_and_execute(
             else:
                 raise ValueError(f"Unrecognized AI action schema: {action_name}")
 
-        except Exception as e:
+        except HTTPException:
             db.rollback()
+            raise
+        except Exception as e:
+            import traceback
+            db.rollback()
+            tb_str = traceback.format_exc()
+            print(f"[Agent Execution Error]:\n{tb_str}")
             raise HTTPException(status_code=500, detail=f"Database execution failed: {str(e)}")
     
-    # Resume the graph to clear the execution node
-    result = oxengl_agent.invoke(None, config=config)
+    # Resume the graph to clear the execution node if state exists in this worker
+    if current_state and current_state.next:
+        try:
+            oxengl_agent.invoke(None, config=config)
+        except Exception:
+            pass
+
+    # Clean up Redis cache for this thread
+    try:
+        try:
+            from backend.app.core.redis import redis_client
+        except (ImportError, ModuleNotFoundError):
+            from app.core.redis import redis_client
+        await redis_client.delete(f"oxengl:agent:thread:{request.thread_id}")
+    except Exception:
+        pass
     
     response_data = {
         "status": "committed",

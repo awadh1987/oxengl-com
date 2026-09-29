@@ -99,7 +99,13 @@ try:
 	from backend.app.api.v1.inventory import router as inventory_router
 	from backend.app.api.v1.finance import router as finance_router
 	from backend.app.api.v1.reports import router as reports_router
-	from backend.app.api.v1.data_observability import router as data_observability_router
+	try:
+		from backend.app.api.v1.data_observability import router as data_observability_router
+	except (ImportError, ModuleNotFoundError):
+		try:
+			from app.api.v1.data_observability import router as data_observability_router
+		except (ImportError, ModuleNotFoundError):
+			from .api.v1.data_observability import router as data_observability_router
 	from backend.app.services.fleet_service import router as logistics_router
 	from backend.app.api.v1.customs import router as customs_router
 	from backend.app.api.v1.hr import router as hr_router
@@ -194,6 +200,13 @@ except ImportError:
 	from backend.app.api.v1.inventory import router as inventory_router  # type: ignore[no-redef]
 	from backend.app.api.v1.finance import router as finance_router  # type: ignore[no-redef]
 	from backend.app.api.v1.reports import router as reports_router  # type: ignore[no-redef]
+	try:
+		from backend.app.api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
+	except (ImportError, ModuleNotFoundError):
+		try:
+			from app.api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
+		except (ImportError, ModuleNotFoundError):
+			from .api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
 	from backend.app.services.fleet_service import router as logistics_router  # type: ignore[no-redef]
 	from backend.app.api.v1.customs import router as customs_router  # type: ignore[no-redef]
 	from backend.app.api.v1.hr import router as hr_router  # type: ignore[no-redef]
@@ -217,6 +230,17 @@ except ImportError:
 			from .api.zatca import router as zatca_router  # type: ignore[no-redef]
 	from backend.app.services.sequence_service import SequenceService, get_next_sequence  # type: ignore[no-redef]
 	from backend.app.services.bulk_import_service import BulkImportService, parse_raw_rows_from_excel, parse_raw_rows_from_csv  # type: ignore[no-redef]
+
+try:
+	data_observability_router
+except NameError:
+	try:
+		from backend.app.api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
+	except (ImportError, ModuleNotFoundError):
+		try:
+			from app.api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
+		except (ImportError, ModuleNotFoundError):
+			from .api.v1.data_observability import router as data_observability_router  # type: ignore[no-redef]
 
 
 app = FastAPI(

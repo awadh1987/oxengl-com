@@ -79,7 +79,7 @@ services:
   # 3. OxenGL Enterprise Core Backend API Engine (FastAPI)
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     container_name: oxengl_backend_container
     restart: always
@@ -114,7 +114,7 @@ services:
   # 4. OxenGL React Frontend Interface (Served via Production Nginx)
   frontend:
     build:
-      context: ./frontend
+      context: ../frontend
       dockerfile: Dockerfile
     container_name: oxengl_frontend_container
     restart: always

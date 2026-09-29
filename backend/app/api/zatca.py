@@ -5,13 +5,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy import text
 from typing import Optional
 
-from app.services.zatca_crypto import (
+from ..services.zatca_crypto import (
     generate_secp256k1_keypair,
     generate_zatca_csr,
     compute_invoice_hash,
 )
 try:
-    from app.services.ubl_builder import generate_base_ubl_xml, canonicalize_invoice
+    from ..services.ubl_builder import generate_base_ubl_xml, canonicalize_invoice
 except (ImportError, ModuleNotFoundError):
     from backend.app.services.ubl_builder import generate_base_ubl_xml, canonicalize_invoice
 
