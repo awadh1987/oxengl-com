@@ -59,7 +59,7 @@ const TableSkeletonRows: React.FC<{ rows?: number; cols?: number }> = ({ rows = 
 const KpiSkeletonCards: React.FC = () => (
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 animate-pulse">
     {[1, 2, 3, 4].map((i) => (
-      <div key={i} className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs space-y-3">
+      <div key={i} className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs space-y-3">
         <div className="h-3 bg-slate-200 rounded w-1/2" />
         <div className="h-7 bg-slate-200 rounded w-3/4" />
         <div className="h-2.5 bg-slate-100 rounded w-1/3" />
@@ -303,7 +303,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
       {/* Error Alert */}
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-xs font-bold text-rose-800 shadow-xs">
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-200 dark:border-rose-900/40 bg-rose-50 dark:bg-rose-950/20 p-4 text-xs font-bold text-rose-800 dark:text-rose-300 shadow-xs">
           <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
           <span>{error}</span>
         </div>
@@ -311,7 +311,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
       {/* Loading Indicator Banner */}
       {isLoading && (
-        <div className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-3.5 text-xs font-bold text-indigo-900 shadow-xs animate-pulse">
+        <div className="flex items-center gap-3 rounded-2xl border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50/70 dark:bg-indigo-950/20 p-3.5 text-xs font-bold text-indigo-900 dark:text-indigo-200 shadow-xs animate-pulse">
           <RefreshCw className="h-4 w-4 animate-spin text-indigo-600 shrink-0" />
           <span>
             {isAr
@@ -328,40 +328,40 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي المدين (Debits)' : 'Total Debits'}
               </span>
-              <div className="mt-2 text-2xl font-black text-slate-900">
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
                 {isLoading ? (
                   <div className="h-7 w-28 bg-slate-200 rounded animate-pulse my-0.5" />
                 ) : (
                   formatCurrency(Number(trialBalance?.total_debit || 0), language)
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {trialBalance?.accounts.length || 0} {isAr ? 'حساب نشط' : 'active accounts'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي الدائن (Credits)' : 'Total Credits'}
               </span>
-              <div className="mt-2 text-2xl font-black text-slate-900">
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
                 {isLoading ? (
                   <div className="h-7 w-28 bg-slate-200 rounded animate-pulse my-0.5" />
                 ) : (
                   formatCurrency(Number(trialBalance?.total_credit || 0), language)
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {isAr ? 'مطابقة متوازنة' : 'Double-entry parity'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'فارق التوازن (Discrepancy)' : 'Ledger Discrepancy'}
               </span>
               <div
@@ -375,7 +375,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   formatCurrency(Number(trialBalance?.discrepancy || 0), language)
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {trialBalance?.is_balanced
                   ? isAr
                     ? '0.00 ر.س (متوازن بدقة)'
@@ -386,8 +386,8 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'حالة التوازن المحاسبي' : 'Ledger Balance Status'}
               </span>
               <div className="mt-2 flex items-center gap-2">
@@ -403,14 +403,14 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono block mt-1">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-1">
                 {isAr ? 'دفتر الأستاذ العام النشط' : 'Active General Ledger'}
               </span>
             </div>
           </div>
 
           {/* Filters Bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs no-print">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs no-print">
             <div className="flex items-center gap-2 flex-1 max-w-md">
               <Search className="h-4 w-4 text-slate-400" />
               <input
@@ -420,7 +420,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 placeholder={isAr ? 'بحث برقم الحساب أو الاسم...' : 'Search by account code or name...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
               />
             </div>
 
@@ -464,10 +464,10 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
           </div>
 
           {/* Trial Balance Table */}
-          <div className="overflow-x-auto rounded-3xl border border-slate-200/80 bg-white shadow-xs">
+          <div className="overflow-x-auto rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
             <table className="w-full text-start text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 font-bold text-slate-600">
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 font-bold text-slate-600 dark:text-slate-300">
                   <th className="py-3.5 px-4 text-start">{isAr ? 'رمز الحساب' : 'Code'}</th>
                   <th className="py-3.5 px-4 text-start">{isAr ? 'اسم الحساب' : 'Account Name'}</th>
                   <th className="py-3.5 px-4 text-start">{isAr ? 'التصنيف' : 'Classification'}</th>
@@ -477,22 +477,22 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   <th className="py-3.5 px-4 text-end">{isAr ? 'رصيد الدائن' : 'Credit Balance'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {isLoading ? (
                   <TableSkeletonRows rows={6} cols={7} />
                 ) : filteredTrialBalanceAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400">
+                    <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
                       {isAr ? 'لا توجد حركات مالية مسجلة' : 'No general ledger entries found.'}
                     </td>
                   </tr>
                 ) : (
                   filteredTrialBalanceAccounts.map((acc) => (
-                    <tr key={acc.account_code} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                    <tr key={acc.account_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
                         {acc.account_code}
                       </td>
-                      <td className="py-3 px-4 font-bold text-slate-800">
+                      <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
                         {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                       </td>
                       <td className="py-3 px-4">
@@ -512,10 +512,10 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                           {acc.account_type}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-end font-mono text-slate-800">
+                      <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
                         {formatCurrency(Number(acc.total_debit), language)}
                       </td>
-                      <td className="py-3 px-4 text-end font-mono text-slate-800">
+                      <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
                         {formatCurrency(Number(acc.total_credit), language)}
                       </td>
                       <td className="py-3 px-4 text-end font-mono font-semibold text-blue-900">
@@ -529,7 +529,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 )}
               </tbody>
               <tfoot>
-                <tr className="border-t-2 border-slate-900 bg-slate-100/80 font-black text-slate-900">
+                <tr className="border-t-2 border-slate-900 dark:border-slate-200 bg-slate-100/80 dark:bg-slate-800/80 font-black text-slate-900 dark:text-slate-100">
                   <td colSpan={3} className="py-4 px-4 text-start uppercase">
                     {isAr ? 'الإجمالي العام لميزان المراجعة' : 'Grand Total'}
                   </td>
@@ -564,32 +564,32 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي الإيرادات (Total Revenue)' : 'Total Revenue'}
               </span>
               <div className="mt-2 text-2xl font-black text-emerald-600">
                 {formatCurrency(Number(incomeStatement?.total_revenue || 0), language)}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {incomeStatement?.revenue_accounts.length || 0} {isAr ? 'بند إيراد' : 'revenue line items'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي المصروفات (Expenses)' : 'Total Expenses'}
               </span>
               <div className="mt-2 text-2xl font-black text-rose-600">
                 {formatCurrency(Number(incomeStatement?.total_expenses || 0), language)}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {incomeStatement?.expense_accounts.length || 0} {isAr ? 'بند مصروف' : 'expense line items'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'صافي الدخل التشغيلي (Net Income)' : 'Net Operating Income'}
               </span>
               <div
@@ -599,7 +599,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               >
                 {formatCurrency(Number(incomeStatement?.net_income || 0), language)}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {Number(incomeStatement?.net_income || 0) >= 0
                   ? isAr
                     ? 'أرباح صافية'
@@ -610,25 +610,25 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'هامش الربحية التشغيلية' : 'Operating Profit Margin'}
               </span>
               <div className="mt-2 text-2xl font-black text-indigo-900">
                 {incomeStatement?.operating_margin_percentage || 0}%
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {isAr ? 'نسبة صافي الربح إلى المبيعات' : 'Net Margin to Revenue Ratio'}
               </span>
             </div>
           </div>
 
           {/* Revenue Breakdown Section */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-emerald-600" />
-                <h3 className="text-base font-black text-slate-900">
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
                   {isAr ? '1. بنود الإيرادات والمبيعات التشغيلية (Operating Revenue)' : '1. Operating Revenue'}
                 </h3>
               </div>
@@ -639,20 +639,20 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
             <table className="w-full text-start text-xs">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400">
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500">
                   <th className="py-2 text-start font-bold">{isAr ? 'رمز الحساب' : 'Code'}</th>
                   <th className="py-2 text-start font-bold">{isAr ? 'البيان' : 'Description'}</th>
                   <th className="py-2 text-end font-bold">{isAr ? 'المبلغ' : 'Amount (SAR)'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {isLoading ? (
                   <TableSkeletonRows rows={3} cols={3} />
                 ) : (
                   incomeStatement?.revenue_accounts.map((acc) => (
                     <tr key={acc.account_code}>
-                      <td className="py-2.5 font-mono text-slate-700">{acc.account_code}</td>
-                      <td className="py-2.5 font-bold text-slate-900">
+                      <td className="py-2.5 font-mono text-slate-700 dark:text-slate-300">{acc.account_code}</td>
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-100">
                         {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                       </td>
                       <td className="py-2.5 text-end font-mono font-bold text-emerald-700">
@@ -666,11 +666,11 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
           </div>
 
           {/* Expense Breakdown Section */}
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="flex items-center gap-2">
                 <TrendingDown className="h-5 w-5 text-rose-600" />
-                <h3 className="text-base font-black text-slate-900">
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
                   {isAr ? '2. بنود المصروفات والتكاليف التشغيلية (Operating Expenses)' : '2. Operating Expenses'}
                 </h3>
               </div>
@@ -681,20 +681,20 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
             <table className="w-full text-start text-xs">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400">
+                <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500">
                   <th className="py-2 text-start font-bold">{isAr ? 'رمز الحساب' : 'Code'}</th>
                   <th className="py-2 text-start font-bold">{isAr ? 'البيان' : 'Description'}</th>
                   <th className="py-2 text-end font-bold">{isAr ? 'المبلغ' : 'Amount (SAR)'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {isLoading ? (
                   <TableSkeletonRows rows={4} cols={3} />
                 ) : (
                   incomeStatement?.expense_accounts.map((acc) => (
                     <tr key={acc.account_code}>
-                      <td className="py-2.5 font-mono text-slate-700">{acc.account_code}</td>
-                      <td className="py-2.5 font-bold text-slate-900">
+                      <td className="py-2.5 font-mono text-slate-700 dark:text-slate-300">{acc.account_code}</td>
+                      <td className="py-2.5 font-bold text-slate-900 dark:text-slate-100">
                         {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                       </td>
                       <td className="py-2.5 text-end font-mono font-bold text-rose-700">
@@ -736,32 +736,32 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
         <div className="space-y-6">
           {/* KPI Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي الأصول (Total Assets)' : 'Total Assets'}
               </span>
               <div className="mt-2 text-2xl font-black text-blue-900">
                 {formatCurrency(Number(balanceSheet?.total_assets || 0), language)}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {balanceSheet?.asset_accounts.length || 0} {isAr ? 'بند أصول' : 'asset accounts'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'إجمالي الخصوم (Total Liabilities)' : 'Total Liabilities'}
               </span>
               <div className="mt-2 text-2xl font-black text-amber-900">
                 {formatCurrency(Number(balanceSheet?.total_liabilities || 0), language)}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {balanceSheet?.liability_accounts.length || 0} {isAr ? 'بند خصوم' : 'liability accounts'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'حقوق الملكية والأرباح (Equity & Earnings)' : 'Equity & Earnings'}
               </span>
               <div className="mt-2 text-2xl font-black text-purple-900">
@@ -771,13 +771,13 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   language
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                 {isAr ? 'متضمن أرباح الفترة النشطة' : 'Includes current period net income'}
               </span>
             </div>
 
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-              <span className="text-xs font-bold text-slate-500">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                 {isAr ? 'توازن معادلة المحاسبة' : 'Accounting Equilibrium'}
               </span>
               <div className="mt-2 flex items-center gap-2">
@@ -793,7 +793,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   </div>
                 )}
               </div>
-              <span className="text-[10px] text-slate-400 font-mono block mt-1">
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-1">
                 {isAr ? 'فارق التوازن: 0.00 ر.س' : 'Discrepancy: 0.00 SAR'}
               </span>
             </div>
@@ -802,9 +802,9 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
           {/* Two-Column Assets vs Liabilities/Equity Breakdown */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Left Column: Assets */}
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-base font-black text-slate-900">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
                   {isAr ? 'الأصول والموجودات (Assets)' : 'Assets'}
                 </h3>
                 <span className="font-mono text-sm font-black text-blue-900">
@@ -814,20 +814,20 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
               <table className="w-full text-start text-xs">
                 <thead>
-                  <tr className="border-b border-slate-100 text-slate-400">
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 dark:text-slate-500">
                     <th className="py-2 text-start font-bold">{isAr ? 'رمز الحساب' : 'Code'}</th>
                     <th className="py-2 text-start font-bold">{isAr ? 'اسم الأصل' : 'Asset Name'}</th>
                     <th className="py-2 text-end font-bold">{isAr ? 'الرصيد' : 'Balance (SAR)'}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                   {isLoading ? (
                     <TableSkeletonRows rows={4} cols={3} />
                   ) : (
                     balanceSheet?.asset_accounts.map((acc) => (
                       <tr key={acc.account_code}>
-                        <td className="py-2.5 font-mono text-slate-700">{acc.account_code}</td>
-                        <td className="py-2.5 font-bold text-slate-900">
+                        <td className="py-2.5 font-mono text-slate-700 dark:text-slate-300">{acc.account_code}</td>
+                        <td className="py-2.5 font-bold text-slate-900 dark:text-slate-100">
                           {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                         </td>
                         <td className="py-2.5 text-end font-mono font-bold text-blue-900">
@@ -838,7 +838,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                   )}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-slate-900 font-black text-slate-900">
+                  <tr className="border-t-2 border-slate-900 dark:border-slate-200 font-black text-slate-900 dark:text-slate-100">
                     <td colSpan={2} className="py-3 text-start uppercase">
                       {isAr ? 'إجمالي الأصول' : 'Total Assets'}
                     </td>
@@ -851,9 +851,9 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
             </div>
 
             {/* Right Column: Liabilities & Equity */}
-            <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h3 className="text-base font-black text-slate-900">
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <h3 className="text-base font-black text-slate-900 dark:text-slate-100">
                   {isAr ? 'الالتزامات وحقوق الملكية (Liabilities & Equity)' : 'Liabilities & Equity'}
                 </h3>
                 <span className="font-mono text-sm font-black text-slate-900">
@@ -863,18 +863,18 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
               {/* Liabilities Subsection */}
               <div>
-                <span className="text-xs font-black text-amber-900 uppercase block mb-2">
+                <span className="text-xs font-black text-amber-900 dark:text-amber-300 uppercase block mb-2">
                   {isAr ? 'الخصوم والالتزامات (Liabilities)' : 'Liabilities'}
                 </span>
                 <table className="w-full text-start text-xs mb-4">
-                  <tbody className="divide-y divide-slate-100 font-medium">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                     {isLoading ? (
                       <TableSkeletonRows rows={3} cols={3} />
                     ) : (
                       balanceSheet?.liability_accounts.map((acc) => (
                         <tr key={acc.account_code}>
                           <td className="py-2 font-mono text-slate-700 w-24">{acc.account_code}</td>
-                          <td className="py-2 font-bold text-slate-900">
+                          <td className="py-2 font-bold text-slate-900 dark:text-slate-100">
                             {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                           </td>
                           <td className="py-2 text-end font-mono font-bold text-amber-900">
@@ -883,7 +883,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                         </tr>
                       ))
                     )}
-                    <tr className="border-t border-slate-200 font-black">
+                    <tr className="border-t border-slate-200 dark:border-slate-800 font-black">
                       <td colSpan={2} className="py-2 text-slate-600">
                         {isAr ? 'مجموع الخصوم' : 'Total Liabilities'}
                       </td>
@@ -896,19 +896,19 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               </div>
 
               {/* Equity Subsection */}
-              <div className="border-t border-slate-100 pt-3">
-                <span className="text-xs font-black text-purple-900 uppercase block mb-2">
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+                <span className="text-xs font-black text-purple-900 dark:text-purple-300 uppercase block mb-2">
                   {isAr ? 'حقوق الملكية والأرباح (Equity & Retained Earnings)' : 'Equity & Retained Earnings'}
                 </span>
                 <table className="w-full text-start text-xs">
-                  <tbody className="divide-y divide-slate-100 font-medium">
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                     {isLoading ? (
                       <TableSkeletonRows rows={3} cols={3} />
                     ) : (
                       balanceSheet?.equity_accounts.map((acc) => (
                         <tr key={acc.account_code}>
                           <td className="py-2 font-mono text-slate-700 w-24">{acc.account_code}</td>
-                          <td className="py-2 font-bold text-slate-900">
+                          <td className="py-2 font-bold text-slate-900 dark:text-slate-100">
                             {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
                           </td>
                           <td className="py-2 text-end font-mono font-bold text-purple-900">
@@ -918,16 +918,16 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                       ))
                     )}
                     {/* Current Period Net Income integration */}
-                    <tr className="bg-purple-50/50">
-                      <td className="py-2 font-mono text-purple-700 w-24">P&L-NET</td>
-                      <td className="py-2 font-black text-purple-950">
+                    <tr className="bg-purple-50/50 dark:bg-purple-950/20">
+                      <td className="py-2 font-mono text-purple-700 dark:text-purple-400 w-24">P&L-NET</td>
+                      <td className="py-2 font-black text-purple-950 dark:text-purple-200">
                         {isAr ? 'أرباح / (خسائر) الفترة الحالية' : 'Current Period Net Income'}
                       </td>
                       <td className="py-2 text-end font-mono font-black text-purple-900">
                         {formatCurrency(Number(balanceSheet?.current_period_net_income || 0), language)}
                       </td>
                     </tr>
-                    <tr className="border-t border-slate-200 font-black">
+                    <tr className="border-t border-slate-200 dark:border-slate-800 font-black">
                       <td colSpan={2} className="py-2 text-slate-600">
                         {isAr ? 'مجموع حقوق الملكية' : 'Total Equity'}
                       </td>
@@ -941,7 +941,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                     </tr>
                   </tbody>
                   <tfoot>
-                    <tr className="border-t-2 border-slate-900 font-black text-slate-900">
+                    <tr className="border-t-2 border-slate-900 dark:border-slate-200 font-black text-slate-900 dark:text-slate-100">
                       <td colSpan={2} className="py-3 text-start uppercase">
                         {isAr ? 'مجموع الخصوم وحقوق الملكية' : 'Total Liabilities & Equity'}
                       </td>

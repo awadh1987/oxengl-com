@@ -1068,7 +1068,7 @@ export const TenantBillingView: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      placeholder="PO-2026-OXEN-01"
+                      placeholder={isAr ? 'PO-2026-OXEN-01' : 'PO-2026-OXEN-01'}
                       value={poForm.poNumber}
                       onChange={(e) => setPoForm({ ...poForm, poNumber: e.target.value })}
                       className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-2.5 text-xs focus:ring-2 focus:ring-purple-500"
@@ -1081,7 +1081,7 @@ export const TenantBillingView: React.FC = () => {
                     </label>
                     <input
                       type="text"
-                      placeholder="300000000000003"
+                      placeholder={isAr ? 'الرقم الضريبي: 300000000000003' : 'VAT: 300000000000003'}
                       value={poForm.taxId}
                       onChange={(e) => setPoForm({ ...poForm, taxId: e.target.value })}
                       className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-2.5 text-xs focus:ring-2 focus:ring-purple-500"
@@ -1096,7 +1096,7 @@ export const TenantBillingView: React.FC = () => {
                   <input
                     type="email"
                     required
-                    placeholder="finance@company.com"
+                    placeholder={isAr ? 'finance@company.com' : 'finance@company.com'}
                     value={poForm.contactEmail}
                     onChange={(e) => setPoForm({ ...poForm, contactEmail: e.target.value })}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/60 p-2.5 text-xs focus:ring-2 focus:ring-purple-500"

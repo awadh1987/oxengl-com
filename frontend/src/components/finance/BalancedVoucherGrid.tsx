@@ -369,7 +369,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
               type="text"
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
-              placeholder="e.g. HRMS-2026-09"
+              placeholder={isAr ? 'مثال: HRMS-2026-09' : 'e.g. HRMS-2026-09'}
               className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-hidden"
             />
           </div>
@@ -454,7 +454,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       min="0"
                       value={line.debit === 0 ? '' : line.debit}
                       onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
-                      placeholder="0.00"
+                      placeholder={isAr ? '0.00' : '0.00'}
                       className="w-full text-end font-mono font-bold text-indigo-700 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-hidden"
                     />
                   </td>
@@ -465,7 +465,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       min="0"
                       value={line.credit === 0 ? '' : line.credit}
                       onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
-                      placeholder="0.00"
+                      placeholder={isAr ? '0.00' : '0.00'}
                       className="w-full text-end font-mono font-bold text-emerald-700 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-hidden"
                     />
                   </td>

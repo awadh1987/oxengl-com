@@ -199,7 +199,7 @@ export const MasterLoginForm: React.FC<MasterLoginFormProps> = ({
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
                 />
               </div>

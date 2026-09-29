@@ -106,6 +106,10 @@ try:
 	from backend.app.api.v1.ai import router as ai_router
 	from backend.app.api.v1.planning import router as planning_router
 	from backend.app.api.v1.auth import router as recovery_auth_router
+	try:
+		from app.agent.router import router as agent_router
+	except (ImportError, ModuleNotFoundError):
+		from backend.app.agent.router import router as agent_router
 	from backend.app.services.sequence_service import SequenceService, get_next_sequence
 	from backend.app.services.bulk_import_service import (
 		BulkImportService,
@@ -192,6 +196,13 @@ except ImportError:
 	from backend.app.api.v1.ai import router as ai_router  # type: ignore[no-redef]
 	from backend.app.api.v1.planning import router as planning_router  # type: ignore[no-redef]
 	from backend.app.api.v1.auth import router as recovery_auth_router  # type: ignore[no-redef]
+	try:
+		from app.agent.router import router as agent_router  # type: ignore[no-redef]
+	except (ImportError, ModuleNotFoundError):
+		try:
+			from backend.app.agent.router import router as agent_router  # type: ignore[no-redef]
+		except (ImportError, ModuleNotFoundError):
+			from .agent.router import router as agent_router  # type: ignore[no-redef]
 	from backend.app.services.sequence_service import SequenceService, get_next_sequence  # type: ignore[no-redef]
 	from backend.app.services.bulk_import_service import BulkImportService, parse_raw_rows_from_excel, parse_raw_rows_from_csv  # type: ignore[no-redef]
 
@@ -424,6 +435,7 @@ app.include_router(customs_router, prefix="/api/logistics/customs/manifests")
 app.include_router(hr_router, prefix="/api/v1/hr")
 app.include_router(saas_router, prefix="/api/v1/saas")
 app.include_router(ai_router, prefix="/api/v1/ai")
+app.include_router(agent_router)
 app.include_router(planning_router, prefix="/api/tenant/planning")
 app.include_router(planning_router, prefix="/api/v1/planning")
 from backend.app.api.v1 import super_admin

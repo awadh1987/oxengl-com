@@ -508,7 +508,7 @@ export const MasterControlPanel: React.FC = () => {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="ابحث عن المنشآت، المستخدمين، النطاقات، أو سجلات التدقيق..."
+                placeholder={isAr ? 'ابحث عن المنشآت، المستخدمين، النطاقات، أو سجلات التدقيق...' : 'Search tenants, users, domains, or audit logs...'}
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full bg-transparent text-white placeholder-slate-500 text-sm focus:outline-none"
@@ -664,7 +664,7 @@ export const MasterControlPanel: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. شركة الرياض للنقليات المحدودة"
+                  placeholder={isAr ? 'مثال: شركة الرياض للنقليات المحدودة' : 'e.g. Riyadh Transport Co. Ltd'}
                   value={newTenantForm.name}
                   onChange={(e) => setNewTenantForm({ ...newTenantForm, name: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
@@ -677,7 +677,7 @@ export const MasterControlPanel: React.FC = () => {
                   <input
                     type="text"
                     required
-                    placeholder="riyadh-transport"
+                    placeholder={isAr ? 'riyadh-transport' : 'riyadh-transport'}
                     value={newTenantForm.slug}
                     onChange={(e) => setNewTenantForm({ ...newTenantForm, slug: e.target.value })}
                     className="flex-1 bg-transparent px-3 py-2 text-white font-mono focus:outline-none"
@@ -704,7 +704,7 @@ export const MasterControlPanel: React.FC = () => {
                   <label className="block text-slate-300 font-semibold mb-1">البريد الإلكتروني للمسؤول</label>
                   <input
                     type="email"
-                    placeholder="admin@tenant.sa"
+                    placeholder={isAr ? 'admin@tenant.sa' : 'admin@tenant.sa'}
                     value={newTenantForm.owner_email}
                     onChange={(e) => setNewTenantForm({ ...newTenantForm, owner_email: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"

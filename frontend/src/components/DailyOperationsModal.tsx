@@ -424,7 +424,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="مثال: 7842-ق أ د"
+                  placeholder={isAr ? 'مثال: 7842-ق أ د' : 'e.g. 7842-RSB'}
                   value={truckNo}
                   onChange={(e) => setTruckNo(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold font-mono text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
@@ -736,7 +736,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder="0"
+                  placeholder={isAr ? '0' : '0'}
                   value={crusherPaymentInput}
                   onChange={(e) => setCrusherPaymentInput(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"

@@ -791,7 +791,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   <label className="block text-slate-400 font-semibold mb-1">عنوان خادم PostgreSQL (Host / IP)</label>
                   <input
                     type="text"
-                    placeholder="db.enterprise.sa or 10.0.1.50"
+                    placeholder={isAr ? 'db.enterprise.sa أو 10.0.1.50' : 'db.enterprise.sa or 10.0.1.50'}
                     value={targetDbForm.host}
                     onChange={(e) => setTargetDbForm({ ...targetDbForm, host: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
@@ -801,7 +801,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   <label className="block text-slate-400 font-semibold mb-1">المنفذ (Port)</label>
                   <input
                     type="number"
-                    placeholder="5432"
+                    placeholder={isAr ? '5432' : '5432'}
                     value={targetDbForm.port}
                     onChange={(e) => setTargetDbForm({ ...targetDbForm, port: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
@@ -814,7 +814,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   <label className="block text-slate-400 font-semibold mb-1">اسم قاعدة البيانات (Database Name)</label>
                   <input
                     type="text"
-                    placeholder="oxengl_tenant_db"
+                    placeholder={isAr ? 'oxengl_tenant_db' : 'oxengl_tenant_db'}
                     value={targetDbForm.database_name}
                     onChange={(e) => setTargetDbForm({ ...targetDbForm, database_name: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
@@ -841,7 +841,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   <label className="block text-slate-400 font-semibold mb-1">اسم المستخدم (Username)</label>
                   <input
                     type="text"
-                    placeholder="postgres or db_user"
+                    placeholder={isAr ? 'postgres أو db_user' : 'postgres or db_user'}
                     value={targetDbForm.username}
                     onChange={(e) => setTargetDbForm({ ...targetDbForm, username: e.target.value })}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-cyan-500"
@@ -853,7 +853,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                   <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-2">
                     <input
                       type={showDbPassword ? 'text' : 'password'}
-                      placeholder="••••••••••••"
+                      placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                       value={targetDbForm.password}
                       onChange={(e) => setTargetDbForm({ ...targetDbForm, password: e.target.value })}
                       className="flex-1 bg-transparent text-white font-mono focus:outline-none"
@@ -927,7 +927,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
               <label className="block text-slate-400 font-semibold mb-1">Webhook Endpoint URL</label>
               <input
                 type="url"
-                placeholder="https://api.yourcompany.com/webhooks/oxengl"
+                placeholder={isAr ? 'https://api.yourcompany.com/webhooks/oxengl' : 'https://api.yourcompany.com/webhooks/oxengl'}
                 value={settings.webhooks?.endpoint_url || ''}
                 onChange={(e) => setSettings({ ...settings, webhooks: { ...settings.webhooks, endpoint_url: e.target.value } })}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500"
@@ -1018,7 +1018,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
               <label className="block text-slate-400 font-semibold mb-1">IdP Entity ID / Metadata URL</label>
               <input
                 type="text"
-                placeholder="https://login.microsoftonline.com/{tenant-id}/federationmetadata/2007-06/federationmetadata.xml"
+                placeholder={isAr ? 'https://login.microsoftonline.com/{tenant-id}/...' : 'https://login.microsoftonline.com/{tenant-id}/federationmetadata/2007-06/federationmetadata.xml'}
                 value={settings.sso?.idp_entity_id || ''}
                 onChange={(e) => setSettings({ ...settings, sso: { ...settings.sso, idp_entity_id: e.target.value } })}
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-indigo-500"
@@ -1050,7 +1050,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                 <input
                   type="text"
                   required
-                  placeholder="محمد العتيبي"
+                  placeholder={isAr ? 'محمد العتيبي' : 'Mohammed Al-Otaibi'}
                   value={inviteForm.full_name}
                   onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
@@ -1062,7 +1062,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
                 <input
                   type="email"
                   required
-                  placeholder="m.otaibi@company.sa"
+                  placeholder={isAr ? 'm.otaibi@company.sa' : 'm.otaibi@company.sa'}
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"

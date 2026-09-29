@@ -87,6 +87,8 @@ export const AIAssistantWidget: React.FC<AIAssistantWidgetProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isSpeakingId, setIsSpeakingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [threadId, setThreadId] = useState("thread_" + Math.random().toString(36).substring(7));
+  const [pendingDraft, setPendingDraft] = useState<any>(null);
 
   // Model & Role Configuration
   const [selectedModel, setSelectedModel] = useState<string>('gemini-3.7-flash');
@@ -256,80 +258,30 @@ How can I assist you with your operations today?`,
     const textToSend = queryText || input.trim();
     if (!textToSend || loading) return;
 
-    const userMessage: Message = {
+    const userMessage = textToSend;
+
+    const newUserMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: textToSend,
+      content: userMessage,
       timestamp: new Date().toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
         hour: '2-digit',
         minute: '2-digit',
       }),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    setMessages((prev) => [...prev, newUserMessage]);
     setInput('');
     setLoading(true);
 
     try {
-      // Build lightweight live ERP context snapshot
-      const erpContext = {
-        company: brandConfig.companyNameAr,
-        user: { name: currentUser?.fullName ?? '', role: currentUser?.role ?? 'Guest' },
-        kpis: {
-          totalSales: kpis.totalSales,
-          totalPurchasesCost: kpis.totalPurchasesCost,
-          netOperatingProfit: kpis.netOperatingProfit,
-          profitMarginPercent: kpis.profitMarginPercent,
-          totalDeliveredTonnage: kpis.totalDeliveredTonnage,
-          totalLoadedTonnage: kpis.totalLoadedTonnage,
-          totalWastageTonnage: kpis.totalWastageTonnage,
-          overallWastagePercent: kpis.overallWastagePercent,
-          totalTrips: kpis.totalTrips,
-          crusherPayableBalance: kpis.crusherPayableBalance,
-          pendingApprovalsCount: kpis.pendingApprovalsCount,
-        },
-        crushers: crushers.map((c) => ({
-          name: c.crusherName,
-          balance: c.openingBalance,
-          location: c.location,
-        })),
-        transporters: transporters.map((t) => ({
-          name: t.transporterName,
-          truck: t.defaultTruckNo || t.truckDetails,
-        })),
-        topHighLossTrips: accessibleOperations
-          .filter((op) => op.qty_wastage > 1.2)
-          .slice(0, 8)
-          .map((op) => ({
-            tripId: op.id,
-            transporter: op.transporter_name,
-            truck: op.truck_no,
-            crusher: op.loading_source,
-            customer: op.destination_customer,
-            loaded: op.qty_loaded,
-            delivered: op.qty_delivered,
-            wastageTons: op.qty_wastage,
-            wastagePercent: op.wastage_percentage,
-          })),
-        totalVouchersCount: vouchers.length,
-      };
-
-      const res = await fetch('/api/ai/chat', {
+      const res = await fetch('/api/v1/agent/interact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: textToSend,
-          history: messages.slice(-8).map((m) => ({ role: m.role, content: m.content })),
-          erpContext,
-          language,
-          model: selectedModel,
-          role: selectedRole,
-          useSearch,
-          useMaps,
-          userLocation: {
-            latitude: 24.7136, // Riyadh coordinates
-            longitude: 46.6753,
-          },
+          prompt: userMessage,
+          current_route: typeof window !== 'undefined' ? window.location.pathname : '/',
+          thread_id: threadId,
         }),
       });
 
@@ -338,39 +290,79 @@ How can I assist you with your operations today?`,
       }
 
       const data = await res.json();
+
+      if (data.status === 'awaiting_approval') {
+        setPendingDraft(data.draft);
+      }
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply || (isAr ? 'تمت معالجة الطلب.' : 'Processed.'),
-        modelUsed: data.modelUsed || selectedModel,
-        webSources: data.webSources,
-        mapSources: data.mapSources,
+        content: data.message || (data.status === 'awaiting_approval'
+          ? (isAr ? 'تم إعداد مسودة العملية وتتطلب اعتمادك للمتابعة.' : 'Draft created. Action requires approval to execute.')
+          : (isAr ? 'تمت معالجة الطلب بنجاح.' : 'Action processed successfully.')),
+        modelUsed: 'OxenGL Operational Intelligence (LangGraph)',
         timestamp: new Date().toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
           hour: '2-digit',
           minute: '2-digit',
         }),
-        suggestedActions: data.suggestedActions,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      console.warn('AI Chat API fallback:', err);
+      console.warn('AI Agent interact API error:', err);
       const fallbackReply: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: isAr
-          ? `بناءً على تدقيق بيانات العمليات الحالية:
-- **إجمالي المبيعات**: ${formatCurrency(kpis.totalSales)} (صافي الربح: ${formatCurrency(kpis.netOperatingProfit)})
-- **معدل الفاقد العام**: ${kpis.overallWastagePercent.toFixed(2)}% بإجمالي فاقد وزن ${formatTonnage(kpis.totalWastageTonnage)}.
-- **تنبيه**: يُوصى بمراجعة تذاكر ميزان الشاحنة 3190 التابعة لمؤسسة النقل السريع لتسجيلها فاقد 1.4 MT طن لعميل يوني بيتون.`
-          : `Audit Summary based on live records:
-- **Total Sales**: ${formatCurrency(kpis.totalSales)} (Net Operating Profit: ${formatCurrency(kpis.netOperatingProfit)})
-- **Wastage Rate**: ${kpis.overallWastagePercent.toFixed(2)}% with total loss of ${formatTonnage(kpis.totalWastageTonnage)}.
-- **Alert**: Recommend inspecting scale tickets for Truck 3190 (Fast Transport) due to 1.4 MT tons loss to UniBeton.`,
+          ? 'تعذر الاتصال بمحرك العمليات الذكي (LangGraph Agent). يرجى التأكد من تشغيل الخادم وتوفر المسار.'
+          : 'Failed to communicate with Operational Intelligence (LangGraph Agent). Please verify backend connection.',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, fallbackReply]);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApproveExecute = async (approved: boolean) => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/agent/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thread_id: threadId,
+          approved,
+        }),
+      });
+      const data = await res.json();
+
+      const execMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message || (approved
+          ? (isAr ? 'تم اعتماد وتنفيذ العملية بنجاح في قاعدة البيانات.' : 'Action successfully committed to the database.')
+          : (isAr ? 'تم إلغاء تنفيذ العملية.' : 'Execution cancelled by user.')),
+        modelUsed: 'OxenGL Operational Intelligence (LangGraph)',
+        timestamp: new Date().toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      };
+      setMessages((prev) => [...prev, execMsg]);
+    } catch (err) {
+      console.error('Agent execute error:', err);
+      const errMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: isAr ? 'فشل تنفيذ الإجراء.' : 'Failed to execute action.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, errMessage]);
+    } finally {
+      setPendingDraft(null);
+      setThreadId("thread_" + Math.random().toString(36).substring(7));
       setLoading(false);
     }
   };
@@ -891,6 +883,37 @@ How can I assist you with your operations today?`,
                   </div>
                 )}
 
+                {/* Pending Draft Action Approval Card */}
+                {pendingDraft && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/30">
+                    <div className="mb-2 flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300 text-xs">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span>{isAr ? 'إجراء يتطلب اعتمادك' : 'Action Requires Approval'}</span>
+                    </div>
+                    <pre className="mb-3 max-h-48 overflow-x-auto overflow-y-auto rounded-lg bg-slate-900 p-2 text-[11px] font-mono text-emerald-400 dark:bg-black/80">
+                      {JSON.stringify(pendingDraft, null, 2)}
+                    </pre>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleApproveExecute(true)}
+                        disabled={loading}
+                        className="flex-1 rounded-lg bg-emerald-600 py-1.5 px-3 font-bold text-white text-xs hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-xs"
+                      >
+                        {isAr ? 'اعتماد وتنفيذ' : 'Approve & Execute'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleApproveExecute(false)}
+                        disabled={loading}
+                        className="flex-1 rounded-lg bg-slate-200 py-1.5 px-3 font-bold text-slate-700 text-xs hover:bg-slate-300 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        {isAr ? 'إلغاء' : 'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div ref={messagesEndRef} />
               </div>
 
@@ -948,9 +971,14 @@ How can I assist you with your operations today?`,
                   <input
                     type="text"
                     value={input}
+                    disabled={loading || !!pendingDraft}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={
-                      isListening
+                      pendingDraft
+                        ? isAr
+                          ? 'يرجى اعتماد أو إلغاء الإجراء أعلاه للمتابعة...'
+                          : 'Please approve or cancel the action above...'
+                        : isListening
                         ? isAr
                           ? 'جاري الاستماع لصوتك...'
                           : 'Listening to your voice...'
@@ -958,13 +986,13 @@ How can I assist you with your operations today?`,
                         ? 'اكتب سؤالك أو استفسارك هنا...'
                         : 'Ask about weighbridge loss, crusher accounts...'
                     }
-                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
+                    className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-orange-500 focus:bg-white focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 disabled:opacity-60"
                   />
 
                   {/* Send Button */}
                   <button
                     type="submit"
-                    disabled={loading || !input.trim()}
+                    disabled={loading || !input.trim() || !!pendingDraft}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md shadow-orange-200 disabled:opacity-40 hover:opacity-95 transition-all dark:shadow-none"
                   >
                     <Send className="h-4 w-4" />

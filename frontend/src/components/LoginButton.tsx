@@ -103,7 +103,7 @@ export const LoginButton: React.FC<LoginButtonProps> = ({
         <label className="block text-xs font-bold text-neutral-300">{isAr ? 'البريد الإلكتروني' : 'Email'}</label>
         <div className="relative">
           <Mail className="absolute start-3 top-3 h-3.5 w-3.5 text-neutral-500" />
-          <input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={`${inputClass} ps-9`} placeholder="name@example.com" />
+          <input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} className={`${inputClass} ps-9`} placeholder={isAr ? 'admin@company.com' : 'admin@company.com'} />
         </div>
 
         <label className="block text-xs font-bold text-neutral-300">{isAr ? 'كلمة المرور' : 'Password'}</label>

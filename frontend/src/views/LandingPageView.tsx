@@ -1226,7 +1226,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                         required
                         value={signupForm.username}
                         onChange={(e) => setSignupForm({ ...signupForm, username: e.target.value })}
-                        placeholder="username"
+                        placeholder={isAr ? 'اسم المستخدم' : 'username'}
                         className="w-full rounded-xl border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
                       />
                     </div>
@@ -1239,7 +1239,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                         required
                         value={signupForm.email}
                         onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
-                        placeholder="user@domain.com"
+                        placeholder={isAr ? 'user@domain.com' : 'user@domain.com'}
                         className="w-full rounded-xl border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
                       />
                     </div>
@@ -1254,7 +1254,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
                         type="tel"
                         value={signupForm.phone}
                         onChange={(e) => setSignupForm({ ...signupForm, phone: e.target.value })}
-                        placeholder="+966 5X XXX XXXX"
+                        placeholder={isAr ? '+966 5X XXX XXXX' : '+966 5X XXX XXXX'}
                         className="w-full rounded-xl border border-gray-800 bg-gray-900 px-3 py-2 text-xs text-white focus:border-orange-500 focus:outline-none"
                       />
                     </div>

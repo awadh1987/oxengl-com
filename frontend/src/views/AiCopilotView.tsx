@@ -171,7 +171,7 @@ export const AiCopilotView: React.FC = () => {
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
           disabled={isProcessing}
-          placeholder="Ask Copilot a natural language ERP question..."
+          placeholder={isAr ? 'اسأل المساعد الذكي أي سؤال عن النظام...' : 'Ask Copilot a natural language ERP question...'}
           className="flex-1 h-10 rounded-lg bg-slate-900 border border-slate-800 px-3 text-sm text-white placeholder-slate-500 focus:border-blue-500 focus:outline-none disabled:opacity-50"
         />
         <button

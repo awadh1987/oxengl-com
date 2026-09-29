@@ -273,7 +273,7 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
               <div className="flex gap-3">
                 <input
                   type="text"
-                  placeholder="e.g. portal.logistics.sa or logistics.company.com"
+                  placeholder={isAr ? 'مثال: portal.logistics.sa أو logistics.company.com' : 'e.g. portal.logistics.sa or logistics.company.com'}
                   value={newDomainInput}
                   onChange={(e) => setNewDomainInput(e.target.value)}
                   className="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"

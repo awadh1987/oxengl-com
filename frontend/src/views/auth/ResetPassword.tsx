@@ -420,7 +420,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="admin@oxengl.com"
+                        placeholder={isAr ? 'admin@oxengl.com' : 'admin@oxengl.com'}
                         className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                       />
                     </div>
@@ -502,7 +502,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                       required
                       value={legacyToken}
                       onChange={(e) => setLegacyToken(e.target.value)}
-                      placeholder="32-byte cryptographic token"
+                      placeholder={isAr ? 'رمز إعادة التعيين (32 حرف)' : '32-byte cryptographic token'}
                       className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 font-mono text-xs text-indigo-200 placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                     />
                   </div>
@@ -524,7 +524,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="••••••••••••"
+                    placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                     className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-10 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                   />
                   <button
@@ -551,7 +551,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                     required
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••••••"
+                    placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                     className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-10 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                   />
                   <button

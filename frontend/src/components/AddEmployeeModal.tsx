@@ -190,7 +190,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 required
                 value={nameAr}
                 onChange={(e) => setNameAr(e.target.value)}
-                placeholder="أحمد بن خالد التميمي"
+                placeholder={isAr ? 'أحمد بن خالد التميمي' : 'Ahmed Al-Tamimi'}
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#F05627] ${
                   isDark
                     ? 'border-slate-700 bg-slate-900/60 text-white placeholder-slate-500'
@@ -208,7 +208,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 type="text"
                 value={nameEn}
                 onChange={(e) => setNameEn(e.target.value)}
-                placeholder="Ahmed Al-Tamimi"
+                placeholder={isAr ? 'أحمد التميمي' : 'Ahmed Al-Tamimi'}
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#F05627] ${
                   isDark
                     ? 'border-slate-700 bg-slate-900/60 text-white placeholder-slate-500'
@@ -255,7 +255,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                 required
                 value={iqamaOrNationalId}
                 onChange={(e) => setIqamaOrNationalId(e.target.value)}
-                placeholder="1092837461"
+                placeholder={isAr ? 'رقم الإقامة: 1092837461' : 'Iqama: 1092837461'}
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-mono font-medium focus:outline-hidden focus:ring-2 focus:ring-[#F05627] ${
                   isDark
                     ? 'border-slate-700 bg-slate-900/60 text-white placeholder-slate-500'

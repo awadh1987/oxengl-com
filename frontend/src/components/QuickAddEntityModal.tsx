@@ -221,7 +221,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="300189452300003"
+                    placeholder={isAr ? '300189452300003' : '300189452300003'}
                     value={taxNumber}
                     onChange={(e) => setTaxNumber(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -233,7 +233,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="+966 50 123 4567"
+                    placeholder={isAr ? '+966 50 123 4567' : '+966 50 123 4567'}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -247,7 +247,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="م. أحمد السالم"
+                    placeholder={isAr ? 'م. أحمد السالم' : 'Ahmed Al-Salem'}
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -259,7 +259,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="الرياض - حي الملز"
+                    placeholder={isAr ? 'الرياض - حي الملز' : 'Riyadh - Malaz District'}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -302,7 +302,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="مصرف الراجحي - SA4280000123608010123456"
+                  placeholder={isAr ? 'مصرف الراجحي - SA4280000123608010123456' : 'Al Rajhi Bank - SA4280000123608010123456'}
                   value={crusherBank}
                   onChange={(e) => setCrusherBank(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -333,7 +333,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="4491-ق ط ب"
+                    placeholder={isAr ? '4491-ق ط ب' : '4491-RSB'}
                     value={truckNo}
                     onChange={(e) => setTruckNo(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
@@ -371,7 +371,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="+966 50 111 2222"
+                    placeholder={isAr ? '+966 50 111 2222' : '+966 50 111 2222'}
                     value={transporterPhone}
                     onChange={(e) => setTransporterPhone(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"

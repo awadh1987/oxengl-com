@@ -220,7 +220,7 @@ export const RegisterGpsTruckModal: React.FC<RegisterGpsTruckModalProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. 864201048123456"
+                  placeholder={isAr ? 'مثال: 864201048123456' : 'e.g. 864201048123456'}
                   value={imei}
                   onChange={(e) => setImei(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono text-white placeholder-slate-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-hidden"
@@ -254,7 +254,7 @@ export const RegisterGpsTruckModal: React.FC<RegisterGpsTruckModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="مثال: سلطان العتيبي"
+                  placeholder={isAr ? 'مثال: سلطان العتيبي' : 'Sultan Al-Otaibi'}
                   value={driverNameAr}
                   onChange={(e) => setDriverNameAr(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
@@ -266,7 +266,7 @@ export const RegisterGpsTruckModal: React.FC<RegisterGpsTruckModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Sultan Al-Otaibi"
+                  placeholder={isAr ? 'سلطان العتيبي' : 'e.g. Sultan Al-Otaibi'}
                   value={driverNameEn}
                   onChange={(e) => setDriverNameEn(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
@@ -280,7 +280,7 @@ export const RegisterGpsTruckModal: React.FC<RegisterGpsTruckModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="مثال: مشروع بوابة الدرعية - الموقع B"
+                  placeholder={isAr ? 'مثال: مشروع بوابة الدرعية - الموقع B' : 'Diriyah Gate Project - Site B'}
                   value={destinationAr}
                   onChange={(e) => setDestinationAr(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"
@@ -292,7 +292,7 @@ export const RegisterGpsTruckModal: React.FC<RegisterGpsTruckModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Diriyah Gate Project - Site B"
+                  placeholder={isAr ? 'مشروع بوابة الدرعية - الموقع B' : 'e.g. Diriyah Gate Project - Site B'}
                   value={destinationEn}
                   onChange={(e) => setDestinationEn(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-600 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-hidden"

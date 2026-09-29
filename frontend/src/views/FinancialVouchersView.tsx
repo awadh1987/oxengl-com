@@ -348,7 +348,7 @@ export const FinancialVouchersView: React.FC = () => {
                   window.dispatchEvent(new Event('popstate'));
                 }
               }}
-              className="group flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
+              className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               title={isAr ? 'دليل الحسابات' : 'Chart of Accounts'}
             >
               <HoverIcon className="h-3.5 w-3.5">
@@ -362,7 +362,7 @@ export const FinancialVouchersView: React.FC = () => {
           <button
             id="bulk-import-vouchers-btn"
             onClick={() => setIsBulkImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 bg-emerald-50/80 px-3.5 py-2 text-xs font-bold text-emerald-900 shadow-xs hover:bg-emerald-100 transition-colors"
+            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-3.5 py-2 text-xs font-bold text-emerald-900 dark:text-emerald-300 shadow-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
             title={isAr ? 'استيراد سندات وحسابات وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
           >
             <HoverIcon className="h-3.5 w-3.5">

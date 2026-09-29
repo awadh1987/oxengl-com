@@ -336,7 +336,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
                 autoFocus
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="Enter 6-digit code"
+                placeholder={isAr ? 'أدخل رمز التحقق المكون من 6 أرقام' : 'Enter 6-digit verification code'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-3 font-mono text-center text-lg tracking-[0.4em] text-emerald-300 placeholder-slate-600 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
               />
             </div>
@@ -548,7 +548,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                 />
               </div>

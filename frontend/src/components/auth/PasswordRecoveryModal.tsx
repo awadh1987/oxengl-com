@@ -201,7 +201,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                     required
                     value={workspaceSlug}
                     onChange={(e) => setWorkspaceSlug(e.target.value.toLowerCase())}
-                    placeholder="meayon-logistics"
+                    placeholder={isAr ? 'meayon-logistics' : 'meayon-logistics'}
                     className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 font-mono text-xs text-indigo-300 outline-none transition focus:border-indigo-400"
                   />
                 </div>
@@ -268,7 +268,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="123456"
+                  placeholder={isAr ? 'رمز التحقق: 123456' : 'Code: 123456'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 text-center font-mono text-base font-black tracking-widest text-emerald-400 outline-none transition focus:border-emerald-400"
                 />
               </div>
@@ -283,7 +283,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                   minLength={10}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white outline-none transition focus:border-indigo-400"
                 />
               </div>
@@ -298,7 +298,7 @@ export const PasswordRecoveryModal: React.FC<PasswordRecoveryModalProps> = ({
                   minLength={10}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 text-xs text-white outline-none transition focus:border-indigo-400"
                 />
               </div>

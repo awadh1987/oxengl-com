@@ -174,7 +174,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
             <span className="hidden h-4 w-px bg-slate-200 md:block" />
             <label className="relative hidden w-72 md:block lg:w-96">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search tenants, licenses, audit logs..." className="w-full rounded-xl border border-slate-200 bg-slate-100 py-1.5 pl-9 pr-3 text-xs text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، الرخصة، أو السجل...' : 'Search tenants, licenses, audit logs...'} className="w-full rounded-xl border border-slate-200 bg-slate-100 py-1.5 pl-9 pr-3 text-xs text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white" />
             </label>
           </div>
 

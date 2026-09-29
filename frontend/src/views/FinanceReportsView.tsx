@@ -839,7 +839,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({ initialM
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 111105"
+                    placeholder={isAr ? 'مثال: 111105' : 'e.g. 111105'}
                     value={newAccount.code}
                     onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
                     className="w-full rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-mono font-bold text-white focus:border-orange-500 focus:outline-none"

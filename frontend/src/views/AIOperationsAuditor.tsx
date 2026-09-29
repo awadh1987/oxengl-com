@@ -539,7 +539,7 @@ export const AIOperationsAuditor: React.FC = () => {
                 onClick={() => setActiveTab(tab.id as AITab)}
                 className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                   isActive
-                    ? 'bg-white text-violet-950 shadow-md'
+                    ? 'bg-white dark:bg-slate-800 text-violet-950 dark:text-violet-200 shadow-md'
                     : 'text-violet-200/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -558,10 +558,10 @@ export const AIOperationsAuditor: React.FC = () => {
           {/* ALWAYS-VISIBLE: Live Anomaly Triage Panel — shows pre-audit discrepancies from live telemetry */}
           <div
             id="live-anomaly-triage-panel"
-            className="rounded-2xl border border-amber-200/80 bg-amber-50/40 p-5 shadow-xs"
+            className="rounded-2xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/20 p-5 shadow-xs"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-              <h3 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+              <h3 className="text-sm font-bold text-amber-950 dark:text-amber-200 flex items-center gap-2">
                 <Zap className="h-4 w-4 text-amber-600 fill-amber-200 shrink-0" />
                 <span>
                   {isAr
@@ -569,7 +569,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     : 'Live Wastage Alerts (>1.5%) — Ready for Immediate Resolution'}
                 </span>
               </h3>
-              <span className="rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 whitespace-nowrap shrink-0">
+              <span className="rounded-full bg-amber-100 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800/50 px-2.5 py-0.5 text-[10px] font-bold text-amber-900 dark:text-amber-300 whitespace-nowrap shrink-0">
                 {liveDiscrepancies.anomalies.length} {isAr ? 'رحلة مرصودة' : 'Detected'}
               </span>
             </div>
@@ -584,7 +584,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     className={`relative rounded-xl border p-4 transition-all ${
                       isFocused
                         ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-400/50 shadow-md'
-                        : 'border-amber-200 bg-white shadow-xs hover:border-amber-400'
+                        : 'border-amber-200 dark:border-amber-800/50 bg-white dark:bg-slate-900 shadow-xs hover:border-amber-400 dark:hover:border-amber-600'
                     }`}
                   >
                     {isFocused && (
@@ -595,27 +595,27 @@ export const AIOperationsAuditor: React.FC = () => {
 
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <div className="flex-1 min-w-0">
-                        <p className="font-bold text-xs text-slate-900 truncate">{anom.title}</p>
+                        <p className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate">{anom.title}</p>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-800">
+                          <span className="rounded bg-rose-100 dark:bg-rose-950/50 px-1.5 py-0.5 text-[9px] font-bold text-rose-800 dark:text-rose-300">
                             {anom.wastage_percentage}% {isAr ? 'فاقد' : 'Loss'}
                           </span>
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-mono text-slate-600">
+                          <span className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[9px] font-mono text-slate-600 dark:text-slate-400">
                             <bdi>{anom.truck_no}</bdi>
                           </span>
                         </div>
                       </div>
-                      <span className="font-mono text-sm font-black text-rose-700 shrink-0">
+                      <span className="font-mono text-sm font-black text-rose-700 dark:text-rose-400 shrink-0">
                         {formatCurrency(anom.loss_value)}
                       </span>
                     </div>
 
-                    <p className="text-[11px] text-slate-600 leading-relaxed mb-3">{anom.details}</p>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">{anom.details}</p>
 
-                    <div className="flex items-center justify-between gap-2 border-t border-amber-100 pt-3">
-                      <div className="text-[10px] text-slate-500 min-w-0">
+                    <div className="flex items-center justify-between gap-2 border-t border-amber-100 dark:border-amber-900/30 pt-3">
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 min-w-0">
                         <span>{isAr ? 'الناقل: ' : 'Carrier: '}</span>
-                        <strong className="text-slate-700">{anom.carrier}</strong>
+                        <strong className="text-slate-700 dark:text-slate-200">{anom.carrier}</strong>
                       </div>
                       <button
                         type="button"
@@ -634,9 +634,9 @@ export const AIOperationsAuditor: React.FC = () => {
           </div>
 
           {/* Natural Language Prompt & Quick Scenarios */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-violet-600" />
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               <span>{isAr ? 'استفسار مخصص لمدقق الذكاء الاصطناعي:' : 'Custom Operational Audit Prompt:'}</span>
             </h3>
 
@@ -650,7 +650,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     : 'Ask the operational auditor... (e.g. Inspect Truck 3190 and verify if shrinkage exceeds 1.5%)'
                 }
                 rows={3}
-                className="w-full rounded-xl border border-slate-200 p-3.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 resize-none"
               />
               <button
                 type="button"
@@ -665,7 +665,7 @@ export const AIOperationsAuditor: React.FC = () => {
 
             {/* Quick Prompts */}
             <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-slate-500">{isAr ? 'سيناريوهات سريعة:' : 'Quick Scenarios:'}</span>
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{isAr ? 'سيناريوهات سريعة:' : 'Quick Scenarios:'}</span>
               {quickScenarios.map((sc, idx) => (
                 <button
                   key={idx}
@@ -673,7 +673,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     setPrompt(sc.query);
                     handleRunAnalysis(sc.query);
                   }}
-                  className="rounded-lg border border-slate-200 bg-slate-50 hover:bg-violet-50 hover:border-violet-300 hover:text-violet-700 px-2.5 py-1 text-[10px] font-medium text-slate-700 transition-all"
+                  className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-violet-50 dark:hover:bg-violet-950/40 hover:border-violet-300 dark:hover:border-violet-600 hover:text-violet-700 dark:hover:text-violet-300 px-2.5 py-1 text-[10px] font-medium text-slate-700 dark:text-slate-300 transition-all"
                 >
                   {isAr ? sc.titleAr : sc.titleEn}
                 </button>
@@ -683,7 +683,7 @@ export const AIOperationsAuditor: React.FC = () => {
 
           {/* Backend AI Vector Search Grounding Output */}
           {backendAiOutput && (
-            <div className="rounded-2xl border border-violet-200 bg-violet-50/50 p-4 text-xs text-violet-950 shadow-xs">
+            <div className="rounded-2xl border border-violet-200 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-950/20 p-4 text-xs text-violet-950 dark:text-violet-200 shadow-xs">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <span className="flex items-center gap-1.5 font-bold text-violet-900">
                   <Brain className="h-4 w-4 text-violet-600 shrink-0" />
@@ -698,7 +698,7 @@ export const AIOperationsAuditor: React.FC = () => {
               <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-mono">
                 <span>Sources:</span>
                 {backendAiOutput.data_sources.map((s, i) => (
-                  <span key={i} className="rounded bg-white/80 border border-violet-200 px-1.5 py-0.5 whitespace-nowrap shrink-0">
+                  <span key={i} className="rounded bg-white/80 dark:bg-slate-800/80 border border-violet-200 dark:border-violet-800/50 px-1.5 py-0.5 whitespace-nowrap shrink-0">
                     {s}
                   </span>
                 ))}
@@ -710,10 +710,10 @@ export const AIOperationsAuditor: React.FC = () => {
           {analysisResult && (
             <div className="space-y-6" ref={anomalyCardRef}>
               {/* Executive Summary Card */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-100 pb-3">
-                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-violet-600 shrink-0" />
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-violet-600 dark:text-violet-400 shrink-0" />
                     <span>{isAr ? 'الملخص التنفيذي للتدقيق التشغيلي' : 'Executive Audit Summary'}</span>
                   </h3>
                   <div className="flex items-center gap-2">
@@ -723,7 +723,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-slate-700 leading-relaxed">
+                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
                   {isAr ? analysisResult.executiveSummaryAr : analysisResult.executiveSummaryEn}
                 </p>
               </div>
@@ -750,12 +750,12 @@ export const AIOperationsAuditor: React.FC = () => {
                         className={`relative rounded-2xl border p-4.5 transition-all ${
                           isFocused
                             ? 'border-orange-500 bg-orange-50/40 ring-2 ring-orange-400/50 shadow-md'
-                            : 'border-rose-200/80 bg-white shadow-xs hover:border-rose-300'
+                            : 'border-rose-200/80 dark:border-rose-900/40 bg-white dark:bg-slate-900 shadow-xs hover:border-rose-300 dark:hover:border-rose-700'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-slate-900">{anom.title}</span>
+                            <span className="font-bold text-xs text-slate-900 dark:text-slate-100">{anom.title}</span>
                             <span className="rounded-md bg-rose-100 px-2 py-0.5 text-[9px] font-bold text-rose-800">
                               {anom.wastage_percentage}% {isAr ? 'فاقد' : 'Loss'}
                             </span>
@@ -765,18 +765,18 @@ export const AIOperationsAuditor: React.FC = () => {
                           </span>
                         </div>
 
-                        <p className="text-[11px] text-slate-600 leading-relaxed mb-3">{anom.details}</p>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-3">{anom.details}</p>
 
-                        <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3 mb-3">
-                          <p className="text-[10px] font-bold text-rose-900 mb-1">
+                        <div className="rounded-xl border border-rose-100 dark:border-rose-900/40 bg-rose-50/50 dark:bg-rose-950/20 p-3 mb-3">
+                          <p className="text-[10px] font-bold text-rose-900 dark:text-rose-300 mb-1">
                             {isAr ? 'الإجراء المقترح من الذكاء الاصطناعي:' : 'Recommended AI Resolution:'}
                           </p>
-                          <p className="text-[11px] text-rose-800">{anom.actionPlan}</p>
+                          <p className="text-[11px] text-rose-800 dark:text-rose-300">{anom.actionPlan}</p>
                         </div>
 
                         {/* Actionable Financial Resolution Button */}
-                        <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                          <span className="text-[10px] text-slate-500">
+                        <div className="flex items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
                             {isAr ? 'الناقل المسؤول:' : 'Carrier:'} <strong>{anom.carrier}</strong>
                           </span>
                           <button
@@ -795,33 +795,33 @@ export const AIOperationsAuditor: React.FC = () => {
               </div>
 
               {/* Flagged Transporters Table */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <Truck className="h-4 w-4 text-orange-600" />
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                   <span>{isAr ? 'تصنيف أداء مزودي الخدمات اللوجستية وتجاوزات الفاقد' : 'Transporter Wastage Compliance'}</span>
                 </h3>
 
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs text-right">
                     <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+                      <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300">
                         <th className="py-2.5 px-3">{isAr ? 'الناقل اللوجستي' : 'Transporter'}</th>
                         <th className="py-2.5 px-3">{isAr ? 'إجمالي الفاقد (MT طن)' : 'Total Loss (MT طن)'}</th>
                         <th className="py-2.5 px-3">{isAr ? 'نسبة الفاقد' : 'Loss %'}</th>
                         <th className="py-2.5 px-3">{isAr ? 'تقييم الامتثال' : 'Compliance Assessment'}</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {analysisResult.wastageAudit.transportersWithExcessiveLoss.map((t: any, idx: number) => (
-                        <tr key={idx} className="hover:bg-slate-50/60">
-                          <td className="py-2.5 px-3 font-semibold text-slate-900">{t.name}</td>
-                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{t.lossTons} MT طن</td>
+                        <tr key={idx} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/50">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{t.name}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-800 dark:text-slate-200">{t.lossTons} MT طن</td>
                           <td className="py-2.5 px-3">
                             <span className="rounded bg-rose-100 px-2 py-0.5 font-bold text-rose-800 text-[10px] whitespace-nowrap shrink-0">
                               {t.percentage}%
                             </span>
                           </td>
-                          <td className="py-2.5 px-3 text-slate-600">{t.flagReason}</td>
+                          <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">{t.flagReason}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -830,14 +830,14 @@ export const AIOperationsAuditor: React.FC = () => {
               </div>
 
               {/* Strategic Recommendations */}
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/30 p-5 shadow-xs">
-                <h3 className="text-sm font-bold text-emerald-950 mb-3 flex items-center gap-2">
+              <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50/30 dark:bg-emerald-950/20 p-5 shadow-xs">
+                <h3 className="text-sm font-bold text-emerald-950 dark:text-emerald-200 mb-3 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                   <span>{isAr ? 'التوصيات التشغيلية والإجراءات التصحيحية الفورية' : 'Corrective Action Plan'}</span>
                 </h3>
                 <div className="space-y-2">
                   {analysisResult.strategicRecommendations.map((rec: string, idx: number) => (
-                    <div key={idx} className="flex items-start gap-2.5 text-xs text-emerald-900">
+                    <div key={idx} className="flex items-start gap-2.5 text-xs text-emerald-900 dark:text-emerald-200">
                       <span className="font-black text-emerald-600">✓</span>
                       <p>{rec}</p>
                     </div>
@@ -852,21 +852,21 @@ export const AIOperationsAuditor: React.FC = () => {
       {/* TAB 2: Formal Notice Drafter */}
       {activeTab === 'letter-drafter' && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-orange-600" />
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-2">
+              <FileCheck className="h-4 w-4 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'إعداد وصياغة خطاب رسمي ذكي' : 'Configure & Generate Official Letter'}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mb-4">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   {isAr ? 'نوع الخطاب المطلوب' : 'Letter Purpose'}
                 </label>
                 <select
                   value={letterType}
                   onChange={(e) => setLetterType(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
                 >
                   <option value="Service Supplier Shrinkage Dispute">
                     {isAr ? 'إشعار خصم فاقد وتلاعب وزن' : 'Shrinkage & Tare Weight Dispute'}
@@ -881,13 +881,13 @@ export const AIOperationsAuditor: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   {isAr ? 'فئة الجهة المستلمة' : 'Recipient Entity Type'}
                 </label>
                 <select
                   value={letterRecipientType}
                   onChange={(e) => setLetterRecipientType(e.target.value as any)}
-                  className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
                 >
                   <option value="Transporter">{isAr ? 'مورد خدمة (ناقل)' : 'Service Supplier (Transporter)'}</option>
                   <option value="Crusher">{isAr ? 'مورد مواد' : 'Material Supplier'}</option>
@@ -896,14 +896,14 @@ export const AIOperationsAuditor: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                   {isAr ? 'الطرف المستلم المحدد' : 'Selected Party'}
                 </label>
                 {letterRecipientType === 'Transporter' ? (
                   <select
                     value={selectedTransporter}
                     onChange={(e) => setSelectedTransporter(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
                   >
                     {transporters.map((t) => (
                       <option key={t.id} value={t.transporterName}>
@@ -915,7 +915,7 @@ export const AIOperationsAuditor: React.FC = () => {
                   <select
                     value={selectedCrusher}
                     onChange={(e) => setSelectedCrusher(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
                   >
                     {crushers.map((c) => (
                       <option key={c.id} value={c.crusherName}>
@@ -927,7 +927,7 @@ export const AIOperationsAuditor: React.FC = () => {
                   <select
                     value={selectedCustomer}
                     onChange={(e) => setSelectedCustomer(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 p-2 text-xs font-semibold"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
                   >
                     {customers.map((c) => (
                       <option key={c.id} value={c.customerName}>
@@ -950,13 +950,13 @@ export const AIOperationsAuditor: React.FC = () => {
           </div>
 
           {generatedLetter && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl print:m-0 print:border-none">
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-8 shadow-xl print:m-0 print:border-none">
               <OfficialLetterheadHeader
                 documentTypeAr="إشعار رسمي بخصم فاقد التوريد"
                 documentTypeEn="OFFICIAL DISPUTE NOTICE"
                 isAr={isAr}
               />
-              <pre className="my-6 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-800">
+              <pre className="my-6 whitespace-pre-wrap font-sans text-xs leading-relaxed text-slate-800 dark:text-slate-200">
                 {generatedLetter}
               </pre>
               <OfficialLetterheadFooter />
@@ -968,7 +968,7 @@ export const AIOperationsAuditor: React.FC = () => {
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
                 >
                   {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                   <span>{copied ? (isAr ? 'تم النسخ' : 'Copied') : (isAr ? 'نسخ النص' : 'Copy Text')}</span>
@@ -989,9 +989,9 @@ export const AIOperationsAuditor: React.FC = () => {
       {/* TAB 3: Maps Grounding */}
       {activeTab === 'maps-grounding' && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-violet-600" />
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               <span>{isAr ? 'استعلام مواقع الموازين ومسارات النقل (Google Maps Grounding):' : 'Weighbridge & Scale Grounding:'}</span>
             </h3>
             <div className="flex gap-2">
@@ -999,7 +999,7 @@ export const AIOperationsAuditor: React.FC = () => {
                 type="text"
                 value={mapsQuery}
                 onChange={(e) => setMapsQuery(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 focus:border-violet-500 focus:outline-none"
+                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-violet-500 focus:outline-none"
               />
               <button
                 onClick={() => handleRunMapsGrounding()}
@@ -1013,8 +1013,8 @@ export const AIOperationsAuditor: React.FC = () => {
           </div>
 
           {mapsResult && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <p className="text-xs text-slate-800 leading-relaxed mb-4">{mapsResult.answer}</p>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed mb-4">{mapsResult.answer}</p>
               {mapsResult.places && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {mapsResult.places.map((p, idx) => (
@@ -1023,9 +1023,9 @@ export const AIOperationsAuditor: React.FC = () => {
                       href={p.uri}
                       target="_blank"
                       rel="noreferrer"
-                      className="group flex items-center justify-between rounded-xl border border-slate-200 p-3 hover:border-violet-500 hover:bg-violet-50/30 transition-all text-xs"
+                      className="group flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 p-3 hover:border-violet-500 hover:bg-violet-50/30 dark:hover:bg-violet-950/30 transition-all text-xs"
                     >
-                      <span className="font-bold text-slate-800 group-hover:text-violet-700">{p.title}</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-violet-700 dark:group-hover:text-violet-300">{p.title}</span>
                       <ExternalLink className="h-3.5 w-3.5 text-slate-400 group-hover:text-violet-600" />
                     </a>
                   ))}
@@ -1039,9 +1039,9 @@ export const AIOperationsAuditor: React.FC = () => {
       {/* TAB 4: Search Grounding */}
       {activeTab === 'search-grounding' && (
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
-              <Globe className="h-4 w-4 text-indigo-600" />
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2 flex items-center gap-2">
+              <Globe className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               <span>{isAr ? 'الربط المباشر بلوائح هيئة النقل وأسعار الطاقة (Google Search Grounding):' : 'TGA Regulatory Grounding:'}</span>
             </h3>
             <div className="flex gap-2">
@@ -1049,7 +1049,7 @@ export const AIOperationsAuditor: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 rounded-xl border border-slate-200 p-2.5 text-xs text-slate-900 focus:border-indigo-500 focus:outline-none"
+                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:outline-none"
               />
               <button
                 onClick={() => handleRunSearchGrounding()}
@@ -1063,8 +1063,8 @@ export const AIOperationsAuditor: React.FC = () => {
           </div>
 
           {searchResult && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-              <p className="text-xs text-slate-800 leading-relaxed mb-4">{searchResult.answer}</p>
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed mb-4">{searchResult.answer}</p>
               {searchResult.sources && (
                 <div className="flex flex-wrap gap-2">
                   {searchResult.sources.map((s, idx) => (
@@ -1073,7 +1073,7 @@ export const AIOperationsAuditor: React.FC = () => {
                       href={s.uri}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:text-indigo-600 hover:border-indigo-300 transition-all"
+                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-2.5 py-1 text-[11px] font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600 transition-all"
                     >
                       <ExternalLink className="h-3 w-3" />
                       <span>{s.title}</span>

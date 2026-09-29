@@ -191,7 +191,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
                 required
                 value={form.slug}
                 onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}
-                placeholder="meayon-logistics"
+                placeholder={isAr ? 'meayon-logistics' : 'meayon-logistics'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 font-mono text-xs text-indigo-300 placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
               />
             </div>
@@ -208,7 +208,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
               maxLength={10}
               value={form.crNumber}
               onChange={(e) => setForm({ ...form, crNumber: e.target.value.replace(/\D/g, '') })}
-              placeholder="1010998877"
+              placeholder={isAr ? 'رقم السجل التجاري: 1010998877' : 'CR No: 1010998877'}
               className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 font-mono text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
             />
           </div>
@@ -224,7 +224,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
               maxLength={15}
               value={form.vatNumber}
               onChange={(e) => setForm({ ...form, vatNumber: e.target.value.replace(/\D/g, '') })}
-              placeholder="300998877600003"
+              placeholder={isAr ? 'الرقم الضريبي: 300998877600003' : 'VAT: 300998877600003'}
               className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3.5 py-2.5 font-mono text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
             />
           </div>
@@ -260,7 +260,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
                 required
                 value={form.adminPhone}
                 onChange={(e) => setForm({ ...form, adminPhone: e.target.value })}
-                placeholder="0551234567"
+                placeholder={isAr ? '0551234567' : '0551234567'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 ps-9 pe-3 py-2.5 font-mono text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
               />
             </div>
@@ -278,7 +278,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
                 required
                 value={form.adminEmail}
                 onChange={(e) => setForm({ ...form, adminEmail: e.target.value })}
-                placeholder="admin@company.com"
+                placeholder={isAr ? 'admin@company.com' : 'admin@company.com'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 ps-9 pe-3 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
               />
             </div>
@@ -297,7 +297,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
                 minLength={10}
                 value={form.adminPassword}
                 onChange={(e) => setForm({ ...form, adminPassword: e.target.value })}
-                placeholder="••••••••••••"
+                placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 ps-9 pe-3 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
               />
             </div>
@@ -316,7 +316,7 @@ export const TenantRegistrationForm: React.FC<TenantRegistrationFormProps> = ({
                 minLength={10}
                 value={form.confirmPassword}
                 onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                placeholder="••••••••••••"
+                placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-950 ps-9 pe-3 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
               />
             </div>

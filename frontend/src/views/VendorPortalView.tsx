@@ -273,7 +273,7 @@ export const VendorPortalView: React.FC = () => {
                     required
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="supplier@vendor.com"
+                    placeholder={isAr ? 'supplier@vendor.com' : 'supplier@vendor.com'}
                     className="w-full px-3 py-2 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -286,7 +286,7 @@ export const VendorPortalView: React.FC = () => {
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={isAr ? '••••••••' : '••••••••'}
                     className="w-full px-3 py-2 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -316,7 +316,7 @@ export const VendorPortalView: React.FC = () => {
                     required
                     value={regCompanyName}
                     onChange={(e) => setRegCompanyName(e.target.value)}
-                    placeholder="شركة الأفق للتوريدات"
+                    placeholder={isAr ? 'شركة الأفق للتوريدات' : 'Horizon Supplies Co.'}
                     className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -329,7 +329,7 @@ export const VendorPortalView: React.FC = () => {
                     required
                     value={regContactName}
                     onChange={(e) => setRegContactName(e.target.value)}
-                    placeholder="م. أحمد السالم"
+                    placeholder={isAr ? 'م. أحمد السالم' : 'Ahmed Al-Salem'}
                     className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -342,7 +342,7 @@ export const VendorPortalView: React.FC = () => {
                       type="text"
                       value={regCr}
                       onChange={(e) => setRegCr(e.target.value)}
-                      placeholder="1010XXXXXX"
+                      placeholder={isAr ? '1010XXXXXX' : '1010XXXXXX'}
                       className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                     />
                   </div>
@@ -354,7 +354,7 @@ export const VendorPortalView: React.FC = () => {
                       type="text"
                       value={regVat}
                       onChange={(e) => setRegVat(e.target.value)}
-                      placeholder="3000XXXXXXXX"
+                      placeholder={isAr ? '3000XXXXXXXX' : '3000XXXXXXXX'}
                       className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                     />
                   </div>
@@ -368,7 +368,7 @@ export const VendorPortalView: React.FC = () => {
                     required
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
-                    placeholder="rfq@vendor.com"
+                    placeholder={isAr ? 'rfq@vendor.com' : 'rfq@vendor.com'}
                     className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -380,7 +380,7 @@ export const VendorPortalView: React.FC = () => {
                     type="tel"
                     value={regMobile}
                     onChange={(e) => setRegMobile(e.target.value)}
-                    placeholder="+966 50 XXX XXXX"
+                    placeholder={isAr ? '+966 50 XXX XXXX' : '+966 50 XXX XXXX'}
                     className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -394,7 +394,7 @@ export const VendorPortalView: React.FC = () => {
                     minLength={8}
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={isAr ? '••••••••' : '••••••••'}
                     className="w-full px-3 py-1.5 text-sm rounded-lg border bg-transparent focus:ring-2 focus:ring-amber-500 outline-none border-slate-300 dark:border-slate-700"
                   />
                 </div>

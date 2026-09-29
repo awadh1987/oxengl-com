@@ -385,7 +385,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
                         <input
                           type="text"
                           required
-                          placeholder="e.g. Install IoT Telematics Sensors"
+                          placeholder={isAr ? 'مثال: تركيب أجهزة تتبع IoT' : 'e.g. Install IoT Telematics Sensors'}
                           value={row.task_name}
                           onChange={(e) => {
                             const updated = [...batchRows];

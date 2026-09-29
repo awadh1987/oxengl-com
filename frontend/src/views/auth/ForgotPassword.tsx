@@ -166,7 +166,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
                   autoFocus
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@oxengl.com"
+                  placeholder={isAr ? 'admin@oxengl.com' : 'admin@oxengl.com'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 text-xs text-white placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                 />
               </div>
@@ -188,7 +188,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
                   type="text"
                   value={workspaceSlug}
                   onChange={(e) => setWorkspaceSlug(e.target.value.toLowerCase())}
-                  placeholder="master"
+                  placeholder={isAr ? 'معرف المنشأة' : 'master'}
                   className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-2.5 font-mono text-xs text-indigo-300 placeholder-slate-500 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
                 />
               </div>

@@ -497,7 +497,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               dir="rtl"
               value={formData.nameAr}
               onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-              placeholder="اسم المنشأة بالعربية (مثال: شركة التطوير اللوجستي)"
+              placeholder={isAr ? 'اسم المنشأة بالعربية (مثال: شركة التطوير اللوجستي)' : 'Company name in Arabic'}
               className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none text-right font-medium unicode-bidi-isolate transition-colors"
               required
             />
@@ -514,7 +514,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               dir="ltr"
               value={formData.nameEn}
               onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-              placeholder="Company name in English (e.g. Logistics Development Co.)"
+              placeholder={isAr ? 'اسم المنشأة بالإنجليزية' : 'Company name in English (e.g. Logistics Development Co.)'}
               className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#030712] border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none text-left font-medium unicode-bidi-isolate transition-colors"
               required
             />
@@ -599,7 +599,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                   dir="ltr"
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  placeholder="company-workspace"
+                  placeholder={isAr ? 'معرف المنشأة' : 'company-workspace'}
                   className="w-full px-3.5 py-2 sm:px-4 sm:py-2.5 bg-transparent text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate"
                   required
                 />
@@ -643,7 +643,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                   disabled={subscriptionTier !== 'enterprise'}
                   value={customDomain}
                   onChange={(e) => setCustomDomain(e.target.value)}
-                  placeholder="erp.company.com"
+                  placeholder={isAr ? 'erp.company.com' : 'erp.company.com'}
                   className="w-full px-3 py-2 bg-slate-950 border border-cyan-500/40 focus:border-cyan-400 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                   required={domainMode === 'custom'}
                 />
@@ -672,7 +672,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               dir="ltr"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="admin@company.com"
+              placeholder={isAr ? 'admin@company.com' : 'admin@company.com'}
               className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
               required
             />
@@ -689,7 +689,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               dir="ltr"
               value={adminPassword}
               onChange={(e) => setAdminPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder={isAr ? '••••••••••••' : '••••••••••••'}
               className="w-full px-3.5 py-2.5 sm:px-4 sm:py-3 bg-slate-950 border border-slate-800 focus:border-cyan-500 rounded-xl text-sm text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors"
               required
             />
@@ -776,7 +776,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbHost}
                       onChange={(e) => setExternalDbHost(e.target.value)}
-                      placeholder="db.company.com or 10.0.0.5"
+                      placeholder={isAr ? 'db.company.com أو 10.0.0.5' : 'db.company.com or 10.0.0.5'}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                       required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
@@ -791,7 +791,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbPort}
                       onChange={(e) => setExternalDbPort(e.target.value)}
-                      placeholder="5432"
+                      placeholder={isAr ? '5432' : '5432'}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                     />
                   </div>
@@ -807,7 +807,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     disabled={subscriptionTier !== 'enterprise'}
                     value={externalDbName}
                     onChange={(e) => setExternalDbName(e.target.value)}
-                    placeholder="company_enterprise_db"
+                    placeholder={isAr ? 'company_enterprise_db' : 'company_enterprise_db'}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                     required={useExternalDb && subscriptionTier === 'enterprise'}
                   />
@@ -824,7 +824,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbUser}
                       onChange={(e) => setExternalDbUser(e.target.value)}
-                      placeholder="postgres_admin"
+                      placeholder={isAr ? 'postgres_admin' : 'postgres_admin'}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                       required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
@@ -839,7 +839,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       disabled={subscriptionTier !== 'enterprise'}
                       value={externalDbPassword}
                       onChange={(e) => setExternalDbPassword(e.target.value)}
-                      placeholder="••••••••••••"
+                      placeholder={isAr ? '••••••••••••' : '••••••••••••'}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 focus:border-cyan-500 rounded-lg text-xs text-slate-100 placeholder:text-slate-600 outline-none font-mono unicode-bidi-isolate transition-colors disabled:cursor-not-allowed"
                       required={useExternalDb && subscriptionTier === 'enterprise'}
                     />
@@ -998,7 +998,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     </label>
                     <input
                       type="text"
-                      placeholder="4000 1234 5678 9010"
+                      placeholder={isAr ? '4000 1234 5678 9010' : '4000 1234 5678 9010'}
                       value={cardNumber}
                       onChange={(e) => setCardNumber(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
@@ -1011,7 +1011,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       </label>
                       <input
                         type="text"
-                        placeholder="MM/YY"
+                        placeholder={isAr ? 'MM/YY' : 'MM/YY'}
                         value={cardExpiry}
                         onChange={(e) => setCardExpiry(e.target.value)}
                         className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"
@@ -1023,7 +1023,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                       </label>
                       <input
                         type="password"
-                        placeholder="•••"
+                        placeholder={isAr ? '•••' : '•••'}
                         maxLength={4}
                         value={cardCvc}
                         onChange={(e) => setCardCvc(e.target.value)}
@@ -1049,7 +1049,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. TRX-88421098"
+                      placeholder={isAr ? 'مثال: TRX-88421098' : 'e.g. TRX-88421098'}
                       value={bankWireRef}
                       onChange={(e) => setBankWireRef(e.target.value)}
                       className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-white font-mono outline-none focus:border-cyan-500"

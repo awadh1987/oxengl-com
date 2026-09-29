@@ -345,7 +345,7 @@ export const SuperAdminTenantsView: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search by tenant name, slug..."
+              placeholder={isAr ? 'بحث باسم المنشأة أو المعرف...' : 'Search by tenant name, slug...'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500"

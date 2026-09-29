@@ -421,7 +421,7 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Eastern Province Logistics Terminal Setup"
+                  placeholder={isAr ? 'مثال: إنشاء محطة لوجستية في المنطقة الشرقية' : 'e.g. Eastern Province Logistics Terminal Setup'}
                   value={projectName}
                   onChange={(e) => setProjectName(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
@@ -478,7 +478,7 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
                 <label className="block text-xs font-medium text-slate-300 mb-1">Scope of Work Narrative</label>
                 <textarea
                   rows={3}
-                  placeholder="Outline high-level deliverables, regulatory guidelines, and technical parameters..."
+                  placeholder={isAr ? 'حدد المخرجات الرئيسية والمتطلبات التنظيمية والمعايير الفنية...' : 'Outline high-level deliverables, regulatory guidelines, and technical parameters...'}
                   value={scopeText}
                   onChange={(e) => setScopeText(e.target.value)}
                   className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 resize-none"

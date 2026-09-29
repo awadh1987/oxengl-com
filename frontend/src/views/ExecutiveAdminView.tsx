@@ -724,7 +724,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       type="text"
                       value={brandConfig.ceoSignatureUrl || ''}
                       onChange={(e) => updateBrandConfig({ ceoSignatureUrl: e.target.value })}
-                      placeholder="https://example.com/signature.png"
+                      placeholder={isAr ? 'https://example.com/signature.png' : 'https://example.com/signature.png'}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -764,7 +764,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       type="text"
                       value={brandConfig.companyStampUrl || ''}
                       onChange={(e) => updateBrandConfig({ companyStampUrl: e.target.value })}
-                      placeholder="https://example.com/stamp.png"
+                      placeholder={isAr ? 'https://example.com/stamp.png' : 'https://example.com/stamp.png'}
                       className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-mono text-slate-900 focus:outline-none"
                     />
                   </div>
@@ -1281,7 +1281,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.sloganAr || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, sloganAr: e.target.value })}
-                        placeholder="الريادة في توريد المواد الإنشائية وأسطول النقل الثقيل"
+                        placeholder={isAr ? 'الريادة في توريد المواد الإنشائية وأسطول النقل الثقيل' : 'Pioneering Heavy Transport & Quarry Supply'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1293,7 +1293,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.sloganEn || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, sloganEn: e.target.value })}
-                        placeholder="Pioneering Heavy Transport & Quarry Supply"
+                        placeholder={isAr ? 'الريادة في توريد المواد الإنشائية' : 'Pioneering Heavy Transport & Quarry Supply'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1364,7 +1364,7 @@ export const ExecutiveAdminView: React.FC = () => {
                           type="text"
                           value={brandForm.customLogoUrl || ''}
                           onChange={(e) => setBrandForm({ ...brandForm, customLogoUrl: e.target.value })}
-                          placeholder="https://example.com/logo.png"
+                          placeholder={isAr ? 'https://example.com/logo.png' : 'https://example.com/logo.png'}
                           className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono text-slate-900 focus:bg-white focus:outline-none"
                         />
                       </div>
@@ -1443,7 +1443,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageBadgeAr || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageBadgeAr: e.target.value })}
-                        placeholder="المنظومة الرقمية الرائدة في توريد المواد الإنشائية"
+                        placeholder={isAr ? 'المنظومة الرقمية الرائدة في توريد المواد الإنشائية' : 'Premier Heavy Transport & Quarry ERP'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1455,7 +1455,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageBadgeEn || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageBadgeEn: e.target.value })}
-                        placeholder="Premier Heavy Transport & Quarry ERP"
+                        placeholder={isAr ? 'المنظومة الرقمية الرائدة' : 'Premier Heavy Transport & Quarry ERP'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1471,7 +1471,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageHeroTitleAr || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageHeroTitleAr: e.target.value })}
-                        placeholder="الريادة في أسطول النقل الثقيل وتوريدات الكسارات والمشاريع"
+                        placeholder={isAr ? 'الريادة في أسطول النقل الثقيل وتوريدات الكسارات والمشاريع' : 'Pioneering Heavy Transport Fleet & Quarry Material Supply'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1483,7 +1483,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageHeroTitleEn || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageHeroTitleEn: e.target.value })}
-                        placeholder="Pioneering Heavy Transport Fleet & Quarry Material Supply"
+                        placeholder={isAr ? 'الريادة في النقل الثقيل وتوريد المحاجر' : 'Pioneering Heavy Transport Fleet & Quarry Material Supply'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1498,7 +1498,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       rows={2}
                       value={brandForm.homepageHeroSubtitleAr || ''}
                       onChange={(e) => setBrandForm({ ...brandForm, homepageHeroSubtitleAr: e.target.value })}
-                      placeholder="تدير شركة ميون للمقاولات المحدودة دورة لوجستية متكاملة تشمل توريد الركام والدفان والبحص..."
+                      placeholder={isAr ? 'تدير شركة ميون للمقاولات المحدودة دورة لوجستية متكاملة تشمل توريد الركام والدفان والبحص...' : 'Meayon Economic Contracting Co. Ltd. manages a complete end-to-end operational lifecycle...'}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 focus:bg-white focus:outline-none"
                     />
                   </div>
@@ -1511,7 +1511,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       rows={2}
                       value={brandForm.homepageHeroSubtitleEn || ''}
                       onChange={(e) => setBrandForm({ ...brandForm, homepageHeroSubtitleEn: e.target.value })}
-                      placeholder="Meayon Economic Contracting Co. Ltd. manages a complete end-to-end operational lifecycle..."
+                      placeholder={isAr ? 'تدير شركة ميون دورة لوجستية متكاملة...' : 'Meayon Economic Contracting Co. Ltd. manages a complete end-to-end operational lifecycle...'}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 focus:bg-white focus:outline-none"
                     />
                   </div>
@@ -1526,7 +1526,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageAnnualTonnage || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageAnnualTonnage: e.target.value })}
-                        placeholder="+500,000"
+                        placeholder={isAr ? '+500,000' : '+500,000'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1538,7 +1538,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageFleetCount || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageFleetCount: e.target.value })}
-                        placeholder="+120"
+                        placeholder={isAr ? '+120' : '+120'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1550,7 +1550,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.homepageCrushersCount || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, homepageCrushersCount: e.target.value })}
-                        placeholder="+25"
+                        placeholder={isAr ? '+25' : '+25'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1565,7 +1565,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       type="text"
                       value={brandForm.homepageAboutTitleAr || ''}
                       onChange={(e) => setBrandForm({ ...brandForm, homepageAboutTitleAr: e.target.value })}
-                      placeholder="حوكمة تشغيلية وأمان مالي رقمي بمقاييس عالمية"
+                      placeholder={isAr ? 'حوكمة تشغيلية وأمان مالي رقمي بمقاييس عالمية' : 'Operational governance & digital financial security'}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                     />
                   </div>
@@ -1578,7 +1578,7 @@ export const ExecutiveAdminView: React.FC = () => {
                       rows={2}
                       value={brandForm.homepageAboutDescriptionAr || ''}
                       onChange={(e) => setBrandForm({ ...brandForm, homepageAboutDescriptionAr: e.target.value })}
-                      placeholder="تلتزم شركة ميون للمقاولات المحدودة بأعلى معايير الرقابة والشفافية عبر نظام سجلات التدقيق الشامل..."
+                      placeholder={isAr ? 'تلتزم شركة ميون للمقاولات المحدودة بأعلى معايير الرقابة والشفافية عبر نظام سجلات التدقيق الشامل...' : 'Meayon adheres to the highest standards of governance and transparency via comprehensive audit logs...'}
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 focus:bg-white focus:outline-none"
                     />
                   </div>
@@ -1608,7 +1608,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.phone}
                         onChange={(e) => setBrandForm({ ...brandForm, phone: e.target.value })}
-                        placeholder="+966 55 588 3321"
+                        placeholder={isAr ? '+966 55 588 3321' : '+966 55 588 3321'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1620,7 +1620,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="email"
                         value={brandForm.email}
                         onChange={(e) => setBrandForm({ ...brandForm, email: e.target.value })}
-                        placeholder="info@meayon.com"
+                        placeholder={isAr ? 'info@meayon.com' : 'info@meayon.com'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1635,7 +1635,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.addressAr}
                         onChange={(e) => setBrandForm({ ...brandForm, addressAr: e.target.value })}
-                        placeholder="الرياض - طريق الملك فهد - حي العليا"
+                        placeholder={isAr ? 'الرياض - طريق الملك فهد - حي العليا' : 'Riyadh, King Fahd Rd, Olaya District'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1647,7 +1647,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.addressEn}
                         onChange={(e) => setBrandForm({ ...brandForm, addressEn: e.target.value })}
-                        placeholder="Riyadh, King Fahd Rd, Olaya District"
+                        placeholder={isAr ? 'الرياض - حي العليا' : 'Riyadh, King Fahd Rd, Olaya District'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1662,7 +1662,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.workingHoursAr || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, workingHoursAr: e.target.value })}
-                        placeholder="السبت - الخميس: 7:00 ص - 6:00 م"
+                        placeholder={isAr ? 'السبت - الخميس: 7:00 ص - 6:00 م' : 'Sat - Thu: 7:00 AM - 6:00 PM'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>
@@ -1674,7 +1674,7 @@ export const ExecutiveAdminView: React.FC = () => {
                         type="text"
                         value={brandForm.workingHoursEn || ''}
                         onChange={(e) => setBrandForm({ ...brandForm, workingHoursEn: e.target.value })}
-                        placeholder="Sat - Thu: 7:00 AM - 6:00 PM"
+                        placeholder={isAr ? 'السبت - الخميس' : 'Sat - Thu: 7:00 AM - 6:00 PM'}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none"
                       />
                     </div>

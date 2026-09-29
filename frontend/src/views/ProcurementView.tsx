@@ -1281,7 +1281,7 @@ export const ProcurementView: React.FC = () => {
                   type="text"
                   name="title"
                   required
-                  placeholder="توريد خرسانة إسفلتية ساخنة للمشروع الجنوبي"
+                  placeholder={isAr ? 'توريد خرسانة إسفلتية ساخنة للمشروع الجنوبي' : 'Hot asphalt concrete supply for southern project'}
                   className="w-full px-3 py-2 text-xs rounded-lg border bg-transparent border-slate-300 dark:border-slate-700"
                 />
               </div>
@@ -1324,14 +1324,14 @@ export const ProcurementView: React.FC = () => {
                     type="text"
                     name="item_code"
                     defaultValue="MAT-ASPH-01"
-                    placeholder="رمز المادة / Item Code"
+                    placeholder={isAr ? 'رمز المادة' : 'Item Code'}
                     className="px-2.5 py-1.5 text-xs rounded border bg-transparent border-slate-300 dark:border-slate-700"
                   />
                   <input
                     type="text"
                     name="item_desc"
                     defaultValue="خلطة إسفلتية مطابقة للمواصفات"
-                    placeholder="الوصف / Description"
+                    placeholder={isAr ? 'الوصف' : 'Description'}
                     className="px-2.5 py-1.5 text-xs rounded border bg-transparent border-slate-300 dark:border-slate-700"
                   />
                 </div>
@@ -1340,14 +1340,14 @@ export const ProcurementView: React.FC = () => {
                     type="number"
                     name="item_qty"
                     defaultValue={2000}
-                    placeholder="الكمية / Quantity"
+                    placeholder={isAr ? 'الكمية' : 'Quantity'}
                     className="px-2.5 py-1.5 text-xs rounded border bg-transparent border-slate-300 dark:border-slate-700"
                   />
                   <input
                     type="text"
                     name="item_uom"
                     defaultValue="TON"
-                    placeholder="الوحدة / UOM"
+                    placeholder={isAr ? 'الوحدة' : 'UOM'}
                     className="px-2.5 py-1.5 text-xs rounded border bg-transparent border-slate-300 dark:border-slate-700"
                   />
                 </div>

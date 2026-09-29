@@ -322,7 +322,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     min="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
+                    placeholder={isAr ? '0.00' : '0.00'}
                     className="w-full rounded-xl border border-orange-300 dark:border-orange-900/60 bg-white dark:bg-slate-900 px-3 py-2.5 text-base font-black font-mono text-slate-900 dark:text-slate-100 focus:border-orange-600 focus:ring-2 focus:ring-orange-500/20 focus:outline-hidden"
                   />
                   <span className="absolute left-3 top-2.5 rounded-md bg-orange-100 dark:bg-orange-900/60 px-2 py-0.5 text-xs font-bold text-orange-800 dark:text-orange-300">
@@ -486,7 +486,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     type="text"
                     value={transferRefNumber}
                     onChange={(e) => setTransferRefNumber(e.target.value)}
-                    placeholder="TRF-88401923"
+                    placeholder={isAr ? 'TRF-88401923' : 'TRF-88401923'}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
@@ -501,7 +501,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                     type="text"
                     value={checkNumber}
                     onChange={(e) => setCheckNumber(e.target.value)}
-                    placeholder="CHQ-001924"
+                    placeholder={isAr ? 'CHQ-001924' : 'CHQ-001924'}
                     className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
@@ -533,7 +533,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                   type="text"
                   value={linkedReferenceNo}
                   onChange={(e) => setLinkedReferenceNo(e.target.value)}
-                  placeholder="INV-2026-08-1048"
+                  placeholder={isAr ? 'INV-2026-08-1048' : 'INV-2026-08-1048'}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100"
                 />
               </div>

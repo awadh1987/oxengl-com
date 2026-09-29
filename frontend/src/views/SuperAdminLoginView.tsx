@@ -237,7 +237,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
                   required
                   autoFocus
                   disabled={isAuthenticating}
-                  placeholder="superadmin@oxengl.com"
+                  placeholder={isAr ? 'superadmin@oxengl.com' : 'superadmin@oxengl.com'}
                   value={credentials.admin_email}
                   onChange={(e) =>
                     setCredentials((prev) => ({ ...prev, admin_email: e.target.value }))
@@ -259,7 +259,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
                   type={showPassword ? 'text' : 'password'}
                   required
                   disabled={isAuthenticating}
-                  placeholder="••••••••••••••••"
+                  placeholder={isAr ? '••••••••••••••••' : '••••••••••••••••'}
                   value={credentials.security_passphrase}
                   onChange={(e) =>
                     setCredentials((prev) => ({
@@ -290,7 +290,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
                 type="text"
                 maxLength={6}
                 disabled={isAuthenticating}
-                placeholder="000000"
+                placeholder={isAr ? 'رمز التحقق' : '000000'}
                 value={credentials.mfa_token}
                 onChange={(e) =>
                   setCredentials((prev) => ({ ...prev, mfa_token: e.target.value }))

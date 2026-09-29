@@ -452,7 +452,7 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="مصرف الراجحي - SA4280000123608010123456"
+                  placeholder={isAr ? 'مصرف الراجحي - SA4280000123608010123456' : 'Al Rajhi Bank - SA4280000123608010123456'}
                   value={formData.bankDetails || ''}
                   onChange={(e) => handleChange('bankDetails', e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"

@@ -1224,7 +1224,7 @@ export const OrganizationProfile: React.FC = () => {
                   type="text"
                   value={branchForm.slug || ''}
                   onChange={(e) => setBranchForm({ ...branchForm, slug: e.target.value })}
-                  placeholder="e.g. riyadh-plant-2"
+                  placeholder={isAr ? 'مثال: مصنع-الرياض-2' : 'e.g. riyadh-plant-2'}
                   className={`w-full px-3 py-2 text-xs font-mono rounded-xl border outline-hidden transition-all ${
                     isDark
                       ? 'bg-slate-900 border-slate-700 focus:border-teal-500 text-white'
@@ -1367,7 +1367,7 @@ export const OrganizationProfile: React.FC = () => {
                     onChange={(e) =>
                       setCostCenterForm({ ...costCenterForm, code: e.target.value.toUpperCase() })
                     }
-                    placeholder="e.g. CC-RYD-01"
+                    placeholder={isAr ? 'مثال: CC-RYD-01' : 'e.g. CC-RYD-01'}
                     className={`w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border outline-hidden uppercase transition-all ${
                       isDark
                         ? 'bg-slate-900 border-slate-700 focus:border-emerald-500 text-emerald-400'
@@ -1537,7 +1537,7 @@ export const OrganizationProfile: React.FC = () => {
                         code: e.target.value.toUpperCase(),
                       })
                     }
-                    placeholder="e.g. PUR-01"
+                    placeholder={isAr ? 'مثال: PUR-01' : 'e.g. PUR-01'}
                     className={`w-full px-3 py-2 text-xs font-mono font-bold rounded-xl border outline-hidden uppercase transition-all ${
                       isDark
                         ? 'bg-slate-900 border-slate-700 focus:border-purple-500 text-purple-400'

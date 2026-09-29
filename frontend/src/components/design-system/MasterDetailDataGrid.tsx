@@ -107,7 +107,7 @@ export function MasterDetailDataGrid<T extends { id: string }>({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter records..."
+              placeholder={isAr ? 'تصفية السجلات...' : 'Filter records...'}
               className={`w-full rounded-xl border pl-8 pr-3 text-xs outline-none transition-colors ${
                 isDark
                   ? 'border-slate-800 bg-slate-900/80 text-white placeholder:text-slate-500 focus:border-indigo-500'

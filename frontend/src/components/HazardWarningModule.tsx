@@ -195,7 +195,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Unconditional SFDA operating permit without citations"
+                  placeholder={isAr ? 'مثال: تصريح تشغيلي من هيئة الغذاء والدواء بدون مخالفات' : 'e.g. Unconditional SFDA operating permit without citations'}
                   value={desiredOutcome}
                   onChange={(e) => setDesiredOutcome(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -209,7 +209,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                 <textarea
                   rows={2}
                   required
-                  placeholder="Describe failure modes, bottlenecks, or adverse environmental/regulatory risks..."
+                  placeholder={isAr ? 'وصف أوجه القصور أو الاختناقات أو المخاطر البيئية / التنظيمية...' : 'Describe failure modes, bottlenecks, or adverse environmental/regulatory risks...'}
                   value={hazardDesc}
                   onChange={(e) => setHazardDesc(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 resize-none"
@@ -235,7 +235,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                   <label className="block text-xs font-medium text-slate-300 mb-1">Mitigation Plan</label>
                   <input
                     type="text"
-                    placeholder="Preventive safeguards..."
+                    placeholder={isAr ? 'إجراءات وقائية...' : 'Preventive safeguards...'}
                     value={mitigationPlan}
                     onChange={(e) => setMitigationPlan(e.target.value)}
                     className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
@@ -345,7 +345,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                           rows={2}
                           value={editingMitigationPlan}
                           onChange={(e) => setEditingMitigationPlan(e.target.value)}
-                          placeholder="Action plan to mitigate..."
+                          placeholder={isAr ? 'خطة التصحيح والمعالجة...' : 'Action plan to mitigate...'}
                           className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-blue-500"
                         />
 

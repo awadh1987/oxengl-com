@@ -1169,7 +1169,7 @@ export const MasterDataView: React.FC = () => {
                         type="email"
                         value={partnerForm.email}
                         onChange={(e) => setPartnerForm({ ...partnerForm, email: e.target.value })}
-                        placeholder="contact@entity.sa"
+                        placeholder={isAr ? 'contact@entity.sa' : 'contact@entity.sa'}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
@@ -1181,7 +1181,7 @@ export const MasterDataView: React.FC = () => {
                         type="text"
                         value={partnerForm.phone}
                         onChange={(e) => setPartnerForm({ ...partnerForm, phone: e.target.value })}
-                        placeholder="05XXXXXXXX"
+                        placeholder={isAr ? '05XXXXXXXX' : '05XXXXXXXX'}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
@@ -1196,7 +1196,7 @@ export const MasterDataView: React.FC = () => {
                         type="text"
                         value={partnerForm.tax_number}
                         onChange={(e) => setPartnerForm({ ...partnerForm, tax_number: e.target.value })}
-                        placeholder="300XXXXXXXXXXX3"
+                        placeholder={isAr ? '300XXXXXXXXXXX3' : '300XXXXXXXXXXX3'}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
@@ -1208,7 +1208,7 @@ export const MasterDataView: React.FC = () => {
                         type="text"
                         value={partnerForm.commercial_registration}
                         onChange={(e) => setPartnerForm({ ...partnerForm, commercial_registration: e.target.value })}
-                        placeholder="1010XXXXXX"
+                        placeholder={isAr ? '1010XXXXXX' : '1010XXXXXX'}
                         className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                       />
                     </div>
@@ -1222,7 +1222,7 @@ export const MasterDataView: React.FC = () => {
                       type="text"
                       value={partnerForm.branch_scope_ids}
                       onChange={(e) => setPartnerForm({ ...partnerForm, branch_scope_ids: e.target.value })}
-                      placeholder="branch-01, warehouse-south"
+                      placeholder={isAr ? 'فرع-01, مستودع-جنوب' : 'branch-01, warehouse-south'}
                       className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-slate-100 focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                     />
                   </div>
@@ -1374,7 +1374,7 @@ export const MasterDataView: React.FC = () => {
                   <input
                     type="email"
                     required
-                    placeholder="user@corporate.com"
+                    placeholder={isAr ? 'user@corporate.com' : 'user@corporate.com'}
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"

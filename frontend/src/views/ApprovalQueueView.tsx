@@ -210,7 +210,7 @@ export const ApprovalQueueView: React.FC = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <input
               type="text"
-              placeholder="Search document #, requester..."
+              placeholder={isAr ? 'بحث برقم المستند أو مقدم الطلب...' : 'Search document #, requester...'}
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="pl-9 pr-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
@@ -391,7 +391,7 @@ export const ApprovalQueueView: React.FC = () => {
                     rows={3}
                     value={rejectionReason}
                     onChange={e => setRejectionReason(e.target.value)}
-                    placeholder="Enter reason for rejection (e.g., budget exceeded, incorrect cost center)..."
+                    placeholder={isAr ? 'أدخل سبب الرفض (مثال: تجاوز الميزانية، مركز تكلفة غير صحيح)...' : 'Enter reason for rejection (e.g., budget exceeded, incorrect cost center)...'}
                     className="w-full rounded-xl bg-slate-950 border border-slate-800 p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500"
                   />
                 </div>

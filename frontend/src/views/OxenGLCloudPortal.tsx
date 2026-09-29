@@ -337,7 +337,7 @@ export const OxenGLCloudPortal: React.FC<OxenGLCloudPortalProps> = ({ onLoginSuc
             <p className="mt-0.5 text-xs text-slate-400">Click any organization to launch its dedicated operational workspace</p>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            <label className="relative min-w-52 flex-1 sm:flex-none"><Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or CR..." className="w-full rounded-xl border border-slate-800 bg-slate-900/90 py-2 pl-4 pr-9 text-xs text-white outline-none placeholder:text-slate-500 focus:border-indigo-500" /></label>
+            <label className="relative min-w-52 flex-1 sm:flex-none"><Search className="absolute right-3 top-2.5 h-4 w-4 text-slate-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالاسم أو السجل التجاري...' : 'Search by name or CR...'} className="w-full rounded-xl border border-slate-800 bg-slate-900/90 py-2 pl-4 pr-9 text-xs text-white outline-none placeholder:text-slate-500 focus:border-indigo-500" /></label>
             <div className="flex rounded-xl border border-slate-800 bg-slate-900/90 p-1">
               {(['All', 'Enterprise', 'Pro', 'Basic'] as const).map((tier) => (
                 <button key={tier} onClick={() => setFilter(tier)} className={`rounded-lg px-2.5 py-1 text-xs font-bold ${filter === tier ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}>{tier}</button>

@@ -103,7 +103,7 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
 
       <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <label className="relative flex-1"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by company, CR, VAT, or license key..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white" /></label>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، السجل التجاري، الرقم الضريبي...' : 'Search by company, CR, VAT, or license key...'} className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white" /></label>
         <div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-600">Tier:</span>
           <select value={tier} onChange={(event) => setTier(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
             {['ALL', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'].map((value) => <option key={value} value={value}>{value === 'ALL' ? 'All Tiers' : value}</option>)}
@@ -264,7 +264,7 @@ export const LicenseProvisionerView: React.FC = () => {
             <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-900"><Lock className="h-4 w-4 text-blue-700" />Security &amp; Tenant Credentials</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-xs font-bold text-slate-700">System SuperAdmin Key *
-                <input type="password" autoComplete="one-time-code" value={superAdminKey} onChange={(event) => setSuperAdminKey(event.target.value)} placeholder="Server recovery code" className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-900 outline-none focus:border-blue-600" /></label>
+                <input type="password" autoComplete="one-time-code" value={superAdminKey} onChange={(event) => setSuperAdminKey(event.target.value)} placeholder={isAr ? 'رمز استرداد الخادم' : 'Server recovery code'} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-900 outline-none focus:border-blue-600" /></label>
               <label className="text-xs font-bold text-slate-700">Licensed Enterprise *
                 <select value={effectiveCompanyId} onChange={(event) => setCompanyId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-600">
                   {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}

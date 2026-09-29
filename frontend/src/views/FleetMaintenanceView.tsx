@@ -767,7 +767,7 @@ export const FleetMaintenanceView: React.FC = () => {
                 rows={2}
                 value={orderForm.description}
                 onChange={(e) => setOrderForm({ ...orderForm, description: e.target.value })}
-                placeholder="Routine service, brake shoe replacement, oil change..."
+                placeholder={isAr ? 'صيانة دورية، تبديل تيل فرامل، تغيير زيت...' : 'Routine service, brake shoe replacement, oil change...'}
                 className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs outline-none"
               />
             </div>
