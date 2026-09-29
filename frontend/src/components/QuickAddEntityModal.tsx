@@ -203,7 +203,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
           {entityType === 'Customer' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'اسم العميل / الشركة *' : 'Customer Name *'}
                 </label>
                 <input
@@ -211,12 +211,12 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'مثال: شركة اليمامة للخرسانة الجاهزة' : 'e.g. Al Yamamah ReadyMix'}
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الرقم الضريبي (15 رقم)' : 'VAT Number'}
                   </label>
                   <input
@@ -224,11 +224,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? '300189452300003' : '300189452300003'}
                     value={taxNumber}
                     onChange={(e) => setTaxNumber(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-mono font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
@@ -236,13 +236,13 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? '+966 50 123 4567' : '+966 50 123 4567'}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الشخص المسؤول' : 'Contact Person'}
                   </label>
                   <input
@@ -250,11 +250,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? 'م. أحمد السالم' : 'Ahmed Al-Salem'}
                     value={contactPerson}
                     onChange={(e) => setContactPerson(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'العنوان' : 'Address'}
                   </label>
                   <input
@@ -262,7 +262,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? 'الرياض - حي الملز' : 'Riyadh - Malaz District'}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -273,7 +273,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
           {entityType === 'Crusher' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'اسم مورد المواد *' : 'Material Supplier Name *'}
                 </label>
                 <input
@@ -281,11 +281,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'مثال: مورد مواد خام الرياض الحديثة' : 'e.g. Riyadh Raw Materials Supplier'}
                   value={crusherName}
                   onChange={(e) => setCrusherName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'الموقع الجغرافي / الطريق' : 'Location'}
                 </label>
                 <input
@@ -293,11 +293,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'الرياض - طريق رماح - كم 25' : 'Riyadh, Rumah Road'}
                   value={crusherLocation}
                   onChange={(e) => setCrusherLocation(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'الحساب البنكي / الآيبان' : 'Bank IBAN'}
                 </label>
                 <input
@@ -305,7 +305,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'مصرف الراجحي - SA4280000123608010123456' : 'Al Rajhi Bank - SA4280000123608010123456'}
                   value={crusherBank}
                   onChange={(e) => setCrusherBank(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
             </>
@@ -315,7 +315,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
           {entityType === 'Transporter' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'اسم مزود الخدمة *' : 'Service Supplier Name *'}
                 </label>
                 <input
@@ -323,12 +323,12 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'مثال: مؤسسة قوافل نجد للنقليات' : 'e.g. Qawafel Najd Transport'}
                   value={transporterName}
                   onChange={(e) => setTransporterName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم لوحة الشاحنة الافتراضية' : 'Truck Plate #'}
                   </label>
                   <input
@@ -336,11 +336,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? '4491-ق ط ب' : '4491-RSB'}
                     value={truckNo}
                     onChange={(e) => setTruckNo(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم السائق' : 'Driver Name'}
                   </label>
                   <input
@@ -348,13 +348,13 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? 'محمد إقبال' : 'Driver Name'}
                     value={driverName}
                     onChange={(e) => setDriverName(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'أجرة النقل (ر.س/MT طن)' : 'Rate / MT (SAR)'}
                   </label>
                   <input
@@ -362,11 +362,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     step="0.5"
                     value={ratePerTon}
                     onChange={(e) => setRatePerTon(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
@@ -374,7 +374,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     placeholder={isAr ? '+966 50 111 2222' : '+966 50 111 2222'}
                     value={transporterPhone}
                     onChange={(e) => setTransporterPhone(e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -385,7 +385,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
           {entityType === 'Material' && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'اسم المادة (عربي) *' : 'Material Name (Arabic) *'}
                 </label>
                 <input
@@ -393,18 +393,18 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   placeholder={isAr ? 'مثال: حصى سن 1/2 مم' : 'Aggregate 1/2"'}
                   value={materialNameAr}
                   onChange={(e) => setMaterialNameAr(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'التصنيف' : 'Category'}
                   </label>
                   <select
                     value={materialCategory}
                     onChange={(e) => setMaterialCategory(e.target.value as any)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   >
                     <option value="Aggregate">{isAr ? 'حصى وركام (Aggregate)' : 'Aggregate'}</option>
                     <option value="Sand">{isAr ? 'رمل بأنواعه (Sand)' : 'Sand'}</option>
@@ -414,13 +414,13 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'وحدة القياس (UOM) *' : 'Unit of Measure (UOM) *'}
                   </label>
                   <select
                     value={materialUnit}
                     onChange={(e) => setMaterialUnit(e.target.value as UOMType)}
-                    className="w-full rounded-xl border border-orange-300 bg-slate-50 px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-orange-300 dark:border-orange-900/50 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   >
                     {SUPPORTED_UOMS.map((u) => (
                       <option key={u.value} value={u.value}>
@@ -432,7 +432,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? `سعر الشراء الافتراضي (ر.س/${materialUnit})` : `Buy Price (SAR/${materialUnit})`}
                   </label>
                   <input
@@ -440,11 +440,11 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     step="1"
                     value={defaultPurchasePrice}
                     onChange={(e) => setDefaultPurchasePrice(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? `سعر البيع الافتراضي (ر.س/${materialUnit})` : `Sell Price (SAR/${materialUnit})`}
                   </label>
                   <input
@@ -452,7 +452,7 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
                     step="1"
                     value={defaultSellingPrice}
                     onChange={(e) => setDefaultSellingPrice(Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>

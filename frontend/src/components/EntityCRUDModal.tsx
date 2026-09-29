@@ -266,23 +266,23 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
       aria-labelledby="entity-crud-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-slate-200 bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
               <HeaderIcon className="h-5 w-5" />
             </div>
             <div>
-              <h2 id="entity-crud-title" className="text-base font-black text-slate-900">
+              <h2 id="entity-crud-title" className="text-base font-black text-slate-900 dark:text-white">
                 {header.title}
               </h2>
-              <p className="text-xs text-slate-500">{header.subtitle}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{header.subtitle}</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -295,123 +295,123 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم العميل (بالعربي) *' : 'Customer Name (AR) *'}
                   </label>
                   <input
                     type="text"
                     value={formData.customerName || ''}
                     onChange={(e) => handleChange('customerName', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم العميل (بالإنجليزي)' : 'Customer Name (EN)'}
                   </label>
                   <input
                     type="text"
                     value={formData.customerNameEn || ''}
                     onChange={(e) => handleChange('customerNameEn', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الرقم الضريبي (VAT Reg Number - 15 رقم) *' : 'Tax Number (15 Digits) *'}
                   </label>
                   <input
                     type="text"
                     value={formData.taxNumber || ''}
                     onChange={(e) => handleChange('taxNumber', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم السجل التجاري (CR Number)' : 'CR Number'}
                   </label>
                   <input
                     type="text"
                     value={formData.crNumber || ''}
                     onChange={(e) => handleChange('crNumber', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الشخص المسؤول' : 'Contact Person'}
                   </label>
                   <input
                     type="text"
                     value={formData.contactPerson || ''}
                     onChange={(e) => handleChange('contactPerson', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
                     type="text"
                     value={formData.phone || ''}
                     onChange={(e) => handleChange('phone', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'البريد الإلكتروني' : 'Email'}
                   </label>
                   <input
                     type="email"
                     value={formData.email || ''}
                     onChange={(e) => handleChange('email', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'العنوان والموقع الجغرافي / المشروع' : 'Site / Project Address'}
                 </label>
                 <input
                   type="text"
                   value={formData.address || ''}
                   onChange={(e) => handleChange('address', e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الحد الائتماني (ر.س)' : 'Credit Limit (SAR)'}
                   </label>
                   <input
                     type="number"
                     value={formData.creditLimit || 0}
                     onChange={(e) => handleChange('creditLimit', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الرصيد الافتتاحي (ر.س)' : 'Opening Balance (SAR)'}
                   </label>
                   <input
                     type="number"
                     value={formData.openingBalance || 0}
                     onChange={(e) => handleChange('openingBalance', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -423,31 +423,31 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم مورد المواد الخام *' : 'Raw Materials Supplier Name *'}
                   </label>
                   <input
                     type="text"
                     value={formData.crusherName || ''}
                     onChange={(e) => handleChange('crusherName', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الموقع الجغرافي / الطريق' : 'Location'}
                   </label>
                   <input
                     type="text"
                     value={formData.location || ''}
                     onChange={(e) => handleChange('location', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700">
+                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'بيانات الحساب البنكي والآيبان للمدفوعات *' : 'Bank & IBAN Details *'}
                 </label>
                 <input
@@ -455,56 +455,56 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                   placeholder={isAr ? 'مصرف الراجحي - SA4280000123608010123456' : 'Al Rajhi Bank - SA4280000123608010123456'}
                   value={formData.bankDetails || ''}
                   onChange={(e) => handleChange('bankDetails', e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'المادة الموردة الأساسية' : 'Primary Material'}
                   </label>
                   <input
                     type="text"
                     value={formData.materialProduced || ''}
                     onChange={(e) => handleChange('materialProduced', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الرصيد الدائن الافتتاحي (ر.س)' : 'Opening Payable Balance (SAR)'}
                   </label>
                   <input
                     type="number"
                     value={formData.openingBalance || 0}
                     onChange={(e) => handleChange('openingBalance', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الشخص المسؤول' : 'Contact Person'}
                   </label>
                   <input
                     type="text"
                     value={formData.contactPerson || ''}
                     onChange={(e) => handleChange('contactPerson', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
                     type="text"
                     value={formData.phone || ''}
                     onChange={(e) => handleChange('phone', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -516,43 +516,43 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم مزود الخدمة *' : 'Service Supplier Name *'}
                   </label>
                   <input
                     type="text"
                     value={formData.transporterName || ''}
                     onChange={(e) => handleChange('transporterName', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم السائق *' : 'Driver Name *'}
                   </label>
                   <input
                     type="text"
                     value={formData.driverName || ''}
                     onChange={(e) => handleChange('driverName', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم لوحة الشاحنة الافتراضية *' : 'Default Truck Plate *'}
                   </label>
                   <input
                     type="text"
                     value={formData.defaultTruckNo || ''}
                     onChange={(e) => handleChange('defaultTruckNo', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'أجرة النقل (ر.س/MT طن)' : 'Rate / MT (SAR)'}
                   </label>
                   <input
@@ -560,43 +560,43 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                     step="0.5"
                     value={formData.ratePerTon || 18}
                     onChange={(e) => handleChange('ratePerTon', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'سعة الحمولة القياسية (MT طن)' : 'Capacity (MT)'}
                   </label>
                   <input
                     type="number"
                     value={formData.capacityTons || 44}
                     onChange={(e) => handleChange('capacityTons', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'مواصفات الشاحنة' : 'Truck Details'}
                   </label>
                   <input
                     type="text"
                     value={formData.truckDetails || ''}
                     onChange={(e) => handleChange('truckDetails', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
                     type="text"
                     value={formData.phone || ''}
                     onChange={(e) => handleChange('phone', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -608,38 +608,38 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم المادة (عربي) *' : 'Material Name (AR) *'}
                   </label>
                   <input
                     type="text"
                     value={formData.nameAr || ''}
                     onChange={(e) => handleChange('nameAr', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم المادة (إنجليزي)' : 'Material Name (EN)'}
                   </label>
                   <input
                     type="text"
                     value={formData.nameEn || ''}
                     onChange={(e) => handleChange('nameEn', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'التصنيف' : 'Category'}
                   </label>
                   <select
                     value={formData.category || 'Aggregate'}
                     onChange={(e) => handleChange('category', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   >
                     <option value="Aggregate">{isAr ? 'حصى وركام (Aggregate)' : 'Aggregate'}</option>
                     <option value="Sand">{isAr ? 'رمل بأنواعه (Sand)' : 'Sand'}</option>
@@ -649,13 +649,13 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'وحدة القياس (UOM) *' : 'Unit of Measure (UOM) *'}
                   </label>
                   <select
                     value={formData.unit || 'MT طن'}
                     onChange={(e) => handleChange('unit', e.target.value)}
-                    className="w-full rounded-xl border border-orange-300 bg-slate-50 px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-orange-300 dark:border-orange-900/50 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   >
                     {SUPPORTED_UOMS.map((u) => (
                       <option key={u.value} value={u.value}>
@@ -665,25 +665,25 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? `سعر الشراء (ر.س/${formData.unit || 'MT طن'})` : `Buy Price (${formData.unit || 'MT طن'})`}
                   </label>
                   <input
                     type="number"
                     value={formData.defaultPurchasePrice || 0}
                     onChange={(e) => handleChange('defaultPurchasePrice', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? `سعر البيع (ر.س/${formData.unit || 'MT طن'})` : `Sell Price (${formData.unit || 'MT طن'})`}
                   </label>
                   <input
                     type="number"
                     value={formData.defaultSellingPrice || 0}
                     onChange={(e) => handleChange('defaultSellingPrice', Number(e.target.value))}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
@@ -695,63 +695,63 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             <>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الاسم الكامل (عربي) *' : 'Full Name (AR) *'}
                   </label>
                   <input
                     type="text"
                     value={formData.fullNameAr || ''}
                     onChange={(e) => handleChange('fullNameAr', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم المستخدم للدخول (Username) *' : 'Username *'}
                   </label>
                   <input
                     type="text"
                     value={formData.username || ''}
                     onChange={(e) => handleChange('username', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'البريد الإلكتروني الرسمي *' : 'Work Email *'}
                   </label>
                   <input
                     type="email"
                     value={formData.email || ''}
                     onChange={(e) => handleChange('email', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'رقم الهاتف' : 'Phone'}
                   </label>
                   <input
                     type="text"
                     value={formData.phone || ''}
                     onChange={(e) => handleChange('phone', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold font-mono text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold font-mono text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700">
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'الدور الوظيفي ومستوى الصلاحيات (Role) *' : 'Role & Security Clearance *'}
                   </label>
                   <select
                     value={formData.role || 'Data_Entry'}
                     onChange={(e) => handleChange('role', e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-orange-950 focus:border-orange-500 focus:bg-white focus:outline-none"
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                   >
                     <option value="Owner">{isAr ? 'مالك المنشأة (Tenant Owner - Supreme Access)' : 'Tenant Owner - Supreme Access'}</option>
                     <option value="Admin">{isAr ? 'المدير العام والتنفيذي (Admin / CEO - Full Access)' : 'CEO / Admin - Full Access'}</option>
@@ -764,13 +764,13 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
 
                 {formData.role === 'Guest' && (
                   <div>
-                    <label className="mb-1 block text-xs font-bold text-slate-700">
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                       {isAr ? 'تقييد المشاهدة بعميل محدد *' : 'Assign to Specific Client *'}
                     </label>
                     <select
                       value={formData.assignedCustomerId || ''}
                       onChange={(e) => handleChange('assignedCustomerId', e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:bg-white focus:outline-none"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
                     >
                       <option value="">{isAr ? '-- اختر العميل --' : '-- Select Client --'}</option>
                       {customers.map((c) => (

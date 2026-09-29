@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { CustomDomainWizard } from './CustomDomainWizard';
 import { erpApi } from '../../services/api';
+import { useTranslation } from 'react-i18next';
 
 interface TenantSettingsPanelProps {
   tenantId: string;
@@ -29,6 +30,9 @@ interface TenantSettingsPanelProps {
 }
 
 export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenantId, tenantSlug }) => {
+  const { i18n } = useTranslation();
+  const isAr = i18n?.language === 'ar' || i18n?.language?.startsWith('ar');
+
   const [activeTab, setActiveTab] = useState<'general' | 'team' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
   const [settings, setSettings] = useState<any>(null);
   const [team, setTeam] = useState<any[]>([]);

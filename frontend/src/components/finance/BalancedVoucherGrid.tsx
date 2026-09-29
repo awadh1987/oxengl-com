@@ -303,22 +303,22 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
   return (
     <div className="space-y-6">
       {/* 1. Header Card with Title & Quick Templates */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-700 shadow-xs">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400 shadow-xs">
               <Scale className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black text-slate-900">
+                <h2 className="text-lg font-black text-slate-900 dark:text-white">
                   {isAr ? 'مصفوفة ترحيل القيود المتوازنة (Double-Entry Matrix)' : 'Double-Entry Balanced Voucher Matrix'}
                 </h2>
-                <span className="rounded-full bg-indigo-100 px-2.5 py-0.5 text-[10px] font-black text-indigo-700">
+                <span className="rounded-full bg-indigo-100 dark:bg-indigo-950/60 px-2.5 py-0.5 text-[10px] font-black text-indigo-700 dark:text-indigo-400">
                   Strict Σ Dr == Σ Cr
                 </span>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 {isAr
                   ? 'نموذج إدخال القيود المالية مع فحص فوري للتطابق الرياضي وحظر الترحيل غير المتوازن'
                   : 'Interactive financial ledger voucher entry with zero-tolerance mathematical balance validation'}
@@ -332,17 +332,17 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
             <button
               type="button"
               onClick={applyPayrollTemplate}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-slate-700"
             >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
               <span>{isAr ? 'مسير رواتب HRMS' : 'HRMS Payroll'}</span>
             </button>
             <button
               type="button"
               onClick={applyVendorSettlementTemplate}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700 hover:border-indigo-300 hover:bg-indigo-50/50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50/50 dark:hover:bg-slate-700"
             >
-              <ArrowDownRight className="h-3.5 w-3.5 text-emerald-600" />
+              <ArrowDownRight className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>{isAr ? 'تسوية ناقلين' : 'Freight Clearance'}</span>
             </button>
           </div>
@@ -351,18 +351,18 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
         {/* Voucher Meta Inputs */}
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               {isAr ? 'تاريخ القيد المحاسبي' : 'Posting Date'}
             </label>
             <input
               type="date"
               value={entryDate}
               onChange={(e) => setEntryDate(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-hidden"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               {isAr ? 'المرجع أو رقم المسير' : 'Reference / Tracking Code'}
             </label>
             <input
@@ -370,29 +370,29 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
               value={referenceNo}
               onChange={(e) => setReferenceNo(e.target.value)}
               placeholder={isAr ? 'مثال: HRMS-2026-09' : 'e.g. HRMS-2026-09'}
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-hidden"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden"
             />
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
               {isAr ? 'البيان العام للقيد' : 'General Voucher Description'}
             </label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-indigo-500 focus:bg-white focus:outline-hidden"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden"
             />
           </div>
         </div>
       </div>
 
       {/* 2. Interactive Line Items Data Grid */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-4 w-4 text-indigo-600" />
-            <h3 className="text-sm font-black text-slate-900">
+            <FileSpreadsheet className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">
               {isAr ? 'بنود القيد المحاسبي (مدين / دائن)' : 'Journal Voucher Line Items (Debit / Credit)'}
             </h3>
             <span className="text-xs text-slate-400">({lines.length} {isAr ? 'أسطر' : 'lines'})</span>
@@ -401,7 +401,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
           <button
             type="button"
             onClick={addLine}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-950/50 px-3 py-1.5 text-xs font-bold text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>{isAr ? 'إضافة سطر قيد' : 'Add Line Item'}</span>
@@ -412,24 +412,24 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-slate-600">
+              <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300">
                 <th className="py-2.5 px-3 text-start font-bold">#</th>
                 <th className="py-2.5 px-3 text-start font-bold">{isAr ? 'الحساب المالي (الشجرة)' : 'Account'}</th>
                 <th className="py-2.5 px-3 text-start font-bold">{isAr ? 'البيان والوصف' : 'Description'}</th>
-                <th className="py-2.5 px-3 text-end font-bold text-indigo-700">{isAr ? 'مدين (Debit SAR)' : 'Debit (SAR)'}</th>
-                <th className="py-2.5 px-3 text-end font-bold text-emerald-700">{isAr ? 'دائن (Credit SAR)' : 'Credit (SAR)'}</th>
+                <th className="py-2.5 px-3 text-end font-bold text-indigo-700 dark:text-indigo-400">{isAr ? 'مدين (Debit SAR)' : 'Debit (SAR)'}</th>
+                <th className="py-2.5 px-3 text-end font-bold text-emerald-700 dark:text-emerald-400">{isAr ? 'دائن (Credit SAR)' : 'Credit (SAR)'}</th>
                 <th className="py-2.5 px-3 text-center font-bold">{isAr ? 'إجراء' : 'Action'}</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {lines.map((line, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70 transition-colors">
+                <tr key={idx} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
                   <td className="py-3 px-3 font-mono font-bold text-slate-400">{idx + 1}</td>
                   <td className="py-3 px-3 min-w-[220px]">
                     <select
                       value={line.account_code}
                       onChange={(e) => handleLineChange(idx, 'account_code', e.target.value)}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:outline-hidden"
                     >
                       {COMMON_ACCOUNTS.map((acc) => (
                         <option key={acc.code} value={acc.code}>
@@ -444,7 +444,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       value={line.description || ''}
                       onChange={(e) => handleLineChange(idx, 'description', e.target.value)}
                       placeholder={isAr ? 'شرح المعاملة...' : 'Memo...'}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-800 focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs font-medium text-slate-800 dark:text-slate-100 focus:border-indigo-500 focus:outline-hidden"
                     />
                   </td>
                   <td className="py-3 px-3 min-w-[130px] text-end">
@@ -455,7 +455,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       value={line.debit === 0 ? '' : line.debit}
                       onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
                       placeholder={isAr ? '0.00' : '0.00'}
-                      className="w-full text-end font-mono font-bold text-indigo-700 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-hidden"
+                      className="w-full text-end font-mono font-bold text-indigo-700 dark:text-indigo-400 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-hidden"
                     />
                   </td>
                   <td className="py-3 px-3 min-w-[130px] text-end">
@@ -466,7 +466,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       value={line.credit === 0 ? '' : line.credit}
                       onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
                       placeholder={isAr ? '0.00' : '0.00'}
-                      className="w-full text-end font-mono font-bold text-emerald-700 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-hidden"
+                      className="w-full text-end font-mono font-bold text-emerald-700 dark:text-emerald-400 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-hidden"
                     />
                   </td>
                   <td className="py-3 px-3 text-center">
@@ -474,7 +474,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
                       type="button"
                       onClick={() => removeLine(idx)}
                       disabled={lines.length <= 2}
-                      className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:text-rose-600 dark:hover:text-rose-400 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
                       title={isAr ? 'حذف السطر' : 'Remove Line'}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -487,39 +487,39 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
         </div>
 
         {/* 3. REAL-TIME BALANCE CALCULATION BAR & ERROR BADGE */}
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+        <div className="mt-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 p-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             {/* Totals Summary */}
             <div className="flex flex-wrap items-center gap-6">
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
                   {isAr ? 'إجمالي المدين (Total Debits)' : 'Total Debits'}
                 </span>
-                <span className="text-lg font-black font-mono text-indigo-700">
+                <span className="text-lg font-black font-mono text-indigo-700 dark:text-indigo-400">
                   {totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR
                 </span>
               </div>
 
-              <div className="hidden sm:block text-slate-300 font-black text-xl">=</div>
+              <div className="hidden sm:block text-slate-300 dark:text-slate-600 font-black text-xl">=</div>
 
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
                   {isAr ? 'إجمالي الدائن (Total Credits)' : 'Total Credits'}
                 </span>
-                <span className="text-lg font-black font-mono text-emerald-700">
+                <span className="text-lg font-black font-mono text-emerald-700 dark:text-emerald-400">
                   {totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR
                 </span>
               </div>
 
-              <div className="hidden sm:block text-slate-300 font-black text-xl">|</div>
+              <div className="hidden sm:block text-slate-300 dark:text-slate-600 font-black text-xl">|</div>
 
               <div>
-                <span className="text-[11px] font-bold text-slate-500 block">
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">
                   {isAr ? 'الفارق الرياضي (Discrepancy)' : 'Discrepancy'}
                 </span>
                 <span
                   className={`text-lg font-black font-mono ${
-                    discrepancy < 0.0001 ? 'text-emerald-600' : 'text-rose-600'
+                    discrepancy < 0.0001 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
                   }`}
                 >
                   {discrepancy.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR
@@ -532,9 +532,9 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
               {isBalanced ? (
                 <div
                   id="balanced-status-badge"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-black text-emerald-800 shadow-xs"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 px-4 py-2.5 text-xs font-black text-emerald-800 dark:text-emerald-300 shadow-xs"
                 >
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                   <span>
                     {isAr
                       ? 'قيد متوازن هندسياً ومحكم رياضياً (Σ Debits == Σ Credits)'
@@ -544,9 +544,9 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
               ) : (
                 <div
                   id="unbalanced-error-badge"
-                  className="inline-flex items-center gap-2 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-800 shadow-xs animate-pulse"
+                  className="inline-flex items-center gap-2 rounded-2xl border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 px-4 py-2.5 text-xs font-black text-rose-800 dark:text-rose-300 shadow-xs animate-pulse"
                 >
-                  <AlertTriangle className="h-4 w-4 text-rose-600" />
+                  <AlertTriangle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
                   <span>
                     {isAr
                       ? `حظر الترحيل: القيد غير متوازن! الفارق (${discrepancy.toFixed(2)} ريال)`
@@ -567,7 +567,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
             className={`flex items-center gap-2.5 rounded-2xl px-6 py-3 text-xs font-black text-white shadow-lg transition-all ${
               isBalanced && !isSubmitting
                 ? 'bg-indigo-600 shadow-indigo-600/30 hover:bg-indigo-700 cursor-pointer'
-                : 'bg-slate-300 shadow-none cursor-not-allowed text-slate-500'
+                : 'bg-slate-300 dark:bg-slate-800 shadow-none cursor-not-allowed text-slate-500 dark:text-slate-600'
             }`}
           >
             <Send className="h-4 w-4" />
@@ -583,17 +583,17 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
       </div>
 
       {/* 5. Historical Posted Balanced Vouchers */}
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xs">
+      <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-xs">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-slate-500" />
-            <h3 className="text-sm font-black text-slate-900">
+            <Clock className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+            <h3 className="text-sm font-black text-slate-900 dark:text-white">
               {isAr ? 'سجل القيود المتوازنة المرحلة حديثاً' : 'Recently Posted Balanced Journal Vouchers'}
             </h3>
           </div>
           <button
             onClick={loadHistory}
-            className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+            className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
           >
             <RefreshCw className={`h-3 w-3 ${isLoadingHistory ? 'animate-spin' : ''}`} />
             <span>{isAr ? 'تحديث' : 'Refresh'}</span>
@@ -601,38 +601,38 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
         </div>
 
         {postedVouchers.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-xs text-slate-400">
+          <div className="rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8 text-center text-xs text-slate-400">
             {isLoadingHistory
               ? isAr ? 'جارِ تحميل القيود...' : 'Loading vouchers...'
               : isAr ? 'لم يتم ترحيل أي قيود متوازنة حتى الآن' : 'No balanced vouchers posted yet'}
           </div>
         ) : (
-          <div className="divide-y divide-slate-100 overflow-x-auto">
+          <div className="divide-y divide-slate-100 dark:divide-slate-800 overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-slate-50 text-slate-600">
+                <tr className="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300">
                   <th className="py-2.5 px-3 text-start font-bold">{isAr ? 'رقم القيد' : 'Voucher No'}</th>
                   <th className="py-2.5 px-3 text-start font-bold">{isAr ? 'البيان' : 'Description'}</th>
                   <th className="py-2.5 px-3 text-start font-bold">{isAr ? 'التاريخ' : 'Date'}</th>
-                  <th className="py-2.5 px-3 text-end font-bold text-indigo-700">{isAr ? 'إجمالي المدين' : 'Total Debit'}</th>
-                  <th className="py-2.5 px-3 text-end font-bold text-emerald-700">{isAr ? 'إجمالي الدائن' : 'Total Credit'}</th>
+                  <th className="py-2.5 px-3 text-end font-bold text-indigo-700 dark:text-indigo-400">{isAr ? 'إجمالي المدين' : 'Total Debit'}</th>
+                  <th className="py-2.5 px-3 text-end font-bold text-emerald-700 dark:text-emerald-400">{isAr ? 'إجمالي الدائن' : 'Total Credit'}</th>
                   <th className="py-2.5 px-3 text-center font-bold">{isAr ? 'الحالة' : 'Status'}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-medium">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
                 {postedVouchers.map((v) => (
-                  <tr key={v.id} className="hover:bg-slate-50/50">
-                    <td className="py-3 px-3 font-mono font-bold text-indigo-900">{v.entry_number}</td>
-                    <td className="py-3 px-3 text-slate-800">{v.description}</td>
-                    <td className="py-3 px-3 text-slate-500 font-mono">{v.entry_date ? v.entry_date.split('T')[0] : '—'}</td>
-                    <td className="py-3 px-3 text-end font-mono font-bold text-indigo-700">
+                  <tr key={v.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
+                    <td className="py-3 px-3 font-mono font-bold text-indigo-900 dark:text-indigo-400">{v.entry_number}</td>
+                    <td className="py-3 px-3 text-slate-800 dark:text-slate-200">{v.description}</td>
+                    <td className="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono">{v.entry_date ? v.entry_date.split('T')[0] : '—'}</td>
+                    <td className="py-3 px-3 text-end font-mono font-bold text-indigo-700 dark:text-indigo-400">
                       {v.total_debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR
                     </td>
-                    <td className="py-3 px-3 text-end font-mono font-bold text-emerald-700">
+                    <td className="py-3 px-3 text-end font-mono font-bold text-emerald-700 dark:text-emerald-400">
                       {v.total_credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} SAR
                     </td>
                     <td className="py-3 px-3 text-center">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300">
                         <CheckCircle2 className="h-3 w-3" />
                         <span>{v.status || 'POSTED'}</span>
                       </span>

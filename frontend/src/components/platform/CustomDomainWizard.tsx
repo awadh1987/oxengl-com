@@ -13,6 +13,7 @@ import {
   Trash2,
   ExternalLink,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface DomainRecord {
   id: string;
@@ -31,6 +32,9 @@ interface CustomDomainWizardProps {
 }
 
 export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId, tenantSlug }) => {
+  const { i18n } = useTranslation();
+  const isAr = i18n?.language === 'ar' || i18n?.language?.startsWith('ar');
+
   const [domains, setDomains] = useState<DomainRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [newDomainInput, setNewDomainInput] = useState('');
