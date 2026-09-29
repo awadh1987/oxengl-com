@@ -57,6 +57,7 @@ const CorporateVault = React.lazy(() => import('./views/settings/CorporateVault'
 const FinancialReportsView = React.lazy(() => import('./views/FinancialReportsView').then(m => ({ default: m.FinancialReportsView })));
 const VendorPortalView = React.lazy(() => import('./views/VendorPortalView').then(m => ({ default: m.VendorPortalView })));
 const SalesReceivablesDashboard = React.lazy(() => import('./views/SalesReceivablesDashboard').then(m => ({ default: m.SalesReceivablesDashboard })));
+const DataObservabilityView = React.lazy(() => import('./views/DataObservabilityView').then(m => ({ default: m.DataObservabilityView })));
 
 const ViewLoadingFallback = () => (
   <div className="flex min-h-[400px] w-full flex-col items-center justify-center p-12 text-center">
@@ -102,6 +103,8 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   '/finance/balance-sheet': 'financial-reports',
   '/finance/audit-closing': 'finance-audit-closing',
   '/finance/ai-auditor': 'ai-insights',
+  '/analytics/data-observability': 'data-observability',
+  '/data-observability': 'data-observability',
 
   // Governance & Admin (Navbar Settings / Sidebar Governance)
   '/settings/approvals': 'executive-admin',
@@ -158,6 +161,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   'financial-reports': '/finance/reports',
   'finance-audit-closing': '/finance/audit-closing',
   'ai-insights': '/finance/ai-auditor',
+  'data-observability': '/analytics/data-observability',
 
   'executive-admin': '/settings/approvals',
   billing: '/settings/billing',
@@ -201,6 +205,7 @@ export const getTabFromPath = (path: string): ActiveTab => {
   if (cleanPath.startsWith('/finance/reports') || cleanPath.startsWith('/finance/trial-balance') || cleanPath.startsWith('/finance/income-statement') || cleanPath.startsWith('/finance/balance-sheet')) return 'financial-reports';
   if (cleanPath.startsWith('/finance/audit-closing')) return 'finance-audit-closing';
   if (cleanPath.startsWith('/finance/ai-auditor')) return 'ai-insights';
+  if (cleanPath.startsWith('/analytics/data-observability') || cleanPath.startsWith('/data-observability')) return 'data-observability';
 
   if (cleanPath.startsWith('/settings/approvals')) return 'executive-admin';
   if (cleanPath.startsWith('/settings/billing')) return 'billing';
@@ -808,6 +813,7 @@ function AppContent() {
     'finance-trial-balance': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     'financial-reports': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     'finance-audit-closing': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
+    'data-observability': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
     approvals: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     procurement: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
     'procurement-p2p': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
@@ -869,6 +875,8 @@ function AppContent() {
         return <TransporterPerformanceView />;
       case 'ai-insights':
         return <AIOperationsView />;
+      case 'data-observability':
+        return <DataObservabilityView />;
       case 'executive-admin':
         return <ExecutiveAdminView />;
       case 'master-data':

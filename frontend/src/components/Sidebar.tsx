@@ -28,6 +28,7 @@ import {
   Users,
   FolderTree,
   TrendingUp,
+  Activity,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -53,6 +54,7 @@ export type ActiveTab =
   | 'finance-trial-balance'
   | 'financial-reports'
   | 'finance-audit-closing'
+  | 'data-observability'
   | 'crushers'
   | 'transporters'
   | 'ai-insights'
@@ -368,6 +370,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
         roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
         badge: 'AI',
       },
+      {
+        id: 'data-observability',
+        labelAr: 'مرصد جودة البيانات والأنظمة',
+        labelEn: 'Data Quality & Observability',
+        path: '/analytics/data-observability',
+        icon: Activity,
+        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
+        badge: 'DQ',
+        highlight: true,
+      },
 
       // 5. Human Resources & Payroll
       {
@@ -511,6 +523,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           'financial-reports',
           'finance-audit-closing',
           'ai-insights',
+          'data-observability',
         ],
       },
       {
@@ -589,10 +602,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         operations: ['dashboard', 'planning', 'operations', 'customs'],
         procurement: ['procurement', 'procurement-p2p', 'inventory'],
         fleet: ['fleet-map', 'maintenance', 'transporters', 'crushers'],
-        finance: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing', 'ai-insights'],
+        finance: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing', 'ai-insights', 'data-observability'],
         hr: ['hr'],
         customs: ['customs'],
-        analytics: ['financial-reports', 'ai-insights', 'dashboard'],
+        analytics: ['financial-reports', 'ai-insights', 'dashboard', 'data-observability'],
       };
 
       availableViews.forEach((v) => {

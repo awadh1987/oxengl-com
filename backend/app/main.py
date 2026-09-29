@@ -99,6 +99,7 @@ try:
 	from backend.app.api.v1.inventory import router as inventory_router
 	from backend.app.api.v1.finance import router as finance_router
 	from backend.app.api.v1.reports import router as reports_router
+	from backend.app.api.v1.data_observability import router as data_observability_router
 	from backend.app.services.fleet_service import router as logistics_router
 	from backend.app.api.v1.customs import router as customs_router
 	from backend.app.api.v1.hr import router as hr_router
@@ -438,6 +439,7 @@ app.include_router(procurement_router)
 app.include_router(inventory_router)
 app.include_router(finance_router)
 app.include_router(reports_router)
+app.include_router(data_observability_router)
 from backend.app.domains.finance import audit_export
 app.include_router(audit_export.router)
 app.include_router(logistics_router)
