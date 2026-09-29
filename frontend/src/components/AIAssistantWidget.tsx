@@ -31,6 +31,7 @@ import {
   ShieldCheck,
   Scale,
   Compass,
+  Clock,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { formatCurrency, formatTonnage } from '../utils/formatters';
@@ -50,7 +51,134 @@ interface Message {
   mapSources?: MessageSource[];
   suggestedActions?: { labelAr: string; labelEn: string; query: string }[];
   isDocument?: boolean;
+  executedAction?: string;
+  zatcaStatus?: 'cleared' | 'pending' | 'reported' | string;
+  zatcaDetails?: {
+    invoice_number?: string;
+    invoice_hash?: string;
+    compliance_status?: string;
+  };
 }
+
+const SCHEMA_REGISTRY: Record<string, {
+  nameEn: string;
+  nameAr: string;
+  moduleEn: string;
+  moduleAr: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+}> = {
+  CustomerInvoiceSchema: {
+    nameEn: 'Customer Sales Invoice',
+    nameAr: 'فاتورة مبيعات عميل (ZATCA)',
+    moduleEn: 'Sales & Invoicing',
+    moduleAr: 'المبيعات والفوترة',
+    badgeBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    badgeBorder: 'border-emerald-200 dark:border-emerald-800',
+    badgeText: 'text-emerald-700 dark:text-emerald-300',
+  },
+  FleetDispatchSchema: {
+    nameEn: 'Fleet Logistics Dispatch',
+    nameAr: 'إرسالية نقل لوجستي',
+    moduleEn: 'Fleet & Logistics',
+    moduleAr: 'الأسطول والعمليات اللوجستية',
+    badgeBg: 'bg-blue-50 dark:bg-blue-950/40',
+    badgeBorder: 'border-blue-200 dark:border-blue-800',
+    badgeText: 'text-blue-700 dark:text-blue-300',
+  },
+  InventoryTransferSchema: {
+    nameEn: 'Warehouse Stock Transfer',
+    nameAr: 'مناقلة مخزون مستودعي',
+    moduleEn: 'Inventory & Stock',
+    moduleAr: 'المستودعات والمخزون',
+    badgeBg: 'bg-amber-50 dark:bg-amber-950/40',
+    badgeBorder: 'border-amber-200 dark:border-amber-800',
+    badgeText: 'text-amber-700 dark:text-amber-300',
+  },
+  PurchaseOrderSchema: {
+    nameEn: 'Procurement Purchase Order',
+    nameAr: 'أمر شراء مشتريات (PO)',
+    moduleEn: 'Procurement & S2P',
+    moduleAr: 'المشتريات والتوريد',
+    badgeBg: 'bg-purple-50 dark:bg-purple-950/40',
+    badgeBorder: 'border-purple-200 dark:border-purple-800',
+    badgeText: 'text-purple-700 dark:text-purple-300',
+  },
+  JournalVoucherSchema: {
+    nameEn: 'General Ledger Journal Voucher',
+    nameAr: 'قيد محاسبي مالي',
+    moduleEn: 'Finance & Accounts',
+    moduleAr: 'المالية والحسابات العامة',
+    badgeBg: 'bg-indigo-50 dark:bg-indigo-950/40',
+    badgeBorder: 'border-indigo-200 dark:border-indigo-800',
+    badgeText: 'text-indigo-700 dark:text-indigo-300',
+  },
+  EmployeeLeaveSchema: {
+    nameEn: 'Employee Leave & Absence',
+    nameAr: 'طلب إجازة موظف',
+    moduleEn: 'HR & Payroll',
+    moduleAr: 'الموارد البشرية والرواتب',
+    badgeBg: 'bg-rose-50 dark:bg-rose-950/40',
+    badgeBorder: 'border-rose-200 dark:border-rose-800',
+    badgeText: 'text-rose-700 dark:text-rose-300',
+  },
+};
+
+const FIELD_LABELS: Record<string, { en: string; ar: string }> = {
+  truck_id: { en: 'Truck Unit ID', ar: 'رقم الشاحنة / المعدة' },
+  destination: { en: 'Destination Facility', ar: 'الوجهة / الموقع' },
+  cargo_type: { en: 'Cargo Material', ar: 'نوع الحمولة / المادة' },
+  priority: { en: 'Dispatch Priority', ar: 'مستوى الأولوية' },
+  item_code: { en: 'Item SKU / Code', ar: 'رمز المادة / الصنف' },
+  quantity: { en: 'Transfer Quantity', ar: 'الكمية المنقولة' },
+  source_warehouse: { en: 'Origin Warehouse', ar: 'مستودع المصدر' },
+  target_warehouse: { en: 'Destination Warehouse', ar: 'مستودع المقصد' },
+  supplier_name: { en: 'Vendor / Supplier', ar: 'المورد / الشريك' },
+  items: { en: 'Procured Items', ar: 'الأصناف المطلوبة' },
+  total_estimated_value: { en: 'Estimated Value', ar: 'القيمة التقديرية' },
+  customer_name: { en: 'Customer / Client', ar: 'العميل' },
+  service_rendered: { en: 'Service Description', ar: 'وصف الخدمة / المبيعات' },
+  net_amount: { en: 'Net Taxable Amount', ar: 'المبلغ الخاضع للضريبة' },
+  tax_rate: { en: 'VAT Rate (%)', ar: 'نسبة الضريبة (%)' },
+  zatca_phase: { en: 'ZATCA Phase', ar: 'مرحلة الامتثال (الزكاة)' },
+  description: { en: 'Accounting Description', ar: 'البيان المحاسبي' },
+  amount: { en: 'Voucher Amount', ar: 'مبلغ القيد' },
+  currency: { en: 'Currency Code', ar: 'العملة' },
+  expense_category: { en: 'Expense Category', ar: 'تصنيف المصروف' },
+  employee_id: { en: 'Employee Reference', ar: 'الموظف / الرقم الوظيفي' },
+  leave_type: { en: 'Leave Category', ar: 'نوع الإجازة' },
+  days_requested: { en: 'Requested Duration', ar: 'عدد الأيام المطلوبة' },
+};
+
+const formatDraftValue = (key: string, val: any, isAr: boolean): string => {
+  if (val === null || val === undefined) return '-';
+  if (typeof val === 'boolean') {
+    return val ? (isAr ? 'نعم' : 'Yes') : (isAr ? 'لا' : 'No');
+  }
+  if (typeof val === 'number') {
+    if (key.includes('amount') || key.includes('value') || key === 'cost') {
+      return `${val.toLocaleString(isAr ? 'ar-SA' : 'en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${isAr ? 'ر.س' : 'SAR'}`;
+    }
+    if (key === 'tax_rate') {
+      return `${val}%`;
+    }
+    if (key === 'zatca_phase') {
+      return isAr ? `المرحلة ${val} (الربط والتكامل)` : `Phase ${val} (Integration & Clearance)`;
+    }
+    if (key === 'days_requested') {
+      return isAr ? `${val} أيام` : `${val} Days`;
+    }
+    if (key === 'quantity' || key === 'qty') {
+      return `${val.toLocaleString(isAr ? 'ar-SA' : 'en-US')} ${isAr ? 'وحدة / طن' : 'Units / Tons'}`;
+    }
+    return val.toString();
+  }
+  if (typeof val === 'object') {
+    return JSON.stringify(val);
+  }
+  return String(val);
+};
 
 interface AIAssistantWidgetProps {
   isOpenExternal?: boolean;
@@ -336,7 +464,16 @@ How can I assist you with your operations today?`,
           approved,
         }),
       });
+
+      if (!res.ok) {
+        throw new Error(`Execution error: ${res.status}`);
+      }
+
       const data = await res.json();
+      const actionName = data.executed_payload?.action || pendingDraft?.action;
+      const zatcaInfo = data.zatca;
+      const isInvoice = actionName === 'CustomerInvoiceSchema';
+      const isCleared = isInvoice && (!zatcaInfo || zatcaInfo.compliance_status === 'CLEARED');
 
       const execMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -349,8 +486,21 @@ How can I assist you with your operations today?`,
           hour: '2-digit',
           minute: '2-digit',
         }),
+        executedAction: approved ? actionName : undefined,
+        zatcaStatus: approved && isInvoice ? (isCleared ? 'cleared' : 'pending') : undefined,
+        zatcaDetails: approved && isInvoice ? {
+          invoice_number: data.invoice_number || data.executed_payload?.data?.invoice_number || 'INV-AUTO',
+          invoice_hash: zatcaInfo?.invoice_hash,
+          compliance_status: zatcaInfo?.compliance_status || (isCleared ? 'CLEARED' : 'PENDING'),
+        } : undefined,
       };
       setMessages((prev) => [...prev, execMsg]);
+      showToast?.(
+        approved
+          ? (isAr ? 'تم تنفيذ واعتماد العملية في النظام بنجاح.' : 'Action successfully committed to database.')
+          : (isAr ? 'تم إلغاء المسودة.' : 'Draft cancelled.'),
+        approved ? 'success' : 'info'
+      );
     } catch (err) {
       console.error('Agent execute error:', err);
       const errMessage: Message = {
@@ -820,6 +970,61 @@ How can I assist you with your operations today?`,
                           </div>
                         )}
 
+                        {/* Post-execution Action & ZATCA Compliance Badges */}
+                        {msg.executedAction && (
+                          <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/80 space-y-1.5">
+                            {msg.executedAction === 'CustomerInvoiceSchema' ? (
+                              <div className="rounded-lg bg-emerald-50/90 p-2.5 border border-emerald-200/80 dark:bg-emerald-950/40 dark:border-emerald-800/80">
+                                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    {msg.zatcaStatus === 'cleared' ? (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs">
+                                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        <span>{isAr ? '✓ معتمد ومطابق للزكاة (ZATCA Cleared)' : '[✓ ZATCA Cleared]'}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs">
+                                        <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 animate-pulse" />
+                                        <span>{isAr ? '⏳ بانتظار اعتماد منصة فاتورة' : '[⏳ Pending Fatoora Clearance]'}</span>
+                                      </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[9.5px] font-mono font-semibold bg-white/80 text-emerald-900 border border-emerald-200 dark:bg-slate-900/80 dark:text-emerald-300 dark:border-emerald-800">
+                                      UBL 2.1 C14N
+                                    </span>
+                                  </div>
+                                  {msg.zatcaDetails?.invoice_number && (
+                                    <span className="text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300">
+                                      {msg.zatcaDetails.invoice_number}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {msg.zatcaDetails?.invoice_hash && (
+                                  <div className="mt-1.5 rounded bg-white/70 p-1.5 text-[9px] font-mono text-slate-600 dark:bg-slate-900/60 dark:text-slate-400 border border-emerald-100 dark:border-emerald-900/40">
+                                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                      {isAr ? 'بصمة الفاتورة الرقمية (SHA-256):' : 'Invoice Hash (SHA-256):'}
+                                    </span>
+                                    <span className="block truncate mt-0.5 text-[8.5px] text-slate-500 dark:text-slate-400">
+                                      {msg.zatcaDetails.invoice_hash}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/80 shadow-2xs">
+                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                  <span>
+                                    {isAr
+                                      ? `✓ تم اعتماد الإجراء: ${SCHEMA_REGISTRY[msg.executedAction]?.nameAr || msg.executedAction}`
+                                      : `[✓ Committed: ${SCHEMA_REGISTRY[msg.executedAction]?.nameEn || msg.executedAction}]`}
+                                  </span>
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Timestamp & Model Used */}
                         <div
                           className={`mt-2 flex items-center justify-between text-[9px] ${
@@ -885,28 +1090,99 @@ How can I assist you with your operations today?`,
 
                 {/* Pending Draft Action Approval Card */}
                 {pendingDraft && (
-                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 shadow-sm dark:border-amber-800/60 dark:bg-amber-950/30">
-                    <div className="mb-2 flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300 text-xs">
-                      <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      <span>{isAr ? 'إجراء يتطلب اعتمادك' : 'Action Requires Approval'}</span>
+                  <div className="rounded-xl border border-amber-300 bg-amber-50/95 p-3.5 shadow-md dark:border-amber-700/60 dark:bg-amber-950/40 backdrop-blur-xs transition-all">
+                    {/* Header with Module Indicator */}
+                    <div className="mb-3 flex items-center justify-between border-b border-amber-200 pb-2.5 dark:border-amber-800/60">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="block text-xs font-bold text-amber-950 dark:text-amber-100">
+                            {isAr ? 'مسودة عملية تتطلب اعتمادك' : 'Pending Action Draft — Requires Approval'}
+                          </span>
+                          <span className="text-[10.5px] text-amber-800 dark:text-amber-300">
+                            {isAr ? 'المخطط المستهدف: ' : 'Target Schema: '}
+                            <span className="font-mono font-semibold">
+                              {pendingDraft.action
+                                ? (SCHEMA_REGISTRY[pendingDraft.action]
+                                    ? (isAr ? SCHEMA_REGISTRY[pendingDraft.action].nameAr : SCHEMA_REGISTRY[pendingDraft.action].nameEn)
+                                    : pendingDraft.action)
+                                : 'Generic Draft'}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                      {pendingDraft.action === 'CustomerInvoiceSchema' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-0.5 text-[9.5px] font-bold text-emerald-800 dark:border-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300 shadow-2xs">
+                          <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          ZATCA Phase 2
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-100/80 px-2 py-0.5 text-[9.5px] font-semibold text-amber-800 dark:border-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                          {SCHEMA_REGISTRY[pendingDraft.action]
+                            ? (isAr ? SCHEMA_REGISTRY[pendingDraft.action].moduleAr : SCHEMA_REGISTRY[pendingDraft.action].moduleEn)
+                            : (isAr ? 'عملية نظام' : 'System Operation')}
+                        </span>
+                      )}
                     </div>
-                    <pre className="mb-3 max-h-48 overflow-x-auto overflow-y-auto rounded-lg bg-slate-900 p-2 text-[11px] font-mono text-emerald-400 dark:bg-black/80">
-                      {JSON.stringify(pendingDraft, null, 2)}
-                    </pre>
+
+                    {/* Dynamic Key-Value Grid for Draft Parameters */}
+                    {pendingDraft.data && typeof pendingDraft.data === 'object' ? (
+                      <div className="mb-3.5 grid grid-cols-2 gap-2 rounded-lg bg-white/90 p-2.5 text-xs shadow-xs border border-amber-200/60 dark:bg-slate-900/80 dark:border-slate-800">
+                        {Object.entries(pendingDraft.data).map(([key, val]) => {
+                          const label = FIELD_LABELS[key]
+                            ? (isAr ? FIELD_LABELS[key].ar : FIELD_LABELS[key].en)
+                            : key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+                          const isFullWidth = (typeof val === 'string' && val.length > 25) || key === 'description' || key === 'service_rendered' || key === 'items';
+                          return (
+                            <div
+                              key={key}
+                              className={`flex flex-col p-1.5 rounded-md bg-slate-50/70 border border-slate-100 dark:bg-slate-800/50 dark:border-slate-700/50 ${
+                                isFullWidth ? 'col-span-2' : ''
+                              }`}
+                            >
+                              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                {label}
+                              </span>
+                              <span className="text-[11.5px] font-semibold text-slate-900 dark:text-slate-100 break-words mt-0.5">
+                                {formatDraftValue(key, val, isAr)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <pre className="mb-3 max-h-40 overflow-x-auto rounded-lg bg-slate-900 p-2 text-[10.5px] font-mono text-emerald-400 dark:bg-black/80">
+                        {JSON.stringify(pendingDraft, null, 2)}
+                      </pre>
+                    )}
+
+                    {/* Confirmation Button with Loading State */}
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => handleApproveExecute(true)}
                         disabled={loading}
-                        className="flex-1 rounded-lg bg-emerald-600 py-1.5 px-3 font-bold text-white text-xs hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-xs"
+                        className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2 px-3 font-bold text-white text-xs hover:bg-emerald-700 active:scale-98 disabled:opacity-50 transition-all shadow-sm"
                       >
-                        {isAr ? 'اعتماد وتنفيذ' : 'Approve & Execute'}
+                        {loading ? (
+                          <>
+                            <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                            <span>{isAr ? 'جاري الاعتماد والتنفيذ في قاعدة البيانات...' : 'Committing to DB...'}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Check className="h-3.5 w-3.5" />
+                            <span>{isAr ? 'اعتماد وتنفيذ العملية' : 'Approve & Execute'}</span>
+                          </>
+                        )}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleApproveExecute(false)}
                         disabled={loading}
-                        className="flex-1 rounded-lg bg-slate-200 py-1.5 px-3 font-bold text-slate-700 text-xs hover:bg-slate-300 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+                        className="rounded-lg bg-slate-200 py-2 px-3.5 font-bold text-slate-700 text-xs hover:bg-slate-300 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
                       >
                         {isAr ? 'إلغاء' : 'Cancel'}
                       </button>

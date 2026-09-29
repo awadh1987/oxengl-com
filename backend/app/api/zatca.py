@@ -261,3 +261,164 @@ async def validate_invoice_compliance(
         "message": "Invoice successfully cleared ZATCA compliance checks.",
         "zatca_response": response.json(),
     }
+
+
+# ZATCA Developer Portal Production URLs
+ZATCA_CLEARANCE_URL = "https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal/invoices/clearance/single"
+ZATCA_REPORTING_URL = "https://gw-fatoora.zatca.gov.sa/e-invoicing/developer-portal/invoices/reporting/single"
+
+
+@router.post("/clearance/single/{invoice_uuid}")
+async def clear_b2b_invoice(
+    invoice_uuid: str,
+    db: Optional[Session] = Depends(get_db) if get_db else None,
+):
+    """
+    B2B Standard Tax Invoice Clearance.
+    Transmits the invoice to ZATCA for real-time validation and clearance stamp.
+    """
+    # 1. Fetch invoice, generate UBL 2.1, and canonicalize (similar to validation route)
+    # invoice = db.query(CustomerInvoice).filter_by(uuid=invoice_uuid).first()
+
+    # Mock payload for architecture completion
+    encoded_invoice = base64.b64encode(b"<Invoice>Mock B2B C14N XML</Invoice>").decode("utf-8")
+    ccsid = "mock_binary_security_token"
+    secret = "mock_secret"
+    invoice_hash = "MockHash="
+
+    if db:
+        try:
+            tax_profile = db.execute(
+                text(
+                    "SELECT csid, secret_key FROM tax_profiles "
+                    "WHERE is_active = true AND csid IS NOT NULL "
+                    "LIMIT 1"
+                )
+            ).fetchone()
+            if tax_profile and tax_profile[0] and tax_profile[1]:
+                ccsid = tax_profile[0]
+                secret = tax_profile[1]
+
+            log_row = db.execute(
+                text(
+                    "SELECT invoice_hash FROM zatca_logs "
+                    "WHERE invoice_id::text = :id OR invoice_hash = :id "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"id": invoice_uuid},
+            ).fetchone()
+            if log_row and log_row[0]:
+                invoice_hash = log_row[0]
+        except Exception as e:
+            print(f"[ZATCA DB Lookup Info] {e}")
+
+    headers = {
+        "Accept-Version": "V2",
+        "Accept-Language": "en",
+        "Authorization": f"Basic {base64.b64encode(f'{ccsid}:{secret}'.encode()).decode()}",
+        "Clearance-Status": "1",
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "invoiceHash": invoice_hash,
+        "uuid": invoice_uuid,
+        "invoice": encoded_invoice,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(ZATCA_CLEARANCE_URL, json=payload, headers=headers)
+    except httpx.RequestError as exc:
+        print(f"[ZATCA Network Error] Failed connecting to clearance service: {exc}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Unable to connect to ZATCA clearance service: {str(exc)}",
+        )
+
+    if response.status_code not in [200, 202]:
+        print(f"[ZATCA Clearance Failed] Status {response.status_code}: {response.text}")
+        try:
+            err_detail = response.json()
+        except Exception:
+            err_detail = response.text or "ZATCA Clearance Failed"
+        raise HTTPException(status_code=response.status_code, detail=err_detail)
+
+    # TODO: Save the returned cleared invoice XML (containing ZATCA's cryptographic stamp) to the DB
+    return {"status": "cleared", "zatca_response": response.json()}
+
+
+@router.post("/reporting/single/{invoice_uuid}")
+async def report_b2c_invoice(
+    invoice_uuid: str,
+    db: Optional[Session] = Depends(get_db) if get_db else None,
+):
+    """
+    B2C Simplified Tax Invoice Reporting.
+    Transmits the locally signed invoice to ZATCA asynchronously (within 24 hours).
+    """
+    # Mock payload for architecture completion
+    encoded_invoice = base64.b64encode(b"<Invoice>Mock B2C C14N XML</Invoice>").decode("utf-8")
+    ccsid = "mock_binary_security_token"
+    secret = "mock_secret"
+    invoice_hash = "MockHash="
+
+    if db:
+        try:
+            tax_profile = db.execute(
+                text(
+                    "SELECT csid, secret_key FROM tax_profiles "
+                    "WHERE is_active = true AND csid IS NOT NULL "
+                    "LIMIT 1"
+                )
+            ).fetchone()
+            if tax_profile and tax_profile[0] and tax_profile[1]:
+                ccsid = tax_profile[0]
+                secret = tax_profile[1]
+
+            log_row = db.execute(
+                text(
+                    "SELECT invoice_hash FROM zatca_logs "
+                    "WHERE invoice_id::text = :id OR invoice_hash = :id "
+                    "ORDER BY created_at DESC LIMIT 1"
+                ),
+                {"id": invoice_uuid},
+            ).fetchone()
+            if log_row and log_row[0]:
+                invoice_hash = log_row[0]
+        except Exception as e:
+            print(f"[ZATCA DB Lookup Info] {e}")
+
+    headers = {
+        "Accept-Version": "V2",
+        "Accept-Language": "en",
+        "Authorization": f"Basic {base64.b64encode(f'{ccsid}:{secret}'.encode()).decode()}",
+        "Clearance-Status": "0",  # 0 indicates reporting, not clearance
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "invoiceHash": invoice_hash,
+        "uuid": invoice_uuid,
+        "invoice": encoded_invoice,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(ZATCA_REPORTING_URL, json=payload, headers=headers)
+    except httpx.RequestError as exc:
+        print(f"[ZATCA Network Error] Failed connecting to reporting service: {exc}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Unable to connect to ZATCA reporting service: {str(exc)}",
+        )
+
+    if response.status_code not in [200, 202]:
+        print(f"[ZATCA Reporting Failed] Status {response.status_code}: {response.text}")
+        try:
+            err_detail = response.json()
+        except Exception:
+            err_detail = response.text or "ZATCA Reporting Failed"
+        raise HTTPException(status_code=response.status_code, detail=err_detail)
+
+    return {"status": "reported", "zatca_response": response.json()}

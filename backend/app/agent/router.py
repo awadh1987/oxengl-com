@@ -264,8 +264,13 @@ async def approve_and_execute(
     # Resume the graph to clear the execution node
     result = oxengl_agent.invoke(None, config=config)
     
-    return {
+    response_data = {
         "status": "committed",
         "message": f"Action '{action_name}' successfully committed.",
-        "executed_payload": payload
+        "executed_payload": payload,
     }
+    if action_name == "CustomerInvoiceSchema" and "inv_result" in locals() and inv_result:
+        response_data["zatca"] = inv_result.get("zatca")
+        response_data["invoice_number"] = inv_result.get("invoice_number")
+
+    return response_data
