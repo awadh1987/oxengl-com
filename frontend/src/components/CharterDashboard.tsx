@@ -29,7 +29,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
   onCharterCreated,
   onOpenProvisionModal,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = (i18n.language || 'ar').startsWith('ar');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 

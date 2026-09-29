@@ -27,7 +27,8 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
   onTaskUpdated,
   onOpenHazardModal,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = (i18n.language || 'ar').startsWith('ar');
   const [selectedPhase, setSelectedPhase] = useState<string>('ALL');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');
   const [showBatchModal, setShowBatchModal] = useState(false);

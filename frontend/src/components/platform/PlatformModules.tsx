@@ -33,7 +33,8 @@ const Banner: React.FC<{ icon: React.ComponentType<{ className?: string }>; titl
 );
 
 export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => void }> = ({ onInspect }) => {
-  const { companies, currentCompany, refreshCompanies } = useApp();
+  const { companies, currentCompany, refreshCompanies, language } = useApp();
+  const isAr = language === 'ar';
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState('ALL');
   const [busy, setBusy] = useState(false);
@@ -195,7 +196,8 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
 };
 
 export const LicenseProvisionerView: React.FC = () => {
-  const { companies, currentCompany, refreshCompanies, setCurrentCompany } = useApp();
+  const { companies, currentCompany, refreshCompanies, setCurrentCompany, language } = useApp();
+  const isAr = language === 'ar';
   const [superAdminKey, setSuperAdminKey] = useState('');
   const [companyId, setCompanyId] = useState(() => {
     if (currentCompany && companies.some((c) => c.id === currentCompany.id)) return currentCompany.id;

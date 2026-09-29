@@ -216,7 +216,7 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
 
       if (res?.access_token) {
         const effectiveSlug = res.tenant_slug || tenantSlug;
-        const tenantCid = (res as any)?.company_id || (res as any)?.tenant_id || res.user?.company_id || res.user?.tenant_id;
+        const tenantCid = (res as any)?.company_id || (res as any)?.tenant_id || (res.user as any)?.company_id || (res.user as any)?.tenant_id;
 
         // Synchronize central auth session and tenant UUID storage
         setAuthSession(res.access_token, 'tenant', effectiveSlug, tenantCid);

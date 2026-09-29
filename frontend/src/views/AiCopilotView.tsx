@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useAppSafe } from '../context/AppContext';
 import { CopilotTestRunner } from '../components/ai/CopilotTestRunner';
 
 // === 1. DATA CONTRACT TYPING ===
@@ -18,6 +19,8 @@ interface ChatMessage {
 }
 
 export const AiCopilotView: React.FC = () => {
+  const app = useAppSafe();
+  const isAr = (app?.language || (typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 'ar' : 'en')).startsWith('ar');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputPrompt, setInputPrompt] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);

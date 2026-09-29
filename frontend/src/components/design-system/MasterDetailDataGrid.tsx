@@ -48,6 +48,7 @@ export function MasterDetailDataGrid<T extends { id: string }>({
   emptyMessage = 'No records found matching criteria',
 }: MasterDetailDataGridProps<T>) {
   const { densityMode, themeMode, language } = useApp();
+  const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
   const density = DENSITY_STYLES[densityMode];
   const [search, setSearch] = useState('');

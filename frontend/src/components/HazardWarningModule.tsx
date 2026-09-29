@@ -25,7 +25,8 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
   hazards,
   onHazardCreatedOrUpdated,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isAr = (i18n.language || 'ar').startsWith('ar');
   const [showAddForm, setShowAddForm] = useState(false);
   const [desiredOutcome, setDesiredOutcome] = useState('');
   const [hazardDesc, setHazardDesc] = useState('');
