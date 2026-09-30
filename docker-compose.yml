@@ -146,8 +146,8 @@ services:
     container_name: oxengl_nginx_container
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "0.0.0.0:8080:80"
+      - "0.0.0.0:4433:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro

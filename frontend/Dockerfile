@@ -20,7 +20,7 @@ RUN npm ci || npm install
 COPY . .
 
 # Build production bundle
-RUN npm run build
+RUN ulimit -n 65535 2>/dev/null || true; npm run build
 
 # Stage 2: Production Nginx Server
 FROM nginx:1.25-alpine AS production
