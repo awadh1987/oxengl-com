@@ -30,7 +30,8 @@ import {
 } from '../services/api';
 
 export const SuperAdminFinancialHubView: React.FC = () => {
-  const { companies } = useApp();
+  const { companies, language } = useApp();
+  const isAr = language === 'ar';
 
   const [summary, setSummary] = useState<SuperAdminBillingSummaryDto | null>(null);
   const [invoices, setInvoices] = useState<SaaSInvoiceDto[]>([]);

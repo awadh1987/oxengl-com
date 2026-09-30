@@ -7,6 +7,7 @@ import {
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 import { erpApi } from '../services/api';
+import { useApp } from '../context/AppContext';
 
 interface TenantItem {
   id: string;
@@ -24,6 +25,8 @@ interface TenantItem {
 }
 
 export const SuperAdminTenantsView: React.FC = () => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

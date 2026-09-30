@@ -19,6 +19,7 @@ import {
   ExternalLink,
   FileCheck2,
 } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 interface TenantRecord {
   id: string;
@@ -55,6 +56,8 @@ interface FeatureFlags {
 }
 
 export const MasterControlPanel: React.FC = () => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({});

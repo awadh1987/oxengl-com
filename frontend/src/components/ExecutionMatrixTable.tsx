@@ -13,6 +13,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { ExecutionTaskItem } from './planningTypes';
+import { useApp } from '../context/AppContext';
 
 interface ExecutionMatrixTableProps {
   tasks: ExecutionTaskItem[];
@@ -27,6 +28,8 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
   onTaskUpdated,
   onOpenHazardModal,
 }) => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const { t } = useTranslation();
   const [selectedPhase, setSelectedPhase] = useState<string>('ALL');
   const [selectedDept, setSelectedDept] = useState<string>('ALL');

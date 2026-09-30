@@ -9,6 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { ExecutionTaskItem, StrategicHazardItem } from './planningTypes';
+import { useApp } from '../context/AppContext';
 
 interface HazardWarningModuleProps {
   isOpen: boolean;
@@ -25,6 +26,8 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
   hazards,
   onHazardCreatedOrUpdated,
 }) => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const { t } = useTranslation();
   const [showAddForm, setShowAddForm] = useState(false);
   const [desiredOutcome, setDesiredOutcome] = useState('');

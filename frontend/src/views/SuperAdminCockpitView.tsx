@@ -34,6 +34,7 @@ const navigation: { id: PlatformTab; label: string; description: string; badge?:
 
 export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ onOpenTenantOnboarding, onLogout, onInspectTenantWorkspace }) => {
   const { companies, currentCompany, setCurrentCompany, currentUser, language, setLanguage } = useApp();
+  const isAr = language === 'ar';
   const [activeTab, setActiveTab] = useState<PlatformTab>('cockpit');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inspectOpen, setInspectOpen] = useState(false);

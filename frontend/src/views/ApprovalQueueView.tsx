@@ -15,6 +15,8 @@ import {
   Layers,
 } from 'lucide-react';
 
+import { useApp } from '../context/AppContext';
+
 export interface ApprovalItem {
   id: string;
   step_id: string;
@@ -34,6 +36,8 @@ export interface ApprovalItem {
 }
 
 export const ApprovalQueueView: React.FC = () => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const [items, setItems] = useState<ApprovalItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');

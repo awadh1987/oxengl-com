@@ -3,7 +3,7 @@ from fastapi import Request, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
-from backend.database import *
+# from backend.database import *
 
 
 def get_isolated_db_session(request: Request) -> Generator[Session, None, None]:

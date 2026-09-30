@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { ProjectCharterItem } from './planningTypes';
 import { erpApi } from '../services/api';
+import { useApp } from '../context/AppContext';
 
 interface CharterDashboardProps {
   charters: ProjectCharterItem[];
@@ -29,6 +30,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
   onCharterCreated,
   onOpenProvisionModal,
 }) => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const { t } = useTranslation();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);

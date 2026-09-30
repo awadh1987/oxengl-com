@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { redirectToTenantSubdomain, getRootDomain, isLocalhost } from '../utils/subdomain';
+import { useApp } from '../context/AppContext';
 import {
   Lock,
   ShieldCheck,
@@ -28,6 +29,8 @@ const SAUDI_BANK_DETAILS = {
 };
 
 export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ onSuccess }) => {
+  const { language } = useApp();
+  const isAr = language === 'ar';
   const navigate = (path: string) => {
     if (typeof window !== 'undefined') {
       window.history.pushState({}, '', path);
