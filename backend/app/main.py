@@ -496,12 +496,20 @@ app.include_router(planning_router, prefix="/api/tenant/planning")
 app.include_router(planning_router, prefix="/api/v1/planning")
 from backend.app.api.v1 import super_admin
 app.include_router(super_admin.router)
+app.add_api_route(
+    "/api/v1/super-admin/tenants/{tenant_slug}/overrides",
+    super_admin.update_tenant_overrides,
+    methods=["PATCH"],
+    tags=["Super Admin"],
+)
 from backend.app.api.v1 import users as users_api
 app.include_router(users_api.router)
 from backend.app.api.v1 import tenant_control, master_platform
 app.include_router(tenant_control.router, prefix="/api/tenant/control")
 app.include_router(tenant_control.router, prefix="/api/v1/tenant/control")
 app.include_router(tenant_control.router, prefix="/tenant/control")
+app.include_router(tenant_control.router, prefix="/api/v1/tenant")
+app.include_router(tenant_control.router, prefix="/api/tenant")
 app.include_router(master_platform.router, prefix="/api/master/platform")
 app.include_router(master_platform.router, prefix="/api/v1/master/platform")
 app.include_router(master_platform.admin_router, prefix="/api/admin")

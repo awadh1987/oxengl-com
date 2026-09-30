@@ -450,9 +450,22 @@ def register_custom_domain(
         header_company=x_company_id,
         db=db,
     )
-    # Enforce custom domain architectural entitlement
-    from backend.app.services.billing_service import enforce_tenant_entitlement
-    enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
+    # Evaluate subscription grade and explicit feature overrides
+    master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
+    company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
+    current_tenant = master or company
+
+    tenant_grade = getattr(current_tenant, "grade", getattr(current_tenant, "subscription_tier", "PROFESSIONAL")).upper() if current_tenant else "PROFESSIONAL"
+    tenant_overrides = getattr(current_tenant, "features_override", None) or {}
+
+    has_custom_domain_access = (
+        tenant_grade == "ENTERPRISE" or
+        bool(tenant_overrides and tenant_overrides.get("allow_custom_domain", False))
+    )
+
+    if not has_custom_domain_access:
+        from backend.app.services.billing_service import enforce_tenant_entitlement
+        enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
 
     clean_domain = payload.domain_name.strip().lower()
 

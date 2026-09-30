@@ -89,7 +89,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:-ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad}
       PYTHONPATH: "/app"
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
     depends_on:
       postgres_db:
         condition: service_healthy
@@ -163,7 +163,7 @@ services:
     mem_limit: 128m
     mem_reservation: 32m
     healthcheck:
-      test: ["CMD-SHELL", "curl -k -f https://localhost/api/v1/health || exit 1"]
+      test: ["CMD-SHELL", "curl -f http://localhost:80/api/v1/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

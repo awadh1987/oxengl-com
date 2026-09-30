@@ -17,10 +17,10 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column('tenants', sa.Column('logo_url', sa.String(length=500), nullable=True))
+    op.add_column('master_tenants', sa.Column('logo_url', sa.String(length=500), nullable=True))
     op.add_column('res_companies', sa.Column('logo_url', sa.String(length=500), nullable=True))
 
 
 def downgrade() -> None:
     op.drop_column('res_companies', 'logo_url')
-    op.drop_column('tenants', 'logo_url')
+    op.drop_column('master_tenants', 'logo_url')

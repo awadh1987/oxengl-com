@@ -68,6 +68,7 @@ class ResCompany(TimestampMixin, Base):
     theme_mode: Mapped[str] = mapped_column(String(16), nullable=False, default="CUSTOM")
     ui_primary_color: Mapped[str] = mapped_column(String(9), nullable=False, default="#1E3A8A")
     ui_logo_url: Mapped[Optional[str]] = mapped_column(Text)
+    features_override: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=True)
     logo_url = Column(String(500), nullable=True, default=None)
     is_active = Column(Boolean, default=True, server_default="true", nullable=False)
     status = Column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
@@ -277,6 +278,7 @@ class Tenant(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
     logo_url = Column(String(500), nullable=True, default=None)
+    features_override = Column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
 
     def __init__(self, *args, **kwargs):
         if "name" in kwargs and "company_name" not in kwargs:
@@ -1916,6 +1918,15 @@ class MasterTenant(TimestampMixin, Base):
     paddle_customer_id: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True, index=True)
     paddle_subscription_id: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True, index=True)
     license_expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    features_override: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
+
+    @property
+    def grade(self) -> str:
+        return (self.subscription_tier or "PROFESSIONAL").upper()
+
+    @grade.setter
+    def grade(self, value: str):
+        self.subscription_tier = (value or "PROFESSIONAL").lower()
 
     database_config: Mapped["TenantDatabase"] = relationship(
         "TenantDatabase", back_populates="tenant", uselist=False, cascade="all, delete-orphan"

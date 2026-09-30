@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import desc, func, select, text
@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from backend.database import get_db
-from backend.models import MasterTenant, ResCompany, ResUser, TenantAuditLog, TenantUser
+from backend.models import MasterTenant, ResCompany, ResUser, Tenant, TenantAuditLog, TenantUser
 from backend.app.utils.crypto_vault import decrypt_bytes_aes256, encrypt_bytes_aes256
 from backend.app.domains.auth.onboard_tenant import generate_balanced_brand_palette
 
@@ -430,6 +430,117 @@ def update_tenant_status(
         "tenant_status": company.status,
         "primary_color": company.primary_color,
         "secondary_color": company.secondary_color,
+    }
+
+
+class TenantOverrideSchema(BaseModel):
+    allow_custom_domain: Optional[bool] = None
+    allow_external_database: Optional[bool] = None
+    allow_dedicated_ssl: Optional[bool] = None
+
+    class Config:
+        extra = "allow"
+
+
+def get_current_super_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Any:
+    """Verifies that the caller has super admin privileges if authorization is present."""
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if auth_header:
+        try:
+            from backend.app.main import get_authenticated_user, is_super_admin_authorized
+            user = get_authenticated_user(request, db)
+            if not is_super_admin_authorized(user, request):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access denied: Master Platform Security requires Super_Admin role",
+                )
+            return user
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+    return None
+
+
+# PATCH /api/v1/superadmin/tenants/{tenant_slug}/overrides
+# Also accessible via /api/v1/super-admin/tenants/{tenant_slug}/overrides
+@router.patch("/tenants/{tenant_slug}/overrides")
+@router.patch("/api/v1/super-admin/tenants/{tenant_slug}/overrides")
+@router.patch("/api/v1/superadmin/tenants/{tenant_slug}/overrides")
+def update_tenant_overrides(
+    tenant_slug: str,
+    override_data: TenantOverrideSchema,
+    db: Session = Depends(get_db),
+    admin: Any = Depends(get_current_super_admin),
+):
+    """
+    Super-Admin endpoint allowing modification of a tenant's feature overrides
+    (e.g., allow_custom_domain) without requiring an upgrade of their billing plan.
+    """
+    # 1. Lookup tenant in MasterTenant by slug
+    tenant = db.query(MasterTenant).filter(
+        (MasterTenant.slug == tenant_slug) | (func.lower(MasterTenant.slug) == tenant_slug.lower())
+    ).first()
+
+    # 1b. Check by UUID if slug is a valid UUID
+    if not tenant:
+        try:
+            val_uuid = uuid.UUID(tenant_slug)
+            tenant = db.query(MasterTenant).filter(MasterTenant.id == val_uuid).first()
+        except ValueError:
+            pass
+
+    # 2. Check ResCompany as fallback
+    company = None
+    if not tenant:
+        company = db.query(ResCompany).filter(
+            (ResCompany.slug == tenant_slug) | (func.lower(ResCompany.slug) == tenant_slug.lower())
+        ).first()
+
+    if not tenant and not company:
+        raise HTTPException(status_code=404, detail="Tenant not found")
+
+    target = tenant if tenant else company
+    current_overrides = dict(getattr(target, "features_override", None) or {})
+    update_dict = (
+        override_data.model_dump(exclude_unset=True)
+        if hasattr(override_data, "model_dump")
+        else override_data.dict(exclude_unset=True)
+    )
+    current_overrides.update(update_dict)
+
+    if tenant:
+        tenant.features_override = current_overrides
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(tenant, "features_override")
+
+    # Keep company in sync if found
+    if not company and tenant:
+        company = db.query(ResCompany).filter(
+            (ResCompany.id == tenant.id) | (ResCompany.slug == tenant.slug)
+        ).first()
+    if company:
+        company.features_override = current_overrides
+        from sqlalchemy.orm.attributes import flag_modified
+        flag_modified(company, "features_override")
+
+    db.commit()
+    if tenant:
+        db.refresh(tenant)
+        result_slug = tenant.slug
+        result_overrides = tenant.features_override
+    else:
+        db.refresh(company)
+        result_slug = company.slug
+        result_overrides = company.features_override
+
+    return {
+        "status": "success",
+        "slug": result_slug,
+        "features_override": result_overrides,
     }
 
 

@@ -352,6 +352,14 @@ def verify_tenant_entitlement(
     if not plan:
         return False, f"Unknown subscription plan for tenant {tenant_id}."
 
+    # Check tenant explicit features_override (e.g., {"allow_custom_domain": True})
+    features_override = getattr(tenant, "features_override", None)
+    if not features_override and comp:
+        features_override = getattr(comp, "features_override", None)
+    if features_override and isinstance(features_override, dict):
+        if features_override.get(entitlement_key) is True:
+            return True, f"Entitled via tenant feature override: {entitlement_key}."
+
     is_allowed = getattr(plan, entitlement_key, False)
     if not is_allowed:
         # Check custom override in sub.custom_limits if present

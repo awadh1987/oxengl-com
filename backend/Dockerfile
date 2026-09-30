@@ -41,5 +41,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=20s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/api/v1/health 2>/dev/null || curl -f http://localhost:8000/docs 2>/dev/null || exit 1
 
-# Launch uvicorn with 2 workers to stay well within the 2GB host memory budget (~150MB per worker)
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2", "--limit-concurrency", "100"]
+# Launch uvicorn with 1 worker to stay well within the 2GB host memory budget
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "100"]
