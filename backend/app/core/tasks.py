@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from backend.app.core.celery_app import celery_app
+from .celery_app import celery_app
 from backend.database import SessionLocal
 from backend import models
 

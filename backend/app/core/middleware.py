@@ -112,12 +112,10 @@ PLATFORM_BASE_HOSTS = {
     "testserver",
     "oxengl.me",
     "app.oxengl.me",
-    "oxengl.com",
     "api.oxengl.me",
     "admin.oxengl.me",
     "domains.oxengl.me",
     "www.oxengl.me",
-    "www.oxengl.com",
 }
 
 _DOMAIN_CACHE: dict[str, Optional[dict[str, Any]]] = {}
@@ -136,7 +134,7 @@ def invalidate_domain_cache(domain: Optional[str] = None) -> None:
 def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optional[dict[str, Any]]:
     """
     Resolves tenant configuration and company metadata from an incoming Host/X-Forwarded-Host header.
-    Supports both custom enterprise domains (e.g. 'myon-contract.cloud')
+    Supports both custom enterprise domains (e.g. 'transport.horizon.sa')
     and tenant subdomains (e.g. 'tenant-a.oxengl.me').
     """
     if not raw_host:
@@ -181,8 +179,8 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                 (func.lower(func.trim(ResCompany.domain_slug)) == clean_host)
             ).first()
 
-        # 3. Subdomain extraction for *.oxengl.me / *.oxengl.com
-        if not master and not company and (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")):
+        # 3. Subdomain extraction for *.oxengl.me
+        if not master and not company and clean_host.endswith(".oxengl.me"):
             subdomain = clean_host.split(".")[0]
             if subdomain not in {"www", "app", "api", "admin", "domains"}:
                 master = db.query(MasterTenant).filter(MasterTenant.slug == subdomain).first()
@@ -243,7 +241,7 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                 "tenant_slug": master.slug,
                 "name": company.name if company else master.name,
                 "custom_domain": clean_host,
-                "is_custom_domain": not (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")),
+                "is_custom_domain": not clean_host.endswith(".oxengl.me"),
                 "logo_url": company.ui_logo_url or company.logo_url if company else None,
                 "primary_color": company.ui_primary_color or company.primary_color if company else None,
                 "subscription_tier": master.subscription_tier or (company.subscription_tier if company else "ENTERPRISE"),
@@ -260,7 +258,7 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                 "tenant_slug": company.slug,
                 "name": company.name,
                 "custom_domain": clean_host,
-                "is_custom_domain": not (clean_host.endswith(".oxengl.me") or clean_host.endswith(".oxengl.com")),
+                "is_custom_domain": not clean_host.endswith(".oxengl.me"),
                 "logo_url": company.ui_logo_url or company.logo_url,
                 "primary_color": company.ui_primary_color or company.primary_color,
                 "subscription_tier": company.subscription_tier,

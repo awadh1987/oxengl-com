@@ -129,7 +129,7 @@ export class TenantResolutionCache {
     const cleanSlug = slug.toLowerCase().trim();
     const hostsToPurge = [
       cleanSlug,
-      `${cleanSlug}.oxengl.com`,
+      `${cleanSlug}.oxengl.me`,
       `${cleanSlug}.localhost`,
       ...domains.filter((d): d is string => Boolean(d)).map((d) => d.toLowerCase().trim())
     ];
@@ -224,8 +224,8 @@ export const customDomainRegistry: Record<string, string> = {
 };
 
 // Standard platform root domains
-const ROOT_DOMAINS = ['app.oxengl.com', 'oxengl.com', 'localhost', '127.0.0.1'];
-const MASTER_SUBDOMAINS = ['admin.oxengl.com', 'admin.localhost', 'master.oxengl.com'];
+const ROOT_DOMAINS = ['localhost', '127.0.0.1'];
+const MASTER_SUBDOMAINS = ['admin.localhost'];
 
 /**
  * Express Middleware: Intercepts request, extracts Host header,
@@ -285,7 +285,7 @@ export function tenantResolverMiddleware(req: ExtendedRequest, res: Response, ne
     }
   }
 
-  // 5. Check Wildcard Subdomains: {slug}.oxengl.com or {slug}.localhost
+  // 5. Check Wildcard Subdomains: {slug}.oxengl.me or {slug}.localhost
   const parts = hostname.split('.');
   if (parts.length >= 2) {
     const potentialSlug = parts[0];

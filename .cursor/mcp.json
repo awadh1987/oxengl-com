@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "agent-pipeline": {
+      "command": "node",
+      "args": [
+        "/root/.antigravity-ide-server/extensions/cemkurtulus.agent-pipeline-0.0.1-universal/dist/mcp/server.js"
+      ],
+      "env": {
+        "AGENT_PIPELINE_WORKSPACE": "/root/oxen-gl"
+      }
+    },
+    "boosthis-oxen-gl-68b802f7": {
+      "httpUrl": "https://www.boosthis.com/mcp/oxen-gl-68b802f7/bk_e35e0de795e9c492bdbb9d122b69da9b96769e7b1d65f559433013f2cfdf2e19"
+    }
+  }
+}
