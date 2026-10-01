@@ -26,7 +26,18 @@ interface TenantItem {
 
 export const SuperAdminTenantsView: React.FC = () => {
   const { language } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
   const [tenants, setTenants] = useState<TenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

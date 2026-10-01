@@ -57,7 +57,18 @@ interface FeatureFlags {
 
 export const MasterControlPanel: React.FC = () => {
   const { language } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
   const [tenants, setTenants] = useState<TenantRecord[]>([]);
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const [featureFlags, setFeatureFlags] = useState<FeatureFlags>({});

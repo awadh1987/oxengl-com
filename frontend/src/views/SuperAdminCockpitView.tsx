@@ -34,7 +34,18 @@ const navigation: { id: PlatformTab; label: string; description: string; badge?:
 
 export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ onOpenTenantOnboarding, onLogout, onInspectTenantWorkspace }) => {
   const { companies, currentCompany, setCurrentCompany, currentUser, language, setLanguage } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
   const [activeTab, setActiveTab] = useState<PlatformTab>('cockpit');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inspectOpen, setInspectOpen] = useState(false);

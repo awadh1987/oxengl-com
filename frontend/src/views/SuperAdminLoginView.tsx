@@ -21,7 +21,18 @@ export interface SuperAdminLoginViewProps {
 
 export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLoginSuccess }) => {
   const { loginMaster, language, setLanguage } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
 
   const [credentials, setCredentials] = useState({
     admin_email: '',

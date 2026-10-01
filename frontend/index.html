@@ -1,6 +1,29 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- CRITICAL: Immediate Global Localization & Safety Pre-Init at absolute top of head -->
+    <script>
+      window.isAr = false;
+      try {
+        var lang = localStorage.getItem('oxengl_language') || localStorage.getItem('i18nextLng') || (document.documentElement && document.documentElement.lang) || '';
+        if (lang.indexOf('ar') === 0 || (document.documentElement && document.documentElement.dir === 'rtl')) {
+          window.isAr = true;
+        }
+      } catch (e) {
+        window.isAr = false;
+      }
+      // Force unregister legacy service workers & clear stale caches
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          for (var i = 0; i < regs.length; i++) { regs[i].unregister(); }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(keys) {
+          keys.forEach(function(k) { caches.delete(k); });
+        });
+      }
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OxenGL Global Cloud ERP</title>
@@ -9,6 +32,10 @@
     <meta property="og:description" content="OxenGL Global Cloud ERP for multi-company supply and logistics operations." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- Cache-Busting Control Headers -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <!-- Moyasar Payment Web SDK -->
     <link rel="stylesheet" href="https://cdn.moyasar.com/mpf/1.14.0/moyasar.css" />
     <script src="https://cdn.moyasar.com/mpf/1.14.0/moyasar.js"></script>
@@ -18,4 +45,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

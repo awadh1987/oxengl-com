@@ -34,7 +34,18 @@ const Banner: React.FC<{ icon: React.ComponentType<{ className?: string }>; titl
 
 export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => void }> = ({ onInspect }) => {
   const { companies, currentCompany, refreshCompanies, language } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
   const [search, setSearch] = useState('');
   const [tier, setTier] = useState('ALL');
   const [busy, setBusy] = useState(false);
@@ -197,7 +208,18 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
 
 export const LicenseProvisionerView: React.FC = () => {
   const { companies, currentCompany, refreshCompanies, setCurrentCompany, language } = useApp();
-  const isAr = language === 'ar';
+  const isAr = Boolean(
+    language === 'ar' ||
+    language?.startsWith('ar') ||
+    (typeof localStorage !== 'undefined' && (
+      localStorage.getItem('oxengl_language') === 'ar' ||
+      localStorage.getItem('i18nextLng')?.startsWith('ar')
+    )) ||
+    (typeof document !== 'undefined' && (
+      document.documentElement.lang?.startsWith('ar') ||
+      document.documentElement.dir === 'rtl'
+    ))
+  );
   const [superAdminKey, setSuperAdminKey] = useState('');
   const [companyId, setCompanyId] = useState(() => {
     if (currentCompany && companies.some((c) => c.id === currentCompany.id)) return currentCompany.id;
