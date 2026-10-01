@@ -27,8 +27,12 @@ from backend.app.domains.auth.onboard_tenant import generate_balanced_brand_pale
 
 router = APIRouter(prefix="/api/v1/superadmin", tags=["Super Admin"])
 
-BACKUP_DIR = "/var/crypto/oxengl/backups"
-os.makedirs(BACKUP_DIR, exist_ok=True)
+BACKUP_DIR = os.getenv("OXENGL_BACKUP_DIR", "/var/crypto/oxengl/backups")
+try:
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+except (PermissionError, OSError):
+    BACKUP_DIR = os.path.expanduser("~/.oxengl/backups")
+    os.makedirs(BACKUP_DIR, exist_ok=True)
 
 # Cryptographic password hashing context matrix
 pwd_context = CryptContext(

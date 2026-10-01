@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration, TenantUser, User
+from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration, TenantSubscription, TenantUser, User
 from backend.two_tier_auth import hash_password
 from backend.schemas import (
     TenantDatabaseInfoResponse,
@@ -453,14 +453,62 @@ def register_custom_domain(
     # Evaluate subscription grade and explicit feature overrides
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
-    current_tenant = master or company
+    if not master and company:
+        master = db.query(MasterTenant).filter(
+            (MasterTenant.id == company.id) |
+            (MasterTenant.slug == getattr(company, "domain_slug", None)) |
+            (MasterTenant.slug == company.slug)
+        ).first()
+    if not company and master:
+        company = db.query(ResCompany).filter(
+            (ResCompany.id == master.id) |
+            (ResCompany.slug == master.slug) |
+            (ResCompany.domain_slug == master.slug)
+        ).first()
 
-    tenant_grade = getattr(current_tenant, "grade", getattr(current_tenant, "subscription_tier", "PROFESSIONAL")).upper() if current_tenant else "PROFESSIONAL"
-    tenant_overrides = getattr(current_tenant, "features_override", None) or {}
+    def _is_feature_override_allowed(obj, key: str) -> bool:
+        if not obj:
+            return False
+        ov = getattr(obj, "features_override", None)
+        if isinstance(ov, str):
+            try:
+                import json
+                ov = json.loads(ov)
+            except Exception:
+                ov = {}
+        if isinstance(ov, dict):
+            val = ov.get(key)
+            return val is True or str(val).lower() in ("true", "1")
+        return False
+
+    def _is_enterprise_tier(obj) -> bool:
+        if not obj:
+            return False
+        for attr in ("subscription_tier", "subscription_plan", "grade"):
+            val = getattr(obj, attr, None)
+            if val and str(val).strip().lower() in ("enterprise", "sovereign"):
+                return True
+        return False
+
+    sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == target_uuid))
+    if not sub and master:
+        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == master.id))
+    if not sub and company:
+        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == company.id))
+
+    sub_override = False
+    if sub and sub.custom_limits and isinstance(sub.custom_limits, dict):
+        val = sub.custom_limits.get("allow_custom_domain")
+        if val is True or str(val).lower() in ("true", "1"):
+            sub_override = True
 
     has_custom_domain_access = (
-        tenant_grade == "ENTERPRISE" or
-        bool(tenant_overrides and tenant_overrides.get("allow_custom_domain", False))
+        _is_enterprise_tier(master)
+        or _is_enterprise_tier(company)
+        or (sub and sub.plan and str(sub.plan.name).upper() == "ENTERPRISE")
+        or _is_feature_override_allowed(master, "allow_custom_domain")
+        or _is_feature_override_allowed(company, "allow_custom_domain")
+        or sub_override
     )
 
     if not has_custom_domain_access:
@@ -469,12 +517,10 @@ def register_custom_domain(
 
     clean_domain = payload.domain_name.strip().lower()
 
-    master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
     if master:
         master.custom_domain = clean_domain
         db.commit()
 
-    company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
     if company:
         company.custom_domain = clean_domain
         company.domain_slug = clean_domain.replace(".", "-")

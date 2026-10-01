@@ -21,6 +21,7 @@ from backend.app.domains.inventory.models import Material
 
 
 class UserRole(str, Enum):
+    SUPERADMIN = "SUPERADMIN"
     SUPER_ADMIN = "SUPER_ADMIN"
     OWNER = "OWNER"
     ADMIN = "ADMIN"
@@ -310,13 +311,18 @@ class ResUser(TimestampMixin, Base):
     warehouse_scope_ids: Mapped[Optional[str]] = mapped_column(Text)
     access_control_list: Mapped[Optional[str]] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mfa_secret: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     mfa_backup_codes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
 
     __table_args__ = (
-        CheckConstraint("role IN ('Super_Admin', 'super_admin', 'SUPER_ADMIN', 'Owner', 'owner', 'OWNER', 'Admin', 'admin', 'ADMIN', 'User', 'user', 'USER', 'COO', 'CEO', 'Accountant', 'Data_Entry', 'Guest')", name="ck_res_user_role"),
+        CheckConstraint("role IN ('Super_Admin', 'super_admin', 'SUPER_ADMIN', 'SUPERADMIN', 'Owner', 'owner', 'OWNER', 'Admin', 'admin', 'ADMIN', 'User', 'user', 'USER', 'COO', 'CEO', 'Accountant', 'Data_Entry', 'Guest')", name="ck_res_user_role"),
     )
+
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role in ("Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN")
 
     @property
     def tenant_id(self) -> Optional[uuid.UUID]:
@@ -334,11 +340,25 @@ class ResUser(TimestampMixin, Base):
     def hashed_password(self, val: str):
         self.password_hash = val
 
+    @property
+    def password(self) -> str:
+        return self.password_hash
+
+    @password.setter
+    def password(self, val: str):
+        from backend.two_tier_auth import hash_password
+        self.password_hash = hash_password(val)
+
     def __init__(self, *args, **kwargs):
         if "tenant_id" in kwargs and "company_id" not in kwargs:
             kwargs["company_id"] = kwargs.pop("tenant_id")
         else:
             kwargs.pop("tenant_id", None)
+
+        if "password" in kwargs and "password_hash" not in kwargs:
+            raw_pwd = kwargs.pop("password")
+            from backend.two_tier_auth import hash_password
+            kwargs["password_hash"] = hash_password(raw_pwd)
 
         if "hashed_password" in kwargs and "password_hash" not in kwargs:
             kwargs["password_hash"] = kwargs.pop("hashed_password")
@@ -1973,11 +1993,12 @@ class MasterUser(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
-    mobile_number: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    mobile_number: Mapped[Optional[str]] = mapped_column(String(64), unique=True, nullable=True, default=None, index=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(32), default="user", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_superuser: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     locked_until: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
@@ -1987,6 +2008,25 @@ class MasterUser(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("role IN ('super_admin', 'admin', 'user')", name="ck_master_user_role"),
     )
+
+    def __init__(self, **kwargs):
+        if "hashed_password" in kwargs and "password_hash" not in kwargs:
+            kwargs["password_hash"] = kwargs.pop("hashed_password")
+        if "mobile_number" not in kwargs:
+            kwargs["mobile_number"] = None
+        super().__init__(**kwargs)
+
+    @property
+    def hashed_password(self) -> str:
+        return self.password_hash
+
+    @hashed_password.setter
+    def hashed_password(self, val: str):
+        self.password_hash = val
+
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role == "super_admin"
 
 
 class MasterPasswordReset(Base):

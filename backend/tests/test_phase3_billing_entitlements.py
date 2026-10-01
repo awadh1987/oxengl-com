@@ -708,3 +708,65 @@ def test_caddy_ask_ssl_gatekeeper_enforces_tier():
         db.query(MasterTenant).filter(MasterTenant.id.in_([free_tenant_id, ent_tenant_id])).delete()
         db.commit()
         db.close()
+
+
+def test_features_override_bypasses_custom_domain_tier_lock():
+    """
+    Test 10: A tenant on PROFESSIONAL plan with features_override.get("allow_custom_domain") == True
+    completely bypasses the 403 Professional plan restriction when registering a custom domain.
+    """
+    db = SessionLocal()
+    suffix = uuid.uuid4().hex[:6]
+    tenant_id = uuid.uuid4()
+    domain_name = f"override-test-{suffix}.com"
+
+    try:
+        tenant = MasterTenant(
+            id=tenant_id,
+            name=f"Override Corp {suffix}",
+            slug=f"ovr-{suffix}",
+            owner_full_name="Override Admin",
+            owner_email=f"admin@{suffix}.ovr",
+            owner_mobile="+966500000011",
+            subscription_tier="professional",
+            status="active",
+            features_override={"allow_custom_domain": True},
+        )
+        company = ResCompany(
+            id=tenant_id,
+            name=f"Override Corp {suffix}",
+            slug=f"ovr-{suffix}",
+            subscription_tier="professional",
+            features_override={"allow_custom_domain": True},
+            is_active=True,
+        )
+        db.add_all([tenant, company])
+        db.commit()
+
+        get_or_create_tenant_subscription(db, tenant_id, plan_name="PROFESSIONAL")
+
+        headers = {
+            "X-Tenant-ID": str(tenant_id),
+            "X-Company-ID": str(tenant_id),
+        }
+
+        # Attempt: Professional tenant with features_override={"allow_custom_domain": True}
+        # MUST bypass 403 and return 201 Created!
+        resp = client.post(
+            "/api/v1/tenant/control/domains",
+            json={"domain_name": domain_name},
+            headers=headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["success"] is True
+
+        # Verify domain registered in DB
+        db.refresh(tenant)
+        assert tenant.custom_domain == domain_name
+    finally:
+        invalidate_domain_cache(domain_name)
+        db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
+        db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
+        db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
+        db.commit()
+        db.close()

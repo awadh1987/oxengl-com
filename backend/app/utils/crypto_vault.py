@@ -1,8 +1,12 @@
 import os
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-KEY_FILE = "/var/crypto/oxengl/master.key"
-os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
+KEY_FILE = os.getenv("OXENGL_KEY_FILE", "/var/crypto/oxengl/master.key")
+try:
+    os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
+except (PermissionError, OSError):
+    KEY_FILE = os.path.expanduser("~/.oxengl/master.key")
+    os.makedirs(os.path.dirname(KEY_FILE), exist_ok=True)
 
 def ensure_master_key() -> bytes:
     if os.path.exists(KEY_FILE):

@@ -6,6 +6,7 @@ from enum import Enum
 from backend.models import ResUser, User, TenantUser
 
 class UserRole(str, Enum):
+    SUPERADMIN = "SUPERADMIN"
     SUPER_ADMIN = "SUPER_ADMIN"
     OWNER = "OWNER"
     ADMIN = "ADMIN"

@@ -12,11 +12,12 @@ from backend.models import ResCompany, ResUser
 
 router = APIRouter(prefix="/api/v1/tenants", tags=["Tenant Branding"])
 
-UPLOAD_DIR = "/var/www/oxengl/media/logos"
-ALLOWED_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
-MAX_FILE_SIZE = 2 * 1024 * 1024  # 2MB Limit
-
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+UPLOAD_DIR = os.getenv("OXENGL_LOGO_UPLOAD_DIR", "/var/www/oxengl/media/logos")
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except (PermissionError, OSError):
+    UPLOAD_DIR = os.path.expanduser("~/.oxengl/media/logos")
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload-logo")
 @router.post("/{tenant_id}/upload-logo")

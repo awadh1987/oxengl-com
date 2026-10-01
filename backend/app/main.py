@@ -92,7 +92,7 @@ try:
 	from .services.ai_governance import ai_governance_engine
 	from .services.ai_parser import ai_document_parser
 	from .services.ai_forecasting import ai_forecasting_service
-	from .two_tier_auth import router as two_tier_auth_router
+	from .two_tier_auth import router as two_tier_auth_router, v1_router as two_tier_auth_v1_router
 	from .core.middleware import CorrelationIdMiddleware, HostHeaderMiddleware
 	from .domains.iam.routes import router as iam_auth_router
 	from backend.app.api.v1.procurement import router as procurement_router
@@ -193,7 +193,7 @@ except ImportError:
 	from .services.ai_governance import ai_governance_engine  # type: ignore[no-redef]
 	from .services.ai_parser import ai_document_parser  # type: ignore[no-redef]
 	from .services.ai_forecasting import ai_forecasting_service  # type: ignore[no-redef]
-	from .two_tier_auth import router as two_tier_auth_router  # type: ignore[no-redef]
+	from .two_tier_auth import router as two_tier_auth_router, v1_router as two_tier_auth_v1_router  # type: ignore[no-redef]
 	from backend.app.core.middleware import CorrelationIdMiddleware, HostHeaderMiddleware  # type: ignore[no-redef]
 	from backend.app.domains.iam.routes import router as iam_auth_router  # type: ignore[no-redef]
 	from backend.app.api.v1.procurement import router as procurement_router  # type: ignore[no-redef]
@@ -455,6 +455,7 @@ from backend.app.domains.auth import onboard_tenant
 app.include_router(onboard_tenant.router)
 
 app.include_router(two_tier_auth_router)
+app.include_router(two_tier_auth_v1_router)
 app.include_router(iam_auth_router)
 app.include_router(recovery_auth_router)
 app.include_router(recovery_auth_router, prefix="/api")
@@ -1030,8 +1031,8 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
 	)
 	if dev_env:
 		is_master_subject = (
-			str(getattr(user, "email", "")).lower() in {"admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-			or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
+			str(getattr(user, "email", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
+			or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
 			or str(token_claims.get("tier", "")).lower() == "master"
 			or getattr(user, "company_id", None) is None
 		)

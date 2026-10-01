@@ -332,12 +332,55 @@ def verify_tenant_entitlement(
                 (MasterTenant.slug == comp.slug)
             ).first()
 
+    if tenant and not comp:
+        comp = db.query(ResCompany).filter(
+            (ResCompany.id == tenant.id) |
+            (ResCompany.slug == tenant.slug) |
+            (ResCompany.domain_slug == tenant.slug)
+        ).first()
+
     if not tenant and not comp:
         return False, "Tenant not found in master catalog."
+
+    # 1. Check explicit feature overrides (e.g., {"allow_custom_domain": True})
+    for entity in (tenant, comp):
+        if not entity:
+            continue
+        overrides = getattr(entity, "features_override", None)
+        if isinstance(overrides, str):
+            try:
+                import json
+                overrides = json.loads(overrides)
+            except Exception:
+                overrides = {}
+        if isinstance(overrides, dict):
+            val = overrides.get(entitlement_key)
+            if val is True or str(val).lower() in ("true", "1"):
+                return True, f"Entitled via tenant feature override: {entitlement_key}."
 
     # Inspect linked subscription first
     target_id = tenant.id if tenant else comp.id
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == target_id))
+    if not sub and comp and comp.id != target_id:
+        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == comp.id))
+
+    # 1b. Check custom override in sub.custom_limits if present
+    if sub and sub.custom_limits and isinstance(sub.custom_limits, dict):
+        val = sub.custom_limits.get(entitlement_key)
+        if val is True or str(val).lower() in ("true", "1"):
+            return True, f"Entitled via custom enterprise contract amendment: {entitlement_key}."
+
+    # 2. Check enterprise tier on tenant, company, or subscription
+    for candidate in [
+        getattr(tenant, "subscription_tier", None),
+        getattr(tenant, "subscription_plan", None),
+        getattr(tenant, "grade", None),
+        getattr(comp, "subscription_tier", None),
+        sub.plan.name if sub and sub.plan else None,
+    ]:
+        if candidate and str(candidate).strip().lower() in ("enterprise", "sovereign"):
+            return True, f"Tenant is entitled to {entitlement_key} under ENTERPRISE grade."
+
     plan: Optional[SubscriptionPlan] = None
     if sub and sub.plan:
         plan = sub.plan
@@ -352,21 +395,8 @@ def verify_tenant_entitlement(
     if not plan:
         return False, f"Unknown subscription plan for tenant {tenant_id}."
 
-    # Check tenant explicit features_override (e.g., {"allow_custom_domain": True})
-    features_override = getattr(tenant, "features_override", None)
-    if not features_override and comp:
-        features_override = getattr(comp, "features_override", None)
-    if features_override and isinstance(features_override, dict):
-        if features_override.get(entitlement_key) is True:
-            return True, f"Entitled via tenant feature override: {entitlement_key}."
-
     is_allowed = getattr(plan, entitlement_key, False)
     if not is_allowed:
-        # Check custom override in sub.custom_limits if present
-        if sub and sub.custom_limits and isinstance(sub.custom_limits, dict):
-            if sub.custom_limits.get(entitlement_key) is True:
-                return True, f"Entitled via custom enterprise contract amendment: {entitlement_key}."
-
         tier_code = plan.name
         return (
             False,

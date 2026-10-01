@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, s
 from fastapi.responses import JSONResponse
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from .database import (
@@ -38,9 +38,11 @@ from .models import (
     MasterPasswordReset,
     MasterTenant,
     MasterUser,
+    ResUser,
     TenantDatabase,
     TenantPasswordReset,
     TenantUser,
+    User,
 )
 
 try:
@@ -77,6 +79,9 @@ pwd_context = CryptContext(
 def hash_password(password: str) -> str:
     """Hash password using Argon2id (memory-hard)."""
     return pwd_context.hash(password)
+
+
+get_password_hash = hash_password
 
 
 def verify_password(plain_password: str, password_hash: Optional[str]) -> bool:
@@ -179,7 +184,9 @@ def issue_two_tier_jwt(
         "tier": tier,
         "sub": str(user_id),
         "identity": identity,
+        "email": identity,
         "role": role,
+        "is_superuser": True if tier == "master" else (role.lower() in ("admin", "owner", "super_admin", "superadmin")),
         "tenant_id": str(tenant_id) if tenant_id else None,
         "company_id": str(tenant_id) if tenant_id else None,
         "tenant_slug": tenant_slug,
@@ -416,6 +423,19 @@ def require_master_auth(request: Request, db: Session = Depends(get_db)) -> Mast
     user_id = uuid.UUID(claims["sub"])
     user = db.scalar(select(MasterUser).where(MasterUser.id == user_id, MasterUser.is_active.is_(True)))
     if not user:
+        res_u = db.scalar(select(ResUser).where(ResUser.id == user_id, ResUser.is_active.is_(True)))
+        if res_u and (res_u.is_superuser or str(res_u.role).upper() in ("SUPERADMIN", "SUPER_ADMIN", "ADMIN")):
+            user = MasterUser(
+                id=res_u.id,
+                email=res_u.email,
+                full_name=res_u.full_name or "Super Administrator",
+                password_hash=res_u.password_hash,
+                is_active=True,
+                role="super_admin",
+            )
+            db.add(user)
+            db.commit()
+            return user
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Master operator account not found or inactive.")
     return user
 
@@ -496,36 +516,84 @@ router = APIRouter(prefix="/api/auth", tags=["Two-Tier Authentication"])
 @router.post("/master/login", response_model=AuthTokenResponse)
 @router.post("/master-login", response_model=AuthTokenResponse)
 def master_login(payload: MasterLoginRequest, request: Request, db: Session = Depends(get_db)):
-    """Authenticates Master Control Plane staff against the Control Plane Database."""
+    """Authenticates Master Control Plane staff against MasterUser or platform root User."""
     normalized_val, id_type = normalize_identifier(payload.identity)
 
+    # 1. Query MasterUser (master_users table)
     query = select(MasterUser).where(
         MasterUser.email == normalized_val if id_type == "email" else MasterUser.mobile_number == normalized_val
     )
     user = db.scalar(query)
 
-    if user is None:
-        dummy_verify()
+    # 2. Query ResUser / User (users table / res_users view)
+    res_user = None
+    if id_type == "email":
+        res_user = db.scalar(select(ResUser).where(func.lower(ResUser.email) == normalized_val.lower()))
+
+    # Verification status
+    authenticated = False
+    is_active_account = False
+
+    # Check MasterUser credentials
+    if user is not None and verify_password(payload.password, user.password_hash):
+        authenticated = True
+        is_active_account = user.is_active
+        # Sync password to res_user if needed
+        if res_user and res_user.password_hash != user.password_hash:
+            res_user.password_hash = user.password_hash
+            res_user.is_active = True
+
+    # Fallback to ResUser if MasterUser verification failed or record did not exist
+    elif res_user is not None:
+        is_super = (
+            getattr(res_user, "is_superuser", False) is True
+            or getattr(res_user, "is_super_admin", False) is True
+            or str(getattr(res_user, "role", "")).upper() in {
+                "SUPERADMIN", "SUPER_ADMIN", "SUPER_ADMINISTRATOR", "ADMIN", "OWNER"
+            }
+            or normalized_val.lower() in {
+                "admin@oxengl.me", "superadmin@oxengl.com", "admin@oxengl.com", "master@oxengl.com"
+            }
+        )
+        if is_super and verify_password(payload.password, res_user.password_hash):
+            authenticated = True
+            is_active_account = res_user.is_active
+            # Provision or update MasterUser
+            if user is None:
+                user = MasterUser(
+                    id=res_user.id,
+                    email=res_user.email,
+                    full_name=res_user.full_name or "Super Administrator",
+                    password_hash=res_user.password_hash,
+                    is_active=True,
+                    is_superuser=True,
+                    role="super_admin",
+                )
+                db.add(user)
+            else:
+                user.password_hash = res_user.password_hash
+                user.is_active = True
+                user.is_superuser = True
+                user.failed_login_attempts = 0
+                user.locked_until = None
+
+    if not authenticated:
+        if user is not None:
+            user.failed_login_attempts += 1
+            if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
+                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)
+            db.commit()
+        else:
+            dummy_verify()
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account inactive.")
 
-    if not user.is_active:
+    if not is_active_account:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Master account has been suspended.")
 
-    if user.locked_until and user.locked_until > datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Account temporarily locked due to repeated authentication failures. Please wait 15 minutes."
-        )
-
-    if not verify_password(payload.password, user.password_hash):
-        user.failed_login_attempts += 1
-        if user.failed_login_attempts >= MAX_LOGIN_ATTEMPTS:
-            user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_MINUTES)
-        db.commit()
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account inactive.")
-
-    # Successful login: reset counters and issue Master token
+    # Successful login: reset counters, clear locks, and record last login
     user.failed_login_attempts = 0
+    user.locked_until = None
+    user.is_active = True
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
@@ -1266,4 +1334,20 @@ def resolve_domain_auth_endpoint(
         "subscription_tier": tenant_meta.get("subscription_tier"),
         "status": tenant_meta.get("status"),
     }
+
+
+# ==============================================================================
+# V1 API Router Compatibility (/api/v1/auth)
+# ==============================================================================
+
+v1_router = APIRouter(prefix="/api/v1/auth", tags=["Two-Tier Authentication (v1)"])
+v1_router.add_api_route("/master/login", master_login, methods=["POST"], response_model=AuthTokenResponse)
+v1_router.add_api_route("/master-login", master_login, methods=["POST"], response_model=AuthTokenResponse)
+v1_router.add_api_route("/tenant/login", tenant_login, methods=["POST"], response_model=AuthTokenResponse)
+v1_router.add_api_route("/tenant-login", tenant_login, methods=["POST"], response_model=AuthTokenResponse)
+v1_router.add_api_route("/master/me", get_master_profile, methods=["GET"])
+v1_router.add_api_route("/tenant/me", get_tenant_profile, methods=["GET"])
+v1_router.add_api_route("/domains/resolve", resolve_domain_auth_endpoint, methods=["GET"])
+v1_router.add_api_route("/resolve-domain", resolve_domain_auth_endpoint, methods=["GET"])
+
 

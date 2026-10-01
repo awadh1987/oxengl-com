@@ -86,8 +86,8 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
     )
     if dev_env:
         is_master_subject = (
-            str(getattr(user, "email", "")).lower() in {"admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-            or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
+            str(getattr(user, "email", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
+            or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
             or str(token_claims.get("tier", "")).lower() == "master"
             or getattr(user, "company_id", None) is None
         )

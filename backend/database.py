@@ -85,6 +85,18 @@ class AsyncCompatibleSession(Session):
         super().rollback()
         return _AwaitableNone()
 
+    def refresh(self, instance, *args, **kwargs) -> Any:
+        super().refresh(instance, *args, **kwargs)
+        return _AwaitableNone()
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.rollback()
+        self.close()
+
 
 SessionLocal = sessionmaker(bind=engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False)
 
