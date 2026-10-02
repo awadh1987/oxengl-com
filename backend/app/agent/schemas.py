@@ -38,6 +38,11 @@ class ProcurementItemSchema(BaseModel):
         description="Estimated unit purchase cost in standard currency (e.g. SAR)",
     )
 
+    @property
+    def line_total(self) -> float:
+        """Calculated total cost for this line item."""
+        return round(self.quantity * self.estimated_unit_cost, 2)
+
 
 class ProcurementPOSchema(BaseModel):
     """
@@ -69,6 +74,21 @@ class ProcurementPOSchema(BaseModel):
         min_length=1,
         description="Target destination facility, construction quarry, or warehouse code",
     )
+    currency: str = Field(
+        default="SAR",
+        min_length=3,
+        max_length=5,
+        description="Transaction currency code, defaults to 'SAR'",
+    )
+    payment_terms: Optional[str] = Field(
+        default="Net 30",
+        description="Commercial payment terms (e.g. 'Net 30', 'Net 60', 'Immediate')",
+    )
+
+    @property
+    def total_estimated_cost(self) -> float:
+        """Calculated aggregate cost across all line items."""
+        return round(sum(item.quantity * item.estimated_unit_cost for item in self.items), 2)
 
     @field_validator("items", mode="before")
     @classmethod
@@ -97,7 +117,7 @@ class PurchaseOrderSchema(BaseModel):
 class FleetDispatchSchema(BaseModel):
     """
     Fleet Dispatch and Mission Orchestration Schema for logistics and heavy asset operations.
-    Validates vehicle, driver, route allocations, and payload capacities.
+    Validates vehicle, driver, route allocations, payload capacities, GPS deviation, and route audits.
     """
     model_config = ConfigDict(
         extra="ignore",
@@ -123,12 +143,21 @@ class FleetDispatchSchema(BaseModel):
     scheduled_departure: str = Field(
         ...,
         min_length=1,
-        description="Target scheduled departure timestamp (ISO 8601 string or standard date-time, e.g. '2026-09-30T08:00:00Z')",
+        description="Target scheduled departure timestamp (ISO 8601 string or standard date-time, e.g. '2026-10-02T08:00:00Z')",
     )
     load_weight_tons: float = Field(
         ...,
         ge=0.0,
         description="Payload mass in metric tons",
+    )
+    gps_deviation_km: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Observed or allowable GPS corridor deviation in kilometers",
+    )
+    route_audit_status: str = Field(
+        default="PASSED",
+        description="Pre-dispatch route safety, weighbridge clearance, and highway audit status: 'PASSED', 'PENDING_REVIEW', or 'FLAGGED'",
     )
 
     # Backward compatibility fields with legacy single-turn prompts
@@ -151,6 +180,10 @@ class FleetDispatchSchema(BaseModel):
                 data["scheduled_departure"] = str(data.get("departure_time") or datetime.now(timezone.utc).isoformat())
             if data.get("load_weight_tons") is None:
                 data["load_weight_tons"] = float(data.get("weight") or data.get("tonnage") or 0.0)
+            if data.get("gps_deviation_km") is None:
+                data["gps_deviation_km"] = float(data.get("deviation") or 0.0)
+            if not data.get("route_audit_status"):
+                data["route_audit_status"] = str(data.get("audit_status") or "PASSED")
         return data
 
 
@@ -161,7 +194,7 @@ class FleetDispatchSchema(BaseModel):
 class PayrollVoucherSchema(BaseModel):
     """
     Payroll Voucher Schema for human resources, compensation, and wage ledger accounting.
-    Validates wage base, statutory/contractual allowances, deductions, and fiscal period.
+    Validates wage base, statutory/contractual allowances, deductions, HR adjustments, and fiscal period.
     """
     model_config = ConfigDict(
         extra="ignore",
@@ -189,16 +222,26 @@ class PayrollVoucherSchema(BaseModel):
         ge=0.0,
         description="Total statutory GOSI, loan repayments, advance, or penalty deductions in currency",
     )
+    hr_adjustments: float = Field(
+        default=0.0,
+        description="Retroactive pay, bonus, overtime, or policy adjustments in currency (positive or negative)",
+    )
     pay_period: str = Field(
         ...,
         min_length=4,
-        description="Applicable accounting pay period (e.g. '2026-09', 'September 2026', '2026-M09')",
+        description="Applicable accounting pay period (e.g. '2026-10', 'October 2026', '2026-M10')",
+    )
+    currency: str = Field(
+        default="SAR",
+        min_length=3,
+        max_length=5,
+        description="Currency code for salary payment, defaults to 'SAR'",
     )
 
     @property
     def net_salary(self) -> float:
-        """Calculated net payable salary after allowances and deductions."""
-        return round(self.base_salary + self.allowances - self.deductions, 2)
+        """Calculated net payable salary after allowances, HR adjustments, and deductions."""
+        return round(self.base_salary + self.allowances + self.hr_adjustments - self.deductions, 2)
 
 
 class EmployeeLeaveSchema(BaseModel):
@@ -241,6 +284,19 @@ class GovernanceComplianceSchema(BaseModel):
     severity_level: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = Field(
         ...,
         description="Assessed risk severity level: 'LOW', 'MEDIUM', 'HIGH', or 'CRITICAL'",
+    )
+    audit_flag: str = Field(
+        default="FLAGGED",
+        min_length=1,
+        description="Audit classification status flag: 'FLAGGED', 'CLEARED', 'UNDER_REVIEW', or 'ESCALATED'",
+    )
+    policy_violation_review: Optional[str] = Field(
+        default=None,
+        description="Detailed policy violation review, statutory citations, or regulatory grounding",
+    )
+    security_clearance_verified: bool = Field(
+        default=False,
+        description="Whether entity security clearance, national identity, or corporate credentials were authenticated",
     )
     audit_notes: str = Field(
         ...,
