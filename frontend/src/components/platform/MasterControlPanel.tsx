@@ -464,7 +464,7 @@ export const MasterControlPanel: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="font-mono text-slate-300 text-[11px] flex items-center gap-1.5">
-                          <span>{t.slug}.oxengl.com</span>
+                          <span>{t.slug}.{import.meta.env.VITE_APP_DOMAIN || 'oxengl.me'}</span>
                         </div>
                         {t.custom_domain && (
                           <div className="font-mono text-indigo-400 text-[11px] flex items-center gap-1">
@@ -696,7 +696,7 @@ export const MasterControlPanel: React.FC = () => {
                     onChange={(e) => setNewTenantForm({ ...newTenantForm, slug: e.target.value })}
                     className="flex-1 bg-transparent px-3 py-2 text-white font-mono focus:outline-none"
                   />
-                  <span className="px-3 py-2 text-slate-500 font-mono bg-slate-900 border-l border-slate-800">.oxengl.com</span>
+                  <span className="px-3 py-2 text-slate-500 font-mono bg-slate-900 border-l border-slate-800">.{import.meta.env.VITE_APP_DOMAIN || 'oxengl.me'}</span>
                 </div>
               </div>
 

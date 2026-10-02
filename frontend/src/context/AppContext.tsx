@@ -1113,7 +1113,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const mappedRole = mapBackendRoleToFrontend(res?.role ?? res?.user?.role);
     const userObj = res?.user;
-    const email = userObj?.email ?? (payload.identity.includes('@') ? payload.identity : 'master@oxengl.com');
+    const email = userObj?.email ?? (payload.identity.includes('@') ? payload.identity : 'master@oxengl.me');
     const newUser: User = {
       id: userObj?.id ?? 'master-operator',
       username: email ? email.split('@')[0] : 'master',

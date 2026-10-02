@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS tenant_domains (
     verification_token VARCHAR(128) NOT NULL,
     is_verified BOOLEAN NOT NULL DEFAULT FALSE,
     verified_at TIMESTAMPTZ,
-    cname_target VARCHAR(255) NOT NULL DEFAULT 'domains.oxengl.com',
+    cname_target VARCHAR(255) NOT NULL DEFAULT 'domains.oxengl.me',
     ssl_status VARCHAR(32) NOT NULL DEFAULT 'pending' CHECK (ssl_status IN ('pending', 'validating_dns', 'issuing', 'active', 'failed')),
     ssl_issued_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

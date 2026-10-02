@@ -330,7 +330,7 @@ def deploy_register_new_tenant(
         "status": "PROVISIONED",
         "message": "Enterprise workspace container generated and admin user seeded.",
         "workspace_slug": slug_cleaned,
-        "workspace_url": f"https://{slug_cleaned}.oxengl.me",
+        "workspace_url": f"https://{slug_cleaned}.{os.getenv('DOMAIN', 'oxengl.me').strip()}",
         "tenant_id": str(company_uuid),
         "admin_user_id": str(admin_user_id),
         "storage_mode": "DEDICATED_EXTERNAL" if payload.use_external_db else "LOCAL_SHARED",

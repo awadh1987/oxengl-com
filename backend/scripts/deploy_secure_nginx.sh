@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-DOMAIN="oxengl.com" # Replace with your definitive domain name
-EMAIL="admin@oxengl.com"
+DOMAIN="oxengl.me" # Replace with your definitive domain name
+EMAIL="admin@oxengl.me"
 CONF_PATH="/etc/nginx/sites-available/oxengl"
 
 echo -e "\033[1m=== Initializing Automated HTTPS Nginx Gateway Deployment ===\033[0m"

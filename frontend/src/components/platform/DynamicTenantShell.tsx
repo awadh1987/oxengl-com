@@ -45,7 +45,7 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
   const [activeTab, setActiveTab] = useState<'dashboard' | 'operations' | 'settings' | 'domains'>('dashboard');
 
   // Simulated host switcher for local testing and demoing
-  const [activeHost, setActiveHost] = useState<string>('horizon-logistics.oxengl.com');
+  const [activeHost, setActiveHost] = useState<string>('horizon-logistics.oxengl.me');
 
   useEffect(() => {
     resolvePlaneAndTenant(activeHost);
@@ -135,10 +135,10 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
                 onChange={(e) => setActiveHost(e.target.value)}
                 className="bg-transparent text-indigo-300 font-semibold focus:outline-none cursor-pointer"
               >
-                <option value="horizon-logistics.oxengl.com" className="bg-slate-900 text-white">horizon-logistics.oxengl.com (Subdomain)</option>
+                <option value="horizon-logistics.oxengl.me" className="bg-slate-900 text-white">horizon-logistics.oxengl.me (Subdomain)</option>
                 <option value="custom-client-domain.com" className="bg-slate-900 text-white">custom-client-domain.com (Custom CNAME)</option>
-                <option value="meayon-transport.oxengl.com" className="bg-slate-900 text-white">meayon-transport.oxengl.com (Meayon)</option>
-                <option value="admin.oxengl.com" className="bg-slate-900 text-white">admin.oxengl.com (Master Plane HUD)</option>
+                <option value="meayon-transport.oxengl.me" className="bg-slate-900 text-white">meayon-transport.oxengl.me (Meayon)</option>
+                <option value="admin.oxengl.me" className="bg-slate-900 text-white">admin.oxengl.me (Master Plane HUD)</option>
               </select>
             </div>
 
@@ -296,13 +296,13 @@ export const DynamicTenantShell: React.FC<DynamicTenantShellProps> = ({ children
             </p>
             <div className="flex items-center justify-center gap-4">
               <button
-                onClick={() => setActiveHost('horizon-logistics.oxengl.com')}
+                onClick={() => setActiveHost('horizon-logistics.oxengl.me')}
                 className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all"
               >
                 الدخول لمنشأة هورايزون لوجستيكس
               </button>
               <button
-                onClick={() => setActiveHost('admin.oxengl.com')}
+                onClick={() => setActiveHost('admin.oxengl.me')}
                 className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition-all"
               >
                 الدخول للوحة تحكم DevOps

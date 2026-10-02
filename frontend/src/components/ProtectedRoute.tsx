@@ -209,7 +209,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             </p>
             <p className="font-mono text-neutral-600 flex items-center justify-center gap-2">
               <Mail className="h-3.5 w-3.5 text-orange-500" />
-              <span>support@oxengl.com</span>
+              <span>support@oxengl.me</span>
               <span className="text-neutral-300">|</span>
               <Phone className="h-3.5 w-3.5 text-orange-500" />
               <span dir="ltr">+966 11 482 9900</span>

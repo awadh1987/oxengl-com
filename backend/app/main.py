@@ -276,6 +276,8 @@ DEFAULT_ACCOUNT_SEEDS = (
 
 SESSION_COOKIE_NAME = getenv("SESSION_COOKIE_NAME", "oxengl_session")
 SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "true").strip().lower() not in {"0", "false", "no"}
+DOMAIN = getenv("DOMAIN", "oxengl.me").strip()
+SESSION_COOKIE_DOMAIN = getenv("SESSION_COOKIE_DOMAIN", f".{DOMAIN}") if getenv("ENVIRONMENT") == "production" else None
 INSECURE_DEFAULT_SECRETS = {"development-secret-change-me", "secret", "changeme", "default", ""}
 JWT_SECRET_KEY = getenv("JWT_SECRET") or getenv("JWT_SECRET_KEY") or getenv("OXENGL_JWT_SECRET") or "development-secret-change-me"
 JWT_EXPIRE_SECONDS = int(getenv("JWT_EXPIRE_SECONDS", "7200"))
@@ -434,6 +436,8 @@ def verify_migration_managed_schema() -> None:
 app.add_middleware(
 	CORSMiddleware,
 	allow_origins=[
+		f"https://{DOMAIN}",
+		f"https://app.{DOMAIN}",
 		"https://oxengl.me",
 		"https://app.oxengl.me",
 		"https://oxengl.com",
@@ -629,11 +633,11 @@ def record_security_event(
 
 
 def set_session_cookie(response: Response, token: str) -> None:
-	response.set_cookie(key=SESSION_COOKIE_NAME, value=token, httponly=True, secure=SESSION_COOKIE_SECURE, samesite="lax", max_age=JWT_EXPIRE_SECONDS, path="/")
+	response.set_cookie(key=SESSION_COOKIE_NAME, value=token, httponly=True, secure=SESSION_COOKIE_SECURE, samesite="lax", max_age=JWT_EXPIRE_SECONDS, path="/", domain=SESSION_COOKIE_DOMAIN)
 
 
 def clear_session_cookie(response: Response) -> None:
-	response.set_cookie(key=SESSION_COOKIE_NAME, value="", httponly=True, secure=SESSION_COOKIE_SECURE, samesite="lax", max_age=0, expires=0, path="/")
+	response.set_cookie(key=SESSION_COOKIE_NAME, value="", httponly=True, secure=SESSION_COOKIE_SECURE, samesite="lax", max_age=0, expires=0, path="/", domain=SESSION_COOKIE_DOMAIN)
 
 
 def get_request_id(request: Request) -> str:

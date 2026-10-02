@@ -33,7 +33,7 @@ export const OfficialLetterheadFooter: React.FC<OfficialLetterheadFooterProps> =
           </p>
           <p className="text-neutral-500">
             هاتف: <span className="font-mono">{brandConfig.phone || '+966 11 482 9900'}</span> | البريد:{' '}
-            <span className="font-mono">{brandConfig.email || 'info@oxengl.com'}</span>
+            <span className="font-mono">{brandConfig.email || 'info@oxengl.me'}</span>
           </p>
         </div>
 

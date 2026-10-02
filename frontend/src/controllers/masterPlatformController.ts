@@ -133,7 +133,7 @@ export const masterPlatformController = {
         type: 'tenant',
         id: t.id,
         title: t.name,
-        subtitle: `${t.slug}.oxengl.com · Plan: ${t.tier.toUpperCase()}`,
+        subtitle: `${t.slug}.oxengl.me · Plan: ${t.tier.toUpperCase()}`,
         badge: t.tier,
       }));
 

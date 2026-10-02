@@ -1044,7 +1044,7 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
         "tenant_slug": tenant.slug,
         "workspace_slug": tenant.slug,
         "custom_domain": clean_custom_domain,
-        "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{tenant.slug}.oxengl.me",
+        "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{tenant.slug}.{os.getenv('DOMAIN', 'oxengl.me').strip()}",
         "tenant": {"id": str(tenant.id), "slug": tenant.slug, "name": tenant.name, "custom_domain": clean_custom_domain},
         "admin_user_id": str(created_user_id),
     }

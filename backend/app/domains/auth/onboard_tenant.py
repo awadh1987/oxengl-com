@@ -749,7 +749,7 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
             "status": "PROVISIONED",
             "message": "Enterprise workspace container generated with default ledger templates and seeded administrator.",
             "workspace_slug": slug_cleaned,
-            "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{slug_cleaned}.oxengl.me",
+            "workspace_url": f"https://{clean_custom_domain}" if clean_custom_domain else f"https://{slug_cleaned}.{os.getenv('DOMAIN', 'oxengl.me').strip()}",
             "custom_domain": clean_custom_domain,
             "tenant_id": str(company_uuid),
             "admin_user_id": str(admin_user_id),

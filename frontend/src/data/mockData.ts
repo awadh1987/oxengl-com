@@ -21,7 +21,7 @@ export const INITIAL_BRAND_CONFIG: BrandConfig = {
   crNumber: '',
   taxNumber: '',
   phone: '+966 11 000 0000',
-  email: 'info@oxengl.com',
+  email: 'info@oxengl.me',
   addressAr: 'المملكة العربية السعودية',
   addressEn: 'Kingdom of Saudi Arabia',
   bankNameAr: 'البنك التجاري',

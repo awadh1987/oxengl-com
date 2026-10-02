@@ -71,6 +71,7 @@ export function isApexDomain(): boolean {
 export function getBasePlatformDomain(): string {
   if (typeof window === 'undefined') return 'oxengl.me';
   const hostname = window.location.hostname.toLowerCase();
+  if (hostname.includes('oxengl.me')) return 'oxengl.me';
   if (hostname.includes('oxengl.com')) return 'oxengl.com';
   if (hostname.includes('oxengl.me')) return 'oxengl.me';
   if (isLocalhost()) return 'localhost';
