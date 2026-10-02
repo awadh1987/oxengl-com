@@ -1,4 +1,5 @@
 # File: backend/app/domains/auth/onboard_tenant.py
+import os
 import re
 import uuid
 import logging

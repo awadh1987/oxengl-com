@@ -4,8 +4,10 @@
 @custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *, .dark, .dark *));
 
 :root {
-  --primary-color: #0F172A;
-  --secondary-color: #F59E0B;
+  --color-primary: #f97316;
+  --color-accent: #0f172a;
+  --primary-color: var(--color-primary, #f97316);
+  --secondary-color: var(--color-accent, #0f172a);
   --font-family: 'Plus Jakarta Sans', 'Tajawal', 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
 }
 
@@ -37,9 +39,10 @@ body,
 }
 
 @theme {
-  --color-brand-primary: #F05627;
-  --color-brand-primary-hover: #D94418;
-  --color-brand-primary-light: #FFF2ED;
+  --color-brand-primary: var(--color-primary, #f97316);
+  --color-brand-accent: var(--color-accent, #0f172a);
+  --color-brand-primary-hover: #d94418;
+  --color-brand-primary-light: #fff2ed;
   --color-brand-dark: #1A1A1A;
   --color-brand-dark-surface: #242424;
 }

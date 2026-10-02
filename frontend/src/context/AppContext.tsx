@@ -64,6 +64,7 @@ import {
   isValidUUID,
 } from '../services/api';
 import { getSubdomain, isApexDomain, getEffectiveDomainIdentifier, isCustomDomain, getCustomDomain } from '../utils/subdomain';
+import { applyBrandingToDOM } from '../hooks/useDynamicBranding';
 import {
   TenantColorTheme,
   DensityMode,
@@ -1010,53 +1011,126 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Inject dynamic CSS custom properties for Brand Theming
   useEffect(() => {
-    const primaryColor = currentCompany?.uiPrimaryColor || brandConfig.primaryColor;
-    const secondaryColor = currentCompany?.uiSecondaryColor || brandConfig.secondaryColor;
+    const primaryColor = currentCompany?.uiPrimaryColor || brandConfig.primaryColor || '#f97316';
+    const secondaryColor = currentCompany?.uiSecondaryColor || brandConfig.secondaryColor || '#0f172a';
     if (primaryColor) {
+      document.documentElement.style.setProperty('--color-primary', primaryColor);
+      document.documentElement.style.setProperty('--primary-color', primaryColor);
       document.documentElement.style.setProperty('--brand-primary', primaryColor);
+      document.documentElement.style.setProperty('--tenant-primary', primaryColor);
     }
     if (secondaryColor) {
+      document.documentElement.style.setProperty('--color-accent', secondaryColor);
+      document.documentElement.style.setProperty('--secondary-color', secondaryColor);
       document.documentElement.style.setProperty('--brand-secondary', secondaryColor);
+      document.documentElement.style.setProperty('--tenant-secondary', secondaryColor);
     }
   }, [brandConfig, currentCompany]);
 
-  // Synchronize brand config with authenticated tenant company
+  // Synchronize dynamic two-tier branding on mount and tenant/route transitions
   useEffect(() => {
-    const isApexRoot = typeof window !== 'undefined' && isApexDomain() && (window.location.pathname === '/' || window.location.pathname === '');
-    const token = getAuthToken();
-    const tier = getAuthTier();
-    if (isApexRoot && (!token || tier === 'master')) {
-      return;
-    }
-    if (currentCompany) {
-      setBrandConfig((prev) => ({
-        ...prev,
-        companyNameEn: currentCompany.name || prev.companyNameEn,
-        companyNameAr: currentCompany.name || prev.companyNameAr,
-        primaryColor: currentCompany.uiPrimaryColor || prev.primaryColor,
-        secondaryColor: currentCompany.uiSecondaryColor || prev.secondaryColor,
-        crNumber: currentCompany.commercialRegistration || prev.crNumber,
-        taxNumber: currentCompany.taxId || prev.taxNumber,
-        customLogoUrl: currentCompany.logo_url || currentCompany.uiLogoUrl || prev.customLogoUrl,
-      }));
-    }
-  }, [currentCompany]);
+    let isCancelled = false;
 
-  // Ensure navigating to root unified portal resets tenant branding leaks (Apex domain only)
-  useEffect(() => {
+    const loadDynamicBranding = async () => {
+      const isApex = typeof window !== 'undefined' ? isApexDomain() : true;
+      const isRoot = typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '');
+      const token = getAuthToken();
+      const tier = getAuthTier();
+      const storedSlug = getTenantSlug();
+      const sub = typeof window !== 'undefined' ? getSubdomain() : null;
+      const isCustom = typeof window !== 'undefined' ? isCustomDomain() : false;
+
+      const isTenantActive = Boolean(
+        (sub && sub !== 'www' && sub !== 'app' && sub !== 'api' && sub !== 'admin') ||
+        isCustom ||
+        (!isApex && tier !== 'master') ||
+        (tier === 'tenant' && (storedSlug || currentCompany)) ||
+        (currentCompany && !isApex)
+      );
+
+      if (isTenantActive) {
+        try {
+          const targetId = currentCompany?.id || storedSlug || undefined;
+          const tenantBranding = await erpApi.getTenantBranding(targetId);
+          if (tenantBranding && !isCancelled) {
+            setBrandConfig((prev) => ({
+              ...prev,
+              companyNameEn: tenantBranding.brand_name || prev.companyNameEn,
+              companyNameAr: tenantBranding.brand_name || prev.companyNameAr,
+              primaryColor: tenantBranding.primary_color || prev.primaryColor,
+              secondaryColor: tenantBranding.accent_color || prev.secondaryColor,
+              customLogoUrl: tenantBranding.logo_url || prev.customLogoUrl,
+            }));
+            applyBrandingToDOM({
+              isTenant: true,
+              tenantId: tenantBranding.tenant_id,
+              brandName: tenantBranding.brand_name,
+              logoUrl: tenantBranding.logo_url,
+              faviconUrl: tenantBranding.favicon_url,
+              primaryColor: tenantBranding.primary_color,
+              accentColor: tenantBranding.accent_color,
+              customDomain: tenantBranding.custom_domain,
+            });
+            return;
+          }
+        } catch (e) {
+          console.warn('[OxenGL Branding] Tenant dynamic fetch fallback:', e);
+        }
+      }
+
+      // Public landing page / Apex Root: Fetch and apply global platform branding defaults
+      try {
+        const platformBranding = await erpApi.getPlatformBranding();
+        if (platformBranding && !isCancelled) {
+          setBrandConfig((prev) => ({
+            ...prev,
+            companyNameEn: platformBranding.company_name_en || platformBranding.platform_name || prev.companyNameEn,
+            companyNameAr: platformBranding.company_name_ar || prev.companyNameAr,
+            primaryColor: platformBranding.primary_color || prev.primaryColor,
+            secondaryColor: platformBranding.accent_color || prev.secondaryColor,
+            customLogoUrl: platformBranding.logo_url || platformBranding.default_logo || prev.customLogoUrl,
+            platformLogoUrl: platformBranding.logo_url || platformBranding.default_logo,
+            email: platformBranding.support_email || prev.email,
+            phone: platformBranding.support_phone || prev.phone,
+          }));
+          applyBrandingToDOM({
+            isTenant: false,
+            brandName: platformBranding.brand_name || platformBranding.platform_name,
+            platformName: platformBranding.platform_name,
+            logoUrl: platformBranding.logo_url || platformBranding.default_logo,
+            faviconUrl: platformBranding.favicon_url || platformBranding.default_favicon,
+            primaryColor: platformBranding.primary_color,
+            accentColor: platformBranding.accent_color,
+            companyNameAr: platformBranding.company_name_ar,
+            companyNameEn: platformBranding.company_name_en,
+            supportEmail: platformBranding.support_email,
+            supportPhone: platformBranding.support_phone,
+          });
+        }
+      } catch (e) {
+        console.warn('[OxenGL Branding] Global platform branding fallback:', e);
+      }
+    };
+
+    loadDynamicBranding();
+
     const handleLocationChange = () => {
       const isApexRoot = typeof window !== 'undefined' && isApexDomain() && (window.location.pathname === '/' || window.location.pathname === '');
       const token = getAuthToken();
       const tier = getAuthTier();
       if (isApexRoot && (!token || tier === 'master')) {
-        setBrandConfig(INITIAL_BRAND_CONFIG);
         setCurrentCompany(null);
       }
+      loadDynamicBranding();
     };
-    handleLocationChange();
+
     window.addEventListener('popstate', handleLocationChange);
-    return () => window.removeEventListener('popstate', handleLocationChange);
-  }, []);
+    return () => {
+      isCancelled = true;
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, [currentCompany]);
+
 
   // Native Authentication & Sync State
   const [isNativeAuthSyncing] = useState<boolean>(false);

@@ -2426,3 +2426,66 @@ from backend.app.domains.saas.models import (  # noqa: E402
     TenantSubscription,
 )
 
+
+# ==============================================================================
+# Two-Tier Dynamic Branding & Platform Settings Models
+# ==============================================================================
+class PlatformSetting(Base):
+    """Global system-wide configuration parameters (Admin Portal Tier)."""
+    __tablename__ = "platform_settings"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    setting_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    setting_value: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+
+
+class Organization(TimestampMixin, Base):
+    """Authoritative tenant organization boundary for branding and workspace resolution."""
+    __tablename__ = "organizations"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slug: Mapped[Optional[str]] = mapped_column(String(100), unique=True, index=True, nullable=True)
+    company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="SET NULL"), unique=True, nullable=True, index=True
+    )
+
+    branding: Mapped[Optional["TenantBranding"]] = relationship(
+        "TenantBranding", back_populates="organization", uselist=False, cascade="all, delete-orphan"
+    )
+
+
+class TenantBranding(Base):
+    """Tenant-level visual identity overrides (Tenant Workspace Tier)."""
+    __tablename__ = "tenant_branding"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    )
+    brand_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    logo_url: Mapped[str] = mapped_column(Text, nullable=False)
+    favicon_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    primary_color: Mapped[str] = mapped_column(
+        String(50), default="#f97316", server_default="#f97316", nullable=False
+    )
+    accent_color: Mapped[str] = mapped_column(
+        String(50), default="#0f172a", server_default="#0f172a", nullable=False
+    )
+    custom_domain: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="branding")
+
+

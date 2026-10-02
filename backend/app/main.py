@@ -6405,7 +6405,10 @@ def create_restock_proposal(
 
 # File segment: backend/app/main.py
 from backend.app.domains.planning.logo_upload import router as logo_upload_router
+from backend.app.api.v1.branding import router as dynamic_branding_router
 
 # Include the branding router alongside active application resource domains
 app.include_router(logo_upload_router)
+app.include_router(dynamic_branding_router)
+
 

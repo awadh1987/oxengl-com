@@ -449,9 +449,11 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="hidden h-5 w-px bg-neutral-200 dark:bg-slate-800 md:block" />
           <div className="hidden flex-col md:flex">
-            {/* Dynamic Isolated Tenant Title or Master OxenGL Enterprise Header */}
+            {/* Dynamic Isolated Tenant Title or Master Platform Global Header */}
             <span className="text-xs font-bold tracking-wide text-slate-200 leading-tight">
-              {isTenant ? tenantDisplayName : 'OXENGL ENTERPRISE CLOUD'}
+              {isTenant
+                ? tenantDisplayName
+                : (isAr ? (brandConfig?.companyNameAr || 'منظومة أوكسن السحابية') : (brandConfig?.companyNameEn || 'OXENGL ENTERPRISE CLOUD'))}
             </span>
             <span className="text-[9px] text-neutral-500 dark:text-slate-400 font-medium leading-tight">
               {isTenant
@@ -460,6 +462,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
         </div>
+
 
         {/* Isolated Tenant Guarded Company Dropdown */}
         { !isTenantDomain && !currentTenantId && <CompanyDropdown /> }

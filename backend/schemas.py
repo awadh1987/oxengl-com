@@ -3041,3 +3041,67 @@ class GenerateRFQFromPRRequest(BaseModel):
     submission_deadline: datetime
     bid_opening_date: datetime
     title: str | None = None
+
+
+# ==============================================================================
+# Two-Tier Dynamic Branding & Platform Settings Schemas
+# ==============================================================================
+class PlatformBrandingResponse(BaseModel):
+    platform_name: str = Field(default="OxenGL Enterprise", description="Global platform application title")
+    brand_name: str = Field(default="OxenGL Enterprise", description="Global platform brand name")
+    default_logo: str = Field(default="/oxengl-logo.svg", description="Global default SVG/PNG asset logo")
+    logo_url: str = Field(default="/oxengl-logo.svg", description="Global default logo URL")
+    default_favicon: str | None = Field(default="/favicon.ico", description="Platform default favicon asset")
+    favicon_url: str | None = Field(default="/favicon.ico", description="Platform default favicon URL")
+    primary_color: str = Field(default="#f97316", description="Platform global primary brand color hex")
+    accent_color: str = Field(default="#0f172a", description="Platform global accent brand color hex")
+    company_name_ar: str | None = Field(default="منظومة أوكسن السحابية", description="Global platform Arabic title")
+    company_name_en: str | None = Field(default="OxenGL Enterprise Cloud", description="Global platform English title")
+    support_email: str | None = Field(default="contact@oxengl.me", description="Platform system support email")
+    support_phone: str | None = Field(default="+966 50 123 4567", description="Platform system support telephone")
+
+    model_config = ConfigDict(extra="allow", from_attributes=True)
+
+
+class TenantBrandingResponse(BaseModel):
+    id: int | None = None
+    tenant_id: int | str
+    brand_name: str
+    logo_url: str
+    favicon_url: str | None = None
+    primary_color: str = "#f97316"
+    accent_color: str = "#0f172a"
+    custom_domain: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(extra="allow", from_attributes=True)
+
+
+class TenantBrandingUpdate(BaseModel):
+    brand_name: str | None = None
+    logo_url: str | None = None
+    favicon_url: str | None = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+    custom_domain: str | None = None
+
+    model_config = ConfigDict(extra="ignore")
+
+
+class PlatformBrandingUpdate(BaseModel):
+    platform_name: str | None = None
+    brand_name: str | None = None
+    default_logo: str | None = None
+    logo_url: str | None = None
+    default_favicon: str | None = None
+    favicon_url: str | None = None
+    primary_color: str | None = None
+    accent_color: str | None = None
+    company_name_ar: str | None = None
+    company_name_en: str | None = None
+    support_email: str | None = None
+    support_phone: str | None = None
+
+    model_config = ConfigDict(extra="allow")
+

@@ -89,6 +89,59 @@ export interface CompanyBrandingPayload {
   background_url?: string | null;
 }
 
+export interface PlatformBrandingDto {
+  platform_name: string;
+  brand_name: string;
+  default_logo: string;
+  logo_url: string;
+  default_favicon?: string;
+  favicon_url?: string;
+  primary_color: string;
+  accent_color: string;
+  company_name_ar?: string;
+  company_name_en?: string;
+  support_email?: string;
+  support_phone?: string;
+}
+
+export interface TenantBrandingDto {
+  id?: number;
+  tenant_id: number | string;
+  brand_name: string;
+  logo_url: string;
+  favicon_url?: string;
+  primary_color: string;
+  accent_color: string;
+  custom_domain?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TenantBrandingPayload {
+  brand_name?: string;
+  logo_url?: string;
+  favicon_url?: string;
+  primary_color?: string;
+  accent_color?: string;
+  custom_domain?: string;
+}
+
+export interface PlatformBrandingPayload {
+  platform_name?: string;
+  brand_name?: string;
+  default_logo?: string;
+  logo_url?: string;
+  default_favicon?: string;
+  favicon_url?: string;
+  primary_color?: string;
+  accent_color?: string;
+  company_name_ar?: string;
+  company_name_en?: string;
+  support_email?: string;
+  support_phone?: string;
+}
+
+
 export interface SubscriptionPlanDto {
   id: string;
   name: 'FREE' | 'PROFESSIONAL' | 'ENTERPRISE' | string;
@@ -1180,6 +1233,22 @@ export const erpApi = {
   registerUser: (payload: UserRegistrationPayload) => request<NativeAuthResponse>('/api/user-registrations', payload.company_id, { method: 'POST', body: JSON.stringify(payload) }),
   registerCompany: (payload: CompanyRegistrationPayload) => request<{ company: ApiCompany; user: { id: string; company_id: string; role: string } }>('/api/companies/register', undefined, { method: 'POST', body: JSON.stringify(payload) }),
   updateCompanyBranding: (companyId: string, payload: CompanyBrandingPayload) => request<ApiCompany>(`/api/companies/${companyId}/branding`, companyId, { method: 'PUT', body: JSON.stringify(payload) }),
+  getPlatformBranding: () => request<PlatformBrandingDto>('/api/v1/platform/branding'),
+  updatePlatformBranding: (payload: PlatformBrandingPayload) =>
+    request<PlatformBrandingDto>('/api/v1/admin/platform/branding', undefined, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  getTenantBranding: (tenantId?: string) => {
+    const url = tenantId ? `/api/v1/tenant/branding?tenant_id=${encodeURIComponent(tenantId)}` : '/api/v1/tenant/branding';
+    return request<TenantBrandingDto>(url, tenantId);
+  },
+  updateTenantBranding: (tenantId: string | number, payload: TenantBrandingPayload) =>
+    request<TenantBrandingDto>(`/api/v1/admin/tenant/${tenantId}/branding`, String(tenantId), {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
   uploadPlatformAsset: (
     payload: {
       asset_type: string;
