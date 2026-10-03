@@ -322,7 +322,15 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def is_super_admin(self) -> bool:
+        if getattr(self, "_is_super_admin_override", None) is not None:
+            return bool(self._is_super_admin_override)
         return self.role in ("Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN")
+
+    @is_super_admin.setter
+    def is_super_admin(self, val: bool):
+        self._is_super_admin_override = bool(val)
+        if val:
+            self.is_superuser = True
 
     @property
     def tenant_id(self) -> Optional[uuid.UUID]:
@@ -2027,6 +2035,12 @@ class MasterUser(TimestampMixin, Base):
     @property
     def is_super_admin(self) -> bool:
         return self.role == "super_admin"
+
+    @is_super_admin.setter
+    def is_super_admin(self, val: bool):
+        self._is_super_admin_override = bool(val)
+        if val:
+            self.is_superuser = True
 
 
 class MasterPasswordReset(Base):

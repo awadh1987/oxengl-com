@@ -758,7 +758,6 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 	if is_master_or_super and user is not None:
 		setattr(user, "is_superuser", True)
 		setattr(user, "is_super_admin", True)
-
 	try:
 		request.state.claims = claims
 		request.state.token_claims = claims
