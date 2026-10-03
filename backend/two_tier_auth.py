@@ -963,11 +963,17 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
 
     # 4. Provision Dedicated Database Name & Encrypted DSN
     tenant_db_name = f"oxengl_tenant_{slug.replace('-', '_')}"
-    # Construct tenant DSN pointing to PostgreSQL (or testing engine)
-    db_user = os.getenv("POSTGRES_USER", "postgres")
-    db_pass = os.getenv("POSTGRES_PASSWORD", "postgres")
-    db_host = os.getenv("POSTGRES_HOST", "localhost")
-    db_port = os.getenv("POSTGRES_PORT", "5432")
+    # Construct tenant DSN pointing to PostgreSQL (or testing engine).
+    # Credentials come from the environment / the platform DATABASE_URL -- never a hard-coded password.
+    from sqlalchemy.engine.url import make_url
+    from backend.database import DATABASE_URL as _platform_db_url
+    _base_url = make_url(_platform_db_url)
+    db_user = os.getenv("POSTGRES_USER") or _base_url.username or "postgres"
+    db_pass = os.getenv("POSTGRES_PASSWORD") or os.getenv("DB_PASSWORD") or _base_url.password
+    if not db_pass:
+        raise HTTPException(status_code=500, detail="Tenant database provisioning is not configured (no database password).")
+    db_host = os.getenv("POSTGRES_HOST") or _base_url.host or "localhost"
+    db_port = os.getenv("POSTGRES_PORT") or str(_base_url.port or 5432)
     raw_dsn = f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{tenant_db_name}"
     enc_dsn = encrypt_connection_url(raw_dsn)
 

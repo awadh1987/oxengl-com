@@ -262,15 +262,16 @@ class Base(DeclarativeBase):
 # ==============================================================================
 
 
+from backend.secret_env import require_secret  # noqa: E402  (strict, no fallbacks)
+
+# Required. There is intentionally NO fallback (formerly a public literal and JWT_SECRET_KEY):
+# the process refuses to start without it. Rotate with backend/scripts/rotate_data_residency_key.py.
+DATA_RESIDENCY_KEY = require_secret("DATA_RESIDENCY_KEY")
+
+
 def _get_encryption_fernet(secret_key: str | None = None) -> Fernet:
     """Derives a deterministic 32-byte URL-safe base64 key for Fernet symmetric encryption."""
-    raw_key = (
-        secret_key
-        or os.getenv("DATA_RESIDENCY_KEY")
-        or os.getenv("JWT_SECRET_KEY")
-
-        or "oxengl-data-residency-secret-key-32b-default"
-    )
+    raw_key = secret_key or DATA_RESIDENCY_KEY
     derived_32 = hashlib.sha256(raw_key.encode("utf-8")).digest()
     fernet_key = base64.urlsafe_b64encode(derived_32)
     return Fernet(fernet_key)

@@ -270,8 +270,7 @@ JWT_SECRET_MASTER = require_secret("JWT_SECRET_MASTER")
 JWT_SECRET_TENANT = require_secret("JWT_SECRET_TENANT")
 JWT_SECRET_DEFAULT = require_secret("JWT_SECRET")
 # Legacy signing key for create_access_token(); defaults to JWT_SECRET (never a literal).
-# NOTE: do not set JWT_SECRET_KEY casually -- backend/database.py also derives the
-# data-residency Fernet key from it.
+# (Independent of the data-residency Fernet key, which uses DATA_RESIDENCY_KEY only.)
 JWT_SECRET_KEY = require_secret("JWT_SECRET_KEY", "JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 

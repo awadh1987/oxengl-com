@@ -23,7 +23,7 @@ for path_str in (str(ROOT_DIR), str(BACKEND_DIR)):
 # Give test runs ephemeral random values unless the environment already provides them.
 import os as _os
 import secrets as _secrets
-for _name in ("JWT_SECRET", "JWT_SECRET_MASTER", "JWT_SECRET_TENANT"):
+for _name in ("JWT_SECRET", "JWT_SECRET_MASTER", "JWT_SECRET_TENANT", "DATA_RESIDENCY_KEY"):
     _os.environ.setdefault(_name, _secrets.token_hex(32))
 
 from backend.app.main import app
