@@ -1,19 +1,31 @@
 # ==============================================================================
-# OxenGL Enterprise Production Docker Compose Orchestration
-# Services: PostgreSQL (pgvector), FastAPI Backend, React Frontend (Nginx), Redis
-# Memory Management: Explicitly tuned for 2GB Physical RAM with Swap Overhead
+# OxenGL Enterprise Production Compose Orchestration (Podman / podman-compose)
+# Services: PostgreSQL (pgvector), FastAPI Backend, React Frontend (Nginx), Redis,
+#           Edge Nginx reverse proxy
+#
+# Synced to the LIVE container state on srv1874240 (2026-10-03):
+#   - Two networks: `oxengl_internal_network` (data plane: postgres/redis/backend)
+#     and `oxengl_net` (edge plane: nginx/frontend/backend). The edge resolves
+#     upstreams dynamically via Podman aardvark-dns on oxengl_net (see nginx.conf).
+#   - Backend + frontend code is baked into the images (no source/dist bind mounts).
+#   - Backend uses the SYNC psycopg2 driver (backend/database.py), not asyncpg.
+#   - NO secrets in this file. Values come from `.env` (gitignored). Required
+#     variables fail fast with `:?` instead of silently using a public default.
+#
+# Memory: postgres/redis carry explicit limits (2GB host); app containers are
+# currently unbounded on the live host (backend ~220MB RSS).
 # ==============================================================================
 
 services:
   # 1. High-Precision Multi-Tenant PostgreSQL Ledger Engine
   postgres_db:
-    image: pgvector/pgvector:pg15
+    image: docker.io/pgvector/pgvector:pg15
     container_name: oxengl_postgres_container
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-erp_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      POSTGRES_DB: ${DB_NAME:-erp_db}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -34,25 +46,20 @@ services:
       -c work_mem=4MB
       -c min_wal_size=100MB
       -c max_wal_size=1GB
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 128M
     mem_limit: 512m
     mem_reservation: 128m
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-erp_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-erp_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       - oxengl_internal_network
+      - oxengl_net
 
   # 2. High-Velocity Cache & State Broker
   redis_cache:
-    image: redis:7-alpine
+    image: docker.io/library/redis:7-alpine
     container_name: oxengl_redis_container
     restart: always
     command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save ""
@@ -60,12 +67,6 @@ services:
       - "127.0.0.1:6379:6379"
     volumes:
       - redis_data_volume:/data
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 32M
     mem_limit: 128m
     mem_reservation: 32m
     healthcheck:
@@ -75,105 +76,84 @@ services:
       retries: 3
     networks:
       - oxengl_internal_network
+      - oxengl_net
 
-  # 3. OxenGL Enterprise Core Backend API Engine (FastAPI)
+  # 3. OxenGL Enterprise Core Backend API Engine (FastAPI, code baked into image)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: localhost/oxen-gl_backend:latest
     container_name: oxengl_backend_container
     restart: always
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "100"]
+    # .env supplies DB_*, REDIS_*, WASL_*, TCP_INGESTION_PORT, NGINX_STREAM_PORT,
+    # JWT_SECRET (and should supply JWT_SECRET_MASTER / JWT_SECRET_TENANT).
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres_db:5432/${POSTGRES_DB:-erp_db}"
+      DATABASE_URL: "postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:?DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
       REDIS_URL: "redis://redis_cache:6379/0"
-      JWT_SECRET: ${JWT_SECRET:-ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad}
+      POSTGRES_HOST: postgres_db
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       PYTHONPATH: "/app"
+    # Live host currently publishes 0.0.0.0:8000; loopback-only is the intended
+    # posture (all public traffic must go through the edge nginx).
     ports:
       - "127.0.0.1:8000:8000"
-    volumes:
-      - ./backend/app:/app/backend/app:ro
     depends_on:
       postgres_db:
         condition: service_healthy
       redis_cache:
         condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
-    mem_limit: 512m
-    mem_reservation: 256m
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health 2>/dev/null || curl -f http://localhost:8000/docs 2>/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/v1/health >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
       start_period: 30s
     networks:
       - oxengl_internal_network
+      - oxengl_net
 
-  # 4. OxenGL React Frontend Interface (Served via Production Nginx)
+  # 4. OxenGL React Frontend (static build baked into the image, served by Nginx)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: localhost/oxen-gl_frontend:latest
     container_name: oxengl_frontend_container
     restart: always
-    ports:
-      - "127.0.0.1:3000:80"
-      - "127.0.0.1:5173:80"
-    volumes:
-      - ./frontend/dist:/usr/share/nginx/html:ro
-      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
-      backend:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 32M
-    mem_limit: 128m
-    mem_reservation: 32m
+      - backend
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
     networks:
-      - oxengl_internal_network
+      - oxengl_net
 
-  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (SSL Termination & Public Routing)
+  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (fronted by host Apache for TLS)
   nginx:
-    image: nginx:1.25-alpine
+    image: docker.io/library/nginx:alpine
     container_name: oxengl_nginx_container
     restart: always
     ports:
-      - "0.0.0.0:8080:80"
-      - "0.0.0.0:4433:443"
+      - "8080:80"
+      - "4433:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       - frontend
       - backend
-    deploy:
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 32M
-    mem_limit: 128m
-    mem_reservation: 32m
     healthcheck:
-      test: ["CMD-SHELL", "curl -k -f https://localhost/api/v1/health || curl -f http://localhost:80/api/v1/health || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/api/v1/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3
     networks:
-      - oxengl_internal_network
+      - oxengl_net
 
 volumes:
   pg_data_volume:
@@ -182,6 +162,11 @@ volumes:
     name: oxengl_redis_data_volume
 
 networks:
+  # Data plane (compose-managed; carries the `postgres_db` / `redis_cache` aliases).
   oxengl_internal_network:
     name: oxengl_internal_network
     driver: bridge
+  # Edge plane (pre-created outside compose; nginx.conf's resolver = its gateway 10.89.1.1).
+  oxengl_net:
+    name: oxengl_net
+    external: true

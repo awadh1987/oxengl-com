@@ -1607,10 +1607,20 @@ TIER_COST_CENTERS = {"BASIC": 5, "PROFESSIONAL": 25, "ENTERPRISE": 100}
 
 def require_platform_key(
 	request: Request,
-	current_user: models.ResUser = Depends(require_super_admin),
+	database: Session = Depends(get_db),
 ) -> None:
-	"""Platform-owner endpoints require an authenticated session with Super_Admin role."""
-	pass
+	"""Platform-owner endpoints require an authenticated session with Super_Admin role.
+
+	Uses the exact same guard as the platform branding PUT: a valid master-tier JWT
+	(Bearer header or oxengl_session cookie, no 2FA handshake tokens) whose subject is an
+	ACTIVE master_users row with role super_admin/admin, checked live against the DB.
+	Raises 401 (no/invalid token) or 403 (not an active platform admin).
+	"""
+	# Lazy import: the branding router is imported near the end of this module.
+	from backend.app.api.v1.branding import _authenticate_branding_editor, _require_active_platform_admin
+
+	claims = _authenticate_branding_editor(request)
+	_require_active_platform_admin(claims, database)
 
 
 @app.get("/api/platform/audit", response_model=IsolationAuditRead, tags=["Platform"])

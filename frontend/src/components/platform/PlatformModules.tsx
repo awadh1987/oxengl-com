@@ -221,7 +221,6 @@ export const LicenseProvisionerView: React.FC = () => {
       document.documentElement.dir === 'rtl'
     ))
   );
-  const [superAdminKey, setSuperAdminKey] = useState('');
   const [companyId, setCompanyId] = useState(() => {
     if (currentCompany && companies.some((c) => c.id === currentCompany.id)) return currentCompany.id;
     return companies[0]?.id || '';
@@ -251,8 +250,8 @@ export const LicenseProvisionerView: React.FC = () => {
   const issue = async (event: React.FormEvent) => {
     event.preventDefault();
     const targetCompanyId = effectiveCompanyId;
-    if (!superAdminKey.trim() || !targetCompanyId) {
-      setStatus({ type: 'error', text: 'SuperAdmin key and target enterprise are required.' });
+    if (!targetCompanyId) {
+      setStatus({ type: 'error', text: 'Target enterprise is required.' });
       return;
     }
     setBusy(true);
@@ -266,7 +265,7 @@ export const LicenseProvisionerView: React.FC = () => {
         ui_primary_color: primaryColor || '#1E3A8A',
         ui_secondary_color: secondaryColor || '#7C3AED',
       };
-      const issued = await erpApi.issueLicense(payload, superAdminKey.trim());
+      const issued = await erpApi.issueLicense(payload);
       await refreshCompanies();
       setStatus({ type: 'success', text: `License successfully issued for ${issued.name}. Key: ${issued.license_key || ''}` });
     } catch (error) {
@@ -288,9 +287,7 @@ export const LicenseProvisionerView: React.FC = () => {
           <section>
             <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Lock className="h-4 w-4 text-blue-700" />Security &amp; Tenant Credentials</h3>
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="text-xs font-bold text-slate-700">System SuperAdmin Key *
-                <input type="password" autoComplete="one-time-code" value={superAdminKey} onChange={(event) => setSuperAdminKey(event.target.value)} placeholder={isAr ? 'رمز استرداد الخادم' : 'Server recovery code'} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-100 outline-none focus:border-blue-600" /></label>
-              <label className="text-xs font-bold text-slate-700">Licensed Enterprise *
+              <label className="text-xs font-bold text-slate-700 sm:col-span-2">Licensed Enterprise *
                 <select value={effectiveCompanyId} onChange={(event) => setCompanyId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-100 outline-none focus:border-blue-600">
                   {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
                 </select></label>

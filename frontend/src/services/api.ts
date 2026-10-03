@@ -1279,9 +1279,8 @@ export const erpApi = {
     }),
   directWorkspaceAccess: (payload: DirectWorkspaceAccessPayload) => request<DirectWorkspaceAccessResponse>('/api/auth/direct-access', undefined, { method: 'POST', body: JSON.stringify(payload) }),
   getIsolationAudit: () => request<IsolationAudit>('/api/platform/audit'),
-  issueLicense: (payload: LicenseIssuePayload, superAdminKey: string) => request<ApiCompany>('/api/platform/licenses', undefined, {
+  issueLicense: (payload: LicenseIssuePayload) => request<ApiCompany>('/api/platform/licenses', undefined, {
     method: 'POST',
-    headers: { 'X-Recovery-Code': superAdminKey },
     body: JSON.stringify(payload),
   }),
   getOperations: (companyId: string) => request<ApiOperation[]>('/api/operations', companyId),
