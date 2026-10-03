@@ -48,6 +48,20 @@ DEFAULT_GLOBAL_BRANDING = {
     "support_phone": "+966 50 123 4567",
 }
 
+# Phase 4: Tenant Custom Landing Engine fields on tenant_branding
+LANDING_FIELDS = (
+    "landing_hero_title",
+    "landing_hero_subtitle",
+    "landing_cta_label",
+    "landing_cta_url",
+    "landing_theme_mode",
+)
+
+
+def _landing_fields(branding: Any) -> Dict[str, Any]:
+    """Extract landing page content from a TenantBranding row (None-safe)."""
+    return {field: getattr(branding, field, None) for field in LANDING_FIELDS}
+
 
 def _resolve_tenant_entity(
     request: Request,
@@ -361,6 +375,7 @@ def get_tenant_branding(
         custom_domain=branding.custom_domain,
         created_at=branding.created_at,
         updated_at=branding.updated_at,
+        **_landing_fields(branding),
     )
 
 
@@ -422,6 +437,7 @@ def get_specific_tenant_branding(
         custom_domain=branding.custom_domain,
         created_at=branding.created_at,
         updated_at=branding.updated_at,
+        **_landing_fields(branding),
     )
 
 
@@ -478,6 +494,11 @@ def update_tenant_branding(
             branding.custom_domain = payload.custom_domain
         branding.updated_at = now
 
+    # Landing content: only fields explicitly sent are applied; explicit null clears.
+    for field in LANDING_FIELDS:
+        if field in payload.model_fields_set:
+            setattr(branding, field, getattr(payload, field))
+
     # Also synchronize values back to linked ResCompany if present
     if company:
         if payload.brand_name:
@@ -507,4 +528,5 @@ def update_tenant_branding(
         custom_domain=branding.custom_domain,
         created_at=branding.created_at,
         updated_at=branding.updated_at,
+        **_landing_fields(branding),
     )

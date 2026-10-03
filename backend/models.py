@@ -2497,6 +2497,12 @@ class TenantBranding(Base):
         String(50), default="#0f172a", server_default="#0f172a", nullable=False
     )
     custom_domain: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    # Phase 4: Tenant Custom Landing Engine (public landing page on subdomain / custom domain)
+    landing_hero_title: Mapped[Optional[str]] = mapped_column(String(160), nullable=True)
+    landing_hero_subtitle: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    landing_cta_label: Mapped[Optional[str]] = mapped_column(String(60), nullable=True)
+    landing_cta_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    landing_theme_mode: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
     )

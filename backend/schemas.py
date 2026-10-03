@@ -3074,6 +3074,11 @@ class TenantBrandingResponse(BaseModel):
     custom_domain: str | None = None
     created_at: datetime | None = None
     updated_at: datetime | None = None
+    landing_hero_title: str | None = None
+    landing_hero_subtitle: str | None = None
+    landing_cta_label: str | None = None
+    landing_cta_url: str | None = None
+    landing_theme_mode: str | None = None
 
     model_config = ConfigDict(extra="allow", from_attributes=True)
 
@@ -3085,6 +3090,31 @@ class TenantBrandingUpdate(BaseModel):
     primary_color: str | None = None
     accent_color: str | None = None
     custom_domain: str | None = None
+    # Phase 4: Tenant landing page content. Explicit null clears a value.
+    landing_hero_title: str | None = Field(default=None, max_length=160)
+    landing_hero_subtitle: str | None = Field(default=None, max_length=600)
+    landing_cta_label: str | None = Field(default=None, max_length=60)
+    landing_cta_url: str | None = Field(default=None, max_length=2048)
+    landing_theme_mode: Literal["light", "dark"] | None = None
+
+    @field_validator("landing_hero_title", "landing_hero_subtitle", "landing_cta_label", "landing_cta_url", mode="before")
+    @classmethod
+    def _blank_to_none(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            v = v.strip()
+            return v or None
+        return v
+
+    @field_validator("landing_cta_url")
+    @classmethod
+    def _safe_cta_url(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        if v.startswith("/") and not v.startswith("//"):
+            return v
+        if v.lower().startswith(("https://", "http://")):
+            return v
+        raise ValueError("landing_cta_url must be an http(s) URL or a site-relative path starting with '/'")
 
     model_config = ConfigDict(extra="ignore")
 
