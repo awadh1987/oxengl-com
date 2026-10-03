@@ -63,6 +63,93 @@ def _landing_fields(branding: Any) -> Dict[str, Any]:
     return {field: getattr(branding, field, None) for field in LANDING_FIELDS}
 
 
+# ==============================================================================
+# Write authorization for tenant branding
+# ==============================================================================
+
+# Master (control-plane) roles allowed to edit ANY tenant's branding.
+_PLATFORM_SUPER_ROLES = {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER", "OWNER"}
+# Tenant-plane roles allowed to edit THEIR OWN tenant's branding.
+# Deliberately explicit: does not reuse normalize_role(), which maps e.g. data_entry -> Admin.
+_TENANT_ADMIN_ROLES = {
+    "OWNER",
+    "ADMIN",
+    "ADMINISTRATOR",
+    "TENANT_OWNER",
+    "TENANT_ADMIN",
+    "COMPANY_OWNER",
+    "COMPANY_ADMIN",
+}
+
+
+def _norm_role(raw: Any) -> str:
+    return str(raw or "").strip().upper().replace(" ", "_").replace("-", "_")
+
+
+def _authenticate_branding_editor(request: Request) -> Dict[str, Any]:
+    """Validate the caller's JWT (Bearer header or oxengl_session cookie). Raises 401 if absent/invalid."""
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization") or ""
+    token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    if not token:
+        token = (request.cookies.get("oxengl_session") or "").strip()
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required to modify tenant branding.")
+
+    claims: Optional[Dict[str, Any]] = None
+    for tier in ("master", "tenant"):
+        try:
+            claims = verify_two_tier_jwt(token, expected_tier=tier)
+            break
+        except HTTPException:
+            continue
+    if not claims:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired authentication token.")
+
+    # Short-lived 2FA handshake tokens share the tenant secret; they must never authorize writes.
+    if claims.get("purpose"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Handshake tokens cannot be used for this operation.")
+    return claims
+
+
+def _authorize_tenant_branding_write(
+    claims: Dict[str, Any],
+    org: Optional[Organization],
+    company: Optional[ResCompany],
+) -> None:
+    """Allow master-plane super admins, or tenant-plane admins bound to the target tenant. Raises 403 otherwise."""
+    role = _norm_role(claims.get("role"))
+    tier = claims.get("tier")
+
+    if tier == "master":
+        if role in _PLATFORM_SUPER_ROLES:
+            return
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient platform role to modify tenant branding.")
+
+    if tier != "tenant" or role not in _TENANT_ADMIN_ROLES:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only tenant owners or administrators can modify branding.")
+
+    target_ids = {str(x).lower() for x in ((org.company_id if org else None), (company.id if company else None)) if x}
+    claim_id = str(claims.get("tenant_id") or claims.get("company_id") or "").strip().lower()
+    if claim_id:
+        if claim_id in target_ids:
+            return
+    else:
+        target_slugs = {
+            str(s).lower()
+            for s in ((org.slug if org else None), (company.slug if company else None), (company.domain_slug if company else None))
+            if s
+        }
+        claim_slug = str(claims.get("tenant_slug") or claims.get("domain_slug") or "").strip().lower()
+        if claim_slug and claim_slug in target_slugs:
+            return
+
+    logger.warning(
+        "Denied cross-tenant branding write: sub=%s claim_tenant=%s target=%s",
+        claims.get("sub"), claim_id or claims.get("tenant_slug"), sorted(target_ids),
+    )
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to modify this tenant's branding.")
+
+
 def _resolve_tenant_entity(
     request: Request,
     tenant_identifier: Optional[str] = None,
@@ -453,7 +540,12 @@ def update_tenant_branding(
     Tier 2 Admin Endpoint: Update or override a specific tenant's visual identity.
     Accepts tenant integer ID, company UUID, or slug.
     Synchronizes across tenant_branding and linked ResCompany record.
+
+    Authorization: master-plane super admin, or a tenant-plane owner/admin of THIS tenant.
     """
+    # Authenticate before resolving: resolution may persist Organization sync rows.
+    claims = _authenticate_branding_editor(request)
+
     resolved = _resolve_tenant_entity(request, tenant_identifier=tenant_id, db=db)
     if not resolved:
         raise HTTPException(
@@ -462,6 +554,7 @@ def update_tenant_branding(
         )
 
     org, company = resolved
+    _authorize_tenant_branding_write(claims, org, company)
     target_tenant_uuid = (org.company_id if org and org.company_id else None) or (company.id if company else None)
     branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
