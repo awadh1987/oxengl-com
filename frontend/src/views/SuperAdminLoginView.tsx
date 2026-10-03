@@ -107,7 +107,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
   return (
     <div
       dir="ltr"
-      className="min-h-dvh erp-viewport-root w-full bg-[#030712] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-cyan-500 selection:text-black"
+      className="platform-dark min-h-dvh erp-viewport-root w-full bg-[#020617] text-slate-100 flex flex-col justify-between p-4 sm:p-6 pt-safe pb-safe px-safe relative overflow-hidden selection:bg-orange-500/30 selection:text-white"
     >
       {/* BACKGROUND GRAPHICS: Pure CSS Dark Matrix Tech Mesh */}
       <div
@@ -126,13 +126,13 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
       {/* TOP STATUS BAR */}
       <header className="relative z-10 mx-auto w-full max-w-5xl flex items-center justify-between py-2 border-b border-slate-800/80">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 shadow-lg shadow-cyan-500/20 ring-1 ring-cyan-400/30">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-orange-600 to-amber-600 shadow-lg shadow-orange-500/20 ring-1 ring-orange-400/30">
             <LockKeyhole className="h-5 w-5 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-base font-black tracking-tight text-white font-mono">OXENGL_CORE</span>
-              <span className="rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-black text-cyan-400 font-mono">
+              <span className="rounded border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10px] font-black text-orange-400 font-mono">
                 MASTER CONTROL PLANE
               </span>
             </div>
@@ -161,13 +161,13 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
 
       {/* COMPACT COMMAND CENTER MATRIX CARD */}
       <main className="relative z-10 mx-auto w-full max-w-lg my-auto py-6">
-        <div className="relative rounded-3xl border border-cyan-500/30 bg-[#070b14]/90 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-cyan-500/20 shadow-cyan-950/40">
+        <div className="oxen-spotlight group relative rounded-3xl border border-orange-500/30 bg-slate-900/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-orange-500/20 shadow-orange-950/20">
           {/* Accent Highlight Bar */}
-          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-cyan-500 via-indigo-500 to-amber-500" />
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600" />
 
           {/* Card Header */}
           <div className="text-center pb-4">
-            <div className="inline-flex items-center justify-center p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 mb-2">
+            <div className="inline-flex items-center justify-center p-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 mb-2">
               <KeyRound className="h-5 w-5" />
             </div>
             <h1 className="text-xl font-bold tracking-tight text-white font-mono">

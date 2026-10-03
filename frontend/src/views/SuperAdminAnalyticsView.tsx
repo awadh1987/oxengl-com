@@ -117,7 +117,7 @@ export const SuperAdminAnalyticsView: React.FC = () => {
   const avgDaily = velocityData?.data.length ? Math.round(totalOps / velocityData.data.length) : 0;
 
   return (
-    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans px-3 sm:px-4 md:px-6 py-4 sm:py-6">
+    <div className="platform-dark min-h-dvh erp-viewport-root pt-safe pb-safe px-safe bg-slate-950 text-slate-100 font-sans px-3 sm:px-4 md:px-6 py-4 sm:py-6">
       <div className="w-full max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
@@ -160,42 +160,48 @@ export const SuperAdminAnalyticsView: React.FC = () => {
 
         {/* Metrics Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-          <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800/80">
+          <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-mono">TOTAL OPERATIONS (7-DAY)</span>
-              <Activity className="h-4 w-4 text-emerald-400" />
+              <span className="text-xs font-mono uppercase tracking-wider">TOTAL OPERATIONS (7-DAY)</span>
+              <div className="h-8 w-8 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+                <Activity className="h-4 w-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-white">{totalOps.toLocaleString()}</div>
+            <div className="text-3xl font-black text-white ltr-isolate-num">{totalOps.toLocaleString()}</div>
             <div className="text-xs text-emerald-400 flex items-center gap-1 mt-2">
               <ArrowUpRight className="h-3.5 w-3.5" />
               <span>Multi-Tenant Transaction Throughput Stable</span>
             </div>
-          </div>
+          </SpotlightCard>
 
-          <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800/80">
+          <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-mono">JOURNAL ENTRIES (7-DAY)</span>
-              <Zap className="h-4 w-4 text-sky-400" />
+              <span className="text-xs font-mono uppercase tracking-wider">JOURNAL ENTRIES (7-DAY)</span>
+              <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                <Zap className="h-4 w-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-white">{totalEntries.toLocaleString()} <span className="text-sm font-normal text-slate-400">entries</span></div>
+            <div className="text-3xl font-black text-white ltr-isolate-num">{totalEntries.toLocaleString()} <span className="text-sm font-normal text-slate-400">entries</span></div>
             <div className="text-xs text-slate-400 mt-2 font-mono">
-              Window: {velocityData?.start_date} to {velocityData?.end_date}
+              Window: <span className="ltr-isolate">{velocityData?.start_date}</span> to <span className="ltr-isolate">{velocityData?.end_date}</span>
             </div>
-          </div>
+          </SpotlightCard>
 
-          <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800/80">
+          <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
             <div className="flex items-center justify-between text-slate-400 mb-2">
-              <span className="text-xs font-mono">DAILY VELOCITY AVERAGE</span>
-              <BarChart3 className="h-4 w-4 text-purple-400" />
+              <span className="text-xs font-mono uppercase tracking-wider">DAILY VELOCITY AVERAGE</span>
+              <div className="h-8 w-8 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                <BarChart3 className="h-4 w-4" />
+              </div>
             </div>
-            <div className="text-3xl font-black text-white">
+            <div className="text-3xl font-black text-white ltr-isolate-num">
               {avgDaily.toLocaleString()} <span className="text-sm font-normal text-slate-400">ops/day</span>
             </div>
             <div className="text-xs text-sky-400 flex items-center gap-1 mt-2">
               <CheckCircle2 className="h-3.5 w-3.5" />
               <span>Cryptographic Auditing Active</span>
             </div>
-          </div>
+          </SpotlightCard>
         </div>
 
         {/* Chart Viewport Canvas */}

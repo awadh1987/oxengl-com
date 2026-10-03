@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Company } from '../../types';
 import { erpApi, IsolationAudit, LicenseIssuePayload } from '../../services/api';
+import { SpotlightCard } from '../design-system/SpotlightCard';
 
 const TIER_CENTERS: Record<string, number> = { BASIC: 5, PROFESSIONAL: 25, ENTERPRISE: 100 };
 
@@ -17,7 +18,7 @@ const tierBadge = (tier?: string) =>
       : 'bg-blue-50 text-blue-700 border-blue-200';
 
 const Banner: React.FC<{ icon: React.ComponentType<{ className?: string }>; title: string; subtitle: string; badge?: string; tone?: string; action?: React.ReactNode }> = ({ icon: Icon, title, subtitle, badge, tone = 'from-blue-950 via-slate-900 to-indigo-950', action }) => (
-  <div className={`flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-gradient-to-r ${tone} p-6 text-white shadow-xl sm:flex-row sm:items-center`}>
+  <div className={`flex flex-col justify-between gap-4 rounded-3xl border border-slate-800 bg-gradient-to-r ${tone} p-6 text-white shadow-xl sm:flex-row sm:items-center`}>
     <div className="flex items-center gap-4">
       <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white shadow-inner"><Icon className="h-7 w-7" /></div>
       <div>
@@ -113,11 +114,11 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
 
       {notice && <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-bold text-emerald-800"><Check className="h-4 w-4 shrink-0" />{notice}</div>}
 
-      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-800/80 bg-white p-4 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <label className="relative flex-1"><Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، السجل التجاري، الرقم الضريبي...' : 'Search by company, CR, VAT, or license key...'} className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-xs text-slate-900 outline-none focus:border-blue-500 focus:bg-white" /></label>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، السجل التجاري، الرقم الضريبي...' : 'Search by company, CR, VAT, or license key...'} className="w-full rounded-xl border border-slate-800 bg-slate-950 text-slate-200 py-2 pl-10 pr-4 text-xs text-slate-100 outline-none focus:border-blue-500 focus:bg-white" /></label>
         <div className="flex items-center gap-2"><span className="text-xs font-bold text-slate-600">Tier:</span>
-          <select value={tier} onChange={(event) => setTier(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
+          <select value={tier} onChange={(event) => setTier(event.target.value)} className="rounded-xl border border-slate-800 bg-slate-950 text-slate-200 px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-blue-500">
             {['ALL', 'BASIC', 'PROFESSIONAL', 'ENTERPRISE'].map((value) => <option key={value} value={value}>{value === 'ALL' ? 'All Tiers' : value}</option>)}
           </select></div>
       </div>
@@ -128,19 +129,19 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600/10 text-base font-black text-blue-700">{company.name.slice(0, 1).toUpperCase()}</div>
-                <div><p className="font-mono text-[11px] text-slate-400">{company.slug}</p><h3 className="text-sm font-black text-slate-900">{company.name}</h3></div>
+                <div><p className="font-mono text-[11px] text-slate-400">{company.slug}</p><h3 className="text-sm font-black text-slate-100">{company.name}</h3></div>
               </div>
               <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase whitespace-nowrap shrink-0 ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span>
             </div>
-            <dl className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 text-xs">
-              <div className="flex justify-between"><dt className="text-slate-500">Commercial Reg:</dt><dd className="font-mono font-bold text-slate-800">{company.commercialRegistration || '—'}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">Tax Number:</dt><dd className="font-mono font-bold text-slate-800">{company.taxId || '—'}</dd></div>
+            <dl className="mt-4 space-y-2 rounded-2xl border border-slate-100 bg-slate-950/70 p-3.5 text-xs">
+              <div className="flex justify-between"><dt className="text-slate-500">Commercial Reg:</dt><dd className="font-mono font-bold text-slate-200">{company.commercialRegistration || '—'}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">Tax Number:</dt><dd className="font-mono font-bold text-slate-200">{company.taxId || '—'}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Allowed Centers:</dt><dd className="font-bold text-indigo-700">Up to {company.maxCostCenters ?? 25}</dd></div>
-              <div className="flex justify-between"><dt className="text-slate-500">License Key:</dt><dd className="font-mono font-bold text-slate-800">{company.licenseKey || 'Not issued'}</dd></div>
+              <div className="flex justify-between"><dt className="text-slate-500">License Key:</dt><dd className="font-mono font-bold text-slate-200">{company.licenseKey || 'Not issued'}</dd></div>
               <div className="flex justify-between"><dt className="text-slate-500">Security Barrier:</dt><dd className="inline-flex items-center gap-1 font-bold text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" />Strict Isolated</dd></div>
             </dl>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => { setSelectedPlanTenant(company); setTargetTier((company.subscriptionTier || 'standard').toLowerCase()); }} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100"><CreditCard className="h-3.5 w-3.5 text-blue-600" />Manage Plan</button>
+              <button onClick={() => { setSelectedPlanTenant(company); setTargetTier((company.subscriptionTier || 'standard').toLowerCase()); }} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-slate-800 bg-slate-950 text-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100"><CreditCard className="h-3.5 w-3.5 text-blue-600" />Manage Plan</button>
               <button onClick={() => onInspect(company)} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-900 py-2.5 text-xs font-black text-white hover:bg-blue-700"><ExternalLink className="h-3.5 w-3.5" />Inspect</button>
             </div>
           </article>
@@ -150,10 +151,10 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
 
       {selectedPlanTenant && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-4">
+          <div className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 text-slate-100 p-6 shadow-2xl space-y-4">
             <div className="flex items-start justify-between border-b border-slate-100 pb-3">
               <div>
-                <h3 className="text-base font-black text-slate-900">Update Tenant SaaS Subscription</h3>
+                <h3 className="text-base font-black text-slate-100">Update Tenant SaaS Subscription</h3>
                 <p className="text-xs text-slate-500">{selectedPlanTenant.name}</p>
               </div>
               <button onClick={() => setSelectedPlanTenant(null)} className="text-slate-400">✕</button>
@@ -186,17 +187,17 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
       )}
 
       {showForm && <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm">
-        <form onSubmit={submit} className="w-full max-w-xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+        <form onSubmit={submit} className="w-full max-w-xl rounded-3xl border border-slate-800 bg-slate-900 text-slate-100 p-6 shadow-2xl">
           <div className="flex items-start justify-between border-b border-slate-100 pb-4">
-            <div><h3 className="text-lg font-black text-slate-900">Register New Enterprise Tenant</h3><p className="text-xs text-slate-500">Creates an isolated workspace with seeded accounts and an administrator.</p></div>
-            <button type="button" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-900"><X className="h-5 w-5" /></button>
+            <div><h3 className="text-lg font-black text-slate-100">Register New Enterprise Tenant</h3><p className="text-xs text-slate-500">Creates an isolated workspace with seeded accounts and an administrator.</p></div>
+            <button type="button" onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-100"><X className="h-5 w-5" /></button>
           </div>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {([['nameEn', 'Company Name (English)', 'text'], ['cr', 'Commercial Registry (10 digits)', 'text'], ['vat', 'VAT Number (15 digits)', 'text'], ['adminEmail', 'Administrator Email', 'email']] as const).map(([field, label, type]) => (
               <label key={field} className="text-xs font-bold text-slate-700">{label}
                 <input required type={type} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })}
                   pattern={field === 'cr' ? '\\d{10}' : field === 'vat' ? '\\d{15}' : undefined}
-                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-blue-500" /></label>
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium text-slate-100 outline-none focus:border-blue-500" /></label>
             ))}
           </div>
           <button disabled={busy} className="mt-6 w-full rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3 text-xs font-black text-white disabled:opacity-60">{busy ? 'Provisioning workspace...' : 'Create Organization'}</button>
@@ -283,50 +284,50 @@ export const LicenseProvisionerView: React.FC = () => {
       {status && <div className={`flex items-center gap-2 rounded-2xl border p-4 text-xs font-bold ${status.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : status.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}><Shield className="h-4 w-4 shrink-0" />{status.text}</div>}
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <form onSubmit={issue} className="space-y-5 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs lg:col-span-2">
+        <form onSubmit={issue} className="space-y-5 rounded-3xl border border-slate-800/80 bg-white p-6 shadow-xs lg:col-span-2">
           <section>
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-900"><Lock className="h-4 w-4 text-blue-700" />Security &amp; Tenant Credentials</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Lock className="h-4 w-4 text-blue-700" />Security &amp; Tenant Credentials</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="text-xs font-bold text-slate-700">System SuperAdmin Key *
-                <input type="password" autoComplete="one-time-code" value={superAdminKey} onChange={(event) => setSuperAdminKey(event.target.value)} placeholder={isAr ? 'رمز استرداد الخادم' : 'Server recovery code'} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-900 outline-none focus:border-blue-600" /></label>
+                <input type="password" autoComplete="one-time-code" value={superAdminKey} onChange={(event) => setSuperAdminKey(event.target.value)} placeholder={isAr ? 'رمز استرداد الخادم' : 'Server recovery code'} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-100 outline-none focus:border-blue-600" /></label>
               <label className="text-xs font-bold text-slate-700">Licensed Enterprise *
-                <select value={effectiveCompanyId} onChange={(event) => setCompanyId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-600">
+                <select value={effectiveCompanyId} onChange={(event) => setCompanyId(event.target.value)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-100 outline-none focus:border-blue-600">
                   {companies.map((company) => <option key={company.id} value={company.id}>{company.name}</option>)}
                 </select></label>
             </div>
           </section>
 
           <section className="border-t border-slate-100 pt-5">
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-900"><Crown className="h-4 w-4 text-amber-600" />Subscription Tier &amp; Allowance</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Crown className="h-4 w-4 text-amber-600" />Subscription Tier &amp; Allowance</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="text-xs font-bold text-slate-700">Subscription Tier *
-                <select value={tier} onChange={(event) => setTier(event.target.value as typeof tier)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-600">
+                <select value={tier} onChange={(event) => setTier(event.target.value as typeof tier)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-100 outline-none focus:border-blue-600">
                   <option value="BASIC">Basic (5 Cost Centers)</option>
                   <option value="PROFESSIONAL">Professional (25 Cost Centers)</option>
                   <option value="ENTERPRISE">Enterprise (100 Cost Centers)</option>
                 </select></label>
               <label className="text-xs font-bold text-slate-700">Max Cost Centers (Read-Only)
-                <input readOnly value={`Cost Centers ${TIER_CENTERS[tier]}`} className="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2 font-mono text-xs font-bold text-blue-900" /></label>
+                <input readOnly value={`Cost Centers ${TIER_CENTERS[tier]}`} className="mt-1 w-full cursor-not-allowed rounded-xl border border-slate-800 bg-slate-100 px-3.5 py-2 font-mono text-xs font-bold text-blue-900" /></label>
               <label className="text-xs font-bold text-slate-700">Validity Period (Days)
-                <input type="number" min={1} value={validityDays} onChange={(event) => setValidityDays(parseInt(event.target.value, 10) || 365)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-900 outline-none focus:border-blue-600" /></label>
+                <input type="number" min={1} value={validityDays} onChange={(event) => setValidityDays(parseInt(event.target.value, 10) || 365)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 font-mono text-xs font-bold text-slate-100 outline-none focus:border-blue-600" /></label>
             </div>
           </section>
 
           <section className="border-t border-slate-100 pt-5">
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-900"><Palette className="h-4 w-4 text-indigo-600" />Branding &amp; Visual Identity</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Palette className="h-4 w-4 text-indigo-600" />Branding &amp; Visual Identity</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="text-xs font-bold text-slate-700">Primary Color
                 <span className="mt-1 flex items-center gap-2">
                   <input type="color" value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="h-9 w-10 cursor-pointer rounded-lg border border-slate-300 p-0.5" />
-                  <input value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs font-bold uppercase text-slate-900 outline-none focus:border-blue-600" />
+                  <input value={primaryColor} onChange={(event) => setPrimaryColor(event.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs font-bold uppercase text-slate-100 outline-none focus:border-blue-600" />
                 </span></label>
               <label className="text-xs font-bold text-slate-700">Secondary Color
                 <span className="mt-1 flex items-center gap-2">
                   <input type="color" value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="h-9 w-10 cursor-pointer rounded-lg border border-slate-300 p-0.5" />
-                  <input value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs font-bold uppercase text-slate-900 outline-none focus:border-blue-600" />
+                  <input value={secondaryColor} onChange={(event) => setSecondaryColor(event.target.value)} className="w-full rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs font-bold uppercase text-slate-100 outline-none focus:border-blue-600" />
                 </span></label>
               <label className="text-xs font-bold text-slate-700">Theme Mode
-                <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as typeof themeMode)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-900 outline-none focus:border-blue-600">
+                <select value={themeMode} onChange={(event) => setThemeMode(event.target.value as typeof themeMode)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-100 outline-none focus:border-blue-600">
                   <option value="LIGHT">Light</option><option value="DARK">Dark</option><option value="CUSTOM">Custom</option>
                 </select></label>
             </div>
@@ -338,8 +339,8 @@ export const LicenseProvisionerView: React.FC = () => {
         </form>
 
         <div className="space-y-4">
-          <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
-            <h3 className="flex items-center gap-2 text-xs font-black text-slate-900"><Sparkles className="h-4 w-4 text-amber-500" />Tenant Identity Preview</h3>
+          <div className="rounded-3xl border border-slate-800/80 bg-white p-5 shadow-xs">
+            <h3 className="flex items-center gap-2 text-xs font-black text-slate-100"><Sparkles className="h-4 w-4 text-amber-500" />Tenant Identity Preview</h3>
             <div className="mt-4 rounded-2xl p-4 text-white shadow-md" style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">{tier} EDITION</span>
@@ -354,8 +355,8 @@ export const LicenseProvisionerView: React.FC = () => {
             <div className="space-y-3 rounded-3xl border border-amber-300 bg-amber-50/70 p-5 shadow-md">
               <span className="inline-flex items-center gap-1.5 text-xs font-black text-amber-950"><ShieldCheck className="h-4 w-4 text-emerald-600" />Active Issued License</span>
               <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2">
-                <button type="button" onClick={() => copyKey(selected.licenseKey as string)} className="text-slate-500 hover:text-slate-900">{copied === selected.licenseKey ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}</button>
-                <span className="flex-1 truncate font-mono text-xs font-bold text-slate-900">{selected.licenseKey}</span>
+                <button type="button" onClick={() => copyKey(selected.licenseKey as string)} className="text-slate-500 hover:text-slate-100">{copied === selected.licenseKey ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}</button>
+                <span className="flex-1 truncate font-mono text-xs font-bold text-slate-100">{selected.licenseKey}</span>
               </div>
               <p className="text-[11px] font-bold text-amber-900">Tenant: {selected.name}</p>
               {selected.licenseExpiresAt && <p className="text-[11px] text-amber-800">Expires: {new Date(selected.licenseExpiresAt).toLocaleDateString()}</p>}
@@ -364,19 +365,19 @@ export const LicenseProvisionerView: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-900 shadow-xs">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <div><h3 className="flex items-center gap-2 text-sm font-black text-slate-900"><Building2 className="h-4 w-4 text-blue-600" />Licensed Multi-Tenant Registry</h3>
+          <div><h3 className="flex items-center gap-2 text-sm font-black text-slate-100"><Building2 className="h-4 w-4 text-blue-600" />Licensed Multi-Tenant Registry</h3>
             <p className="text-xs text-slate-500">Manage segregated tenant instances, verify cryptographic keys, and switch active tenant context</p></div>
-          <button onClick={() => refreshCompanies()} className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
+          <button onClick={() => refreshCompanies()} className="flex items-center gap-1.5 rounded-xl border border-slate-800 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-950"><RefreshCw className="h-3.5 w-3.5" />Refresh</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500"><tr>{['Licensed Enterprise', 'Tenant ID', 'Tier', 'Cost Centers Limit', 'License Key', 'Status', 'Actions'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr></thead>
+            <thead className="bg-slate-950 text-slate-500"><tr>{['Licensed Enterprise', 'Tenant ID', 'Tier', 'Cost Centers Limit', 'License Key', 'Status', 'Actions'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {companies.map((company) => (
-                <tr key={company.id} className={currentCompany?.id === company.id ? 'bg-blue-50/60' : 'hover:bg-slate-50'}>
-                  <td className="px-4 py-3 font-bold text-slate-900">{company.name}</td>
+                <tr key={company.id} className={currentCompany?.id === company.id ? 'bg-blue-50/60' : 'hover:bg-slate-950'}>
+                  <td className="px-4 py-3 font-bold text-slate-100">{company.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-600">{company.slug}</td>
                   <td className="px-4 py-3"><span className={`rounded-md border px-2 py-0.5 text-[10px] font-black whitespace-nowrap shrink-0 ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span></td>
                   <td className="px-4 py-3">centers max {company.maxCostCenters ?? 25}</td>
@@ -422,20 +423,20 @@ export const PricingPlansView: React.FC = () => {
         {plans.map((plan) => {
           const price = cycle === 'monthly' ? plan.monthly : Math.round(plan.yearly / 12);
           return (
-            <article key={plan.tier} className={`relative flex flex-col justify-between rounded-3xl border bg-white p-6 shadow-sm transition-all hover:shadow-lg ${plan.style}`}>
+            <article key={plan.tier} className={`relative flex flex-col justify-between rounded-3xl border bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100 transition-all hover:shadow-lg ${plan.style}`}>
               {'highlight' in plan && plan.highlight && <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-1 text-[11px] font-black text-white shadow-md">Most Popular</span>}
               <div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{plan.tier}</span>
                   <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"><Building2 className="h-3.5 w-3.5 text-blue-600" />{count(plan.tier)} Subscribers</span>
                 </div>
-                <h3 className="mt-3 text-lg font-black text-slate-900">{plan.name}</h3>
+                <h3 className="mt-3 text-lg font-black text-slate-100">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline gap-1 border-b border-slate-100 pb-5">
                   <span className="font-mono text-3xl font-black text-slate-950">{price.toLocaleString('en-US')}</span>
                   <span className="text-xs font-bold text-slate-500">SAR / month</span>
                   {cycle === 'yearly' && <span className="ml-2 text-[10px] text-slate-400">(billed yearly {plan.yearly.toLocaleString('en-US')})</span>}
                 </div>
-                <p className="mt-5 text-xs font-black text-slate-800">Included features:</p>
+                <p className="mt-5 text-xs font-black text-slate-200">Included features:</p>
                 <ul className="mt-3 space-y-2 text-xs">
                   {plan.features.map((feature) => <li key={feature} className="flex items-start gap-2 text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{feature}</li>)}
                 </ul>
@@ -444,7 +445,7 @@ export const PricingPlansView: React.FC = () => {
                   <ul className="space-y-1.5 text-xs text-slate-400">{plan.excluded.map((item) => <li key={item} className="flex items-start gap-2 line-through opacity-75"><span>•</span>{item}</li>)}</ul>
                 </div>}
               </div>
-              <p className="mt-8 rounded-2xl bg-slate-50 p-3 text-center text-xs font-medium text-slate-600">Tier is assigned when generating tenant license</p>
+              <p className="mt-8 rounded-2xl bg-slate-950 p-3 text-center text-xs font-medium text-slate-600">Tier is assigned when generating tenant license</p>
             </article>
           );
         })}
@@ -479,24 +480,24 @@ export const SystemAuditView: React.FC = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {cards.map((card) => { const Icon = card.icon; return (
-          <div key={card.label} className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-xs">
+          <div key={card.label} className="rounded-3xl border border-slate-800/80 bg-white p-5 shadow-xs">
             <div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-500">{card.label}</span><Icon className={`h-5 w-5 ${card.tone}`} /></div>
-            <p className="mt-2 font-mono text-2xl font-black text-slate-900">{card.value}</p>
+            <p className="mt-2 font-mono text-2xl font-black text-slate-100">{card.value}</p>
             <span className={`mt-1 inline-block text-[11px] font-bold ${card.tone}`}>{card.note}</span>
           </div>
         ); })}
       </div>
 
-      <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs">
+      <div className="space-y-4 rounded-3xl border border-slate-800/80 bg-white p-6 shadow-xs">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-          <div><h3 className="text-sm font-black text-slate-900">Database Tables Isolation Matrix</h3>
+          <div><h3 className="text-sm font-black text-slate-100">Database Tables Isolation Matrix</h3>
             <p className="mt-0.5 text-xs text-slate-500">Every query strictly applies the tenant partition filter preventing cross-tenant data leaks</p></div>
           <span className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 whitespace-nowrap shrink-0"><CheckCircle2 className="h-4 w-4 shrink-0" />All Passed</span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {tables.map((table) => (
-            <div key={table} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-3 text-xs">
-              <span className="flex items-center gap-2"><Database className="h-4 w-4 shrink-0 text-slate-400" /><span className="font-mono font-bold text-slate-800 break-all">{table}</span></span>
+            <div key={table} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-800/80 bg-slate-950/60 p-3 text-xs">
+              <span className="flex items-center gap-2"><Database className="h-4 w-4 shrink-0 text-slate-400" /><span className="font-mono font-bold text-slate-200 break-all">{table}</span></span>
               <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 whitespace-nowrap shrink-0">ISOLATED</span>
             </div>
           ))}
@@ -681,7 +682,7 @@ export const PlatformSettingsView: React.FC = () => {
     setOperatorCr('1010789012'); setOperatorVat('310987654300003'); setVatRate(15); setCurrency('SAR'); setAnnouncementActive(false);
   };
 
-  const field = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium text-slate-900 outline-none focus:border-indigo-500';
+  const field = 'mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-xs font-medium text-slate-100 outline-none focus:border-indigo-500';
 
   return (
     <form onSubmit={save} className="space-y-6">
@@ -696,10 +697,10 @@ export const PlatformSettingsView: React.FC = () => {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-800/80 bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100">
             <header className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><Palette className="h-4 w-4" /></span>
-              <div><h3 className="text-sm font-black text-slate-900">Visual Branding &amp; Logo</h3><p className="text-[11px] text-slate-500">Master platform name, primary logo, and header color palette</p></div>
+              <div><h3 className="text-sm font-black text-slate-100">Visual Branding &amp; Logo</h3><p className="text-[11px] text-slate-500">Master platform name, primary logo, and header color palette</p></div>
             </header>
             <div className="mt-5 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
@@ -707,16 +708,16 @@ export const PlatformSettingsView: React.FC = () => {
                 <label className="block text-xs font-bold text-slate-700">Platform Name (English)<input value={nameEn} onChange={(event) => setNameEn(event.target.value)} className={field} /></label>
               </div>
               <label className="block text-xs font-bold text-slate-700">Platform Tagline<input value={tagline} onChange={(event) => setTagline(event.target.value)} className={field} /></label>
-              <div className="rounded-xl border border-slate-200/90 bg-slate-50/60 p-4">
-                <p className="mb-2 text-xs font-bold text-slate-800">Master Platform Logo</p>
+              <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+                <p className="mb-2 text-xs font-bold text-slate-200">Master Platform Logo</p>
                 <div className="flex flex-col items-center gap-4 sm:flex-row">
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white p-2 shadow-xs">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-slate-100 p-2 shadow-xs">
                     <img src={logoUrl} alt="Platform logo preview" className="max-h-full max-w-full object-contain" onError={(event) => { (event.target as HTMLElement).style.visibility = 'hidden'; }} />
                   </div>
                   <div className="w-full flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <input value={logoUrl} onChange={(event) => setLogoUrl(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs text-slate-900 outline-none focus:border-indigo-500" />
-                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50">
+                      <input value={logoUrl} onChange={(event) => setLogoUrl(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs text-slate-100 outline-none focus:border-indigo-500" />
+                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-950">
                         {isUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" /> : <Upload className="h-3.5 w-3.5 text-indigo-600" />}
                         {isUploading ? 'جاري الرفع...' : 'Upload'}
                         <input type="file" accept="image/*" onChange={uploadLogo} className="hidden" disabled={isUploading} />
@@ -727,16 +728,16 @@ export const PlatformSettingsView: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div className="rounded-xl border border-slate-200/90 bg-slate-50/60 p-4">
-                <p className="mb-2 text-xs font-bold text-slate-800">Corporate Wallpaper &amp; Background</p>
+              <div className="rounded-xl border border-slate-800/90 bg-slate-950/60 p-4">
+                <p className="mb-2 text-xs font-bold text-slate-200">Corporate Wallpaper &amp; Background</p>
                 <div className="flex flex-col items-center gap-4 sm:flex-row">
-                  <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 shadow-xs">
+                  <div className="flex h-20 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-xs">
                     <img src={wallpaperUrl} alt="Wallpaper preview" className="h-full w-full object-cover" onError={(event) => { (event.target as HTMLElement).style.visibility = 'hidden'; }} />
                   </div>
                   <div className="w-full flex-1 space-y-2">
                     <div className="flex items-center gap-2">
-                      <input value={wallpaperUrl} onChange={(event) => setWallpaperUrl(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs text-slate-900 outline-none focus:border-indigo-500" />
-                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50">
+                      <input value={wallpaperUrl} onChange={(event) => setWallpaperUrl(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-1.5 font-mono text-xs text-slate-100 outline-none focus:border-indigo-500" />
+                      <label className="flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-950">
                         {isUploadingWallpaper ? <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" /> : <Upload className="h-3.5 w-3.5 text-indigo-600" />}
                         {isUploadingWallpaper ? 'جاري الرفع...' : 'Upload'}
                         <input type="file" accept="image/*" onChange={uploadWallpaper} className="hidden" disabled={isUploadingWallpaper} />
@@ -752,34 +753,34 @@ export const PlatformSettingsView: React.FC = () => {
                   <div key={label}><p className="mb-1 text-xs font-bold text-slate-700">{label}</p>
                     <div className="flex items-center gap-2">
                       <input type="color" value={value} onChange={(event) => setter(event.target.value)} className="h-9 w-12 cursor-pointer rounded-lg border border-slate-300 bg-white p-0.5" />
-                      <input value={value} onChange={(event) => setter(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-mono text-xs uppercase text-slate-900 outline-none focus:border-indigo-500" />
+                      <input value={value} onChange={(event) => setter(event.target.value)} className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-mono text-xs uppercase text-slate-100 outline-none focus:border-indigo-500" />
                     </div></div>
                 ))}
               </div>
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-800/80 bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100">
             <header className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><Megaphone className="h-4 w-4" /></span>
-                <div><h3 className="text-sm font-black text-slate-900">System-Wide Broadcast Announcement</h3><p className="text-[11px] text-slate-500">Live broadcast notice displayed to all tenant users in the system</p></div>
+                <div><h3 className="text-sm font-black text-slate-100">System-Wide Broadcast Announcement</h3><p className="text-[11px] text-slate-500">Live broadcast notice displayed to all tenant users in the system</p></div>
               </div>
               <label className="flex cursor-pointer items-center gap-2">
                 <span className="text-xs font-bold text-slate-600">{announcementActive ? 'Active' : 'Disabled'}</span>
                 <input type="checkbox" checked={announcementActive} onChange={(event) => setAnnouncementActive(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
               </label>
             </header>
-            <textarea rows={3} value={announcement} onChange={(event) => setAnnouncement(event.target.value)} className="mt-4 w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-indigo-500" />
+            <textarea rows={3} value={announcement} onChange={(event) => setAnnouncement(event.target.value)} className="mt-4 w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-100 outline-none focus:border-indigo-500" />
             <div className="flex items-center justify-between text-[11px] text-slate-400"><span>Broadcasts to OxenGL &amp; Tenant Workspaces</span><span>{announcement.length} chars</span></div>
           </section>
         </div>
 
         <div className="space-y-6">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-800/80 bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100">
             <header className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Building2 className="h-4 w-4" /></span>
-              <div><h3 className="text-sm font-black text-slate-900">Platform Operator Info</h3><p className="text-[11px] text-slate-500">Legal registration and tax identity</p></div>
+              <div><h3 className="text-sm font-black text-slate-100">Platform Operator Info</h3><p className="text-[11px] text-slate-500">Legal registration and tax identity</p></div>
             </header>
             <div className="mt-4 space-y-3.5">
               <label className="block text-xs font-bold text-slate-700">Operator CR Number<input value={operatorCr} onChange={(event) => setOperatorCr(event.target.value)} className={`${field} font-mono`} /></label>
@@ -789,10 +790,10 @@ export const PlatformSettingsView: React.FC = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+          <section className="rounded-2xl border border-slate-800/80 bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100">
             <header className="flex items-center gap-2.5 border-b border-slate-100 pb-4">
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><ShieldCheck className="h-4 w-4" /></span>
-              <div><h3 className="text-sm font-black text-slate-900">Compliance &amp; VAT Standards</h3><p className="text-[11px] text-slate-500">Default VAT rate &amp; base currency</p></div>
+              <div><h3 className="text-sm font-black text-slate-100">Compliance &amp; VAT Standards</h3><p className="text-[11px] text-slate-500">Default VAT rate &amp; base currency</p></div>
             </header>
             <div className="mt-4 space-y-3.5">
               <label className="block text-xs font-bold text-slate-700">Default VAT Rate (%)<input type="number" min={0} max={100} value={vatRate} onChange={(event) => setVatRate(Number(event.target.value))} className={`${field} font-mono`} />
@@ -925,27 +926,27 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {kpis.map((kpi) => { const Icon = kpi.icon; return (
-          <article key={kpi.label} className="rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/50 p-5 shadow-xs transition-all hover:shadow-md">
+          <SpotlightCard key={kpi.label} tone="platform" className="p-5 shadow-lg border-slate-800">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{kpi.label}</span>
-              <span className={`rounded-xl border p-2.5 ${kpi.tone}`}><Icon className="h-5 w-5" /></span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">{kpi.label}</span>
+              <span className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-2.5 text-orange-400"><Icon className="h-5 w-5" /></span>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="font-mono text-2xl font-black text-slate-900 lg:text-3xl">{kpi.value}</span>
-              <span className="text-xs font-bold text-slate-500">{kpi.unit}</span>
+              <span className="font-mono text-2xl font-black text-white lg:text-3xl ltr-isolate-num">{kpi.value}</span>
+              <span className="text-xs font-bold text-slate-400">{kpi.unit}</span>
             </div>
-            <p className="mt-4 border-t border-slate-100 pt-2.5 text-xs text-slate-500">{kpi.note}</p>
-          </article>
+            <p className="mt-4 border-t border-slate-800 pt-2.5 text-xs text-slate-400">{kpi.note}</p>
+          </SpotlightCard>
         ); })}
       </div>
 
       {/* Global Revenue Velocity Sparklines & Telemetry Spectrum */}
-      <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
+      <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl backdrop-blur-md">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-600" />
-              <h3 className="text-sm font-black text-slate-900">Global Revenue &amp; Cross-Tenant Velocity Sparklines</h3>
+              <h3 className="text-sm font-black text-white">Global Revenue &amp; Cross-Tenant Velocity Sparklines</h3>
               <span className="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                 7-DAY WINDOW
               </span>
@@ -957,7 +958,7 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
           <div className="flex items-center gap-3">
             <div className="text-right">
               <span className="text-[10px] uppercase font-bold text-slate-400 block">Total 7-Day Operations</span>
-              <span className="font-mono text-base font-black text-slate-900">{totalOps.toLocaleString()} ops</span>
+              <span className="font-mono text-base font-black text-white ltr-isolate-num">{totalOps.toLocaleString()} ops</span>
             </div>
             <button
               onClick={() => onNavigate('analytics')}
@@ -971,13 +972,13 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
 
         {/* Velocity Sparkline Bars Representation */}
         <div className="mt-4 pt-2">
-          <div className="h-32 flex items-end justify-between gap-3 pt-4 pb-2 border-b border-slate-100">
+          <div className="h-32 flex items-end justify-between gap-3 pt-4 pb-2 border-b border-slate-800">
             {velocityData?.data && velocityData.data.length > 0 ? (
               velocityData.data.map((item, idx) => {
                 const heightPct = Math.round((item.transaction_velocity / maxVelocity) * 100);
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center gap-1.5 group h-full justify-end">
-                    <div className="text-[9px] font-mono text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                    <div className="text-[9px] font-mono text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-100 px-1.5 py-0.5 rounded border border-slate-800">
                       {item.transaction_velocity} ops
                     </div>
                     <div className="w-full max-w-[42px] bg-slate-100 rounded-t-lg overflow-hidden flex flex-col justify-end p-0.5">
@@ -1007,18 +1008,18 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xs">
+      <div className="overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-900 shadow-xs">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-          <h3 className="flex items-center gap-2 text-sm font-black text-slate-900"><Activity className="h-4 w-4 text-blue-600" />Tenant Portfolio</h3>
+          <h3 className="flex items-center gap-2 text-sm font-black text-slate-100"><Activity className="h-4 w-4 text-blue-600" />Tenant Portfolio</h3>
           <button onClick={() => onNavigate('tenants')} className="text-xs font-bold text-blue-700 hover:underline">Open registry</button>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[720px] text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500"><tr>{['Organization', 'Tenant ID', 'Tier', 'Centers', 'License'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr></thead>
+            <thead className="bg-slate-950 text-slate-500"><tr>{['Organization', 'Tenant ID', 'Tier', 'Centers', 'License'].map((label) => <th key={label} className="px-4 py-3 font-bold">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {companies.map((company) => (
-                <tr key={company.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-bold text-slate-900">{company.name}</td>
+                <tr key={company.id} className="hover:bg-slate-950">
+                  <td className="px-4 py-3 font-bold text-slate-100">{company.name}</td>
                   <td className="px-4 py-3 font-mono text-slate-600">{company.slug}</td>
                   <td className="px-4 py-3"><span className={`rounded-md border px-2 py-0.5 text-[10px] font-black ${tierBadge(company.subscriptionTier)}`}>{company.subscriptionTier || 'PROFESSIONAL'}</span></td>
                   <td className="px-4 py-3">{company.maxCostCenters ?? 25}</td>

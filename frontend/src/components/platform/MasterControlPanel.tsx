@@ -284,7 +284,7 @@ export const MasterControlPanel: React.FC = () => {
   };
 
   return (
-    <div className="min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans pb-16">
+    <div className="platform-dark min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans pb-16 pt-safe pb-safe px-safe">
       {/* 1. Persistent Top Telemetry Status Banner */}
       <div className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 md:gap-4 text-xs font-mono">

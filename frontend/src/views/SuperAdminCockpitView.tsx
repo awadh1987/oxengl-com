@@ -79,17 +79,17 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
   };
 
   return (
-    <div dir="ltr" className="flex h-dvh erp-viewport-screen w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased">
+    <div dir="ltr" className="platform-dark flex h-dvh erp-viewport-screen w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased pt-safe pb-safe px-safe">
       {sidebarOpen && (
         <button
           aria-label="Close navigation"
           onClick={() => setSidebarOpen(false)}
-          className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs md:hidden"
+          className="erp-drawer-backdrop fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden cursor-pointer"
         />
       )}
 
       <aside
-        className={`erp-sidebar-drawer fixed inset-y-0 left-0 z-40 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-slate-950 p-4 shadow-2xl transition-transform md:static md:translate-x-0 ${
+        className={`erp-sidebar-drawer fixed inset-y-0 left-0 z-50 flex w-80 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-slate-950 p-4 pb-safe pl-safe shadow-2xl transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -102,7 +102,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
                 <p className="text-[11px] font-medium text-slate-400">Central Platform Owner Console</p>
               </div>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 md:hidden cursor-pointer"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(false)} className="text-slate-400 lg:hidden cursor-pointer hover:text-white"><X className="h-4 w-4" /></button>
           </div>
 
           <div className="space-y-1 rounded-xl border border-blue-500/20 bg-blue-950/40 p-3 text-xs">
@@ -175,36 +175,36 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-slate-100">
-        <header className="z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 shadow-xs sm:px-6">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-slate-950 text-slate-100">
+        <header className="z-20 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/90 px-4 shadow-xs sm:px-6 backdrop-blur-md">
           <div className="flex min-w-0 items-center gap-4">
-            <button onClick={() => setSidebarOpen(true)} className="rounded-lg border border-slate-200 p-2 text-slate-600 md:hidden cursor-pointer"><Menu className="h-4 w-4" /></button>
+            <button onClick={() => setSidebarOpen(true)} className="rounded-lg border border-slate-800 bg-slate-950 p-2 text-slate-300 lg:hidden cursor-pointer hover:bg-slate-900 transition-colors"><Menu className="h-4 w-4" /></button>
             <span className="flex shrink-0 items-center gap-2">
-              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" />
-              <span className="font-mono text-xs font-black uppercase tracking-wider text-blue-900">OxenGL • Master Root</span>
+              <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-400" />
+              <span className="font-mono text-xs font-black uppercase tracking-wider text-orange-400">OxenGL • Master Root</span>
             </span>
-            <span className="hidden h-4 w-px bg-slate-200 md:block" />
-            <label className="relative hidden w-72 md:block lg:w-96">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، الرخصة، أو السجل...' : 'Search tenants, licenses, audit logs...'} className="w-full rounded-xl border border-slate-200 bg-slate-100 py-1.5 pl-9 pr-3 text-xs text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white" />
+            <span className="hidden h-4 w-px bg-slate-800 lg:block" />
+            <label className="relative hidden w-72 lg:block xl:w-96">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={isAr ? 'بحث بالمنشأة، الرخصة، أو السجل...' : 'Search tenants, licenses, audit logs...'} className="w-full rounded-xl border border-slate-800 bg-slate-950 py-1.5 pl-9 pr-3 text-xs text-slate-200 outline-none transition-all placeholder:text-slate-500 focus:border-orange-500/50 focus:bg-slate-900" />
             </label>
           </div>
 
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div ref={inspectRef} className="relative">
-              <button onClick={() => setInspectOpen(!inspectOpen)} className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-800 transition-all hover:bg-blue-100">
-                <Building2 className="h-4 w-4 text-blue-600" /><span className="hidden sm:inline">Inspect Tenant:</span>
-                <span className="max-w-32 truncate rounded border border-blue-200 bg-white px-1.5 py-0.5 font-mono text-slate-700">{currentCompany?.slug || 'Central Master'}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-blue-500" />
+              <button onClick={() => setInspectOpen(!inspectOpen)} className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950 px-2.5 sm:px-3 py-1.5 text-xs font-bold text-slate-200 transition-all hover:bg-slate-900">
+                <Building2 className="h-4 w-4 text-orange-400" /><span className="hidden sm:inline">Inspect Tenant:</span>
+                <span className="max-w-28 sm:max-w-32 truncate rounded border border-slate-800 bg-slate-900 px-1.5 py-0.5 font-mono text-slate-300">{currentCompany?.slug || 'Central Master'}</span>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
               </button>
               {inspectOpen && (
-                <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
-                  <p className="border-b border-slate-100 p-2 text-[11px] font-bold uppercase text-slate-500">Select Tenant Workspace to Inspect</p>
-                  <div className="space-y-1 py-1">
+                <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-2xl backdrop-blur-xl">
+                  <p className="border-b border-slate-800 p-2 text-[11px] font-bold uppercase text-slate-400">Select Tenant Workspace to Inspect</p>
+                  <div className="space-y-1 py-1 max-h-64 overflow-y-auto">
                     {companies.map((company) => (
-                      <button key={company.id} onClick={() => inspect(company)} className="flex w-full items-center justify-between rounded-lg p-2 text-left text-xs font-bold text-slate-800 transition-colors hover:bg-slate-50">
+                      <button key={company.id} onClick={() => inspect(company)} className="flex w-full items-center justify-between rounded-lg p-2 text-left text-xs font-bold text-slate-200 transition-colors hover:bg-slate-800">
                         <span className="flex min-w-0 items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-[#F05627] text-[10px] font-black text-white">{company.name.slice(0, 1).toUpperCase()}</span>
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-orange-600 text-[10px] font-black text-white">{company.name.slice(0, 1).toUpperCase()}</span>
                           <span className="min-w-0"><span className="block truncate">{company.name}</span><span className="block font-mono text-[10px] text-slate-400">{company.slug} · {company.subscriptionTier || 'PRO'}</span></span>
                         </span>
                         <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -215,8 +215,8 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
               )}
             </div>
 
-            <button onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 transition-all hover:bg-slate-50"><Globe2 className="h-3.5 w-3.5 text-slate-500" />{language === 'ar' ? 'English' : 'عربي'}</button>
-            <button onClick={onLogout} className="flex items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 transition-all hover:bg-red-100"><LogOut className="h-3.5 w-3.5" /><span className="hidden sm:inline">Logout</span></button>
+            <button onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')} className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-950 px-2.5 py-1.5 text-xs font-bold text-slate-300 transition-all hover:bg-slate-900 hover:text-white"><Globe2 className="h-3.5 w-3.5 text-slate-400" />{language === 'ar' ? 'English' : 'عربي'}</button>
+            <button onClick={onLogout} className="flex items-center gap-1 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-1.5 text-xs font-bold text-rose-400 transition-all hover:bg-rose-500/20"><LogOut className="h-3.5 w-3.5" /><span className="hidden sm:inline">Logout</span></button>
           </div>
         </header>
 
@@ -227,17 +227,17 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
           </div>
         )}
 
-        <main className="w-full flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-slate-900">
+        <main className="w-full flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 text-slate-100">
           <div className="w-full max-w-7xl mx-auto">{renderModule()}</div>
         </main>
 
-        <footer className="flex shrink-0 flex-col items-center justify-between gap-2 border-t border-slate-200 bg-white px-6 py-2.5 text-xs text-slate-500 sm:flex-row">
+        <footer className="flex shrink-0 flex-col items-center justify-between gap-2 border-t border-slate-800 bg-slate-900/90 px-6 py-2.5 text-xs text-slate-400 sm:flex-row pb-safe">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-bold text-slate-700">OxenGL Global Cloud ERP Core</span><span>•</span>
-            <span className="font-mono text-[11px] text-slate-400">Build: 2026.09-ENTERPRISE-PRO</span><span>•</span>
-            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-700"><ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />Multi-Tenant Schema Level 3 Isolation</span>
+            <span className="font-bold text-slate-300">OxenGL Global Cloud ERP Core</span><span className="text-slate-600">•</span>
+            <span className="font-mono text-[11px] text-slate-500">Build: 2026.09-ENTERPRISE-PRO</span><span className="text-slate-600">•</span>
+            <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-400"><ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />Multi-Tenant Schema Level 3 Isolation</span>
           </div>
-          <span className="font-mono text-[11px] text-slate-400">Central Platform Ops • All Rights Reserved © 2026</span>
+          <span className="font-mono text-[11px] text-slate-500">Central Platform Ops • All Rights Reserved © 2026</span>
         </footer>
       </div>
     </div>

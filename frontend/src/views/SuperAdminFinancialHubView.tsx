@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SpotlightCard } from '../components/design-system/SpotlightCard';
 import {
   CreditCard,
   Building2,
@@ -213,15 +214,15 @@ export const SuperAdminFinancialHubView: React.FC = () => {
       {/* Global Financial KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* MRR Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
+        <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Monthly Recurring Revenue</span>
-            <div className="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-blue-400" />
+            <div className="h-8 w-8 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+              <TrendingUp className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-mono text-2xl font-black text-white">
+            <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
               {Number(summary?.mrr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
               <span className="text-xs font-normal text-slate-400">SAR</span>
             </div>
@@ -229,18 +230,18 @@ export const SuperAdminFinancialHubView: React.FC = () => {
               <span>● Active normalized monthly run</span>
             </p>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* ARR Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
+        <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Annual Run Rate (ARR)</span>
-            <div className="h-8 w-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-indigo-400" />
+            <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <DollarSign className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-mono text-2xl font-black text-indigo-400">
+            <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
               {Number(summary?.arr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
               <span className="text-xs font-normal text-slate-400">SAR</span>
             </div>
@@ -248,48 +249,48 @@ export const SuperAdminFinancialHubView: React.FC = () => {
               Contractual annualized subscription run
             </p>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Active Subscribers Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg">
+        <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Active Paid Tenants</span>
-            <div className="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Building2 className="h-4 w-4 text-emerald-400" />
+            <div className="h-8 w-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Building2 className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-mono text-2xl font-black text-emerald-400">
+            <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
               {summary?.total_active_subscriptions ?? 0}
             </div>
-            <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-400">
-              <span>Free: {summary?.subscribers_by_tier?.FREE ?? 0}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
+              <span className="whitespace-nowrap">Free: {summary?.subscribers_by_tier?.FREE ?? 0}</span>
               <span>•</span>
-              <span className="text-blue-400 font-bold">Pro: {summary?.subscribers_by_tier?.PROFESSIONAL ?? 0}</span>
+              <span className="text-orange-400 font-bold whitespace-nowrap">Pro: {summary?.subscribers_by_tier?.PROFESSIONAL ?? 0}</span>
               <span>•</span>
-              <span className="text-purple-400 font-bold">Ent: {summary?.subscribers_by_tier?.ENTERPRISE ?? 0}</span>
+              <span className="text-amber-400 font-bold whitespace-nowrap">Ent: {summary?.subscribers_by_tier?.ENTERPRISE ?? 0}</span>
             </div>
           </div>
-        </div>
+        </SpotlightCard>
 
         {/* Pending Bank Wire Queue Card */}
-        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 shadow-lg">
+        <SpotlightCard tone="platform" className="p-5 shadow-lg border-slate-800">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Pending Wire Settlement</span>
-            <div className="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-amber-400" />
+            <div className="h-8 w-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <FileText className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <div className="font-mono text-2xl font-black text-amber-300">
+            <div className="font-mono text-2xl font-black text-amber-300 ltr-isolate-num">
               {summary?.pending_wire_invoices_count ?? pendingWireInvoices.length}{' '}
               <span className="text-xs font-normal text-slate-400">Invoices</span>
             </div>
-            <p className="mt-1 font-mono text-[11px] text-amber-400">
+            <p className="mt-1 font-mono text-[11px] text-amber-400 ltr-isolate">
               Vol: {Number(summary?.pending_wire_volume_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR
             </p>
           </div>
-        </div>
+        </SpotlightCard>
       </div>
 
       {/* Pending Bank Wire Verification Queue (Priority Operational Section) */}
