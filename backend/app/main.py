@@ -479,7 +479,7 @@ except (ImportError, ModuleNotFoundError):
         pass  # data_observability is optional
 from backend.app.domains.finance import audit_export
 app.include_router(audit_export.router)
-app.include_router(logistics_router, prefix="/api/v1/logistics")
+app.include_router(logistics_router)
 app.include_router(customs_router, prefix="/api/v1/logistics/customs/manifests")
 app.include_router(customs_router, prefix="/api/logistics/customs/manifests")
 app.include_router(hr_router, prefix="/api/v1/hr")
