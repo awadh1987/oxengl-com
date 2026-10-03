@@ -2470,7 +2470,11 @@ class Organization(TimestampMixin, Base):
     )
 
     branding: Mapped[Optional["TenantBranding"]] = relationship(
-        "TenantBranding", back_populates="organization", uselist=False, cascade="all, delete-orphan"
+        "TenantBranding",
+        primaryjoin="Organization.company_id == foreign(TenantBranding.tenant_id)",
+        back_populates="organization",
+        uselist=False,
+        cascade="all, delete-orphan",
     )
 
 
@@ -2480,8 +2484,8 @@ class TenantBranding(Base):
     __table_args__ = {"extend_existing": True}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    tenant_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), unique=True, nullable=False, index=True
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), unique=True, nullable=True, index=True
     )
     brand_name: Mapped[str] = mapped_column(String(255), nullable=False)
     logo_url: Mapped[str] = mapped_column(Text, nullable=False)
@@ -2500,6 +2504,10 @@ class TenantBranding(Base):
         DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
     )
 
-    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="branding")
+    organization: Mapped[Optional["Organization"]] = relationship(
+        "Organization",
+        primaryjoin="Organization.company_id == foreign(TenantBranding.tenant_id)",
+        back_populates="branding",
+    )
 
 

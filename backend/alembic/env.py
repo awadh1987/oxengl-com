@@ -14,6 +14,7 @@ if str(APP_ROOT) not in sys.path:
 from backend.database import DATABASE_URL, Base  # noqa: E402
 from backend import models  # noqa: F401,E402
 from backend.app.db import base as app_db_base  # noqa: F401,E402
+from backend.app.domains.planning import models as planning_models  # noqa: F401,E402
 
 config = context.config
 

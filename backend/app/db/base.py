@@ -75,6 +75,14 @@ from backend.app.domains.ai.models import (
     AIKnowledgeChunk,
 )
 
+from backend.app.domains.planning.models import (
+    ProjectCharter,
+    ExecutionTask,
+    StrategicHazard,
+    ElectronicLedgerBlock,
+    CustomsManifest,
+)
+
 __all__ = [
     "Base",
     # IAM

@@ -203,7 +203,7 @@ class CustomsManifest(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), index=True, nullable=False)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False)
     manifest_number: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     declaration_type: Mapped[str] = mapped_column(String(50), default="IMPORT", nullable=False)
     border_port_name: Mapped[str] = mapped_column(String(150), nullable=False)

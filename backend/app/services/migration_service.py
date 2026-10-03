@@ -14,7 +14,7 @@ import os
 import threading
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, Union
 from urllib.parse import quote_plus
 
 from sqlalchemy import Engine, create_engine, select, text
@@ -39,7 +39,7 @@ _tasks_lock = threading.Lock()
 
 def build_connection_url(
     host: Optional[str] = None,
-    port: Optional[int] = 5432,
+    port: Optional[Union[int, str]] = None,
     database_name: Optional[str] = None,
     username: Optional[str] = None,
     password: Optional[str] = None,
@@ -56,7 +56,10 @@ def build_connection_url(
     user_part = quote_plus(username) if username else ""
     pass_part = f":{quote_plus(password)}" if password else ""
     auth_part = f"{user_part}{pass_part}@" if (user_part or pass_part) else ""
-    port_val = port or 5432
+    try:
+        port_val = int(port) if port is not None and str(port).strip() else 5432
+    except (ValueError, TypeError):
+        port_val = 5432
     ssl_part = f"?sslmode={ssl_mode}" if ssl_mode else ""
     return f"postgresql+psycopg2://{auth_part}{host}:{port_val}/{database_name}{ssl_part}"
 
@@ -238,7 +241,10 @@ def run_migration_worker(
     # Initial state
     target_host = target_params.get("host") or "external_host"
     target_db = target_params.get("database_name") or target_params.get("database") or "external_db"
-    target_port = target_params.get("port") or 5432
+    try:
+        target_port = int(target_params.get("port")) if target_params.get("port") is not None and str(target_params.get("port")).strip() else 5432
+    except (ValueError, TypeError):
+        target_port = 5432
     target_ssl = target_params.get("ssl_mode") or "prefer"
 
     update_task_state(
@@ -301,6 +307,13 @@ def run_migration_worker(
             eng_kwargs["max_overflow"] = 10
 
         target_engine = create_engine(target_url, **eng_kwargs)
+        if not is_sqlite:
+            with target_engine.connect() as ext_conn:
+                ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+                ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS ltree;"))
+                ext_conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
+                ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+                ext_conn.commit()
         Base.metadata.create_all(bind=target_engine)
 
         update_task_state(

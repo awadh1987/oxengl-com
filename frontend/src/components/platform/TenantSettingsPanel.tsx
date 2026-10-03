@@ -268,9 +268,10 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
     setDbActionLoading(true);
     setDbTestResult(null);
     try {
+      const parsedPort = parseInt(String(targetDbForm.port).trim(), 10);
       const res = await erpApi.testTenantDatabaseConnection({
         host: targetDbForm.host.trim(),
-        port: parseInt(targetDbForm.port, 10) || 5432,
+        port: !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 5432,
         database_name: targetDbForm.database_name.trim(),
         username: targetDbForm.username.trim(),
         password: targetDbForm.password,
@@ -291,9 +292,10 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
     }
     setDbActionLoading(true);
     try {
+      const parsedPort = parseInt(String(targetDbForm.port).trim(), 10);
       const res = await erpApi.triggerTenantDatabaseMigration({
         host: targetDbForm.host.trim(),
-        port: parseInt(targetDbForm.port, 10) || 5432,
+        port: !isNaN(parsedPort) && parsedPort > 0 ? parsedPort : 5432,
         database_name: targetDbForm.database_name.trim(),
         username: targetDbForm.username.trim(),
         password: targetDbForm.password,

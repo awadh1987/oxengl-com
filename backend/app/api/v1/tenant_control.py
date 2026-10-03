@@ -799,6 +799,10 @@ def trigger_database_migration(
     migration_id = uuid.uuid4()
     target_host = payload.host or "external_host"
     target_db = payload.database_name or "external_db"
+    try:
+        target_port = int(payload.port) if payload.port is not None and str(payload.port).strip() else 5432
+    except (ValueError, TypeError):
+        target_port = 5432
 
     # Persist initial migration job
     job = TenantDatabaseMigration(
@@ -806,7 +810,7 @@ def trigger_database_migration(
         company_id=target_uuid,
         source_type="shared_postgres",
         target_host=target_host,
-        target_port=payload.port or 5432,
+        target_port=target_port,
         target_database=target_db,
         ssl_mode=payload.ssl_mode or "prefer",
         status="PENDING",
@@ -817,12 +821,14 @@ def trigger_database_migration(
     db.add(job)
     db.commit()
 
-    # Launch background worker
+    # Launch background worker with strictly resolved port
+    worker_params = payload.model_dump()
+    worker_params["port"] = target_port
     background_tasks.add_task(
         migration_service.run_migration_worker,
         migration_id=migration_id,
         company_id=target_uuid,
-        target_params=payload.model_dump(),
+        target_params=worker_params,
     )
 
     return {

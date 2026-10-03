@@ -308,9 +308,10 @@ def get_tenant_branding(
         )
 
     org, company = resolved
+    target_tenant_uuid = (org.company_id if org and org.company_id else None) or (company.id if company else None)
 
     # Query tenant_branding table
-    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == org.id).first()
+    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
     if not branding:
         # Auto-seed tenant_branding from ResCompany or defaults
@@ -321,7 +322,7 @@ def get_tenant_branding(
         custom_domain = (company.custom_domain or company.domain_slug or company.slug if company else None) or org.slug
 
         branding = TenantBranding(
-            tenant_id=org.id,
+            tenant_id=target_tenant_uuid,
             brand_name=brand_name,
             logo_url=logo_url,
             favicon_url="/favicon.ico",
@@ -337,11 +338,11 @@ def get_tenant_branding(
             db.refresh(branding)
         except Exception:
             db.rollback()
-            branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == org.id).first()
+            branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
     return TenantBrandingResponse(
         id=branding.id,
-        tenant_id=branding.tenant_id,
+        tenant_id=str(branding.tenant_id) if branding.tenant_id else str(target_tenant_uuid or ""),
         brand_name=branding.brand_name,
         logo_url=branding.logo_url,
         favicon_url=branding.favicon_url,
@@ -371,7 +372,8 @@ def get_specific_tenant_branding(
         )
 
     org, company = resolved
-    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == org.id).first()
+    target_tenant_uuid = (org.company_id if org and org.company_id else None) or (company.id if company else None)
+    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
     if not branding:
         brand_name = (company.name if company else None) or org.name
@@ -381,7 +383,7 @@ def get_specific_tenant_branding(
         custom_domain = (company.custom_domain or company.domain_slug or company.slug if company else None) or org.slug
 
         branding = TenantBranding(
-            tenant_id=org.id,
+            tenant_id=target_tenant_uuid,
             brand_name=brand_name,
             logo_url=logo_url,
             favicon_url="/favicon.ico",
@@ -397,11 +399,11 @@ def get_specific_tenant_branding(
             db.refresh(branding)
         except Exception:
             db.rollback()
-            branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == org.id).first()
+            branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
     return TenantBrandingResponse(
         id=branding.id,
-        tenant_id=branding.tenant_id,
+        tenant_id=str(branding.tenant_id) if branding.tenant_id else str(target_tenant_uuid or ""),
         brand_name=branding.brand_name,
         logo_url=branding.logo_url,
         favicon_url=branding.favicon_url,
@@ -434,12 +436,13 @@ def update_tenant_branding(
         )
 
     org, company = resolved
-    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == org.id).first()
+    target_tenant_uuid = (org.company_id if org and org.company_id else None) or (company.id if company else None)
+    branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
     now = datetime.now(timezone.utc)
     if not branding:
         branding = TenantBranding(
-            tenant_id=org.id,
+            tenant_id=target_tenant_uuid,
             brand_name=payload.brand_name or ((company.name if company else None) or org.name),
             logo_url=payload.logo_url or ((company.ui_logo_url or company.logo_url if company else None) or "/oxengl-logo.svg"),
             favicon_url=payload.favicon_url or "/favicon.ico",
@@ -485,7 +488,7 @@ def update_tenant_branding(
 
     return TenantBrandingResponse(
         id=branding.id,
-        tenant_id=branding.tenant_id,
+        tenant_id=str(branding.tenant_id) if branding.tenant_id else str(target_tenant_uuid or ""),
         brand_name=branding.brand_name,
         logo_url=branding.logo_url,
         favicon_url=branding.favicon_url,
