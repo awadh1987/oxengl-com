@@ -3,6 +3,7 @@ import {
   TrendingUp, Activity, BarChart3, Calendar, RefreshCw, ArrowUpRight,
   ShieldAlert, Zap, Layers, Building2, CheckCircle2, ArrowRight
 } from 'lucide-react';
+import { SpotlightCard } from '../components/design-system/SpotlightCard';
 
 interface VelocityDay {
   date: string;

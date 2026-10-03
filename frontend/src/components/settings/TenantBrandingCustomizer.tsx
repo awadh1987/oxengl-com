@@ -15,6 +15,10 @@ import {
   Layout,
   Maximize2,
   FileCheck,
+  Globe,
+  Sun,
+  Moon,
+  MousePointerClick,
 } from 'lucide-react';
 import { HoverIcon } from '../common/HoverIcon';
 import { TenantAvatar } from '../TenantAvatar';
@@ -61,8 +65,36 @@ export const TenantBrandingCustomizer: React.FC = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
-  const [previewTab, setPreviewTab] = useState<'navbar' | 'letterhead' | 'hero'>('navbar');
+  const [previewTab, setPreviewTab] = useState<'navbar' | 'letterhead' | 'hero' | 'landing'>('navbar');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+
+  // Phase 4: Tenant public landing page content
+  const [heroTitle, setHeroTitle] = useState<string>('');
+  const [heroSubtitle, setHeroSubtitle] = useState<string>('');
+  const [ctaLabel, setCtaLabel] = useState<string>('');
+  const [ctaUrl, setCtaUrl] = useState<string>('');
+  const [landingThemeMode, setLandingThemeMode] = useState<'light' | 'dark'>('light');
+
+  useEffect(() => {
+    if (!currentCompany?.id) return;
+    let cancelled = false;
+    erpApi
+      .getTenantBranding(String(currentCompany.id))
+      .then((dto) => {
+        if (cancelled || !dto) return;
+        setHeroTitle(dto.landing_hero_title || '');
+        setHeroSubtitle(dto.landing_hero_subtitle || '');
+        setCtaLabel(dto.landing_cta_label || '');
+        setCtaUrl(dto.landing_cta_url || '');
+        setLandingThemeMode(dto.landing_theme_mode === 'dark' ? 'dark' : 'light');
+      })
+      .catch(() => {
+        /* landing content is optional; keep defaults */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCompany?.id]);
 
   useEffect(() => {
     if (brandConfig.customLogoUrl || currentCompany?.ui_logo_url || currentCompany?.uiLogoUrl) {
@@ -191,6 +223,26 @@ export const TenantBrandingCustomizer: React.FC = () => {
 
       // 3. Refresh companies in context
       await refreshCompanies();
+
+      // 4. Sync tenant_branding (drives the public tenant landing page on subdomain/custom domain)
+      try {
+        await erpApi.updateTenantBranding(currentCompany.id, {
+          logo_url: logoUrl || undefined,
+          primary_color: primaryColor,
+          accent_color: sidebarColor,
+          landing_hero_title: heroTitle.trim() || null,
+          landing_hero_subtitle: heroSubtitle.trim() || null,
+          landing_cta_label: ctaLabel.trim() || null,
+          landing_cta_url: ctaUrl.trim() || null,
+          landing_theme_mode: landingThemeMode,
+        });
+      } catch (landingErr) {
+        console.warn('Tenant landing branding sync failed:', landingErr);
+        showToast(
+          isAr ? 'تم حفظ الهوية، لكن تعذر مزامنة صفحة الهبوط' : 'Branding saved, but landing page sync failed',
+          'info'
+        );
+      }
 
       setLastSaved(new Date().toLocaleTimeString(isAr ? 'ar-SA' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       showToast(
@@ -479,6 +531,109 @@ export const TenantBrandingCustomizer: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Phase 4: Public Landing Page Content */}
+          <div className={`p-4 sm:p-5 rounded-xl border space-y-4 ${
+            isDark ? 'bg-[#050914] border-slate-800/90' : 'bg-slate-50 border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs font-bold uppercase tracking-wider flex items-center gap-2 text-slate-200">
+                <Globe className="h-4 w-4 text-emerald-400" />
+                <span>{isAr ? 'صفحة الهبوط العامة' : 'Public Landing Page'}</span>
+              </label>
+              <span className="text-[10px] font-mono text-slate-400 truncate">
+                {currentCompany?.slug ? `${currentCompany.slug}.oxengl.me` : '*.oxengl.me'}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 leading-relaxed">
+              {isAr
+                ? 'يظهر هذا المحتوى للزوار على النطاق الفرعي أو النطاق المخصص لمنشأتك قبل تسجيل الدخول.'
+                : 'Shown to visitors on your subdomain or mapped custom domain before they sign in.'}
+            </p>
+
+            <div className="space-y-1.5">
+              <label htmlFor="landing-hero-title" className="text-[11px] font-semibold text-slate-300">
+                {isAr ? 'عنوان البطل (Hero Title)' : 'Hero Title'}
+              </label>
+              <input
+                id="landing-hero-title"
+                type="text"
+                maxLength={120}
+                value={heroTitle}
+                onChange={(e) => setHeroTitle(e.target.value)}
+                placeholder={`Welcome to ${companyDisplayName}`}
+                className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 outline-none focus:border-slate-500"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label htmlFor="landing-hero-subtitle" className="text-[11px] font-semibold text-slate-300">
+                {isAr ? 'النص التعريفي' : 'Hero Subtitle'}
+              </label>
+              <textarea
+                id="landing-hero-subtitle"
+                rows={3}
+                maxLength={400}
+                value={heroSubtitle}
+                onChange={(e) => setHeroSubtitle(e.target.value)}
+                placeholder={isAr ? 'وصف مختصر لمنشأتك وخدماتها' : 'A short description of your company and services'}
+                className="w-full resize-none rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 outline-none focus:border-slate-500"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label htmlFor="landing-cta-label" className="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5">
+                  <MousePointerClick className="h-3.5 w-3.5" />
+                  {isAr ? 'نص زر الإجراء' : 'Call-to-Action Label'}
+                </label>
+                <input
+                  id="landing-cta-label"
+                  type="text"
+                  maxLength={40}
+                  value={ctaLabel}
+                  onChange={(e) => setCtaLabel(e.target.value)}
+                  placeholder="Sign in to workspace"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-100 outline-none focus:border-slate-500"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="landing-cta-url" className="text-[11px] font-semibold text-slate-300">
+                  {isAr ? 'رابط الزر (اختياري)' : 'CTA Link (optional)'}
+                </label>
+                <input
+                  id="landing-cta-url"
+                  type="url"
+                  value={ctaUrl}
+                  onChange={(e) => setCtaUrl(e.target.value)}
+                  placeholder="https://… or /login"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-mono text-slate-100 outline-none focus:border-slate-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <span className="text-[11px] font-semibold text-slate-300">
+                {isAr ? 'مظهر صفحة الهبوط' : 'Landing Appearance'}
+              </span>
+              <div className="flex bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                {(['light', 'dark'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    id={`landing-theme-${mode}`}
+                    type="button"
+                    onClick={() => setLandingThemeMode(mode)}
+                    className={`px-2.5 py-1 rounded-md flex items-center gap-1.5 transition-colors ${
+                      landingThemeMode === mode ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {mode === 'light' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+                    <span>{mode === 'light' ? (isAr ? 'فاتح' : 'Light') : (isAr ? 'داكن' : 'Dark')}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Live Contextual Previews (5 cols) */}
@@ -522,6 +677,15 @@ export const TenantBrandingCustomizer: React.FC = () => {
                     }`}
                   >
                     {isAr ? 'العرض الكامل' : 'Full Emblem'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewTab('landing')}
+                    className={`px-2.5 py-1 rounded-md transition-colors ${
+                      previewTab === 'landing' ? 'bg-slate-800 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {isAr ? 'صفحة الهبوط' : 'Landing'}
                   </button>
                 </div>
               </div>
@@ -685,6 +849,40 @@ export const TenantBrandingCustomizer: React.FC = () => {
                       <span className="text-slate-600">|</span>
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: sidebarColor }} />
                       <span className="text-[10px] font-mono text-slate-400">{sidebarColor.toUpperCase()}</span>
+                    </div>
+                  </div>
+                )}
+
+                {previewTab === 'landing' && (
+                  <div
+                    className={`rounded-xl border overflow-hidden shadow-xl ${
+                      landingThemeMode === 'dark' ? 'bg-slate-950 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
+                    }`}
+                  >
+                    <div className={`flex items-center justify-between px-3 py-2 border-b ${
+                      landingThemeMode === 'dark' ? 'border-slate-800' : 'border-slate-200'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <TenantAvatar logoUrl={logoUrl} name={companyDisplayName} primaryColor={primaryColor} size="sm" />
+                        <span className="text-[11px] font-bold truncate max-w-[120px]">{companyDisplayName}</span>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold text-white" style={{ backgroundColor: primaryColor }}>
+                        {isAr ? 'دخول' : 'Sign in'}
+                      </span>
+                    </div>
+                    <div className="p-4" style={{ background: `radial-gradient(80% 80% at 0% 0%, ${primaryColor}22, transparent 70%)` }}>
+                      <p className="text-sm font-black leading-snug">
+                        {heroTitle.trim() || `Welcome to ${companyDisplayName}`}
+                      </p>
+                      <p className={`mt-1.5 text-[10px] leading-relaxed line-clamp-3 ${landingThemeMode === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                        {heroSubtitle.trim() || 'Our secure operations and finance workspace.'}
+                      </p>
+                      <span
+                        className="mt-3 inline-block px-3 py-1.5 rounded-lg text-[10px] font-bold text-white"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        {ctaLabel.trim() || 'Sign in to workspace'}
+                      </span>
                     </div>
                   </div>
                 )}

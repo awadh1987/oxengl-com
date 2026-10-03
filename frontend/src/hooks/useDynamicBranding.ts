@@ -13,7 +13,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { erpApi, PlatformBrandingDto, TenantBrandingDto } from '../services/api';
 import { getSubdomain, isApexDomain, isCustomDomain } from '../utils/subdomain';
 
+export type TenantLandingContent = {
+  heroTitle?: string | null;
+  heroSubtitle?: string | null;
+  ctaLabel?: string | null;
+  ctaUrl?: string | null;
+  themeMode?: 'light' | 'dark' | null;
+};
+
 export type DynamicBranding = {
+  landing?: TenantLandingContent;
   isTenant: boolean;
   tenantId?: number | string;
   brandName: string;
@@ -123,6 +132,13 @@ export function useDynamicBranding() {
           customDomain: tenantData.custom_domain,
           companyNameAr: tenantData.brand_name,
           companyNameEn: tenantData.brand_name,
+          landing: {
+            heroTitle: tenantData.landing_hero_title,
+            heroSubtitle: tenantData.landing_hero_subtitle,
+            ctaLabel: tenantData.landing_cta_label,
+            ctaUrl: tenantData.landing_cta_url,
+            themeMode: tenantData.landing_theme_mode,
+          },
         };
         setBranding(resolved);
         applyBrandingToDOM(resolved);

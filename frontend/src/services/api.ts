@@ -115,6 +115,12 @@ export interface TenantBrandingDto {
   custom_domain?: string;
   created_at?: string;
   updated_at?: string;
+  // Phase 4: Tenant Custom Landing Engine (optional until persisted by backend)
+  landing_hero_title?: string | null;
+  landing_hero_subtitle?: string | null;
+  landing_cta_label?: string | null;
+  landing_cta_url?: string | null;
+  landing_theme_mode?: 'light' | 'dark' | null;
 }
 
 export interface TenantBrandingPayload {
@@ -124,6 +130,11 @@ export interface TenantBrandingPayload {
   primary_color?: string;
   accent_color?: string;
   custom_domain?: string;
+  landing_hero_title?: string | null;
+  landing_hero_subtitle?: string | null;
+  landing_cta_label?: string | null;
+  landing_cta_url?: string | null;
+  landing_theme_mode?: 'light' | 'dark' | null;
 }
 
 export interface PlatformBrandingPayload {

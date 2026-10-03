@@ -27,6 +27,7 @@ const FinancialVouchersView = React.lazy(() => import('./views/FinancialVouchers
 const TenantLoginView = React.lazy(() => import('./views/TenantLoginView').then(m => ({ default: m.TenantLoginView })));
 const TenantRegistrationView = React.lazy(() => import('./views/TenantRegistrationView').then(m => ({ default: m.TenantRegistrationView })));
 const LandingPageView = React.lazy(() => import('./views/LandingPageView').then(m => ({ default: m.LandingPageView })));
+const TenantLandingView = React.lazy(() => import('./views/TenantLandingView').then(m => ({ default: m.TenantLandingView })));
 const SuperAdminLoginView = React.lazy(() => import('./views/SuperAdminLoginView').then(m => ({ default: m.SuperAdminLoginView })));
 const SuperAdminCockpitView = React.lazy(() => import('./views/SuperAdminCockpitView').then(m => ({ default: m.SuperAdminCockpitView })));
 const PublicSharedInvoiceView = React.lazy(() => import('./views/PublicSharedInvoiceView').then(m => ({ default: m.PublicSharedInvoiceView })));
@@ -741,12 +742,20 @@ function AppContent() {
 
   if (currentPath === '/' && !isLoggedIn) {
     if (effectiveTenantSlug) {
+      // Phase 4: tenant subdomain (*.oxengl.me) or mapped custom domain -> tenant-branded landing
       return (
         <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug} onNavigate={(to) => {
-            setCurrentPath(to);
-            navigate(to);
-          }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
+          <Route
+            path="/"
+            element={
+              <TenantLandingView
+                onSignIn={() => {
+                  setCurrentPath('/login');
+                  navigate('/login');
+                }}
+              />
+            }
+          />
         </Suspense>
       );
     }
