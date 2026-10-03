@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import SessionLocal, get_db
 from backend.models import MasterTenant, Organization, PlatformSetting, ResCompany, ResUser, TenantBranding
 from backend.schemas import (
     PlatformBrandingResponse,
@@ -184,7 +184,17 @@ def get_platform_branding(db: Session = Depends(get_db)):
     Public Tier 1 endpoint: Returns global platform branding defaults.
     Accessible publicly without authentication for landing page and login portals.
     """
-    setting = db.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
+    try:
+        setting = db.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
+    except Exception as exc:
+        logger.warning("Failed to query platform_settings from current session: %s. Falling back to SessionLocal().", exc)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        with SessionLocal() as central_sess:
+            setting = central_sess.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
+
     if setting and setting.setting_value:
         merged = {**DEFAULT_GLOBAL_BRANDING, **setting.setting_value}
         return PlatformBrandingResponse(**merged)
