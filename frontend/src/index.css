@@ -1500,3 +1500,130 @@ a:hover > svg.hover-lightable-icon {
     margin-top: 16px !important;
   }
 }
+
+
+/* ==========================================================================
+   OXENGL PHASE 1: GLOBAL UI/UX TOKENS */
+/* Source: docs/GLOBAL_UI_UX_OVERHAUL_SPEC.md
+   Scope rule: the Deep Dark Theme is OPT-IN via `.platform-dark` (central platform only:
+   SuperAdmin Cockpit, global landing page). Tenant workspaces are NOT affected and keep
+   honouring tenant_branding (--color-primary, data-theme-mode, etc.).
+   ========================================================================== */
+
+/* --- Platform Deep Dark tokens (exposed as Tailwind utilities, e.g. bg-platform-void) --- */
+@theme {
+  --color-platform-void: #020617;      /* slate-950: base layer */
+  --color-platform-surface: #0f172a;   /* slate-900: elevated surfaces */
+  --color-platform-raised: #1e293b;    /* slate-800: inputs, hover rows */
+  --color-platform-border: #1e293b;    /* slate-800: hairlines */
+  --color-platform-text: #cbd5e1;      /* slate-300: body text */
+  --color-platform-muted: #94a3b8;     /* slate-400: secondary text */
+  --color-platform-accent: #f97316;    /* OxenGL signature orange (fixed, not tenant-overridable) */
+  --color-platform-accent-soft: #fb923c;
+  --color-platform-glow: #f59e0b;      /* amber-500: spotlight tail */
+}
+
+/* --- Opt-in central platform surface --- */
+.platform-dark {
+  --platform-spot-color: rgba(249, 115, 22, 0.14);
+  color-scheme: dark;
+  background-color: var(--color-platform-void);
+  color: var(--color-platform-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.platform-dark ::selection {
+  background-color: rgba(249, 115, 22, 0.3);
+  color: #fff;
+}
+
+.platform-dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.platform-dark ::-webkit-scrollbar-track { background: var(--color-platform-void); }
+.platform-dark ::-webkit-scrollbar-thumb {
+  background: var(--color-platform-raised);
+  border-radius: 9999px;
+  border: 2px solid var(--color-platform-void);
+}
+.platform-dark ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* --- Standard 2: Hover Spotlight (cursor-tracking radial glow) ---
+   Used by <SpotlightCard />. JS writes --spot-x / --spot-y on mousemove. */
+.oxen-spotlight {
+  --spot-x: 50%;
+  --spot-y: 50%;
+  isolation: isolate;
+}
+
+.oxen-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--spot-x) var(--spot-y),
+    var(--platform-spot-color, rgba(249, 115, 22, 0.14)),
+    rgba(245, 158, 11, 0.05) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.oxen-spotlight:hover::before,
+.oxen-spotlight:focus-within::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oxen-spotlight::before { transition: none; }
+}
+
+/* --- Fix 1: Mixed-direction text & alphanumeric isolation ---
+   <span class="ltr-isolate">V-1002</span>, <span class="ltr-isolate">16.80 KM</span> */
+.ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.bidi-isolate {
+  unicode-bidi: isolate;
+}
+
+/* Keeps numeric columns aligned in RTL tables without flipping punctuation */
+.ltr-isolate-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Fix 2: Safe-area helpers (requires viewport-fit=cover in index.html) ---
+   Registered with @utility so Tailwind variants work, e.g. lg:pb-safe. */
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+@utility pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+@utility top-safe { top: env(safe-area-inset-top, 0px); }
+@utility bottom-safe { bottom: env(safe-area-inset-bottom, 0px); }
+@utility bottom-safe-4 { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+@utility bottom-safe-6 { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+@utility mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* --- Fix 5: Dynamic viewport height ---
+   Tailwind v4 ships h-dvh / min-h-dvh natively. These classes add a 100vh fallback
+   for browsers without dvh support. */
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}

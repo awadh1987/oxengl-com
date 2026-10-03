@@ -277,7 +277,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
         : (successData.workspace_url || `https://${slug}.oxengl.me`));
 
     return (
-      <div className="min-h-screen min-h-[100dvh] erp-viewport-root bg-[#030712] flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
+      <div className="min-h-dvh-safe bg-[#030712] flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
         <div className="w-full max-w-lg bg-[#090f1c] border border-emerald-500/20 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl text-center">
           <div className="text-4xl mb-3 sm:mb-4 animate-bounce">🚀</div>
           <h2 className="text-lg sm:text-xl font-bold text-emerald-400">Workspace Generated!</h2>
@@ -362,7 +362,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
   }
 
   return (
-    <div className="min-h-screen min-h-[100dvh] erp-viewport-root bg-slate-950 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
+    <div className="min-h-dvh-safe bg-slate-950 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8 font-sans overflow-x-hidden">
       <div className="w-full max-w-lg bg-slate-900 border border-slate-800/80 rounded-2xl p-4 sm:p-6 md:p-8 shadow-2xl relative transition-all">
         {/* Header with Navigation */}
         <div className="flex items-center justify-between mb-4 sm:mb-5">

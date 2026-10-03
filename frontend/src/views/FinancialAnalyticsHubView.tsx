@@ -227,7 +227,7 @@ export const FinancialAnalyticsHubView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 p-4 md:p-8 transition-colors">
+    <div className="min-h-dvh-safe bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 p-4 md:p-8 transition-colors">
       <div className="max-w-[1600px] mx-auto space-y-6">
         {/* Top Header Row: Title & Actions */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-zinc-200 dark:border-zinc-800">

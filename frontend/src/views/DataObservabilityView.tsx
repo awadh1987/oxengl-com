@@ -326,7 +326,7 @@ export const DataObservabilityView: React.FC = () => {
   }, [summary]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 p-4 lg:p-8 space-y-6">
+    <div className="min-h-dvh-safe bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 p-4 lg:p-8 space-y-6">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-zinc-900 border border-zinc-700 text-zinc-100 px-4 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5">

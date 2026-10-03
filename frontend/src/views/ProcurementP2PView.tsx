@@ -386,7 +386,7 @@ export const ProcurementP2PView: React.FC = () => {
   // Render
   // ==============================================================================
   return (
-    <div className={`min-h-screen p-4 md:p-6 transition-colors ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+    <div className={`min-h-dvh-safe p-4 md:p-6 transition-colors ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
       {/* Notification Toast */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 max-w-md px-4 py-3 rounded-xl border backdrop-blur-md shadow-2xl flex items-center gap-3 animate-in slide-in-from-top-5 ${
