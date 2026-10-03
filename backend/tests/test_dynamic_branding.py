@@ -16,9 +16,46 @@ from starlette.testclient import TestClient
 
 from backend.app.main import app
 from backend.database import SessionLocal
+from backend.two_tier_auth import issue_two_tier_jwt
 import backend.models as models
 
 client = TestClient(app)
+
+
+def _make_master_user(role: str = "admin", is_active: bool = True):
+    db = SessionLocal()
+    try:
+        user = models.MasterUser(
+            id=uuid.uuid4(),
+            email=f"branding-test-{uuid.uuid4().hex[:8]}@oxengl.test",
+            full_name="Branding Test Operator",
+            password_hash="!unusable",
+            role=role,
+            is_active=is_active,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        token = issue_two_tier_jwt(tier="master", user_id=user.id, identity=user.email, role=role)
+        return user.id, token
+    finally:
+        db.close()
+
+
+def _delete_master_user(user_id):
+    db = SessionLocal()
+    try:
+        db.query(models.MasterUser).filter(models.MasterUser.id == user_id).delete()
+        db.commit()
+    finally:
+        db.close()
+
+
+@pytest.fixture
+def platform_admin_token():
+    user_id, token = _make_master_user(role="admin")
+    yield token
+    _delete_master_user(user_id)
 
 
 @pytest.fixture
@@ -89,8 +126,8 @@ def test_get_global_platform_branding():
     assert "accent_color" in data
 
 
-def test_update_global_platform_branding_authorized():
-    """Verify PUT /api/v1/admin/platform/branding successfully modifies platform settings."""
+def test_update_global_platform_branding_authorized(platform_admin_token):
+    """Verify PUT /api/v1/admin/platform/branding successfully modifies platform settings for a platform admin."""
     payload = {
         "platform_name": "OxenGL Global Cloud Suite",
         "primary_color": "#ea580c",
@@ -99,13 +136,42 @@ def test_update_global_platform_branding_authorized():
     response = client.put(
         "/api/v1/admin/platform/branding",
         json=payload,
-        headers={"X-Recovery-Code": "SUPER_ADMIN_EMERGENCY_RECOVERY_KEY_2026"},
+        headers={"Authorization": f"Bearer {platform_admin_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["platform_name"] == "OxenGL Global Cloud Suite"
     assert data["primary_color"] == "#ea580c"
     assert data["accent_color"] == "#020617"
+
+
+@pytest.mark.parametrize("headers", [
+    {},
+    {"X-Recovery-Code": "SUPER_ADMIN_EMERGENCY_RECOVERY_KEY_2026"},  # removed backdoor must not work
+    {"Authorization": "Bearer not.a.jwt"},
+])
+def test_update_global_platform_branding_rejects_unauthenticated(headers):
+    response = client.put("/api/v1/admin/platform/branding", json={"primary_color": "#000000"}, headers=headers)
+    assert response.status_code == 401
+
+
+def test_update_global_platform_branding_rejects_tenant_token():
+    token = issue_two_tier_jwt(tier="tenant", user_id=uuid.uuid4(), identity="t@x.test", role="Owner",
+                               tenant_id=uuid.uuid4(), tenant_slug="any")
+    response = client.put("/api/v1/admin/platform/branding", json={"primary_color": "#000000"},
+                          headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("role,is_active", [("user", True), ("admin", False)])
+def test_update_global_platform_branding_rejects_non_admin_or_inactive(role, is_active):
+    user_id, token = _make_master_user(role=role, is_active=is_active)
+    try:
+        response = client.put("/api/v1/admin/platform/branding", json={"primary_color": "#000000"},
+                              headers={"Authorization": f"Bearer {token}"})
+        assert response.status_code == 403
+    finally:
+        _delete_master_user(user_id)
 
 
 def test_get_tenant_branding_via_header(sample_branding_tenant):
@@ -144,7 +210,7 @@ def test_get_tenant_branding_not_found():
     assert "Tenant workspace context not found" in data["detail"]
 
 
-def test_update_tenant_branding_override(sample_branding_tenant):
+def test_update_tenant_branding_override(sample_branding_tenant, platform_admin_token):
     """Verify PUT /api/v1/admin/tenant/{id}/branding updates visual identity and syncs ResCompany."""
     tenant = sample_branding_tenant
     org_id = tenant["org_id"]
@@ -159,6 +225,7 @@ def test_update_tenant_branding_override(sample_branding_tenant):
     response = client.put(
         f"/api/v1/admin/tenant/{org_id}/branding",
         json=payload,
+        headers={"Authorization": f"Bearer {platform_admin_token}"},
     )
     assert response.status_code == 200
     data = response.json()

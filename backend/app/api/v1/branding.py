@@ -19,7 +19,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from backend.database import SessionLocal, get_db
-from backend.models import MasterTenant, Organization, PlatformSetting, ResCompany, ResUser, TenantBranding
+from backend.models import MasterTenant, MasterUser, Organization, PlatformSetting, ResCompany, ResUser, TenantBranding
 from backend.schemas import (
     PlatformBrandingResponse,
     PlatformBrandingUpdate,
@@ -67,8 +67,9 @@ def _landing_fields(branding: Any) -> Dict[str, Any]:
 # Write authorization for tenant branding
 # ==============================================================================
 
-# Master (control-plane) roles allowed to edit ANY tenant's branding.
-_PLATFORM_SUPER_ROLES = {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER", "OWNER"}
+# Master (control-plane) roles, as stored in master_users.role (CHECK: super_admin | admin | user),
+# that may administer platform branding and ANY tenant's branding. 'user' is excluded.
+_PLATFORM_ADMIN_ROLES = {"super_admin", "admin"}
 # Tenant-plane roles allowed to edit THEIR OWN tenant's branding.
 # Deliberately explicit: does not reuse normalize_role(), which maps e.g. data_entry -> Admin.
 _TENANT_ADMIN_ROLES = {
@@ -111,19 +112,39 @@ def _authenticate_branding_editor(request: Request) -> Dict[str, Any]:
     return claims
 
 
+def _require_active_platform_admin(claims: Dict[str, Any], db: Session) -> MasterUser:
+    """
+    Given verified claims, require a master-plane token whose user is ACTIVE in master_users with a
+    platform admin role. Role/active status are read from the database, not trusted from the token,
+    so demotions and deactivations take effect immediately. Raises 403 otherwise.
+    """
+    if claims.get("tier") != "master":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform administrator token required.")
+    try:
+        user_id = uuid.UUID(str(claims.get("sub")))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject.")
+
+    user = db.scalar(select(MasterUser).where(MasterUser.id == user_id, MasterUser.is_active.is_(True)))
+    if not user or str(user.role or "").strip().lower() not in _PLATFORM_ADMIN_ROLES:
+        logger.warning("Denied platform-admin action: sub=%s role=%s", claims.get("sub"), getattr(user, "role", None))
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform administrator privileges required.")
+    return user
+
+
 def _authorize_tenant_branding_write(
     claims: Dict[str, Any],
     org: Optional[Organization],
     company: Optional[ResCompany],
+    db: Session,
 ) -> None:
-    """Allow master-plane super admins, or tenant-plane admins bound to the target tenant. Raises 403 otherwise."""
+    """Allow active platform admins (DB-verified), or tenant-plane admins bound to the target tenant. Raises 403 otherwise."""
     role = _norm_role(claims.get("role"))
     tier = claims.get("tier")
 
     if tier == "master":
-        if role in _PLATFORM_SUPER_ROLES:
-            return
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient platform role to modify tenant branding.")
+        _require_active_platform_admin(claims, db)
+        return
 
     if tier != "tenant" or role not in _TENANT_ADMIN_ROLES:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only tenant owners or administrators can modify branding.")
@@ -312,44 +333,10 @@ def update_platform_branding(
 ):
     """
     Platform Admin Tier: Updates global platform settings & default branding.
-    Requires Super_Admin authorization.
+    Requires an authenticated, active platform administrator (master plane, role super_admin/admin).
     """
-    # Verify Super_Admin privilege via JWT or API key
-    auth_header = request.headers.get("Authorization") or request.headers.get("authorization") or ""
-    recovery_code = request.headers.get("X-Recovery-Code")
-    is_authorized = False
-
-    if recovery_code and recovery_code == "SUPER_ADMIN_EMERGENCY_RECOVERY_KEY_2026":
-        is_authorized = True
-
-    if not is_authorized and auth_header.lower().startswith("bearer "):
-        token = auth_header[7:].strip()
-        try:
-            from backend.two_tier_auth import verify_two_tier_jwt
-            claims = verify_two_tier_jwt(token, expected_tier="master")
-            role = str(claims.get("role") or "").upper()
-            if role in {"SUPER_ADMIN", "OWNER", "ROOT", "MASTER"}:
-                is_authorized = True
-        except Exception:
-            try:
-                claims = verify_two_tier_jwt(token, expected_tier="tenant")
-                role = str(claims.get("role") or "").upper()
-                if role in {"SUPER_ADMIN", "OWNER"}:
-                    is_authorized = True
-            except Exception:
-                pass
-
-    if not is_authorized:
-        # Check standard app current user if running in test environment or dependency injection
-        from backend.api.dependencies import get_current_user, SUPER_ADMIN, OWNER
-        try:
-            from fastapi.security import HTTPAuthorizationCredentials
-            creds = HTTPAuthorizationCredentials(scheme="Bearer", credentials=auth_header[7:].strip()) if auth_header.lower().startswith("bearer ") else None
-            # If pytest and no auth header, permit if configured
-            if not creds and "PYTEST_CURRENT_TEST" in request.headers:
-                is_authorized = True
-        except Exception:
-            pass
+    claims = _authenticate_branding_editor(request)
+    _require_active_platform_admin(claims, db)
 
     from sqlalchemy.orm.attributes import flag_modified
 
@@ -554,7 +541,7 @@ def update_tenant_branding(
         )
 
     org, company = resolved
-    _authorize_tenant_branding_write(claims, org, company)
+    _authorize_tenant_branding_write(claims, org, company, db)
     target_tenant_uuid = (org.company_id if org and org.company_id else None) or (company.id if company else None)
     branding = db.query(TenantBranding).filter(TenantBranding.tenant_id == target_tenant_uuid).first()
 
