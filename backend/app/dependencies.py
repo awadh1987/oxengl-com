@@ -27,9 +27,11 @@ from backend.models import ResCompany, ResUser, TenantUser, User
 logger = logging.getLogger("oxengl.dependencies")
 
 # Security and secret configuration
-JWT_SECRET_MASTER = os.getenv("JWT_SECRET_MASTER", "oxengl-master-control-plane-secret-key-32b-min")
-JWT_SECRET_TENANT = os.getenv("JWT_SECRET_TENANT", "oxengl-tenant-plane-secret-key-32b-min")
-JWT_SECRET_DEFAULT = os.getenv("JWT_SECRET", "oxengl-default-jwt-secret-key-prod-2026")
+from backend.secret_env import require_secret  # strict, no fallbacks
+
+JWT_SECRET_MASTER = require_secret("JWT_SECRET_MASTER")
+JWT_SECRET_TENANT = require_secret("JWT_SECRET_TENANT")
+JWT_SECRET_DEFAULT = require_secret("JWT_SECRET")
 
 security_bearer = HTTPBearer(auto_error=False)
 
@@ -63,8 +65,6 @@ def decode_jwt_token(token: str) -> Dict[str, Any]:
         JWT_SECRET_TENANT,
         JWT_SECRET_MASTER,
         JWT_SECRET_DEFAULT,
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        "development-secret-change-me",
         os.getenv("JWT_SECRET_KEY", ""),
     ]
     candidate_secrets = [s for s in candidate_secrets if s]

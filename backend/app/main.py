@@ -279,7 +279,9 @@ SESSION_COOKIE_SECURE = getenv("SESSION_COOKIE_SECURE", "true").strip().lower() 
 DOMAIN = getenv("DOMAIN", "oxengl.me").strip()
 SESSION_COOKIE_DOMAIN = getenv("SESSION_COOKIE_DOMAIN", f".{DOMAIN}") if getenv("ENVIRONMENT") == "production" else None
 INSECURE_DEFAULT_SECRETS = {"development-secret-change-me", "secret", "changeme", "default", ""}
-JWT_SECRET_KEY = getenv("JWT_SECRET") or getenv("JWT_SECRET_KEY") or getenv("OXENGL_JWT_SECRET") or "development-secret-change-me"
+from backend.secret_env import require_secret  # strict: no hard-coded fallback secret
+
+JWT_SECRET_KEY = require_secret("JWT_SECRET", "JWT_SECRET_KEY", "OXENGL_JWT_SECRET")
 JWT_EXPIRE_SECONDS = int(getenv("JWT_EXPIRE_SECONDS", "7200"))
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
@@ -1619,7 +1621,7 @@ def require_platform_key(
 	# Lazy import: the branding router is imported near the end of this module.
 	from backend.app.api.v1.branding import _authenticate_branding_editor, _require_active_platform_admin
 
-	claims = _authenticate_branding_editor(request)
+	claims = _authenticate_branding_editor(request, action="issue platform licenses")
 	_require_active_platform_admin(claims, database)
 
 
@@ -1641,20 +1643,22 @@ def platform_isolation_audit(database: Session = Depends(get_db)):
 
 @app.post("/api/platform/licenses", response_model=ResCompanyRead, tags=["Platform"], dependencies=[Depends(require_platform_key)])
 def issue_platform_license(payload: LicenseIssueRequest, database: Session = Depends(get_db)):
+	lookup = payload.company_id.strip()
 	company = None
 	try:
-		target_uuid = uuid.UUID(payload.company_id.strip())
+		target_uuid = uuid.UUID(lookup)
 		company = database.get(models.ResCompany, target_uuid)
 	except (ValueError, TypeError):
 		pass
+	if company is None and lookup:
+		company = database.scalar(select(models.ResCompany).where(models.ResCompany.slug == lookup))
+	if company is None and lookup:
+		# Exact (case-insensitive) match only: ilike() would treat '%'/'_' as wildcards and
+		# could silently resolve to an arbitrary tenant.
+		company = database.scalar(select(models.ResCompany).where(func.lower(models.ResCompany.name) == lookup.lower()))
+	# Never fall back to another tenant: an unknown target must abort, not license someone else.
 	if company is None:
-		company = database.scalar(select(models.ResCompany).where(models.ResCompany.slug == payload.company_id.strip()))
-	if company is None:
-		company = database.scalar(select(models.ResCompany).where(models.ResCompany.name.ilike(payload.company_id.strip())))
-	if company is None:
-		company = database.scalars(select(models.ResCompany).order_by(models.ResCompany.created_at)).first()
-	if company is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No registered tenant company found")
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Company '{lookup[:100]}' not found; no license was issued.")
 
 	tier = payload.subscription_tier.upper().strip()
 	if tier not in TIER_COST_CENTERS:

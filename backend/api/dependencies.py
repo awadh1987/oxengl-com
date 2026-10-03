@@ -264,10 +264,15 @@ class TenantContext:
 # JWT Authentication & Validation
 # ==============================================================================
 
-JWT_SECRET_MASTER = os.getenv("JWT_SECRET_MASTER", "oxengl-master-control-plane-secret-key-32b-min")
-JWT_SECRET_TENANT = os.getenv("JWT_SECRET_TENANT", "oxengl-tenant-plane-secret-key-32b-min")
-JWT_SECRET_DEFAULT = os.getenv("JWT_SECRET", "oxengl-default-jwt-secret-key-prod-2026")
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+from backend.secret_env import require_secret  # noqa: E402  (strict, no fallbacks)
+
+JWT_SECRET_MASTER = require_secret("JWT_SECRET_MASTER")
+JWT_SECRET_TENANT = require_secret("JWT_SECRET_TENANT")
+JWT_SECRET_DEFAULT = require_secret("JWT_SECRET")
+# Legacy signing key for create_access_token(); defaults to JWT_SECRET (never a literal).
+# NOTE: do not set JWT_SECRET_KEY casually -- backend/database.py also derives the
+# data-residency Fernet key from it.
+JWT_SECRET_KEY = require_secret("JWT_SECRET_KEY", "JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 
 security_bearer = HTTPBearer(auto_error=False)
@@ -315,8 +320,6 @@ def decode_jwt_token(token: str) -> Dict[str, Any]:
         JWT_SECRET_MASTER,
         JWT_SECRET_DEFAULT,
         JWT_SECRET_KEY,
-        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
-        "development-secret-change-me",
     ]
     candidate_secrets = [s for s in candidate_secrets if s]
     valid_sig = False

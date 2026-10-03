@@ -86,7 +86,7 @@ if [ -f "${PROJECT_DIR}/backend/.env" ]; then
 fi
 export DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5432/erp_db}"
 export REDIS_URL="${REDIS_URL:-redis://localhost:6379/0}"
-export JWT_SECRET="${JWT_SECRET:-ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad}"
+export JWT_SECRET="${JWT_SECRET:?JWT_SECRET must be set}"
 export PYTHONPATH="${PROJECT_DIR}:${PROJECT_DIR}/backend"
 
 echo "⚙️  Step 5: Launching Multi-Container Application Mesh..."

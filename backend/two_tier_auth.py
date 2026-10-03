@@ -59,8 +59,12 @@ logger = logging.getLogger("oxengl.two_tier_auth")
 # Security Configuration
 # ==============================================================================
 
-JWT_SECRET_MASTER = os.getenv("JWT_SECRET_MASTER", "oxengl-master-control-plane-secret-key-32b-min")
-JWT_SECRET_TENANT = os.getenv("JWT_SECRET_TENANT", "oxengl-tenant-plane-secret-key-32b-min")
+from backend.secret_env import require_secret  # noqa: E402  (strict, no fallbacks)
+
+JWT_SECRET_MASTER = require_secret("JWT_SECRET_MASTER")
+JWT_SECRET_TENANT = require_secret("JWT_SECRET_TENANT")
+if JWT_SECRET_MASTER == JWT_SECRET_TENANT:
+    raise RuntimeError("CRITICAL SECURITY CONFIGURATION ERROR: JWT_SECRET_MASTER and JWT_SECRET_TENANT must differ.")
 JWT_EXPIRE_SECONDS = int(os.getenv("JWT_EXPIRE_SECONDS", "14400"))  # 4 hours
 OTP_EXPIRE_MINUTES = 10
 MAX_LOGIN_ATTEMPTS = 5

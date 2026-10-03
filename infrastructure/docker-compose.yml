@@ -86,7 +86,7 @@ services:
     environment:
       DATABASE_URL: "postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres_db:5432/${POSTGRES_DB:-erp_db}"
       REDIS_URL: "redis://redis_cache:6379/0"
-      JWT_SECRET: ${JWT_SECRET:-ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
       PYTHONPATH: "/app"
     ports:
       - "127.0.0.1:8000:8000"

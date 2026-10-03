@@ -35,7 +35,9 @@ from backend import models
 logger = logging.getLogger("oxengl.iam.services")
 
 # Security configuration & timelines
-JWT_SECRET = os.getenv("JWT_SECRET", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+from backend.secret_env import require_secret  # noqa: E402  (strict, no fallbacks)
+
+JWT_SECRET = require_secret("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 
 ACCESS_TOKEN_EXPIRE_MINUTES = 15

@@ -87,14 +87,17 @@ def _norm_role(raw: Any) -> str:
     return str(raw or "").strip().upper().replace(" ", "_").replace("-", "_")
 
 
-def _authenticate_branding_editor(request: Request) -> Dict[str, Any]:
-    """Validate the caller's JWT (Bearer header or oxengl_session cookie). Raises 401 if absent/invalid."""
+def _authenticate_branding_editor(request: Request, action: str = "modify tenant branding") -> Dict[str, Any]:
+    """Validate the caller's JWT (Bearer header or oxengl_session cookie). Raises 401 if absent/invalid.
+
+    ``action`` only customises the 401 message (e.g. "issue platform licenses").
+    """
     auth_header = request.headers.get("Authorization") or request.headers.get("authorization") or ""
     token = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
     if not token:
         token = (request.cookies.get("oxengl_session") or "").strip()
     if not token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required to modify tenant branding.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Authentication required to {action}.")
 
     claims: Optional[Dict[str, Any]] = None
     for tier in ("master", "tenant"):
@@ -335,7 +338,7 @@ def update_platform_branding(
     Platform Admin Tier: Updates global platform settings & default branding.
     Requires an authenticated, active platform administrator (master plane, role super_admin/admin).
     """
-    claims = _authenticate_branding_editor(request)
+    claims = _authenticate_branding_editor(request, action="modify platform branding")
     _require_active_platform_admin(claims, db)
 
     from sqlalchemy.orm.attributes import flag_modified

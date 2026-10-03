@@ -273,7 +273,7 @@ done
 echo "⚙️  Step 3: Starting OxenGL Unified Backend Engine..."
 export DATABASE_URL="postgresql+asyncpg://postgres:postgres@localhost:5432/erp_db"
 export REDIS_URL="redis://localhost:6379/0"
-export JWT_SECRET="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+export JWT_SECRET="${JWT_SECRET:?JWT_SECRET must be set (openssl rand -hex 32)}"
 export PYTHONPATH="${PROJECT_DIR}:${PROJECT_DIR}/backend"
 
 exec "${VENV_DIR}/bin/python" -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload

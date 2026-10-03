@@ -19,6 +19,13 @@ for path_str in (str(ROOT_DIR), str(BACKEND_DIR)):
     if path_str not in sys.path:
         sys.path.insert(0, path_str)
 
+# The backend refuses to start without JWT secrets (no hard-coded fallbacks).
+# Give test runs ephemeral random values unless the environment already provides them.
+import os as _os
+import secrets as _secrets
+for _name in ("JWT_SECRET", "JWT_SECRET_MASTER", "JWT_SECRET_TENANT"):
+    _os.environ.setdefault(_name, _secrets.token_hex(32))
+
 from backend.app.main import app
 from backend.database import SessionLocal
 import backend.app.domains.procurement.models
