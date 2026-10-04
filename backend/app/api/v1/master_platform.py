@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.app.core.auth import require_super_admin
 from backend.models import (
     MasterTenant,
     ResCompany,
@@ -28,8 +29,11 @@ from backend.models import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["Master Platform Control"])
-admin_router = APIRouter(tags=["Admin Control"])
+# SECURITY: every route on both routers (tenant listing, provisioning, deletion, global
+# user search, health, feature flags) is platform-owner only. Enforced at router level so
+# new endpoints cannot be added unauthenticated by accident.
+router = APIRouter(tags=["Master Platform Control"], dependencies=[Depends(require_super_admin)])
+admin_router = APIRouter(tags=["Admin Control"], dependencies=[Depends(require_super_admin)])
 
 _START_TIME = time.time()
 

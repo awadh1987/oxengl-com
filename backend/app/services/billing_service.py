@@ -1103,3 +1103,33 @@ def update_tenant_custom_limits(
     db.refresh(sub)
     logger.info("SuperAdmin updated custom limits for tenant %s: %s", tenant_id, current)
     return sub
+
+
+# ==============================================================================
+# Tenant-scoped invoice access (IDOR guard)
+# ==============================================================================
+
+def list_tenant_invoices_scoped(db: Session, *, tenant_id: uuid.UUID) -> list[SaaSInvoice]:
+    """All SaaS invoices that belong to ``tenant_id``, newest first."""
+    return list(
+        db.scalars(
+            select(SaaSInvoice)
+            .where(SaaSInvoice.tenant_id == tenant_id)
+            .order_by(SaaSInvoice.issued_date.desc())
+        ).all()
+    )
+
+
+def get_tenant_invoice(db: Session, *, tenant_id: uuid.UUID, invoice_id: uuid.UUID) -> Optional[SaaSInvoice]:
+    """Fetch one invoice ONLY if it belongs to ``tenant_id``.
+
+    The tenant filter is part of the query itself, so an invoice owned by another tenant is
+    indistinguishable from a non-existent one (callers return 404 and leak nothing).
+    """
+    return db.scalar(
+        select(SaaSInvoice).where(
+            SaaSInvoice.id == invoice_id,
+            SaaSInvoice.tenant_id == tenant_id,
+        )
+    )
+

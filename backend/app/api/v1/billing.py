@@ -26,6 +26,8 @@ from backend.database import get_db
 from backend.models import MasterTenant, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (
+    get_tenant_invoice,
+    list_tenant_invoices_scoped,
     activate_tenant_subscription,
     create_enterprise_po_quote,
     create_stripe_checkout_session,
@@ -45,7 +47,7 @@ from backend.app.services.billing_service import (
     SAUDI_CORPORATE_BANK_DETAILS,
 )
 from backend.app.api.v1.tenant_control import resolve_control_tenant_id
-from backend.app.core.auth import require_super_admin
+from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized, require_super_admin
 
 logger = logging.getLogger("oxengl.billing.api")
 
@@ -322,48 +324,53 @@ def create_enterprise_purchase_order_quote(
     return quote_data
 
 
+def _invoice_scope_tenant_id(request: Request, current_user: Any, requested_tenant: Optional[str]) -> uuid.UUID:
+    """Tenant whose invoices the caller may read.
+
+    SECURITY: derived from the authenticated user's own ``company_id`` and never from
+    client-controlled headers/query params. Only a platform Super Admin may target another
+    tenant explicitly via ``?tenant_id=<uuid>``.
+    """
+    if requested_tenant and is_super_admin_authorized(current_user, request):
+        try:
+            return uuid.UUID(str(requested_tenant))
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tenant_id must be a valid UUID.")
+    company_id = getattr(current_user, "company_id", None)
+    if not company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenant workspace is associated with this account.")
+    return uuid.UUID(str(company_id))
+
+
 @tenant_billing_router.get("/invoices")
 def list_tenant_invoices(
     request: Request,
     tenant_id_query: Optional[str] = Query(None, alias="tenant_id"),
-    header_tenant: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    header_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieves the chronological invoice history for the authenticated tenant,
     including VAT breakdowns, payment methods, and receipt download links.
     """
-    tenant_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id_query,
-        header_tenant=header_tenant,
-        header_slug=header_slug,
-        authorization=authorization,
-        request=request,
-        db=db,
-    )
-    if not tenant_uuid:
-        return []
-
-    invoices = db.scalars(
-        select(SaaSInvoice)
-        .where(SaaSInvoice.tenant_id == tenant_uuid)
-        .order_by(desc(SaaSInvoice.issued_date))
-    ).all()
-
-    return [inv.to_dict() for inv in invoices]
+    tenant_uuid = _invoice_scope_tenant_id(request, current_user, tenant_id_query)
+    return [inv.to_dict() for inv in list_tenant_invoices_scoped(db, tenant_id=tenant_uuid)]
 
 
 @tenant_billing_router.get("/invoices/{invoice_id}")
 def get_single_invoice_detail(
     invoice_id: uuid.UUID,
+    request: Request,
+    tenant_id_query: Optional[str] = Query(None, alias="tenant_id"),
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieves a specific SaaS invoice with full line item and ZATCA tax metadata.
+    Strictly scoped to the requesting user's tenant: another tenant's invoice returns 404.
     """
-    inv = db.get(SaaSInvoice, invoice_id)
+    tenant_uuid = _invoice_scope_tenant_id(request, current_user, tenant_id_query)
+    inv = get_tenant_invoice(db, tenant_id=tenant_uuid, invoice_id=invoice_id)
     if not inv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
     return inv.to_dict()

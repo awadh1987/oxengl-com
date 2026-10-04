@@ -20,6 +20,20 @@ import {
   FileCheck2,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { getAuthToken } from '../../services/api';
+
+/** Platform-owner API call: sends the session cookie and bearer token (endpoints require Super_Admin). */
+const masterFetch = (url: string, init: RequestInit = {}): Promise<Response> => {
+  const token = getAuthToken();
+  return fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: {
+      ...((init.headers as Record<string, string>) || {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  });
+};
 
 interface TenantRecord {
   id: string;
@@ -136,7 +150,7 @@ export const MasterControlPanel: React.FC = () => {
 
   const loadTenants = async () => {
     try {
-      const res = await fetch('/api/master/platform/tenants');
+      const res = await masterFetch('/api/master/platform/tenants');
       const data = await res.json();
       if (data.success) setTenants(data.tenants);
     } catch (err) {
@@ -146,7 +160,7 @@ export const MasterControlPanel: React.FC = () => {
 
   const loadHealth = async () => {
     try {
-      const res = await fetch('/api/master/platform/health');
+      const res = await masterFetch('/api/master/platform/health');
       const data = await res.json();
       setHealth(data);
     } catch (err) {
@@ -156,7 +170,7 @@ export const MasterControlPanel: React.FC = () => {
 
   const loadFeatureFlags = async () => {
     try {
-      const res = await fetch('/api/admin/feature-flags').catch(() => null);
+      const res = await masterFetch('/api/admin/feature-flags').catch(() => null);
       if (res && res.ok) {
         const data = await res.json();
         if (data.success && data.flags) {
@@ -164,7 +178,7 @@ export const MasterControlPanel: React.FC = () => {
           return;
         }
       }
-      const fallbackRes = await fetch('/api/master/platform/feature-flags');
+      const fallbackRes = await masterFetch('/api/master/platform/feature-flags');
       const data = await fallbackRes.json();
       if (data.success && data.flags) setFeatureFlags(data.flags);
     } catch (err) {
@@ -180,7 +194,7 @@ export const MasterControlPanel: React.FC = () => {
     }
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/master/platform/search?q=${encodeURIComponent(q)}`);
+      const res = await masterFetch(`/api/master/platform/search?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       if (data.success) {
         setSearchResults(data.results);
@@ -202,7 +216,7 @@ export const MasterControlPanel: React.FC = () => {
 
     try {
       // Primary: PATCH /api/admin/feature-flags to persist in PostgreSQL
-      const res = await fetch('/api/admin/feature-flags', {
+      const res = await masterFetch('/api/admin/feature-flags', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ flag_key: flagKey, enabled: nextVal }),
@@ -214,7 +228,7 @@ export const MasterControlPanel: React.FC = () => {
         }
       } else {
         // Fallback: POST /api/master/platform/feature-flags/toggle
-        const fallbackRes = await fetch('/api/master/platform/feature-flags/toggle', {
+        const fallbackRes = await masterFetch('/api/master/platform/feature-flags/toggle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ flag_key: flagKey, enabled: nextVal }),
@@ -238,7 +252,7 @@ export const MasterControlPanel: React.FC = () => {
     e.preventDefault();
     setProvisionError(null);
     try {
-      const res = await fetch('/api/master/platform/tenants', {
+      const res = await masterFetch('/api/master/platform/tenants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTenantForm),
@@ -262,7 +276,7 @@ export const MasterControlPanel: React.FC = () => {
     setDeleteError(null);
 
     try {
-      const res = await fetch(`/api/master/platform/tenants/${deleteTarget.id}`, {
+      const res = await masterFetch(`/api/master/platform/tenants/${deleteTarget.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ confirm_phrase: confirmInput }),
