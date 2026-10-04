@@ -100,6 +100,8 @@ The previous backend container `oxengl_backend_prev` (image `:pricing`) is stopp
 - ~~Tenant billing `/subscription`, `/checkout` and `/enterprise-quote` are unauthenticated and trust-on-header.~~ **Resolved, see Addendum A.**
 - Run an access-log review of the master-platform routes for the period before this fix. Look for `POST`, `DELETE`, `PATCH` and `/search` requests from non-admin IPs.
 - `backend/routers/master_platform.py` (legacy, not mounted) should be deleted so it can't be re-mounted by mistake.
+- ~~`tenant_control.py` is unauthenticated and trust-on-header.~~ **Resolved, see Addendum B.**
+- `get_authenticated_user` auto-provisions accounts for unknown token subjects. See Addendum B, Follow-ups.
 
 ---
 
@@ -148,7 +150,7 @@ The routes, under `/api/v1/tenant/billing` (alias `/api/tenant/billing`):
 
 **Rollback:** `oxengl_backend_prev` (image `:secpatch`) is stopped but kept. Rolling back re-opens this addendum's vulnerability only.
 
-### New critical finding (not fixed in this patch)
+### New critical finding (fixed in Addendum B)
 
 `backend/app/api/v1/tenant_control.py` is mounted at `/api/tenant/control`, `/api/v1/tenant/control`, `/tenant/control`, `/api/v1/tenant` and `/api/tenant`. It has the **same pattern**: no authentication, and 15 call sites of `resolve_control_tenant_id`.
 
@@ -172,3 +174,103 @@ Its write routes use the same resolver, so they are most likely also anonymously
 4. Delete the header and query fallback and the "first company" fallback from `resolve_control_tenant_id`.
 
 Keep `/domains/resolve` and `/resolve-domain` public if the edge or nginx needs them, but make sure they only return the minimum.
+
+---
+
+## Addendum B — Tenant control panel lock-down (2026-10-04, backend image `oxen-gl_backend:tenantctl2`)
+
+### Finding (confirmed)
+
+`backend/app/api/v1/tenant_control.py` (mounted at `/api/tenant/control`, `/api/v1/tenant/control`, `/tenant/control`, `/api/v1/tenant`, `/api/tenant`) had **no authentication on any route**. Every route got its tenant from `resolve_control_tenant_id`, which trusted, in order: JWT claims if present, request state, then `X-Tenant-ID` / `X-Company-ID` / `?tenant_id=` / `X-Tenant-Slug`, the Host header, **the first company in the table**, and finally a hard-coded UUID.
+
+So an anonymous caller could act on **any** tenant by passing its id or slug:
+
+| Route | Impact |
+|---|---|
+| `GET /team`, `/settings`, `/domains`, `/database/config` | Read any tenant's users, company settings, domains, DB hosting config |
+| `POST /team/invite` | Create users in any tenant, **including `Super_Admin`-role users** (the role map accepted `super_admin`) |
+| `DELETE /team/{id}` | Delete any tenant's users |
+| `POST /settings` | Overwrite company name, CR number, VAT number, currency |
+| `POST/DELETE /domains`, `POST /domains/{id}/verify` | Hijack or remove a tenant's custom domain |
+| `POST /database/test-connection`, `/database/migrate`, `/database/switch-back` | Copy a tenant's data to an attacker-supplied PostgreSQL server, or revert its DB hosting |
+
+### Fix
+
+**Router-level authentication.** `router = APIRouter(..., dependencies=[Depends(get_authenticated_user)])`. Every route needs a session cookie or Bearer token (**401** otherwise). Routes added later are protected by default.
+
+**Public routes split out.** Zero-slug domain resolution (`GET /domains/resolve`, `GET /resolve-domain`) moved to a separate `public_router`. It reads only the Host / `?host=` and returns branding metadata. `main.py` mounts `public_router` and `router` at the same five prefixes.
+
+**Caller-derived tenant.**
+- `_caller_tenant_id(current_user)` returns the authenticated user's own `company_id`, or **403** if the user has none. It is the only tenant source.
+- The `?tenant_id=` / `X-Tenant-ID` / `X-Tenant-Slug` / `X-Company-ID` parameters were removed from all 15 endpoint signatures.
+- `resolve_control_tenant_id` was replaced by a stub that raises. The header, first-company and hard-coded fallbacks are gone.
+
+**Explicit cross-tenant targeting is refused.** A router-level guard, `enforce_caller_tenant_scope`, returns **403** if any tenant hint in the request names a tenant other than the caller's own.
+- The hint may be a different UUID, or a slug belonging to another company / master tenant.
+- Hints that match the caller's own company id, slug, `domain_slug` or master-tenant slug are accepted, because the frontend sends them.
+- This applies to platform super admins too: they use the master-platform API for other tenants.
+
+**Admin / Owner role on sensitive routes.** `require_tenant_admin` (role `Admin` or `Owner`, or platform Super_Admin acting on its own tenant) is required on:
+- invite and remove member;
+- `POST /settings`;
+- add / remove / verify domain, and `ssl-status`;
+- **all** `/database/*` routes (config, test-connection, migrate, migration-status, switch-back).
+
+`GET /team`, `/settings` and `/domains` remain readable by any authenticated member of the tenant.
+
+**Guard rails.**
+- Only a platform Super_Admin may invite a `Super_Admin` (**403** otherwise).
+- An admin cannot remove their own account (**400**).
+- Tenant admins cannot remove a platform super admin (**403**).
+
+### Verification (production)
+
+**`verify_tenant_control.py`: 121/121 passed**
+
+| Check | Result |
+|---|---|
+| Anonymous, every route (3 reads + 12 sensitive) × all 5 mounts, with Alwehda id/slug spoofed | **401** (75 probes) |
+| Anonymous `/api/v1/tenant/resolve-domain`, `/api/tenant/control/domains/resolve` | 200, resolved |
+| Myon admin `GET /team` | 200; every member is Myon's; no `@wac-ye.com` users |
+| Myon admin with its **own** id / slug / `domain_slug` hints (frontend pattern) | 200 |
+| Alwehda admin / super admin `GET /team` | only their own tenant's members |
+| Myon admin → Alwehda via `X-Tenant-ID`, `?tenant_id=`, `X-Tenant-Slug`, `X-Company-ID` on team / settings / database config / settings write / domain add & delete / switch-back / invite / member delete | **403** |
+| Alwehda admin → Myon, super admin → Myon | **403** |
+| Myon admin deletes an Alwehda member by id (no hints) | **404**; member still exists, Alwehda company row unchanged |
+| Temporary `Data_Entry` user in Myon: `GET /team`, `/settings`, `/domains` | 200 |
+| Same user: all 12 sensitive routes | **403** |
+| Admin self-removal (disposable probe admin) | **400**; account still exists |
+| Admin invites with `role=super_admin` | **403**; no user created |
+
+**Regression:** `verify_sec.py` 28/28, `verify_idor.py` 7/7 and `verify_tenant_billing.py` 23/23 still pass. Total 179/179.
+
+**Rollback:** `oxengl_backend_prev` (image `:tenantctl`, which has auth and role checks but not the cross-tenant 403 guard) is stopped but kept. `:tenantbill` (the pre-patch image) still exists. Rolling back to `:tenantbill` **re-opens this vulnerability**.
+
+### Operational incident during verification (resolved)
+
+The first verification run **accidentally deleted the Myon admin account `muath.salaih@meayon.com`** at 02:56 UTC. It was restored at 02:58 UTC.
+
+**Cause: a test-harness bug, not a flaw in the patch.**
+- The harness minted tokens with `create_access_token()`, which puts the user's **UUID** in `sub`.
+- `get_authenticated_user()` (`backend/app/main.py`) treats `sub` as an **email**. When it found no user with that "email", it **auto-provisioned a new account**: email = the UUID, with the role taken from the token.
+- So the requests ran as a *shadow* user, not as muath. The "admin cannot remove self" check therefore saw two different ids, and the self-removal probe deleted the real account.
+- The earlier verification runs (Addenda/§3) had silently created three such shadow accounts the same way. One was a `Super_Admin` with `is_superuser = true` in the platform company.
+
+**Remediation.**
+- **Account restored.** muath's row was restored from the pre-change snapshot `~/.oxengl/backups/pre_isolation_fix_20261004T005607Z_*.sql` with the same id, password hash, role and company. `is_superuser = false` was kept, as decided earlier today.
+- **Collateral checked.** `pg_stat_user_tables` showed:
+  - the only FK side effect was the `SET NULL` of `user_id` and `hitl_approved_by` on one Myon `ai_governance_logs` row. Both were re-linked;
+  - no sessions, tokens, drivers or employees were affected (0 deletes).
+- **Shadow accounts deleted.** All four shadow accounts (three from earlier runs, one from this run) were deleted. `superadmin@oxengl.com` is again the only `is_superuser` account. `res_users` is back to the 6 real users.
+- **Harness fixed.**
+  - Tokens now carry the real email as `sub` / `identity`.
+  - Destructive guard tests target only disposable probe accounts.
+  - Each run asserts that there are 0 UUID-email accounts and that the Myon admin still exists.
+  - A fresh `res_users` snapshot is taken before verification (`pre_tenantctl_verify_*.sql`).
+
+**Effect on users.** muath's active sessions were unaffected (0 `user_sessions` rows were removed). The account was restored to its 00:56 UTC state; any profile or password change made between 00:56 and 02:56 UTC would need to be redone. None is known.
+
+### Follow-ups
+
+- **`get_authenticated_user` auto-provisioning (high).** Any validly signed token whose subject isn't a known email creates a new `res_users` row. The role comes from the token, and `Super_Admin` / `is_superuser` comes from token claims. Exploiting it needs a server-signed token, but it should be removed: unknown subjects should get **401**.
+- Two decorative `Crown` icons remain outside the Super Admin console: `Navbar.tsx` (header badge) and `MasterLoginForm.tsx` (master login header).

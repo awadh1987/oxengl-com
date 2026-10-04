@@ -5,6 +5,7 @@ import {
   CheckSquare, Check, Download
 } from 'lucide-react';
 import { useBulkSelection } from '../hooks/useBulkSelection';
+import { navigateSuperAdmin, SuperAdminNavLink, SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 import { erpApi } from '../services/api';
 import { useApp } from '../context/AppContext';
@@ -24,7 +25,12 @@ interface TenantItem {
   created_at?: string;
 }
 
-export const SuperAdminTenantsView: React.FC = () => {
+interface SuperAdminModuleNavProps {
+  /** Provided when embedded in the Super Admin Cockpit: switch cockpit tabs instead of routing. */
+  onNavigate?: (target: SuperAdminNavTarget) => void;
+}
+
+export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNavigate }) => {
   const { language } = useApp();
   const isAr = Boolean(
     language === 'ar' ||
@@ -281,20 +287,16 @@ export const SuperAdminTenantsView: React.FC = () => {
               <span>{isUploading ? 'Reconstituting...' : 'Restore Archive'}</span>
               <input type="file" accept=".json,.gz,.enc,.tar" onChange={handleArchiveUpload} className="hidden" disabled={isUploading} />
             </label>
-            <a href="/admin/logs" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
+            <SuperAdminNavLink target="logs" onNavigate={onNavigate} id="btn-tenants-audit-logs" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
               Audit Logs
-            </a>
-            <a href="/admin/analytics" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
+            </SuperAdminNavLink>
+            <SuperAdminNavLink target="analytics" onNavigate={onNavigate} id="btn-tenants-velocity" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
               Velocity Analytics
-            </a>
+            </SuperAdminNavLink>
             <button
               type="button"
               id="btn-admin-hub"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.href = '/admin';
-                }
-              }}
+              onClick={() => navigateSuperAdmin('hub', onNavigate)}
               className="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
               Admin Hub

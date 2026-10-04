@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Activity, Building2, Check, CheckCircle2, Copy, CreditCard, Crown, Database, ExternalLink,
+  Activity, Building2, Check, CheckCircle2, Copy, CreditCard, Database, ExternalLink,
   KeyRound, Layers, Loader2, Lock, Megaphone, Palette, Plus, RefreshCw, Save, Search, Server,
-  Shield, ShieldCheck, Sparkles, Upload, X, Cpu, TrendingUp, BarChart3, ArrowUpRight, Zap, Pencil,
+  Settings, Shield, ShieldCheck, Sparkles, Upload, X, Cpu, TrendingUp, BarChart3, ArrowUpRight, Zap, Pencil,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTranslation } from '../../hooks/useTranslation';
@@ -281,7 +281,7 @@ export const LicenseProvisionerView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Banner icon={Crown} title="SaaS Multi-Tenant Provisioning" badge="SuperAdmin Portal"
+      <Banner icon={Shield} title="SaaS Multi-Tenant Provisioning" badge="SuperAdmin Portal"
         subtitle="Provision independent corporate licenses with custom visual branding and cost center allowances." />
 
       {status && <div className={`flex items-center gap-2 rounded-2xl border p-4 text-xs font-bold ${status.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : status.type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-blue-200 bg-blue-50 text-blue-800'}`}><Shield className="h-4 w-4 shrink-0" />{status.text}</div>}
@@ -299,7 +299,7 @@ export const LicenseProvisionerView: React.FC = () => {
           </section>
 
           <section className="border-t border-slate-100 pt-5">
-            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Crown className="h-4 w-4 text-amber-600" />Subscription Tier &amp; Allowance</h3>
+            <h3 className="mb-3 flex items-center gap-2 text-xs font-black text-slate-100"><Layers className="h-4 w-4 text-amber-600" />Subscription Tier &amp; Allowance</h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <label className="text-xs font-bold text-slate-700">Subscription Tier *
                 <select value={tier} onChange={(event) => setTier(event.target.value as typeof tier)} className="mt-1 w-full rounded-xl border border-slate-300 px-3.5 py-2 text-xs font-bold text-slate-100 outline-none focus:border-blue-600">
@@ -873,7 +873,7 @@ export const PlatformSettingsView: React.FC = () => {
 
   return (
     <form onSubmit={save} className="space-y-6">
-      <Banner icon={Crown} title="OxenGL Platform Settings & Master Branding" badge="Platform Owner Console" tone="from-blue-950 via-indigo-900 to-slate-900"
+      <Banner icon={Settings} title="OxenGL Platform Settings & Master Branding" badge="Platform Owner Console" tone="from-blue-950 via-indigo-900 to-slate-900"
         subtitle="Master control center for OxenGL platform identity, white-label defaults, system-wide announcements, and multi-tenant compliance."
         action={<div className="flex items-center gap-3">
           <button type="button" onClick={resetDefaults} className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/5 px-3.5 py-2 text-xs font-bold text-slate-200 hover:bg-white/10"><RefreshCw className="h-3.5 w-3.5" />Reset Defaults</button>

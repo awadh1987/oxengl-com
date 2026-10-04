@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Activity, ArrowRight, Building2, ChevronDown, CreditCard, Crown, ExternalLink, Globe2,
+  Activity, ArrowRight, Building2, ChevronDown, CreditCard, ExternalLink, Globe2,
   KeyRound, LayoutDashboard, LogOut, Menu, Radio, Search, Settings, ShieldCheck, X, Server,
   TrendingUp, BarChart3, FileCheck2
 } from 'lucide-react';
@@ -11,9 +11,11 @@ import { Company } from '../types';
 import { LicenseProvisionerView, PanoramicCockpit, PlatformSettingsView, PricingPlansView, SystemAuditView, TenantsRegistryView } from '../components/platform/PlatformModules';
 import { MasterControlPanel } from '../components/platform/MasterControlPanel';
 import { SuperAdminAnalyticsView } from './SuperAdminAnalyticsView';
+import { SuperAdminLogsView } from './SuperAdminLogsView';
+import { SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 import { SuperAdminFinancialHubView } from './SuperAdminFinancialHubView';
 
-type PlatformTab = 'cockpit' | 'financial-hub' | 'tenants' | 'analytics' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
+type PlatformTab = 'cockpit' | 'financial-hub' | 'tenants' | 'analytics' | 'logs' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
 
 interface SuperAdminCockpitViewProps {
   onOpenTenantOnboarding: () => void;
@@ -27,6 +29,7 @@ const navigation: { id: PlatformTab; label: string; description: string; badge?:
   { id: 'master-devops', label: 'DevOps & RLS HUD', description: 'Domain routing, RLS isolation & Cmd+K', badge: 'LIVE', icon: Server },
   { id: 'tenants', label: 'Tenants Registry', description: 'Client accounts & tenant entities', icon: Building2 },
   { id: 'analytics', label: 'Cross-Tenant Velocity', description: 'Transaction density & sparklines', badge: '7-DAY', icon: TrendingUp },
+  { id: 'logs', label: 'Platform Audit Logs', description: 'Audit trail & capacity telemetry', icon: FileCheck2 },
   { id: 'licenses', label: 'License Provisioner', description: 'JWT license key issuer', badge: 'JWT', icon: KeyRound },
   { id: 'pricing', label: 'Pricing & Subscription Plans', description: 'Tiers, quotas & features', icon: CreditCard },
   { id: 'health', label: 'System Isolation & Health', description: 'Tenant table audit & engine metrics', badge: '100%', icon: Activity },
@@ -65,12 +68,18 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
     onInspectTenantWorkspace?.();
   };
 
+  // Header shortcuts inside embedded Super Admin modules switch cockpit tabs in place.
+  const navigateModule = (target: SuperAdminNavTarget) => {
+    setActiveTab(target === 'hub' ? 'cockpit' : target);
+  };
+
   const renderModule = () => {
     switch (activeTab) {
       case 'financial-hub': return <div className="h-full overflow-y-auto"><SuperAdminFinancialHubView /></div>;
       case 'master-devops': return <div className="h-full overflow-y-auto"><MasterControlPanel /></div>;
       case 'tenants': return <TenantsRegistryView onInspect={inspect} />;
-      case 'analytics': return <div className="h-full overflow-y-auto"><SuperAdminAnalyticsView /></div>;
+      case 'analytics': return <div className="h-full overflow-y-auto"><SuperAdminAnalyticsView onNavigate={navigateModule} /></div>;
+      case 'logs': return <div className="h-full overflow-y-auto"><SuperAdminLogsView onNavigate={navigateModule} /></div>;
       case 'licenses': return <LicenseProvisionerView />;
       case 'pricing': return <PricingPlansView />;
       case 'health': return <SystemAuditView />;

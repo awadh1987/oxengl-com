@@ -26,95 +26,124 @@ from backend.schemas import (
     TenantDatabaseTestConnectionResponse,
 )
 from backend.app.services import migration_service
+from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized
 
 
-router = APIRouter(tags=["Tenant Control Panel"])
+# SECURITY (2026-10-04, incident Addendum B):
+# Every route on `router` requires an authenticated session. The tenant is derived
+# strictly from the authenticated user's own company_id -- client-supplied
+# X-Tenant-ID / X-Company-ID / X-Tenant-Slug headers and ?tenant_id= are ignored.
+# Mutating / sensitive routes additionally require the Admin or Owner role
+# (or platform Super_Admin acting on its own platform tenant).
+router = APIRouter(
+    tags=["Tenant Control Panel"],
+    dependencies=[Depends(get_authenticated_user)],
+)
+# NOTE: `enforce_caller_tenant_scope` is appended to router.dependencies below.
+
+# Public, unauthenticated routes (zero-slug domain resolution only). These read
+# nothing but the Host header / ?host= and never expose tenant-private data.
+public_router = APIRouter(tags=["Tenant Control Panel (Public)"])
+
+TENANT_ADMIN_ROLES = frozenset({"ADMIN", "OWNER"})
 
 
-def resolve_control_tenant_id(
-    query_tenant: Optional[str] = None,
-    header_tenant: Optional[str] = None,
-    header_slug: Optional[str] = None,
-    header_company: Optional[str] = None,
-    authorization: Optional[str] = None,
-    request: Optional[Request] = None,
-    db: Optional[Session] = None,
-) -> uuid.UUID:
-    raw = ""
+def _normalize_role(role: Optional[str]) -> str:
+    return str(role or "").strip().upper().replace("-", "_").replace(" ", "_")
 
-    # 1. Authoritative: Inspect JWT Authorization token first (anti-spoofing guarantee)
-    if not authorization and request is not None and hasattr(request, "headers"):
-        authorization = request.headers.get("Authorization") or request.headers.get("authorization")
 
-    if authorization and authorization.startswith("Bearer "):
-        token = authorization.split(" ", 1)[1].strip()
-        try:
-            from backend.two_tier_auth import verify_two_tier_jwt
-            try:
-                claims = verify_two_tier_jwt(token, expected_tier="tenant")
-            except Exception:
-                claims = verify_two_tier_jwt(token, expected_tier="master")
-            raw = str(claims.get("tenant_id") or claims.get("company_id") or claims.get("tenant_slug") or "")
-        except Exception:
-            pass
-
-    # 2. Host-header / request state resolution (zero-slug custom domain)
-    if not raw and request is not None:
-        raw = (
-            getattr(request.state, "tenant_id", None)
-            or getattr(request.state, "company_id", None)
-            or getattr(request.state, "tenant_slug", None)
-            or ""
+def _caller_tenant_id(user: ResUser) -> uuid.UUID:
+    """The ONLY tenant a caller may act on: their own company."""
+    company_id = getattr(user, "company_id", None)
+    if not company_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user is not bound to a tenant workspace.",
         )
+    try:
+        return company_id if isinstance(company_id, uuid.UUID) else uuid.UUID(str(company_id))
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid tenant binding.")
 
-    # 3. Explicit headers & query params fallback (for internal or service calls)
-    if not raw:
-        raw = (header_tenant or header_company or query_tenant or header_slug or "").strip()
 
-    # 4. Host header DB lookup fallback
-    if not raw and request is not None and db is not None and hasattr(request, "headers"):
-        host = request.headers.get("Host") or request.headers.get("x-forwarded-host") or ""
-        clean_host = host.split(":")[0].strip().lower()
-        if clean_host and clean_host not in {"localhost", "127.0.0.1", "testserver", "oxengl.me"}:
-            m = db.query(MasterTenant).filter(MasterTenant.custom_domain == clean_host).first()
-            if m:
-                return m.id
-            c = db.query(ResCompany).filter(ResCompany.custom_domain == clean_host).first()
-            if c:
-                return c.id
+def _is_tenant_admin(user: ResUser, request: Optional[Request] = None) -> bool:
+    if _normalize_role(getattr(user, "role", None)) in TENANT_ADMIN_ROLES:
+        return True
+    return bool(is_super_admin_authorized(user, request))
 
-    # 1. Try UUID parse directly
-    if raw:
+
+def require_tenant_admin(
+    request: Request,
+    current_user: ResUser = Depends(get_authenticated_user),
+) -> ResUser:
+    """Dependency: authenticated user holding the Admin or Owner role."""
+    if not _is_tenant_admin(current_user, request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin or Owner role required for this action.",
+        )
+    return current_user
+
+
+def enforce_caller_tenant_scope(
+    request: Request,
+    current_user: ResUser = Depends(get_authenticated_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Reject (403) any request that explicitly targets a tenant other than the caller's own.
+
+    Tenant hints (?tenant_id=, X-Tenant-ID, X-Company-ID, X-Tenant-Slug) are never used to
+    select data. If one is present and identifies a *different* tenant, the request is an
+    attempted cross-tenant access and is refused rather than silently re-scoped.
+    """
+    own_id = _caller_tenant_id(current_user)
+    company = db.get(ResCompany, own_id)
+    own_ids = {str(own_id)}
+    own_slugs = set()
+    if company is not None:
+        own_slugs |= {s.lower() for s in (company.slug, getattr(company, "domain_slug", None)) if s}
+        for m in db.query(MasterTenant).filter(
+            (MasterTenant.id == own_id) | (MasterTenant.slug.in_(list(own_slugs) or [""]))
+        ).all():
+            own_ids.add(str(m.id))
+            if m.slug:
+                own_slugs.add(m.slug.lower())
+
+    hints = [
+        request.query_params.get("tenant_id"),
+        request.headers.get("x-tenant-id"),
+        request.headers.get("x-company-id"),
+        request.headers.get("x-tenant-slug"),
+    ]
+    for raw in hints:
+        val = str(raw or "").strip().lower()
+        if not val or val in ("null", "undefined") or val in own_ids or val in own_slugs:
+            continue
         try:
-            return uuid.UUID(str(raw))
-        except Exception:
-            pass
+            uuid.UUID(val)
+            foreign = True  # a well-formed tenant UUID that is not the caller's
+        except ValueError:
+            foreign = db.query(ResCompany.id).filter(
+                (ResCompany.slug == val) | (ResCompany.domain_slug == val)
+            ).first() is not None or db.query(MasterTenant.id).filter(MasterTenant.slug == val).first() is not None
+        if foreign:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cross-tenant access denied: requests are scoped to your own workspace.",
+            )
 
-    # 2. Look up slug or identifier in DB if session provided
-    if db and raw:
-        # Check by slug in ResCompany
-        comp = db.query(ResCompany).filter(
-            (ResCompany.domain_slug == str(raw).lower()) | (ResCompany.slug == str(raw).lower())
-        ).first()
-        if comp:
-            return comp.id
 
-        # Check by slug in MasterTenant
-        m_tenant = db.query(MasterTenant).filter(MasterTenant.slug == str(raw).lower()).first()
-        if m_tenant:
-            return m_tenant.id
+router.dependencies.append(Depends(enforce_caller_tenant_scope))
 
-    # 3. Fallback to first active company or tenant if raw is missing or unknown
-    if db:
-        first_comp = db.query(ResCompany).first()
-        if first_comp:
-            return first_comp.id
-        first_master = db.query(MasterTenant).first()
-        if first_master:
-            return first_master.id
 
-    # Fallback to system default UUID
-    return uuid.UUID("dcb40cee-b20a-4bdf-a79b-b284371f04fa")
+def resolve_control_tenant_id(*_args: Any, **_kwargs: Any) -> uuid.UUID:  # pragma: no cover
+    """REMOVED (security). Header/query/first-company tenant resolution was an IDOR.
+
+    Use `_caller_tenant_id(current_user)` with an authenticated dependency instead.
+    """
+    raise RuntimeError(
+        "resolve_control_tenant_id was removed: derive the tenant from the authenticated user."
+    )
 
 
 class InviteMemberRequest(BaseModel):
@@ -143,20 +172,11 @@ class DomainRegisterRequest(BaseModel):
 
 @router.get("/team", status_code=status.HTTP_200_OK)
 def list_team_members(
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """Lists team members belonging strictly to the active tenant from PostgreSQL."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     
     users = db.query(ResUser).filter(ResUser.company_id == target_uuid).all()
     team = []
@@ -178,20 +198,11 @@ def list_team_members(
 @router.post("/team/invite", status_code=status.HTTP_201_CREATED)
 def invite_team_member(
     payload: InviteMemberRequest,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Invites a new team member and persists into PostgreSQL."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     # Enforce plan seat quota
     from backend.app.services.billing_service import verify_tenant_seat_limit, increment_tenant_seat_usage
     seat_ok, seat_msg = verify_tenant_seat_limit(db, target_uuid)
@@ -229,6 +240,12 @@ def invite_team_member(
     }
     raw_role = (payload.role or "user").strip().lower()
     assigned_role = role_mapping.get(raw_role, "Data_Entry")
+    # Tenant admins can never mint platform Super_Admin accounts.
+    if assigned_role == "Super_Admin" and not is_super_admin_authorized(current_user, None):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only platform Super Admins may assign the Super_Admin role.",
+        )
 
     new_id = uuid.uuid4()
     user = ResUser(
@@ -267,20 +284,11 @@ def invite_team_member(
 @router.delete("/team/{member_id}", status_code=status.HTTP_200_OK)
 def delete_team_member(
     member_id: str,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Removes a team member belonging to the tenant."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     try:
         user_uuid = uuid.UUID(member_id)
     except Exception:
@@ -292,6 +300,11 @@ def delete_team_member(
     ).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found")
+    if str(user.id) == str(current_user.id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot remove your own account.")
+    if (getattr(user, "is_superuser", False) or _normalize_role(user.role) == "SUPER_ADMIN") \
+            and not is_super_admin_authorized(current_user, None):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot remove a platform Super Admin.")
 
     removed_name = user.full_name or user.email
     db.delete(user)
@@ -307,21 +320,11 @@ def delete_team_member(
 @router.get("/settings", status_code=status.HTTP_200_OK)
 def get_tenant_settings(
     request: Request,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """Fetches tenant configuration settings from PostgreSQL with resilient fallback."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        request=request,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first() if not company else None
 
@@ -359,20 +362,11 @@ def get_tenant_settings(
 @router.post("/settings", status_code=status.HTTP_200_OK)
 def update_tenant_settings(
     payload: SettingsUpdateRequest,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Updates tenant settings in PostgreSQL."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
 
     # Support either payload.general or payload.settings (if section='general')
@@ -400,21 +394,11 @@ def update_tenant_settings(
 @router.get("/domains", status_code=status.HTTP_200_OK)
 def list_custom_domains(
     request: Request,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """Lists registered custom domains for the tenant."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        request=request,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
     
     domains = []
@@ -436,20 +420,11 @@ def list_custom_domains(
 @router.post("/domains", status_code=status.HTTP_201_CREATED)
 def register_custom_domain(
     payload: DomainRegisterRequest,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Registers a new custom domain for the tenant in PostgreSQL."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     # Evaluate subscription grade and explicit feature overrides
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
@@ -546,20 +521,11 @@ def register_custom_domain(
 @router.delete("/domains/{domain_id}", status_code=status.HTTP_200_OK)
 def remove_custom_domain(
     domain_id: str,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Removes a registered custom domain and clears routing cache."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     old_domain = None
     master = db.query(MasterTenant).filter(MasterTenant.id == target_uuid).first()
     if master and master.custom_domain:
@@ -580,8 +546,8 @@ def remove_custom_domain(
     return {"success": True, "message": f"Custom domain '{domain_id}' removed successfully"}
 
 
-@router.get("/domains/resolve", status_code=status.HTTP_200_OK)
-@router.get("/resolve-domain", status_code=status.HTTP_200_OK)
+@public_router.get("/domains/resolve", status_code=status.HTTP_200_OK)
+@public_router.get("/resolve-domain", status_code=status.HTTP_200_OK)
 def resolve_domain_endpoint(
     request: Request,
     host: Optional[str] = Query(None),
@@ -627,10 +593,7 @@ def resolve_domain_endpoint(
 @router.post("/domains/{domain_id}/verify", status_code=status.HTTP_200_OK)
 def verify_custom_domain(
     domain_id: str,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """
@@ -639,13 +602,7 @@ def verify_custom_domain(
     from backend.app.services import ssl_service
     from backend.app.services.billing_service import enforce_tenant_entitlement
 
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
 
     target_domain = domain_id
@@ -679,23 +636,14 @@ def verify_custom_domain(
 @router.get("/domains/{domain_id}/ssl-status", status_code=status.HTTP_200_OK)
 def get_domain_ssl_status(
     domain_id: str,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Inspects live TLS certificate details and expiration for custom domain."""
     from backend.app.services import ssl_service
     from backend.app.services.billing_service import enforce_tenant_entitlement
 
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     enforce_tenant_entitlement(db, target_uuid, "allow_custom_domain")
 
     target_domain = domain_id
@@ -719,40 +667,22 @@ def get_domain_ssl_status(
 
 @router.get("/database/config", response_model=TenantDatabaseInfoResponse)
 def get_tenant_database_config(
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Retrieves current database hosting configuration for this tenant (Shared container vs Private External)."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     return migration_service.get_tenant_database_info(target_uuid, db)
 
 
 @router.post("/database/test-connection", response_model=TenantDatabaseTestConnectionResponse)
 def test_tenant_database_connection(
     payload: TenantDatabaseTestConnectionRequest,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Tests connectivity, TLS/SSL handshake, and permissions for a target external PostgreSQL instance."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     from backend.app.services.billing_service import enforce_tenant_entitlement
     enforce_tenant_entitlement(db, target_uuid, "allow_external_database")
 
@@ -778,20 +708,11 @@ def test_tenant_database_connection(
 def trigger_database_migration(
     payload: TenantDatabaseMigrationRequest,
     background_tasks: BackgroundTasks,
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Triggers an in-app live background migration to copy tenant data to a private external PostgreSQL instance."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     # Enforce external database architectural entitlement
     from backend.app.services.billing_service import enforce_tenant_entitlement
     enforce_tenant_entitlement(db, target_uuid, "allow_external_database")
@@ -844,20 +765,11 @@ def trigger_database_migration(
 @router.get("/database/migration-status")
 def get_database_migration_status(
     migration_id: Optional[uuid.UUID] = Query(None),
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Polls live progress and status for an active or recent database migration."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     status_data = migration_service.get_migration_status_data(
         company_id=target_uuid, migration_id=migration_id, db=db
     )
@@ -871,20 +783,11 @@ def get_database_migration_status(
 
 @router.post("/database/switch-back")
 def switch_back_to_shared_database(
-    tenant_id: Optional[str] = Query(None),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    x_tenant_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    x_company_id: Optional[str] = Header(None, alias="X-Company-ID"),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Reverts a dedicated external database tenant back to the platform's shared multi-tenant database."""
-    target_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id,
-        header_tenant=x_tenant_id,
-        header_slug=x_tenant_slug,
-        header_company=x_company_id,
-        db=db,
-    )
+    target_uuid = _caller_tenant_id(current_user)
     # Enforce external database architectural entitlement
     from backend.app.services.billing_service import enforce_tenant_entitlement
     enforce_tenant_entitlement(db, target_uuid, "allow_external_database")

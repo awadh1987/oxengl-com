@@ -515,11 +515,11 @@ app.add_api_route(
 from backend.app.api.v1 import users as users_api
 app.include_router(users_api.router)
 from backend.app.api.v1 import tenant_control, master_platform
-app.include_router(tenant_control.router, prefix="/api/tenant/control")
-app.include_router(tenant_control.router, prefix="/api/v1/tenant/control")
-app.include_router(tenant_control.router, prefix="/tenant/control")
-app.include_router(tenant_control.router, prefix="/api/v1/tenant")
-app.include_router(tenant_control.router, prefix="/api/tenant")
+# tenant_control.router carries a router-level get_authenticated_user dependency;
+# public_router holds only the anonymous zero-slug domain-resolution endpoints.
+for _tc_prefix in ("/api/tenant/control", "/api/v1/tenant/control", "/tenant/control", "/api/v1/tenant", "/api/tenant"):
+	app.include_router(tenant_control.public_router, prefix=_tc_prefix)
+	app.include_router(tenant_control.router, prefix=_tc_prefix)
 app.include_router(master_platform.router, prefix="/api/master/platform")
 app.include_router(master_platform.router, prefix="/api/v1/master/platform")
 app.include_router(master_platform.admin_router, prefix="/api/admin")

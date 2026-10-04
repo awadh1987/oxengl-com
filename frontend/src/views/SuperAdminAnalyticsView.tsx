@@ -4,6 +4,7 @@ import {
   ShieldAlert, Zap, Layers, Building2, CheckCircle2, ArrowRight
 } from 'lucide-react';
 import { SpotlightCard } from '../components/design-system/SpotlightCard';
+import { navigateSuperAdmin, SuperAdminNavLink, SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 
 interface VelocityDay {
   date: string;
@@ -85,7 +86,12 @@ const Sparkline: React.FC<{ data: number[]; color?: string }> = ({ data, color =
   );
 };
 
-export const SuperAdminAnalyticsView: React.FC = () => {
+interface SuperAdminModuleNavProps {
+  /** Provided when embedded in the Super Admin Cockpit: switch cockpit tabs instead of routing. */
+  onNavigate?: (target: SuperAdminNavTarget) => void;
+}
+
+export const SuperAdminAnalyticsView: React.FC<SuperAdminModuleNavProps> = ({ onNavigate }) => {
   const [velocityData, setVelocityData] = useState<VelocityResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -135,20 +141,16 @@ export const SuperAdminAnalyticsView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <a href="/admin/tenants" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
+            <SuperAdminNavLink target="tenants" onNavigate={onNavigate} id="btn-velocity-tenants-grid" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
               Tenants Grid
-            </a>
-            <a href="/admin/logs" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
+            </SuperAdminNavLink>
+            <SuperAdminNavLink target="logs" onNavigate={onNavigate} id="btn-velocity-audit-logs" className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs font-semibold hover:bg-slate-800 transition-colors">
               Audit Logs
-            </a>
+            </SuperAdminNavLink>
             <button
               type="button"
               id="btn-admin-hub"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.href = '/admin';
-                }
-              }}
+              onClick={() => navigateSuperAdmin('hub', onNavigate)}
               className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white transition-colors cursor-pointer"
             >
               Admin Hub
