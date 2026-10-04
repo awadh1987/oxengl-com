@@ -15,18 +15,24 @@ import asyncio
 from datetime import datetime, timezone
 import logging
 import os
+from pathlib import Path
 import sys
 import time
 from typing import Any, Dict, List, Optional
+import uuid
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.app.database import SessionLocal
 from backend.app.services.backup_service import (
-    BackupConfig,
+    BackupKind,
+    BackupPolicy,
+    BackupRunStatus,
     BackupScope,
     BackupService,
+    StorageLayout,
+    select_for_deletion,
 )
 
 logger = logging.getLogger("oxengl.backup_worker")
@@ -67,6 +73,32 @@ BACKUP_WEEKLY_HOUR: int = get_env_int("OXENGL_BACKUP_WEEKLY_HOUR", 3)  # 03:00 U
 BACKUP_KEEP_DAILY: int = get_env_int("OXENGL_BACKUP_KEEP_DAILY", 7)
 BACKUP_KEEP_WEEKLY: int = get_env_int("OXENGL_BACKUP_KEEP_WEEKLY", 4)
 BACKUP_DEFAULT_SCOPES: str = os.getenv("OXENGL_BACKUP_SCOPES", "platform,tenants")
+
+
+# ==============================================================================
+# Local Staging Retention Pruner
+# ==============================================================================
+
+def prune_local_artifacts(
+    output_dir: Path,
+    scope: BackupScope,
+    kind: BackupKind,
+    keep: int,
+) -> int:
+    """Safely prunes stale encrypted archives and checksum sidecars from local staging directory."""
+    if not output_dir.exists():
+        return 0
+    all_files = [f.name for f in output_dir.iterdir() if f.is_file()]
+    to_delete = select_for_deletion(all_files, keep, scope=scope, kind=kind)
+    count = 0
+    for fname in to_delete:
+        try:
+            (output_dir / fname).unlink(missing_ok=True)
+            (output_dir / (fname + ".sha256")).unlink(missing_ok=True)
+            count += 1
+        except Exception as e:
+            logger.warning("Failed to delete local archive %s: %s", fname, e)
+    return count
 
 
 # ==============================================================================
@@ -128,7 +160,7 @@ def get_active_tenants(db: Session) -> List[Dict[str, Any]]:
 def execute_scheduled_backups(
     scopes: Optional[List[str]] = None,
     backup_kind: str = "full",
-    config: Optional[BackupConfig] = None,
+    layout: Optional[StorageLayout] = None,
 ) -> Dict[str, Any]:
     """
     Synchronous execution routine invoked by Celery Beat workers or Asyncio daemon threads.
@@ -142,11 +174,16 @@ def execute_scheduled_backups(
         raw_scopes = [s.strip().lower() for s in BACKUP_DEFAULT_SCOPES.split(",") if s.strip()]
         scopes = raw_scopes or ["platform", "tenants"]
 
-    service = BackupService(config=config)
+    try:
+        kind = BackupKind(backup_kind.lower())
+    except (ValueError, AttributeError):
+        kind = BackupKind.FULL
+
+    service = BackupService(layout=layout, keep_local_artifacts=True)
     results: Dict[str, Any] = {
         "status": "SUCCESS",
         "started_at": timestamp_iso,
-        "backup_kind": backup_kind,
+        "backup_kind": kind.value,
         "platform_backup": None,
         "tenant_backups": [],
         "errors": [],
@@ -156,29 +193,37 @@ def execute_scheduled_backups(
     if "platform" in scopes:
         logger.info("[Platform] Initiating full platform backup...")
         try:
-            p_result = service.run_policy(
-                scope=BackupScope.PLATFORM,
-                kind=backup_kind,
-                tenant_id=None,
-            )
-            # Prune obsolete platform archives
-            pruned_count = service.prune(
+            policy = BackupPolicy(
+                id=uuid.uuid4(),
                 scope=BackupScope.PLATFORM,
                 tenant_id=None,
-                keep_daily=BACKUP_KEEP_DAILY,
-                keep_weekly=BACKUP_KEEP_WEEKLY,
+                destinations=[],
+                retention_daily=BACKUP_KEEP_DAILY,
+                retention_weekly=BACKUP_KEEP_WEEKLY,
             )
+            p_run = service.run_policy(policy, kind)
+            if p_run.status == BackupRunStatus.FAILED:
+                raise RuntimeError(p_run.error or "Platform backup execution failed")
+
+            keep_count = BACKUP_KEEP_DAILY if kind == BackupKind.INCREMENTAL else BACKUP_KEEP_WEEKLY
+            pruned_count = p_run.pruned + prune_local_artifacts(
+                service.output_dir, BackupScope.PLATFORM, kind, keep_count
+            )
+
             results["platform_backup"] = {
-                "archive_name": p_result.staged.archive_name,
-                "size_bytes": p_result.staged.size_bytes,
-                "sha256": p_result.staged.sha256_ciphertext,
+                "archive_name": p_run.artifact.path.name if p_run.artifact else None,
+                "size_bytes": p_run.artifact.size_bytes if p_run.artifact else 0,
+                "sha256": p_run.artifact.sha256 if p_run.artifact else None,
                 "pruned_archives": pruned_count,
-                "duration_seconds": round(p_result.staged.duration_seconds, 2),
+                "duration_seconds": round(
+                    (p_run.finished_at - p_run.started_at).total_seconds()
+                    if p_run.finished_at and p_run.started_at else 0.0, 2
+                ),
             }
             logger.info(
-                "[Platform] Backup completed successfully: %s (%d bytes, %d pruned)",
-                p_result.staged.archive_name,
-                p_result.staged.size_bytes,
+                "[Platform] Backup completed successfully: %s (%s bytes, %d pruned)",
+                results["platform_backup"]["archive_name"],
+                results["platform_backup"]["size_bytes"],
                 pruned_count,
             )
         except Exception as exc:
@@ -194,40 +239,55 @@ def execute_scheduled_backups(
 
         logger.info("[Tenants] Discovered %d active tenant partitions.", len(active_tenants))
         for tenant in active_tenants:
-            t_id = tenant["id"]
+            t_id_str = tenant["id"]
             t_name = tenant["name"]
-            logger.info("[Tenant:%s] Initiating backup for %s (%s)...", t_id[:8], t_name, t_id)
             try:
-                t_result = service.run_policy(
+                t_uuid = uuid.UUID(t_id_str)
+            except (ValueError, TypeError):
+                logger.warning("[Tenant:%s] Skipping invalid tenant UUID: %s", t_id_str, t_id_str)
+                continue
+
+            logger.info("[Tenant:%s] Initiating backup for %s (%s)...", t_id_str[:8], t_name, t_id_str)
+            try:
+                policy = BackupPolicy(
+                    id=uuid.uuid4(),
                     scope=BackupScope.TENANT,
-                    kind=backup_kind,
-                    tenant_id=t_id,
+                    tenant_id=t_uuid,
+                    destinations=[],
+                    retention_daily=BACKUP_KEEP_DAILY,
+                    retention_weekly=BACKUP_KEEP_WEEKLY,
                 )
-                t_pruned = service.prune(
-                    scope=BackupScope.TENANT,
-                    tenant_id=t_id,
-                    keep_daily=BACKUP_KEEP_DAILY,
-                    keep_weekly=BACKUP_KEEP_WEEKLY,
+                t_run = service.run_policy(policy, kind)
+                if t_run.status == BackupRunStatus.FAILED:
+                    raise RuntimeError(t_run.error or f"Tenant {t_id_str} backup execution failed")
+
+                keep_count = BACKUP_KEEP_DAILY if kind == BackupKind.INCREMENTAL else BACKUP_KEEP_WEEKLY
+                t_pruned = t_run.pruned + prune_local_artifacts(
+                    service.output_dir, BackupScope.TENANT, kind, keep_count
                 )
+
                 results["tenant_backups"].append({
-                    "tenant_id": t_id,
+                    "tenant_id": t_id_str,
                     "tenant_name": t_name,
-                    "archive_name": t_result.staged.archive_name,
-                    "size_bytes": t_result.staged.size_bytes,
-                    "sha256": t_result.staged.sha256_ciphertext,
+                    "archive_name": t_run.artifact.path.name if t_run.artifact else None,
+                    "size_bytes": t_run.artifact.size_bytes if t_run.artifact else 0,
+                    "sha256": t_run.artifact.sha256 if t_run.artifact else None,
                     "pruned_archives": t_pruned,
-                    "duration_seconds": round(t_result.staged.duration_seconds, 2),
+                    "duration_seconds": round(
+                        (t_run.finished_at - t_run.started_at).total_seconds()
+                        if t_run.finished_at and t_run.started_at else 0.0, 2
+                    ),
                 })
                 logger.info(
-                    "[Tenant:%s] Backup complete: %s (%d bytes)",
-                    t_id[:8],
-                    t_result.staged.archive_name,
-                    t_result.staged.size_bytes,
+                    "[Tenant:%s] Backup complete: %s (%s bytes)",
+                    t_id_str[:8],
+                    t_run.artifact.path.name if t_run.artifact else None,
+                    t_run.artifact.size_bytes if t_run.artifact else 0,
                 )
             except Exception as exc:
-                err_msg = f"Tenant {t_id} backup failed: {exc}"
+                err_msg = f"Tenant {t_id_str} backup failed: {exc}"
                 logger.error(err_msg, exc_info=True)
-                results["errors"].append({"scope": f"tenant:{t_id}", "error": str(exc)})
+                results["errors"].append({"scope": f"tenant:{t_id_str}", "error": str(exc)})
                 results["status"] = "PARTIAL_FAILURE"
 
     total_duration = time.monotonic() - start_time

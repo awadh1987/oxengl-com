@@ -370,6 +370,8 @@ def verify_migration_managed_schema() -> None:
 		with SessionLocal() as db:
 			db.execute(text("ALTER TABLE weighbridge_tickets ADD COLUMN IF NOT EXISTS uom VARCHAR(32) DEFAULT 'MT';"))
 			db.execute(text("CREATE OR REPLACE VIEW public.chart_of_accounts AS SELECT id, tenant_id, company_id, code AS account_code, name AS account_name, path AS node_path, account_type, currency, is_active, created_at, parent_id FROM public.accounts;"))
+			db.execute(text("ALTER TABLE res_companies ALTER COLUMN logo_url TYPE TEXT;"))
+			db.execute(text("ALTER TABLE tenants ALTER COLUMN logo_url TYPE TEXT;"))
 			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;"))
 			db.execute(text("CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);"))
 			db.execute(text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;"))
