@@ -1627,3 +1627,15 @@ a:hover > svg.hover-lightable-icon {
   height: 100vh;
   height: 100dvh;
 }
+
+/* Global Modal & Dialog Responsive Overrides */
+.modal-container,
+dialog,
+[role="dialog"],
+.MuiDialog-paper,
+.ant-modal-content {
+  width: min(90vw, 1200px) !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  margin: auto !important;
+}
