@@ -98,6 +98,20 @@ def ensure_password_resets_table(db: Session):
         logger.warning(f"Note on password_resets table verification: {err}")
 
 
+# SECURITY (2026-10-04, incident Addendum D): the recovery-initiation response is IDENTICAL whether or not
+# the account / workspace exists, and it NEVER contains the OTP, the reset token or the recovery link.
+# (Previously all three were returned to any anonymous caller = account takeover of any user, incl.
+# the platform super admin.) Codes are delivered only out-of-band (email / SMS provider).
+_GENERIC_RECOVERY_MESSAGE = (
+    "If an account matches the details provided, a verification code has been sent to its "
+    "registered email address or mobile number. The code expires in 5 minutes."
+)
+
+
+def _generic_recovery_response() -> dict:
+    return {"status": "OTP_DISPATCHED", "message": _GENERIC_RECOVERY_MESSAGE, "expires_in_seconds": 300}
+
+
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 @router.post("/auth/forgot-password", status_code=status.HTTP_200_OK)
 @router.post("/password-reset-init", status_code=status.HTTP_200_OK)
@@ -143,18 +157,18 @@ async def request_password_reset(
             tenant_row = comp_row
 
         if not tenant_row:
-            user_exists_anywhere = db.execute(
-                text("SELECT id FROM public.tenant_users WHERE LOWER(email) = :e LIMIT 1"),
-                {"e": norm_email},
-            ).first() or db.execute(
-                text("SELECT id FROM public.users WHERE LOWER(email) = :e LIMIT 1"),
-                {"e": norm_email},
-            ).first()
+            # Addendum D: the old fallback also probed public.users (absent) and raised HTTP 500 for unknown
+            # accounts - itself an enumeration oracle. Any lookup failure now yields the uniform response.
+            try:
+                user_exists_anywhere = db.execute(
+                    text("SELECT id FROM public.tenant_users WHERE LOWER(email) = :e LIMIT 1"),
+                    {"e": norm_email},
+                ).first()
+            except Exception:
+                db.rollback()
+                user_exists_anywhere = None
             if not user_exists_anywhere:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"Enterprise workspace '{raw_slug}' was not found in registered tenant catalog.",
-                )
+                return _generic_recovery_response()  # no workspace / account enumeration
             tenant_row = {"id": raw_slug, "slug": raw_slug, "name": raw_slug.capitalize()}
 
         company_name = tenant_row.get("name", raw_slug)
@@ -221,15 +235,11 @@ async def request_password_reset(
             db.rollback()
 
     if not user_found:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User identity '{norm_email}' not found inside workspace partition '{raw_slug}'.",
-        )
+        return _generic_recovery_response()  # no account enumeration
 
     # 3. Generate 6-Digit OTP via VerificationService stored in Redis (5-minute TTL)
-    otp = await VerificationService.generate_and_store_otp(norm_email)
-    # Also store under reset-specific prefix so both identifiers work
-    await VerificationService.generate_and_store_otp(f"reset:{norm_email}")
+    # Reset namespace ONLY: the bare "otp:{email}" key belongs to tenant registration (Addendum D).
+    otp = await VerificationService.generate_and_store_otp(f"reset:{norm_email}")
     # Cache recovery metadata in Redis
     await VerificationService.store_registration_payload(
         f"reset:{norm_email}",
@@ -268,18 +278,7 @@ async def request_password_reset(
 
     recovery_link = f"https://{raw_slug}.oxengl.me/reset-password?email={norm_email}&otp={otp}" if raw_slug and raw_slug != "master" else f"https://oxengl.me/reset-password?email={norm_email}&otp={otp}"
 
-    print(
-        f"\n=======================================================\n"
-        f"🔑 [PASSWORD RECOVERY OTP DISPATCHED]\n"
-        f"Workspace:    {raw_slug}\n"
-        f"User Email:   {norm_email}\n"
-        f"Redis OTP:    {otp} (6 digits, TTL 5 min)\n"
-        f"Legacy Token: {reset_token}\n"
-        f"Recovery URL: {recovery_link}\n"
-        f"=======================================================\n",
-        flush=True,
-    )
-    logger.info(f"[PASSWORD RECOVERY] Dispatched OTP {otp} for {norm_email} in {raw_slug}")
+    logger.info("[PASSWORD RECOVERY] verification code issued for a registered account (workspace=%s)", raw_slug)
 
     # Compile HTML recovery email template via Jinja2
     try:
@@ -293,17 +292,7 @@ async def request_password_reset(
     except Exception as tmpl_err:
         logger.warning(f"Could not render recovery email template: {tmpl_err}")
 
-    return {
-        "status": "OTP_DISPATCHED",
-        "message": "Password recovery verification code dispatched successfully. Expires in 5 minutes.",
-        "email": norm_email,
-        "workspace_slug": raw_slug,
-        "otp_dispatched": True,
-        "otp_code": otp,
-        "token": reset_token,
-        "recovery_link": recovery_link,
-        "expires_in_seconds": 300,
-    }
+    return _generic_recovery_response()
 
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
@@ -336,9 +325,9 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
 
     # 1. Attempt Redis OTP Validation via VerificationService
     if candidate_otp and norm_email:
-        is_valid = await VerificationService.verify_otp(norm_email, candidate_otp)
-        if not is_valid:
-            is_valid = await VerificationService.verify_otp(f"reset:{norm_email}", candidate_otp)
+        # SECURITY (Addendum D): only the reset-namespaced OTP is accepted; the bare "otp:{email}" key is
+        # the tenant-registration OTP and must never authorise a password change.
+        is_valid = await VerificationService.verify_otp(f"reset:{norm_email}", candidate_otp)
         if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -366,16 +355,13 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
         ).mappings().first()
 
         if not token_row:
-            t_row = db.execute(
-                text("SELECT id, identifier AS email, 'myon' AS workspace_slug, reset_token AS token, expires_at, is_used FROM public.tenant_password_resets WHERE reset_token = :t LIMIT 1"),
-                {"t": raw_token},
-            ).mappings().first()
-            if not t_row:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid, unknown, or revoked password reset token."
-                )
-            token_row = t_row
+            # SECURITY (Addendum D): tenant_password_resets tokens are handed to the client by
+            # /api/auth/recover-password as a flow handle and must be redeemed TOGETHER WITH the OTP via
+            # /api/auth/reset-password. They are no longer accepted here as a standalone bearer credential.
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid, unknown, or revoked password reset token."
+            )
 
         if token_row.get("is_used"):
             raise HTTPException(
@@ -485,15 +471,27 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
     }
 
 
+def _require_session_user(request: Request, db: Session):
+    """Resolve the authenticated res_users account (401 if anonymous / unknown subject)."""
+    from backend.app.core.auth import get_authenticated_user as _get_authenticated_user
+    return _get_authenticated_user(request, db)
+
+
 @router.post("/auth/2fa/setup", status_code=status.HTTP_200_OK)
 @router.post("/2fa/setup", status_code=status.HTTP_200_OK)
-def setup_two_factor(payload: TwoFactorSetupRequest, db: Session = Depends(get_db)):
+def setup_two_factor(payload: TwoFactorSetupRequest, request: Request, db: Session = Depends(get_db)):
     """
     TOTP 2FA Setup Endpoint.
     Generates a random base32 key via pyotp.random_base32() and returns
     an absolute provisioning URI formatted for authenticator apps.
     """
-    norm_email = payload.email.strip().lower()
+    # SECURITY (2026-10-04, incident Addendum D): previously ANY anonymous caller could overwrite any user's
+    # TOTP secret (and reset tfa_enabled=FALSE) just by naming their email, and received the new secret.
+    # Setup now requires an authenticated session and only ever targets the caller's own account.
+    me = _require_session_user(request, db)
+    norm_email = str(me.email or "").strip().lower()
+    if payload.email and payload.email.strip().lower() != norm_email:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="2FA can only be configured for your own account.")
     raw_slug = (payload.workspace_slug or "myon").strip().lower()
 
     # Generate random base32 key
@@ -556,7 +554,7 @@ def setup_two_factor(payload: TwoFactorSetupRequest, db: Session = Depends(get_d
 
     db.commit()
 
-    logger.info(f"[2FA SETUP] Provisioned secret for {norm_email} in {raw_slug} (URI: {totp_auth_url})")
+    logger.info("[2FA SETUP] provisioned a new TOTP secret for %s (workspace=%s)", norm_email, raw_slug)  # never log the secret/URI
 
     return {
         "status": "SETUP_INITIATED",
@@ -570,7 +568,7 @@ def setup_two_factor(payload: TwoFactorSetupRequest, db: Session = Depends(get_d
 
 @router.post("/auth/2fa/verify", status_code=status.HTTP_200_OK)
 @router.post("/2fa/verify", status_code=status.HTTP_200_OK)
-def verify_two_factor(payload: TwoFactorVerifyRequest, db: Session = Depends(get_db)):
+def verify_two_factor(payload: TwoFactorVerifyRequest, request: Request, db: Session = Depends(get_db)):
     """
     TOTP 2FA Verification Endpoint.
     Validates rolling 6-digit code via pyotp.TOTP(secret).verify(code).
@@ -597,6 +595,13 @@ def verify_two_factor(payload: TwoFactorVerifyRequest, db: Session = Depends(get
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="email or two_factor_token is required for verification.",
         )
+
+    if not payload.two_factor_token:
+        # SECURITY (Addendum D): completing 2FA *setup* (email path, no login handshake token) requires an
+        # authenticated session for the same account.
+        me = _require_session_user(request, db)
+        if str(me.email or "").strip().lower() != norm_email:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="2FA can only be configured for your own account.")
 
     # Locate user's tfa_secret
     target_schemas = list(dict.fromkeys([

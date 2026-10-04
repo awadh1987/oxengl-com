@@ -1062,6 +1062,18 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
     }
 
 
+def _recovery_ack(id_type: str, reset_token: Optional[str] = None) -> dict:
+    """Uniform recovery acknowledgement (Addendum D). The reset_token is only a flow handle: it is useless
+    without the out-of-band OTP. Unknown accounts receive a random, unredeemable handle so the responses
+    are indistinguishable (no account enumeration)."""
+    return {
+        "message": "If the account exists, a recovery code has been sent.",
+        "delivery_channel": id_type.upper(),
+        "reset_token": reset_token or secrets.token_urlsafe(32),
+        "expires_in_seconds": OTP_EXPIRE_MINUTES * 60,
+    }
+
+
 @router.post("/recover-password")
 def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest, master_db: Session = Depends(get_db)):
     """Dispatches a secure 6-digit OTP and reset token via SMS or Email."""
@@ -1079,7 +1091,7 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
         )
         if not user:
             # Silent return to prevent account enumeration
-            return {"message": "If the account exists, a recovery code has been sent.", "delivery_channel": id_type.upper()}
+            return _recovery_ack(id_type)  # indistinguishable from the success response
 
         reset_entry = MasterPasswordReset(
             user_id=user.id,
@@ -1119,7 +1131,7 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
             )
         )
         if not tenant:
-            return {"message": "If the account exists, a recovery code has been sent.", "delivery_channel": id_type.upper()}
+            return _recovery_ack(id_type)  # indistinguishable from the success response
 
         conn_mgr = TenantConnectionManager(master_db.get_bind())
         with conn_mgr.session_scope(tenant.id, db=master_db) as tenant_db:
@@ -1129,7 +1141,7 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
                 )
             )
             if not user:
-                return {"message": "If the account exists, a recovery code has been sent.", "delivery_channel": id_type.upper()}
+                return _recovery_ack(id_type)  # indistinguishable from the success response
 
             reset_entry = TenantPasswordReset(
                 user_id=user.id,
@@ -1141,13 +1153,9 @@ def recover_password(request: Request, payload: PasswordRecoveryInitiateRequest,
             tenant_db.add(reset_entry)
             tenant_db.commit()
 
-    logger.info(f"[DISPATCH-OTP] Destination: {normalized_val} | Code: {otp_code} | Token: {reset_token}")
-    return {
-        "message": "Verification code dispatched successfully.",
-        "delivery_channel": id_type.upper(),
-        "reset_token": reset_token,
-        "expires_in_seconds": OTP_EXPIRE_MINUTES * 60,
-    }
+    # SECURITY (Addendum D): never log the OTP or reset token.
+    logger.info("[DISPATCH-OTP] recovery code issued (channel=%s)", id_type)
+    return _recovery_ack(id_type, reset_token)
 
 
 @router.post("/reset-password")

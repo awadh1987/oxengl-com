@@ -5,10 +5,11 @@ TTL-managed caching in Redis, and asynchronous external dispatch.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import os
-import random
+import secrets
 from datetime import timedelta
 from typing import Any, Dict, Optional
 
@@ -22,6 +23,8 @@ logger = logging.getLogger("oxengl.notification_service")
 
 class VerificationService:
     OTP_TTL = timedelta(minutes=5)
+    # SECURITY (Addendum D): an OTP is destroyed after this many wrong guesses (anti brute force).
+    MAX_OTP_ATTEMPTS = 5
     PAYLOAD_TTL = timedelta(minutes=15)
 
     @classmethod
@@ -48,7 +51,7 @@ class VerificationService:
     ) -> str:
         """Generates a 6-digit numeric OTP and stores it in Redis with a 5-minute default TTL."""
         norm_id = identifier.strip().lower()
-        otp = f"{random.randint(100000, 999999)}"
+        otp = f"{secrets.randbelow(900000) + 100000}"  # CSPRNG (was random.randint)
         key = f"otp:{norm_id}"
         ttl = ttl_seconds or expire_seconds or int(cls.OTP_TTL.total_seconds())
         await cls._safe_call(redis_client.set, key, otp, ex=ttl)
@@ -65,9 +68,18 @@ class VerificationService:
             return False
 
         val = stored_otp.decode("utf-8") if isinstance(stored_otp, bytes) else str(stored_otp)
-        if val.strip() == str(provided_otp).strip():
+        attempts_key = f"otp_attempts:{norm_id}"
+        if hmac.compare_digest(val.strip().encode(), str(provided_otp).strip().encode()):
             await cls._safe_call(redis_client.delete, key)
+            await cls._safe_call(redis_client.delete, attempts_key)
             return True
+        attempts = await cls._safe_call(redis_client.incr, attempts_key)
+        if attempts == 1:
+            await cls._safe_call(redis_client.expire, attempts_key, int(cls.OTP_TTL.total_seconds()))
+        if attempts >= cls.MAX_OTP_ATTEMPTS:
+            await cls._safe_call(redis_client.delete, key)
+            await cls._safe_call(redis_client.delete, attempts_key)
+            logger.warning("OTP for identifier %s destroyed after %s failed attempts", norm_id, attempts)
         return False
 
     @classmethod
@@ -110,9 +122,13 @@ class VerificationService:
     @staticmethod
     async def dispatch_email_otp(email: str, otp: str, company_name: str) -> None:
         """Asynchronous dispatcher for SendGrid / SMTP email delivery."""
-        logger.info(f"📧 [NOTIFICATION] Dispatching Email OTP {otp} to {email} for company '{company_name}'")
+        # SECURITY (Addendum D): the OTP is never logged. No email provider is wired yet (see
+        # docs/architecture/password-reset-and-backup-strategy.md, Phase A).
+        logger.warning("[NOTIFICATION] email OTP requested for %s (company=%s) but no email provider is configured", email, company_name)
 
     @staticmethod
     async def dispatch_sms_otp(phone: str, otp: str) -> None:
         """Asynchronous dispatcher for Twilio / Vonage SMS delivery."""
-        logger.info(f"📱 [NOTIFICATION] Dispatching SMS OTP {otp} to {phone}")
+        # SECURITY (Addendum D): the OTP is never logged. No SMS provider is wired yet (Phase A).
+        masked = f"***{str(phone)[-3:]}" if phone else ""
+        logger.warning("[NOTIFICATION] SMS OTP requested for %s but no SMS provider is configured", masked)

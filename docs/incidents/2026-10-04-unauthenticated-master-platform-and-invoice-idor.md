@@ -351,3 +351,86 @@ Pre-deploy snapshot: `~/.oxengl/backups/pre_noprovision_*_res_users.sql`. No rea
 - **SSO callback reassigns existing users (high).** The SSO JIT callback (`main.py`, SSO callback) moves an *existing* user to the SSO-configured company and overrides their role. A tenant that can configure SSO for an email domain could take over accounts from another tenant. Not changed here.
 - **Legacy dependencies trust the token role (medium).** `backend/api/dependencies.get_current_user` ("Honor token's normalized role") overrides the DB role with the token's role on the in-request user object. Authority should come from the DB only, as it now does in `main.get_authenticated_user`.
 - **Test bypass still present (low).** `PYTEST_CURRENT_TEST` in `backend/api/dependencies.py` is a test-only bypass. It should be removed or guarded so it can never be active in production images.
+
+
+---
+
+## Addendum D — Password-recovery credential leak & unauthenticated 2FA setup (2026-10-04, backend image `oxen-gl_backend:recoveryfix3`)
+
+Found while preparing the password-reset roadmap (`docs/architecture/password-reset-and-backup-strategy.md`). The existing recovery endpoints were checked by reading the code before any scaffolding was written. The live exploit was **not** run against real accounts.
+
+### Findings
+
+**D1. Recovery endpoint returned the reset credentials to the caller (critical).**
+
+Affected endpoint: `POST /forgot-password` in `backend/app/api/v1/auth.py`, mounted at `/`, `/api` and `/api/v1`, with aliases `/auth/forgot-password` and `/password-reset-init`. It needs no authentication.
+
+What happened:
+- Anyone could send any email address, including `superadmin@oxengl.com` (slug `master` resolves to `res_users`).
+- The JSON response contained the **6-digit `otp_code`, the legacy reset `token` and the `recovery_link`**.
+- Either the OTP or the token could then be sent to `/reset-password` to set a new password.
+
+Result: unauthenticated takeover of **any** account, including the platform super admin.
+
+Related problems in the same flow:
+- **Secrets in logs.** OTPs, tokens and links were printed to stdout and logged. `VerificationService.dispatch_email_otp` / `dispatch_sms_otp` are stubs that *only* logged the OTP.
+- **No real delivery.** No SMTP, SendGrid or SMS provider is configured, so the API response was the only place a user ever received the code.
+- **Account enumeration.** Unknown accounts got `404 User identity … not found`. Unknown workspaces got an unhandled **500**, caused by a probe of the non-existent `public.users` table.
+- **Shared OTP key.** The recovery OTP was stored under the bare `otp:{email}` key. That is the same key tenant registration uses, so the two flows could redeem each other's codes.
+- **Weak OTPs, no attempt limit.** OTPs came from `random.randint`, which is not a cryptographically secure generator. There was no limit on wrong guesses, so the 6-digit code could be brute-forced within its 5-minute lifetime.
+
+**D2. Two-tier recovery could skip the OTP (critical).**
+- `POST /api/auth/recover-password` (`two_tier_auth.py`) returns a `reset_token` to the caller. It is meant only as a flow handle: the two-tier `/api/auth/reset-password` also requires the OTP, with 3 attempts.
+- However, `auth.py` `/reset-password` accepted rows from **`public.tenant_password_resets` by token alone**. A tenant user's handle could therefore be redeemed **without the OTP**.
+- The endpoint also logged `Code: <otp> | Token: <token>`.
+- Its responses differed for existing and unknown accounts.
+
+**D3. Unauthenticated 2FA setup (high).**
+- `POST /2fa/setup` (`auth.py`, same mounts) needed no authentication. Given just an email, it **overwrote that user's TOTP secret, set `tfa_enabled = FALSE`, and returned the new secret and provisioning URI**.
+- The email path of `/2fa/verify` (setup completion) then let the same caller enable 2FA with *their* secret, locking the real owner out.
+- The secret was also logged.
+- The frontend does not use `/2fa/setup`.
+
+### Fix
+
+| File | Change |
+|---|---|
+| `backend/app/api/v1/auth.py` — `request_password_reset` | Returns the **same** body (`status`, generic `message`, `expires_in_seconds`) for every case: existing account, unknown account, unknown workspace. It never contains the OTP, token or link. The 404s and the 500 are replaced by this response. The OTP is issued only under `reset:{email}`. Secret `print`/`logger` output is removed. |
+| `backend/app/api/v1/auth.py` — `confirm_password_reset` | Accepts only the `reset:`-namespaced OTP. `tenant_password_resets` tokens are no longer accepted alone; they must go through `/api/auth/reset-password` with the OTP. |
+| `backend/app/api/v1/auth.py` — 2FA | `/2fa/setup` requires an authenticated session and targets only the caller's own account (another email → 403). The email path of `/2fa/verify` requires an authenticated session for the same email. The login-handshake path (`two_factor_token`) is unchanged. The secret/URI is no longer logged. |
+| `backend/two_tier_auth.py` — `recover_password` | One uniform acknowledgement for every case. Unknown accounts get a random, unredeemable handle, so the responses cannot be told apart. The OTP/token is no longer logged. |
+| `backend/app/services/notification_service.py` | OTPs come from `secrets` (cryptographically secure). An OTP is **destroyed after 5 wrong guesses**, and comparison is constant-time. The dispatch stubs no longer log the OTP; they warn that no provider is configured. |
+
+**Effect on users:** self-service password reset is unavailable until an email/SMS provider is configured (Phase A of the roadmap). This was decided with the platform owner. The response is still a normal 200 acknowledgement, but no code arrives. Super Admin password rotation is unaffected.
+
+### Verification (production)
+
+`verify_recovery.py` passed **51/51**:
+
+| Check | Result |
+|---|---|
+| `forgot-password` on 4 aliases × (existing probe account / unknown account / unknown workspace) | **200**; no `otp_code` / `token` / `recovery_link`; body byte-identical in all three cases |
+| Registration-namespace OTP sent to `reset-password` | **400** |
+| 5 wrong OTP guesses, then the correct OTP | **400**; OTP destroyed; probe password unchanged |
+| Legitimate reset using the out-of-band OTP (read server-side by the harness) | **200**; hash changed; replay → **400** |
+| Unknown legacy token; two-tier handle redeemed alone at `/api/v1/auth/reset-password` | **400** |
+| Two-tier `recover-password` for unknown master identity / unknown workspace | **200**; identical keys; no OTP |
+| Anonymous `/2fa/setup` (3 aliases) targeting superadmin | **401**; no secret returned |
+| Authenticated probe targeting superadmin's 2FA (setup / verify) | **403** |
+| Anonymous `/2fa/verify` email path | **401**; handshake path still reachable (bad token → 400) |
+| Real users | password hashes unchanged; `superadmin@oxengl.com` is still the only `is_superuser` account |
+| Backend logs since deploy | 0 OTP / token / TOTP-URI occurrences |
+
+**Regression:** `verify_noprovision.py` 57/57, `verify_tenant_control.py` 121/121, `verify_sec.py` 28/28, `verify_idor.py` 7/7, `verify_tenant_billing.py` 23/23. **Total 287/287.**
+
+The only test account was a disposable `secprobe.recovery.*@probe.invalid` user, which was deleted afterwards (`res_users` back to 6). Pre-deploy snapshot: `~/.oxengl/backups/pre_recoveryfix_*_users.sql`.
+
+**Rollback:** the `:noclaims` image is the version from before this addendum. Rolling back to it **re-opens D1–D3**.
+
+### Follow-ups
+
+- **Phase A (blocks self-service reset).** Wire a real email provider (SMTP / SendGrid) and an SMS / WhatsApp provider behind `RecoveryDeliveryProvider` (`backend/app/api/v1/auth_recovery.py`), then retire the legacy endpoints.
+- **Revoke sessions on reset.** A completed reset does not yet revoke the account's existing sessions or refresh tokens.
+- **Rate limits.** `forgot-password` / `recover-password` have no per-IP or per-identifier rate limit; `slowapi` is installed but not applied to them.
+- **Response timing.** Response timing still differs slightly between existing and unknown accounts (database lookups and OTP storage).
+- **Credential review.** It is not known whether D1–D3 were exploited before the fix: successful resets are not audited. Real users who reset their password recently should confirm it was them, and recent password changes on platform accounts should be reviewed.
