@@ -40,7 +40,7 @@ import {
 import { UserRole } from '../types';
 import { TENANT_PALETTES } from '../theme/designTokens';
 import { BrandLogo } from './BrandLogo';
-import { PlatformLogo } from './PlatformLogo';
+import { BrandWordmark } from '../views/landing/BrandWordmark';
 import { UserAvatar } from './UserAvatar';
 import { TenantAvatar } from './TenantAvatar';
 import { HoverIcon } from './common/HoverIcon';
@@ -442,8 +442,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             />
           ) : (
             /* Global Platform Master Logo strictly displayed on apex domain / unauthenticated / master portal routes */
-            <div className="flex h-7 w-7 items-center justify-center shrink-0">
-              <PlatformLogo size="sm" />
+            <div className="flex items-center shrink-0">
+              <BrandWordmark height={18} />
             </div>
           )}
 

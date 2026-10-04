@@ -5,6 +5,7 @@ import {
   TrendingUp, BarChart3, FileCheck2
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { BrandWordmark } from './landing/BrandWordmark';
 import { useOutsideClick } from '../hooks/useOutsideClick';
 import { Company } from '../types';
 import { LicenseProvisionerView, PanoramicCockpit, PlatformSettingsView, PricingPlansView, SystemAuditView, TenantsRegistryView } from '../components/platform/PlatformModules';
@@ -96,10 +97,9 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-3 border-b border-blue-900/50 px-1 pb-4 pt-1">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-500 shadow-lg shadow-blue-500/25"><Crown className="h-6 w-6 text-amber-300" /></div>
               <div>
-                <div className="flex items-center gap-1.5"><span className="font-mono text-base font-black tracking-tight text-white">OxenGL</span><span className="rounded-md border border-blue-400/30 bg-blue-500/20 px-2 py-0.5 text-[10px] font-black text-blue-300">MASTER</span></div>
-                <p className="text-[11px] font-medium text-slate-400">Central Platform Owner Console</p>
+                <div className="flex items-center gap-2"><BrandWordmark height={20} /><span className="rounded-md border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-300">MASTER</span></div>
+                <p className="mt-1.5 text-[11px] font-medium text-slate-400">Central Platform Owner Console</p>
               </div>
             </div>
             <button onClick={() => setSidebarOpen(false)} className="text-slate-400 lg:hidden cursor-pointer hover:text-white"><X className="h-4 w-4" /></button>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrandLogo } from './BrandLogo';
+import { BrandMark } from '../views/landing/BrandWordmark';
 import { useApp } from '../context/AppContext';
 
 export interface PlatformLogoProps {
@@ -45,7 +45,8 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
 
   const px = sizePxMap[size] || 32;
 
-  if (platformLogoUrl && !imgError) {
+  // The legacy default (/oxengl-logo.svg) is superseded by the OxenGL GL brand mark.
+  if (platformLogoUrl && platformLogoUrl !== '/oxengl-logo.svg' && !imgError) {
     return (
       <div
         style={{ width: px, height: px }}
@@ -64,7 +65,7 @@ export const PlatformLogo: React.FC<PlatformLogoProps> = ({
 
   return (
     <div className={`flex items-center justify-center shrink-0 ${className}`}>
-      <BrandLogo size={size} showText={false} forcePlatformLogo={true} />
+      <BrandMark size={px} />
     </div>
   );
 };

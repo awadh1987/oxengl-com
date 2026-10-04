@@ -6,6 +6,9 @@ const WORDMARK_RATIO = 371 / 73;
 /** OxenGL luxury navy: brand tile behind the wordmark and the favicon set. */
 export const BRAND_NAVY = '#0B1F3A';
 
+/** OxenGL accent yellow used for the "GL" letters (wordmark + favicon monogram). */
+export const BRAND_YELLOW = '#FFC107';
+
 interface BrandWordmarkProps {
   /** Rendered height of the lettering in px; width follows the wordmark's aspect ratio. */
   height?: number;
@@ -13,7 +16,7 @@ interface BrandWordmarkProps {
 }
 
 /**
- * Official OxenGL wordmark: "Oxen" in white, "GL" in brand orange (#F97316),
+ * Official OxenGL wordmark: "Oxen" in white, "GL" in brand yellow (#FFC107),
  * set on the navy brand tile. Vector asset with outlined text, so it renders
  * identically without the font.
  */
@@ -40,6 +43,22 @@ export const BrandWordmark: React.FC<BrandWordmarkProps> = ({ height = 26, class
       draggable={false}
     />
   </span>
+);
+
+/**
+ * Compact square OxenGL mark (yellow "GL" on the navy tile), identical to the favicon.
+ * For collapsed rails and other spots too narrow for the full wordmark.
+ */
+export const BrandMark: React.FC<{ size?: number; className?: string }> = ({ size = 28, className = '' }) => (
+  <img
+    src="/favicon.svg"
+    alt="OxenGL"
+    width={size}
+    height={size}
+    className={`brand-mark ${className}`.trim()}
+    style={{ borderRadius: Math.round(size * 0.22), boxShadow: '0 6px 18px -8px rgba(11, 31, 58, 0.9)' }}
+    draggable={false}
+  />
 );
 
 export default BrandWordmark;

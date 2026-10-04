@@ -1176,7 +1176,7 @@
       gap: 10px;
     }
 
-    /* OxenGL wordmark (white "Oxen" + orange "GL"), see BrandWordmark.tsx */
+    /* OxenGL wordmark (white "Oxen" + yellow "GL"), see BrandWordmark.tsx */
     .landing-page-root .brand-wordmark {
       display: block;
       width: auto;

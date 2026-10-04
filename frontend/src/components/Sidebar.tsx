@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
 import { TenantAvatar } from './TenantAvatar';
+import { BrandMark, BrandWordmark } from '../views/landing/BrandWordmark';
 import { HoverIcon } from './common/HoverIcon';
 
 export type ActiveTab =
@@ -736,37 +737,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               {!isCollapsed ? (
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <TenantAvatar
-                    tenant={currentCompany}
-                    name={sidebarCompanyName}
-                    logoUrl={sidebarLogoUrl}
-                    primaryColor={sidebarPrimaryColor}
-                    size="xs"
-                    showGlow={true}
-                    title={sidebarCompanyName}
-                  />
-                  <span className="text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase truncate">
-                    {isDriverMode
-                      ? isAr
-                        ? 'القائمة الميدانية'
-                        : 'Field Mode'
-                      : isAr
-                      ? 'بوابة الملاحة الرئيسية'
-                      : 'Navigation'}
-                  </span>
+                <div id="sidebar-brand-wordmark" className="flex items-center gap-2 overflow-hidden" title="OxenGL">
+                  <BrandWordmark height={16} />
+                  {isDriverMode && (
+                    <span className="text-[10px] font-black tracking-[0.16em] text-slate-400 uppercase truncate">
+                      {isAr ? 'القائمة الميدانية' : 'Field Mode'}
+                    </span>
+                  )}
                 </div>
               ) : (
-                <div className="flex justify-center pb-1">
-                  <TenantAvatar
-                    tenant={currentCompany}
-                    name={sidebarCompanyName}
-                    logoUrl={sidebarLogoUrl}
-                    primaryColor={sidebarPrimaryColor}
-                    size="xs"
-                    showGlow={true}
-                    title={sidebarCompanyName}
-                  />
+                <div id="sidebar-brand-mark" className="flex justify-center pb-1" title="OxenGL">
+                  <BrandMark size={28} />
                 </div>
               )}
 
