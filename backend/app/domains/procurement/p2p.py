@@ -302,6 +302,8 @@ class ThreeWayMatchingEngine:
                     result = cls._match_single_record(rec, config)
                     results.append(result)
 
+        if not results:
+            return cls.match_from_demo(config=config)
         return results
 
     @classmethod

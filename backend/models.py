@@ -70,7 +70,7 @@ class ResCompany(TimestampMixin, Base):
     ui_primary_color: Mapped[str] = mapped_column(String(9), nullable=False, default="#1E3A8A")
     ui_logo_url: Mapped[Optional[str]] = mapped_column(Text)
     features_override: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=True)
-    logo_url = Column(String(500), nullable=True, default=None)
+    logo_url = Column(Text, nullable=True, default=None)
     is_active = Column(Boolean, default=True, server_default="true", nullable=False)
     status = Column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
     primary_color = Column(String(7), default="#0ea5e9", server_default="#0ea5e9", nullable=False)
@@ -278,7 +278,7 @@ class Tenant(Base):
     schema_name: Mapped[str] = mapped_column(String(64), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
-    logo_url = Column(String(500), nullable=True, default=None)
+    logo_url = Column(Text, nullable=True, default=None)
     features_override = Column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
 
     def __init__(self, *args, **kwargs):

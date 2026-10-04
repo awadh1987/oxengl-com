@@ -218,6 +218,18 @@ def get_abac_user_context(
     )
 
 
+
+def _safe_uuid(val: Any) -> Optional[UUID]:
+    if isinstance(val, UUID):
+        return val
+    if not val:
+        return None
+    try:
+        return UUID(str(val).strip())
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 async def extract_request_resource_attributes(request: Request) -> ResourceAttributes:
     """Extracts target resource attributes dynamically from headers, query params, or JSON body."""
     headers = request.headers
@@ -266,9 +278,9 @@ async def extract_request_resource_attributes(request: Request) -> ResourceAttri
     if not tenant_str and company_str:
         tenant_str = company_str
 
-    tenant_uuid = UUID(tenant_str) if tenant_str else UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
-    company_uuid = UUID(company_str) if company_str else None
-    warehouse_uuid = UUID(warehouse_str) if warehouse_str else None
+    tenant_uuid = _safe_uuid(tenant_str) or UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
+    company_uuid = _safe_uuid(company_str)
+    warehouse_uuid = _safe_uuid(warehouse_str)
 
     return ResourceAttributes(
         tenant_id=tenant_uuid,

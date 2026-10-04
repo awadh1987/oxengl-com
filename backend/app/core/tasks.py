@@ -68,3 +68,16 @@ def emit_audit_log(
         raise self.retry(exc=exc)
     finally:
         db.close()
+
+
+@celery_app.task(name="tasks.execute_scheduled_backups", bind=True, max_retries=2, default_retry_delay=60)
+def execute_scheduled_backups_task(self, scopes: Optional[list] = None, backup_kind: str = "full"):
+    """
+    Celery worker task to execute automated full-scope platform and tenant backups.
+    """
+    from backend.app.services.backup_worker import execute_scheduled_backups
+    try:
+        return execute_scheduled_backups(scopes=scopes, backup_kind=backup_kind)
+    except Exception as exc:
+        logger.error("Celery execute_scheduled_backups task failed: %s", exc)
+        raise self.retry(exc=exc)

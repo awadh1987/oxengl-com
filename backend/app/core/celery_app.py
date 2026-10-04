@@ -29,3 +29,18 @@ celery_app.conf.update(
     worker_concurrency=4,
     worker_prefetch_multiplier=1,
 )
+
+from celery.schedules import crontab
+
+celery_app.conf.beat_schedule = {
+    "daily-platform-and-tenant-backups": {
+        "task": "tasks.execute_scheduled_backups",
+        "schedule": crontab(hour=2, minute=0),
+        "kwargs": {"backup_kind": "full"},
+    },
+    "weekly-sunday-full-backups": {
+        "task": "tasks.execute_scheduled_backups",
+        "schedule": crontab(hour=3, minute=0, day_of_week=0),
+        "kwargs": {"backup_kind": "full"},
+    },
+}

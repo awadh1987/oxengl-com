@@ -369,6 +369,7 @@ def verify_migration_managed_schema() -> None:
 	try:
 		with SessionLocal() as db:
 			db.execute(text("ALTER TABLE weighbridge_tickets ADD COLUMN IF NOT EXISTS uom VARCHAR(32) DEFAULT 'MT';"))
+			db.execute(text("CREATE OR REPLACE VIEW public.chart_of_accounts AS SELECT id, tenant_id, company_id, code AS account_code, name AS account_name, path AS node_path, account_type, currency, is_active, created_at, parent_id FROM public.accounts;"))
 			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;"))
 			db.execute(text("CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);"))
 			db.execute(text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;"))
@@ -6317,3 +6318,17 @@ app.include_router(logo_upload_router)
 app.include_router(dynamic_branding_router)
 
 
+
+
+@app.on_event("startup")
+async def start_backup_worker_daemon_event() -> None:
+    """Initializes the background backup scheduling worker daemon."""
+    from backend.app.services.backup_worker import backup_worker_daemon
+    backup_worker_daemon.start()
+
+
+@app.on_event("shutdown")
+async def stop_backup_worker_daemon_event() -> None:
+    """Gracefully terminates the background backup scheduling worker daemon."""
+    from backend.app.services.backup_worker import backup_worker_daemon
+    backup_worker_daemon.stop()

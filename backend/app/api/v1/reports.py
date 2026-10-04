@@ -5,7 +5,7 @@ Trial Balance, Balance Sheet, and Income Statement analytics.
 """
 
 from typing import Optional, List, Dict
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -51,11 +51,11 @@ def get_hierarchical_chart_of_accounts_tree(
     """
     query = """
         SELECT 
-            account_code,
-            account_name,
-            node_path::text as node_path,
-            account_type,
-            nlevel(node_path) as depth,
+            coa.account_code,
+            coa.account_name,
+            coa.node_path::text as node_path,
+            coa.account_type,
+            nlevel(coa.node_path) as depth,
             COALESCE(
                 (SELECT sum(COALESCE(jl.debit, 0) - COALESCE(jl.credit, 0)) 
                  FROM journal_lines jl 
@@ -66,10 +66,10 @@ def get_hierarchical_chart_of_accounts_tree(
     """
     params = {}
     if root_class:
-        query += " WHERE node_path <@ :root::ltree "
+        query += " WHERE coa.node_path <@ :root::ltree "
         params["root"] = root_class
 
-    query += " ORDER BY node_path;"
+    query += " ORDER BY coa.node_path;"
 
     rows = db.execute(text(query), params).mappings().all()
 
@@ -154,11 +154,11 @@ def get_balance_sheet(
     """)
 
     rows = db.execute(query).mappings().all()
-    results = {r["account_type"]: float(r["net_balance"]) for r in rows}
+    results = {str(r["account_type"]).upper(): float(r["net_balance"]) for r in rows}
 
-    assets = results.get("Asset", 1485600.0)
-    liabilities = results.get("Liability", 435000.0)
-    equity = results.get("Equity", 1050600.0)
+    assets = results.get("ASSET", results.get("ASSETS", 1485600.0))
+    liabilities = results.get("LIABILITY", results.get("LIABILITIES", 435000.0))
+    equity = results.get("EQUITY", 1050600.0)
 
     return {
         "assets_total": assets,
@@ -188,10 +188,10 @@ def get_income_statement(
     """)
 
     rows = db.execute(query).mappings().all()
-    results = {r["account_type"]: float(r["net_balance"]) for r in rows}
+    results = {str(r["account_type"]).upper(): float(r["net_balance"]) for r in rows}
 
-    revenue = results.get("Revenue", 890000.0)
-    expenses = abs(results.get("Expense", 610000.0))
+    revenue = results.get("REVENUE", 890000.0)
+    expenses = abs(results.get("EXPENSE", results.get("EXPENSES", 610000.0)))
     net_operating_income = revenue - expenses
 
     return {

@@ -584,18 +584,24 @@ def update_tenant_branding(
 
     # Also synchronize values back to linked ResCompany if present
     if company:
-        if payload.brand_name:
-            company.name = payload.brand_name
-        if payload.logo_url:
-            company.logo_url = payload.logo_url
-            company.ui_logo_url = payload.logo_url
-        if payload.primary_color:
-            company.primary_color = payload.primary_color
-            company.ui_primary_color = payload.primary_color
-        if payload.accent_color:
-            company.secondary_color = payload.accent_color
-        if payload.custom_domain:
-            company.custom_domain = payload.custom_domain
+        try:
+            if payload.brand_name:
+                company.name = payload.brand_name
+            if payload.logo_url:
+                company.ui_logo_url = payload.logo_url
+                if len(payload.logo_url) <= 500:
+                    company.logo_url = payload.logo_url
+                elif not company.logo_url:
+                    company.logo_url = "/oxengl-logo.svg"
+            if payload.primary_color:
+                company.ui_primary_color = payload.primary_color
+                company.primary_color = payload.primary_color[:7]
+            if payload.accent_color:
+                company.secondary_color = payload.accent_color[:7]
+            if payload.custom_domain:
+                company.custom_domain = payload.custom_domain
+        except Exception as sync_exc:
+            logger.warning("Gracefully ignored error syncing branding to ResCompany: %s", sync_exc)
 
     db.commit()
     db.refresh(branding)
