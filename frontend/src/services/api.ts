@@ -526,6 +526,49 @@ export interface ApiEmployee {
   attendance_rate?: number;
   attendanceRate?: number;
   iqamaOrNationalId?: string;
+  name_ar?: string | null;
+  name_en?: string | null;
+  date_of_birth?: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
+  nationality?: string | null;
+  marital_status?: 'SINGLE' | 'MARRIED' | null;
+  blood_type?: string | null;
+  personal_mobile?: string | null;
+  emergency_contact_name?: string | null;
+  emergency_contact_number?: string | null;
+  personal_email?: string | null;
+  id_type?: 'SAUDI_NATIONAL_ID' | 'IQAMA' | 'GCC_ID' | 'BORDER_NUMBER' | null;
+  identity_number?: string | null;
+  iqama_expiry_hijri?: string | null;
+  iqama_expiry_gregorian?: string | null;
+  passport_number?: string | null;
+  passport_expiry_date?: string | null;
+  profession_on_iqama?: string | null;
+  sponsorship_status?: string | null;
+  department_type?: string | null;
+  job_title?: string | null;
+  job_title_category?: string | null;
+  direct_manager_id?: string | null;
+  direct_manager_name?: string | null;
+  contract_type?: 'FIXED_TERM' | 'INDEFINITE' | 'PART_TIME' | 'FREELANCE' | null;
+  contract_duration_months?: 12 | 24 | null;
+  probation_period_days?: number | null;
+  iban_number?: string | null;
+  bank_name?: string | null;
+  bank_code?: string | null;
+  housing_allowance?: number;
+  transportation_allowance?: number;
+  operational_telecom_allowance?: number;
+  food_other_allowance?: number;
+  total_target_salary?: number;
+  overtime_eligible?: boolean | null;
+  standard_working_hours?: number | null;
+  gosi_registration_number?: string | null;
+  highest_education_level?: string | null;
+  field_of_study?: string | null;
+  certifications?: string[] | null;
+  drivers_license_type?: 'PRIVATE' | 'PUBLIC' | 'HEAVY' | null;
+  drivers_license_expiry_date?: string | null;
 }
 
 export interface ApiAttendanceLog {
@@ -1792,19 +1835,12 @@ export const erpApi = {
 
   // HR Personnel Core
   getEmployees: (companyId?: string) =>
-    request<any[]>('/api/hrms/employees', companyId).catch(() =>
-      request<any[]>('/api/v1/hr/employees', companyId)
-    ),
+    request<any[]>('/api/hrms/employees', companyId),
   createEmployee: (payload: any, companyId?: string) =>
     request<any>('/api/hrms/employees', companyId, {
       method: 'POST',
       body: JSON.stringify(payload),
-    }).catch(() =>
-      request<any>('/api/v1/hr/employees', companyId, {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
-    ),
+    }),
 
   // Phase 2: Biometric HRMS & Double-Entry Financial Ledger
   getHrmsEmployees: (companyId?: string, department?: string) => {
@@ -1816,6 +1852,15 @@ export const erpApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  uploadEmployeeDocument: (employeeId: string, documentType: string, file: File, companyId?: string) => {
+    const formData = new FormData();
+    formData.append('document_type', documentType);
+    formData.append('file', file);
+    return request<any>(`/api/hrms/employees/${employeeId}/documents`, companyId, {
+      method: 'POST',
+      body: formData,
+    });
+  },
   getHrmsAttendanceLogs: (companyId?: string, employeeId?: string, limit = 50) => {
     const params = new URLSearchParams();
     if (employeeId) params.append('employee_id', employeeId);

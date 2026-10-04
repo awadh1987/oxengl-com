@@ -401,6 +401,8 @@ class PlatformAuditLog(Base):
     action: Mapped[str] = mapped_column(String(120), nullable=False, index=True)
     outcome: Mapped[str] = mapped_column(String(40), nullable=False, default="SUCCESS", index=True)
     endpoint_accessed: Mapped[str] = mapped_column(String(255), nullable=False)
+    actor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     request_id: Mapped[Optional[str]] = mapped_column(String(64), index=True)
     user_agent: Mapped[Optional[str]] = mapped_column(String(512))
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))
@@ -2365,6 +2367,7 @@ class Invoice(Base):
 # ==============================================================================
 from backend.app.domains.hr.models import (  # noqa: E402
     Employee,
+    EmployeeDocument,
     AttendanceLog,
     PayrollRun,
     HrmsAttendanceLog,
@@ -2515,5 +2518,3 @@ class TenantBranding(Base):
         primaryjoin="Organization.company_id == foreign(TenantBranding.tenant_id)",
         back_populates="branding",
     )
-
-

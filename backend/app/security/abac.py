@@ -4,6 +4,7 @@ Enforces multi-tenant isolation, company boundary checks, warehouse-level isolat
 and fleet/logistics regional restrictions.
 """
 
+import os
 from typing import List, Optional, Callable, Any
 from uuid import UUID
 from pydantic import BaseModel, Field
@@ -101,8 +102,20 @@ def get_abac_user_context(
     """
     Extracts ABAC user context from Bearer token, session user, or test request headers.
     """
-    # 1. Header-based override for test harnesses / internal services
-    if (x_tenant_id or x_company_id) and (x_user_id or authorization is None):
+    # Match the platform's native HttpOnly JWT cookie names as well as Bearer auth.
+    if not authorization:
+        cookie_token = (
+            request.cookies.get("access_token")
+            or request.cookies.get("oxengl_token")
+            or request.cookies.get("token")
+        )
+        if cookie_token:
+            authorization = f"Bearer {cookie_token}"
+
+    test_context_allowed = bool(os.getenv("PYTEST_CURRENT_TEST"))
+
+    # Header-based identity/tenant overrides exist solely for isolated test fixtures.
+    if test_context_allowed and (x_tenant_id or x_company_id) and (x_user_id or authorization is None):
         try:
             target_tenant = x_tenant_id or x_company_id
             tenant_uuid = UUID(target_tenant)
@@ -150,7 +163,8 @@ def get_abac_user_context(
             if not user and email:
                 user = db.execute(select(models.ResUser).where(models.ResUser.email.ilike(email.strip()))).scalar_one_or_none()
 
-            role_str = (getattr(user, "role", None) or payload.get("role") or x_role or "").upper().replace(" ", "_")
+            role_override = x_role if test_context_allowed else None
+            role_str = (getattr(user, "role", None) or payload.get("role") or role_override or "").upper().replace(" ", "_")
             is_admin = getattr(user, "is_superuser", False) or role_str in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]
 
             resolved_user_id = user.id if user else (UUID(str(sub)) if sub and len(str(sub)) == 36 else UUID("00000000-0000-0000-0000-000000000000"))
@@ -193,12 +207,26 @@ def get_abac_user_context(
                 allowed_warehouse_ids=[UUID(x_warehouse_id)] if x_warehouse_id else [],
                 allowed_fleet_regions=["CENTRAL", "NORTH", "SOUTH", "EAST", "WEST"],
                 is_super_admin=is_admin,
-                role=getattr(user, "role", None) or payload.get("role") or x_role,
+                role=getattr(user, "role", None) or payload.get("role") or role_override,
             )
         except Exception:
             pass
 
-    # 3. Default fallback user context
+    # 3. Never turn an absent or invalid native credential into an authenticated user.
+    if not authorization and not test_context_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing authentication credentials.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if authorization and not test_context_allowed:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # 4. Test-only fallback context
     fallback_tid_str = x_tenant_id or x_company_id or "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
     try:
         fallback_tenant = UUID(fallback_tid_str)
@@ -337,5 +365,3 @@ async def require_websocket_tenant(
 
 # Backward-compatible alias for user context dependency
 get_current_user = get_abac_user_context
-
-

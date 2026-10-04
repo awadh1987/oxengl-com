@@ -37,50 +37,7 @@ export const HRMSView: React.FC = () => {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
 
   // Live Backend Data States
-  const [employees, setEmployees] = useState<EmployeeRecord[]>([
-    {
-      id: 'emp-01',
-      employeeNumber: 'EMP-0412',
-      nameAr: 'أحمد بن خالد التميمي',
-      nameEn: 'Ahmed Al-Tamimi',
-      roleAr: 'مشرف عمليات الميزان والقبان',
-      roleEn: 'Weighbridge Operations Supervisor',
-      departmentAr: 'العمليات اللوجستية',
-      departmentEn: 'Logistics Operations',
-      baseSalary: 12500,
-      attendanceRate: 98.5,
-      status: 'ACTIVE',
-      iqamaOrNationalId: '1092837461',
-    },
-    {
-      id: 'emp-02',
-      employeeNumber: 'EMP-0418',
-      nameAr: 'محمد عبد الله الشمري',
-      nameEn: 'Mohammed Al-Shammari',
-      roleAr: 'محاسب مالي أول',
-      roleEn: 'Senior Financial Accountant',
-      departmentAr: 'الإدارة المالية',
-      departmentEn: 'Finance & Accounts',
-      baseSalary: 14000,
-      attendanceRate: 100,
-      status: 'ACTIVE',
-      iqamaOrNationalId: '1084729104',
-    },
-    {
-      id: 'emp-03',
-      employeeNumber: 'EMP-0425',
-      nameAr: 'طارق سيف الزهراني',
-      nameEn: 'Tariq Al-Zahrani',
-      roleAr: 'مدير حركة الأسطول والشاحنات',
-      roleEn: 'Fleet Movement Controller',
-      departmentAr: 'الأسطول والنقل',
-      departmentEn: 'Fleet Dispatch',
-      baseSalary: 11000,
-      attendanceRate: 96.0,
-      status: 'ACTIVE',
-      iqamaOrNationalId: '1073829105',
-    },
-  ]);
+  const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
 
   const [payrollRuns, setPayrollRuns] = useState<ApiPayrollRun[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<ApiAttendanceLog[]>([]);
@@ -95,20 +52,20 @@ export const HRMSView: React.FC = () => {
     setIsLoadingEmployees(true);
     try {
       const data = await erpApi.getHrmsEmployees(currentCompany?.id);
-      if (Array.isArray(data) && data.length > 0) {
+      if (Array.isArray(data)) {
         setEmployees(data.map((d: any) => ({
           id: d.id,
           employeeNumber: d.employeeNumber || d.employee_code || 'EMP-0000',
           nameAr: d.nameAr || `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.name || 'موظف',
           nameEn: d.nameEn || `${d.first_name || ''} ${d.last_name || ''}`.trim() || d.name || 'Employee',
-          roleAr: d.roleAr || 'موظف',
-          roleEn: d.roleEn || 'Employee',
+          roleAr: d.roleAr || d.job_title || 'موظف',
+          roleEn: d.roleEn || d.job_title || 'Employee',
           departmentAr: d.departmentAr || d.department || 'العمليات اللوجستية',
           departmentEn: d.departmentEn || d.department || 'Logistics Operations',
           baseSalary: typeof d.base_salary === 'number' ? d.base_salary : (parseFloat(d.base_salary) || d.baseSalary || 10000),
           attendanceRate: d.attendanceRate ?? 100,
           status: (d.is_active === false || d.status === 'TERMINATED' ? 'TERMINATED' : d.status === 'LEAVE' ? 'ON_LEAVE' : 'ACTIVE') as 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED',
-          iqamaOrNationalId: d.iqamaOrNationalId || '1092837461',
+          iqamaOrNationalId: d.identity_number || d.iqamaOrNationalId || '',
         })));
       }
     } catch (err) {

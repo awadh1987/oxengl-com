@@ -34,7 +34,11 @@ async def test_onb_01_subscription_seat_cap_enforcement(async_client, db_session
         "base_salary": 14000.00
     }
 
-    res = await async_client.post("/api/v1/hr/employees", json=payload, headers={"X-Role": "ADMIN"})
+    res = await async_client.post(
+        "/api/v1/hr/employees",
+        json=payload,
+        headers={"X-Role": "ADMIN", "X-Tenant-ID": str(tenant_id)},
+    )
     # The registration handler must intercept usage checks and reject the payload
     assert res.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert "Subscription seat cap exceeded" in res.json()["detail"]
