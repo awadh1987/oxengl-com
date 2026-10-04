@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { redirectToTenantSubdomain, getRootDomain, isLocalhost } from '../utils/subdomain';
 import { useApp } from '../context/AppContext';
+import { usePricingPlans } from '../hooks/usePricingPlans';
+import { formatSar } from '../utils/pricing';
 import {
   Lock,
   ShieldCheck,
@@ -29,6 +31,8 @@ const SAUDI_BANK_DETAILS = {
 };
 
 export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ onSuccess }) => {
+  const { plans: catalogPlans } = usePricingPlans();
+  const enterprisePlan = catalogPlans.find((plan) => plan.name.toUpperCase() === 'ENTERPRISE');
   const { language } = useApp();
   const isAr = language === 'ar';
   const navigate = (path: string) => {
@@ -955,7 +959,7 @@ export const TenantRegistrationView: React.FC<TenantRegistrationViewProps> = ({ 
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Enterprise Annual Plan</div>
                 <div className="text-lg font-black text-white font-mono">
-                  SAR 4,999 <span className="text-xs text-slate-400 font-normal">/ year</span>
+                  SAR {enterprisePlan ? formatSar(enterprisePlan.annual_price) : '—'} <span className="text-xs text-slate-400 font-normal">/ year</span>
                 </div>
               </div>
               <div className="text-right">

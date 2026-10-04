@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
+import { usePricingPlans } from '../../hooks/usePricingPlans';
+import { annualMonthlyEquivalent, annualSavingsLabel, formatSar, isFreePlan } from '../../utils/pricing';
 
 interface PricingSectionProps {
   onSelectTier?: (tier: string) => void;
 }
 
+/** Public pricing grid, rendered live from the unified catalog (subscription_plans). */
 export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectTier }) => {
   const [billingCycle, setBillingCycle] = useState<'m' | 'y'>('m');
+  const { plans, loading, error, reload } = usePricingPlans();
 
   const handleSelect = (tier: string) => {
     if (onSelectTier) {
@@ -17,17 +21,19 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectTier }) 
   };
 
   const isAnnual = billingCycle === 'y';
+  const savingsLabel = annualSavingsLabel(plans);
 
   return (
     <section className="pricing-section" id="pricing">
       <div className="section-header">
         <span className="section-pill">DEPLOYMENT TIERS</span>
         <h2 className="section-title">Transparent Enterprise Licensing</h2>
-        <p className="section-subtitle">Predictable SaaS and sovereign infrastructure tiers for Saudi contracting, logistics, and enterprise syndicates.</p>
-        
+        <p className="section-subtitle">Predictable SaaS and sovereign infrastructure tiers for Saudi contracting, logistics, and enterprise syndicates. All prices in SAR, excluding 15% VAT.</p>
+
         <div className="pricing-toggle">
           <button
             type="button"
+            id="pricing-cycle-monthly"
             className={`toggle-btn ${!isAnnual ? 'active' : ''}`}
             onClick={() => setBillingCycle('m')}
           >
@@ -35,83 +41,68 @@ export const PricingSection: React.FC<PricingSectionProps> = ({ onSelectTier }) 
           </button>
           <button
             type="button"
+            id="pricing-cycle-annual"
             className={`toggle-btn ${isAnnual ? 'active' : ''}`}
             onClick={() => setBillingCycle('y')}
           >
-            Annual Billing <span className="discount-tag">Save 20%</span>
+            Annual Billing {savingsLabel && <span className="discount-tag">{savingsLabel}</span>}
           </button>
         </div>
       </div>
 
       <div className="pricing-grid">
-        {/* Tier 1: Growth Workspace */}
-        <div className="pricing-card">
-          <div className="pricing-header">
-            <h3 className="tier-name">Growth Workspace</h3>
-            <p className="tier-desc">Designed for scaling contractors, quarries, and multi-branch suppliers in KSA.</p>
-            <div className="tier-price font-mono">
-              <span className="currency">SAR</span>
-              <span>{isAnnual ? '3,000' : '3,750'}</span>
-              <span className="period">/month</span>
-            </div>
-          </div>
-          <ul className="tier-features">
-            <li><span>✓</span> Up to 5 Isolated Entity Branches</li>
-            <li><span>✓</span> Full ZATCA Phase 2 E-Invoicing Engine</li>
-            <li><span>✓</span> Dual Weighbridge IoT Stream Integration</li>
-            <li><span>✓</span> Automated WPS SIF Payroll Exports</li>
-            <li><span>✓</span> Standard Multi-Tenant PostgreSQL RLS</li>
-          </ul>
-          <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => handleSelect('Growth Workspace')}>
-            Select Growth Tier
-          </button>
-        </div>
+        {loading && plans.length === 0 &&
+          [0, 1, 2].map((key) => <div key={key} className="pricing-card pricing-card--loading" aria-hidden="true" />)}
 
-        {/* Tier 2: Enterprise Syndicate (Featured) */}
-        <div className="pricing-card featured">
-          <div className="featured-badge">MOST POPULAR</div>
-          <div className="pricing-header">
-            <h3 className="tier-name">Enterprise Syndicate</h3>
-            <p className="tier-desc">For heavy mining groups, national logistics fleets, and multi-company holdings.</p>
-            <div className="tier-price font-mono">
-              <span className="currency">SAR</span>
-              <span>{isAnnual ? '7,120' : '8,900'}</span>
-              <span className="period">/month</span>
-            </div>
+        {!loading && plans.length === 0 && (
+          <div className="pricing-status" role="status">
+            {error ? 'Live pricing is temporarily unavailable.' : 'No subscription plans are published yet.'}
+            <button type="button" className="btn-secondary" onClick={() => reload()}>Retry</button>
           </div>
-          <ul className="tier-features">
-            <li><span>✓</span> Unlimited Branches &amp; Cost Centers</li>
-            <li><span>✓</span> Multi-Fleet Weighbridge Queueing &amp; GPS</li>
-            <li><span>✓</span> 5-Level Chart of Accounts with Multi-Currency</li>
-            <li><span>✓</span> Priority ZATCA Cryptographic Sandbox</li>
-            <li><span>✓</span> Dedicated PgBouncer Database Connection Pool</li>
-            <li><span>✓</span> 99.98% Service-Level Agreement (SLA)</li>
-          </ul>
-          <button type="button" className="btn-primary" style={{ width: '100%' }} onClick={() => handleSelect('Enterprise Syndicate')}>
-            Deploy Enterprise Tier
-          </button>
-        </div>
+        )}
 
-        {/* Tier 3: Sovereign Dedicated */}
-        <div className="pricing-card">
-          <div className="pricing-header">
-            <h3 className="tier-name">Sovereign Dedicated</h3>
-            <p className="tier-desc">Isolated physical database clusters running on KSA bare-metal with air-gapped encryption.</p>
-            <div className="tier-price font-mono">
-              <span style={{ fontSize: '26px' }}>Custom Node</span>
+        {plans.map((plan) => {
+          const free = isFreePlan(plan);
+          const amount = isAnnual ? plan.annual_price : plan.monthly_price;
+          const code = plan.name.toLowerCase();
+          return (
+            <div key={plan.id} id={`pricing-plan-${code}`} className={`pricing-card ${plan.is_featured ? 'featured' : ''}`}>
+              {plan.is_featured && <div className="featured-badge">MOST POPULAR</div>}
+              <div className="pricing-header">
+                <h3 className="tier-name">{plan.display_name}</h3>
+                {plan.description && <p className="tier-desc">{plan.description}</p>}
+                <div className="tier-price font-mono">
+                  {free ? (
+                    <span>Free</span>
+                  ) : (
+                    <>
+                      <span className="currency">SAR</span>
+                      <span>{formatSar(amount)}</span>
+                      <span className="period">{isAnnual ? '/year' : '/month'}</span>
+                    </>
+                  )}
+                </div>
+                {isAnnual && !free && (
+                  <p className="tier-price-note">≈ SAR {formatSar(Math.round(annualMonthlyEquivalent(plan)))} / month, billed annually</p>
+                )}
+              </div>
+              <ul className="tier-features">
+                {(plan.display_features ?? []).map((feature) => (
+                  <li key={feature}><span>✓</span> {feature}</li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                id={`pricing-select-${code}`}
+                className={plan.is_featured ? 'btn-primary' : 'btn-secondary'}
+                style={{ width: '100%' }}
+                onClick={() => handleSelect(plan.name)}
+              >
+                {free ? 'Start Free Evaluation' : `Select ${plan.display_name}`}
+              </button>
             </div>
-          </div>
-          <ul className="tier-features">
-            <li><span>✓</span> Completely Air-Gapped Dedicated PostgreSQL 16 DB</li>
-            <li><span>✓</span> Custom Subdomain or Enterprise apex domain SSL</li>
-            <li><span>✓</span> On-Premise / Local KSA Cloud (STC, Mobily, Oracle)</li>
-            <li><span>✓</span> Custom SOCPA / GAZT Integration Pipelines</li>
-            <li><span>✓</span> 24/7 Dedicated Infrastructure DevOps Support</li>
-          </ul>
-          <button type="button" className="btn-secondary" style={{ width: '100%' }} onClick={() => handleSelect('Sovereign Dedicated')}>
-            Consult Enterprise Architect
-          </button>
-        </div>
+          );
+        })}
       </div>
     </section>
   );

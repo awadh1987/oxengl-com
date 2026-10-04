@@ -2,12 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity, Building2, Check, CheckCircle2, Copy, CreditCard, Crown, Database, ExternalLink,
   KeyRound, Layers, Loader2, Lock, Megaphone, Palette, Plus, RefreshCw, Save, Search, Server,
-  Shield, ShieldCheck, Sparkles, Upload, X, Cpu, TrendingUp, BarChart3, ArrowUpRight, Zap,
+  Shield, ShieldCheck, Sparkles, Upload, X, Cpu, TrendingUp, BarChart3, ArrowUpRight, Zap, Pencil,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Company } from '../../types';
-import { erpApi, IsolationAudit, LicenseIssuePayload } from '../../services/api';
+import { erpApi, IsolationAudit, LicenseIssuePayload, SubscriptionPlanDto } from '../../services/api';
+import { invalidatePricingPlans, usePricingPlans } from '../../hooks/usePricingPlans';
+import { annualSavingsPercent, formatSar, isUnlimited, normalizeTierCode } from '../../utils/pricing';
 import { SpotlightCard } from '../design-system/SpotlightCard';
 
 const TIER_CENTERS: Record<string, number> = { BASIC: 5, PROFESSIONAL: 25, ENTERPRISE: 100 };
@@ -85,7 +87,8 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
   };
 
   const [selectedPlanTenant, setSelectedPlanTenant] = useState<Company | null>(null);
-  const [targetTier, setTargetTier] = useState('standard');
+  const [targetTier, setTargetTier] = useState('professional');
+  const { plans: catalogPlans } = usePricingPlans();
 
   const updatePlan = async () => {
     if (!selectedPlanTenant) return;
@@ -141,7 +144,7 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
               <div className="flex justify-between"><dt className="text-slate-500">Security Barrier:</dt><dd className="inline-flex items-center gap-1 font-bold text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" />Strict Isolated</dd></div>
             </dl>
             <div className="mt-4 flex gap-2">
-              <button onClick={() => { setSelectedPlanTenant(company); setTargetTier((company.subscriptionTier || 'standard').toLowerCase()); }} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-slate-800 bg-slate-950 text-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100"><CreditCard className="h-3.5 w-3.5 text-blue-600" />Manage Plan</button>
+              <button onClick={() => { setSelectedPlanTenant(company); setTargetTier(normalizeTierCode(company.subscriptionTier).toLowerCase()); }} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl border border-slate-800 bg-slate-950 text-slate-200 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100"><CreditCard className="h-3.5 w-3.5 text-blue-600" />Manage Plan</button>
               <button onClick={() => onInspect(company)} className="flex-1 flex items-center justify-center gap-1.5 rounded-2xl bg-slate-900 py-2.5 text-xs font-black text-white hover:bg-blue-700"><ExternalLink className="h-3.5 w-3.5" />Inspect</button>
             </div>
           </article>
@@ -166,10 +169,11 @@ export const TenantsRegistryView: React.FC<{ onInspect: (company: Company) => vo
                 onChange={(e) => setTargetTier(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-xs font-bold outline-none capitalize"
               >
-                <option value="starter">Starter (5 users, 5 GB, 2,500 SAR/mo)</option>
-                <option value="standard">Standard (15 users, 25 GB, 4,500 SAR/mo)</option>
-                <option value="growth">Growth (50 users, 100 GB, 8,500 SAR/mo)</option>
-                <option value="enterprise">Enterprise (Unlimited users, 1000 GB, 14,000 SAR/mo)</option>
+                {catalogPlans.map((plan) => (
+                  <option key={plan.id} value={plan.name.toLowerCase()}>
+                    {plan.display_name} ({isUnlimited(plan.max_seats) ? 'Unlimited' : plan.max_seats} users, {formatSar(plan.max_storage_gb)} GB, {formatSar(plan.monthly_price)} SAR/mo)
+                  </option>
+                ))}
               </select>
             </div>
             <div className="rounded-xl bg-blue-50 p-3 text-xs text-blue-800">
@@ -393,60 +397,246 @@ export const LicenseProvisionerView: React.FC = () => {
   );
 };
 
-export const PricingPlansView: React.FC = () => {
-  const { companies } = useApp();
-  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('yearly');
-  const count = (tier: string) => companies.filter((company) => (company.subscriptionTier || 'PROFESSIONAL') === tier).length;
+type PlanDraft = {
+  display_name: string;
+  description: string;
+  monthly_price: string;
+  annual_price: string;
+  features: string;
+  is_featured: boolean;
+  is_active: boolean;
+  sort_order: string;
+  max_seats: string;
+  max_vehicles: string;
+  max_storage_gb: string;
+  max_monthly_transactions: string;
+};
 
-  const plans = [
-    { tier: 'FREE', name: 'Free Starter Sandbox', monthly: 0, yearly: 0, style: 'border-slate-300', features: ['2 User seats capacity', 'Up to 5 fleet vehicles', '5 GB Document vault storage', '100 Transactions & tickets / month', 'Shared database with standard hostname'], excluded: ['PostgreSQL RLS tenant isolation', 'ZATCA Phase 2 clearance', 'Private external database hosting', 'Custom zero-slug domain routing', 'Dynamic Caddy SSL automation'] },
-    { tier: 'PROFESSIONAL', name: 'Professional Logistics Cloud', monthly: 185, yearly: 1850, style: 'border-blue-400 ring-2 ring-blue-500/20 shadow-xl', highlight: true, features: ['20 User seats with RBAC roles', '50 Fleet vehicles & haulers', '50 GB Cloud storage vault', '10,000 Invoices & waybills / month', 'Strict PostgreSQL RLS tenant isolation', 'ZATCA Phase 2 tax invoicing engine', 'Automated weighbridge ticket logs'], excluded: ['Private external database hosting', 'Custom zero-slug domain routing', 'Dynamic Caddy SSL automation'] },
-    { tier: 'ENTERPRISE', name: 'Enterprise Conglomerate Tier', monthly: 3750, yearly: 37500, style: 'border-purple-300 ring-2 ring-purple-500/20 shadow-xl', features: ['Unlimited user seats (∞)', 'Unlimited fleet vehicles (∞)', '1 TB (1,000 GB) Dedicated vault', 'Unlimited transactions & ledger volume', 'Private External Database Hosting & Live Migration', 'Dedicated Zero-Slug Custom Domain Routing', 'Dynamic Caddy On-Demand SSL Automation', 'Corporate Purchase Order & Bank Wire Billing', '24/7 Priority SLA & Dedicated Solutions Architect'], excluded: [] },
-  ] as const;
+const planToDraft = (plan: SubscriptionPlanDto): PlanDraft => ({
+  display_name: plan.display_name || '',
+  description: plan.description || '',
+  monthly_price: String(plan.monthly_price ?? 0),
+  annual_price: String(plan.annual_price ?? 0),
+  features: (plan.display_features ?? []).join('\n'),
+  is_featured: Boolean(plan.is_featured),
+  is_active: plan.is_active !== false,
+  sort_order: String(plan.sort_order ?? 0),
+  max_seats: String(plan.max_seats ?? 1),
+  max_vehicles: String(plan.max_vehicles ?? 0),
+  max_storage_gb: String(plan.max_storage_gb ?? 0),
+  max_monthly_transactions: String(plan.max_monthly_transactions ?? 0),
+});
+
+const limitLabel = (value?: number) => (isUnlimited(value) ? 'Unlimited' : formatSar(value ?? 0));
+
+/**
+ * Super Admin pricing console. Reads and edits the subscription_plans table, which is the
+ * single source of truth for the public landing page and the tenant billing dashboard.
+ */
+export const PricingPlansView: React.FC = () => {
+  const [cycle, setCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [plans, setPlans] = useState<SubscriptionPlanDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [editing, setEditing] = useState<SubscriptionPlanDto | null>(null);
+  const [draft, setDraft] = useState<PlanDraft | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await erpApi.getAdminPricingPlans();
+      setPlans(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load subscription plans.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openEditor = (plan: SubscriptionPlanDto) => {
+    setEditing(plan);
+    setDraft(planToDraft(plan));
+    setNotice(null);
+    setError(null);
+  };
+
+  const closeEditor = () => {
+    if (saving) return;
+    setEditing(null);
+    setDraft(null);
+  };
+
+  const set = <K extends keyof PlanDraft>(key: K, value: PlanDraft[K]) =>
+    setDraft((current) => (current ? { ...current, [key]: value } : current));
+
+  const draftMonthly = Number(draft?.monthly_price);
+  const draftAnnual = Number(draft?.annual_price);
+  const draftSavings = draftMonthly > 0 && draftAnnual > 0 ? Math.round((1 - draftAnnual / (draftMonthly * 12)) * 100) : 0;
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editing || !draft) return;
+    const monthly = Number(draft.monthly_price);
+    const annual = Number(draft.annual_price);
+    if (!Number.isFinite(monthly) || monthly < 0 || !Number.isFinite(annual) || annual < 0) {
+      setError('Prices must be valid, non-negative SAR amounts.');
+      return;
+    }
+    const features = draft.features.split('\n').map((line) => line.trim()).filter(Boolean);
+    if (!features.length) {
+      setError('Add at least one feature (one per line).');
+      return;
+    }
+    const toInt = (value: string, min = 0) => Math.max(min, Math.round(Number(value) || 0));
+    setSaving(true);
+    setError(null);
+    try {
+      await erpApi.updatePricingPlan(editing.id, {
+        display_name: draft.display_name.trim(),
+        description: draft.description.trim(),
+        monthly_price: monthly.toFixed(2),
+        annual_price: annual.toFixed(2),
+        display_features: features,
+        is_featured: draft.is_featured,
+        is_active: draft.is_active,
+        sort_order: toInt(draft.sort_order),
+        max_seats: toInt(draft.max_seats, 1),
+        max_vehicles: toInt(draft.max_vehicles),
+        max_storage_gb: toInt(draft.max_storage_gb),
+        max_monthly_transactions: toInt(draft.max_monthly_transactions),
+      });
+      await load();
+      invalidatePricingPlans().catch(() => undefined);
+      setNotice(`${draft.display_name.trim()} saved. The new pricing is live on the landing page and tenant billing.`);
+      setEditing(null);
+      setDraft(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save the plan.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputClass = 'mt-1 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-semibold text-slate-100 outline-none focus:border-blue-500';
 
   return (
     <div className="space-y-6">
       <Banner icon={CreditCard} title="Cloud Subscription & Pricing Plans" tone="from-slate-900 via-indigo-950 to-blue-950"
-        subtitle="Configure tenant pricing tiers, resource quotas, and monitor distribution across active client companies."
-        action={<div className="flex items-center rounded-2xl border border-slate-700 bg-slate-800/80 p-1">
-          {(['monthly', 'yearly'] as const).map((value) => (
-            <button key={value} onClick={() => setCycle(value)} className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold capitalize transition ${cycle === value ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>
-              {value}{value === 'yearly' && <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[9px] font-black text-white">15% Off</span>}
-            </button>
-          ))}
+        badge="Single source of truth"
+        subtitle="Edit tier names, SAR prices, features and quotas. Changes publish instantly to the public landing page and every tenant's billing dashboard."
+        action={<div className="flex items-center gap-2">
+          <div className="flex items-center rounded-2xl border border-slate-700 bg-slate-800/80 p-1">
+            {(['monthly', 'yearly'] as const).map((value) => (
+              <button key={value} id={`admin-pricing-cycle-${value}`} onClick={() => setCycle(value)} className={`rounded-xl px-4 py-2 text-xs font-bold capitalize transition ${cycle === value ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}>
+                {value}
+              </button>
+            ))}
+          </div>
+          <button id="admin-pricing-refresh" onClick={load} disabled={loading} className="grid h-9 w-9 place-items-center rounded-xl border border-slate-700 bg-slate-800/80 text-slate-300 hover:text-white" title="Reload plans">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>} />
 
+      {notice && <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-bold text-emerald-300"><CheckCircle2 className="h-4 w-4" />{notice}</div>}
+      {error && !editing && <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-xs font-bold text-rose-300">{error}</div>}
+
       <div className="grid gap-6 lg:grid-cols-3">
+        {loading && plans.length === 0 && [0, 1, 2].map((key) => (
+          <div key={key} className="h-96 animate-pulse rounded-3xl border border-slate-800 bg-slate-900/60" />
+        ))}
         {plans.map((plan) => {
-          const price = cycle === 'monthly' ? plan.monthly : Math.round(plan.yearly / 12);
+          const yearly = cycle === 'yearly';
+          const price = yearly ? Number(plan.annual_price) : Number(plan.monthly_price);
+          const savings = annualSavingsPercent(plan);
           return (
-            <article key={plan.tier} className={`relative flex flex-col justify-between rounded-3xl border bg-slate-900/90 border border-slate-800 p-6 shadow-xl text-slate-100 transition-all hover:shadow-lg ${plan.style}`}>
-              {'highlight' in plan && plan.highlight && <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-1 text-[11px] font-black text-white shadow-md">Most Popular</span>}
+            <article key={plan.id} id={`admin-plan-${plan.name.toLowerCase()}`} className={`relative flex flex-col justify-between rounded-3xl border bg-slate-900/90 p-6 text-slate-100 shadow-xl transition-all hover:shadow-lg ${plan.is_featured ? 'border-blue-400 ring-2 ring-blue-500/20' : 'border-slate-800'} ${plan.is_active === false ? 'opacity-60' : ''}`}>
+              {plan.is_featured && <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-1 text-[11px] font-black text-white shadow-md">Most Popular</span>}
               <div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{plan.tier}</span>
-                  <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"><Building2 className="h-3.5 w-3.5 text-blue-600" />{count(plan.tier)} Subscribers</span>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">{plan.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    {plan.is_active === false && <span className="rounded-full bg-slate-800 px-2.5 py-1 text-[10px] font-black uppercase text-slate-400">Hidden</span>}
+                    <span className="flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-slate-300"><Building2 className="h-3.5 w-3.5 text-blue-400" />{plan.subscriber_count ?? 0} Subscribers</span>
+                  </div>
                 </div>
-                <h3 className="mt-3 text-lg font-black text-slate-100">{plan.name}</h3>
-                <div className="mt-4 flex items-baseline gap-1 border-b border-slate-100 pb-5">
-                  <span className="font-mono text-3xl font-black text-slate-950">{price.toLocaleString('en-US')}</span>
-                  <span className="text-xs font-bold text-slate-500">SAR / month</span>
-                  {cycle === 'yearly' && <span className="ml-2 text-[10px] text-slate-400">(billed yearly {plan.yearly.toLocaleString('en-US')})</span>}
+                <h3 className="mt-3 text-lg font-black text-slate-100">{plan.display_name}</h3>
+                {plan.description && <p className="mt-1 text-xs text-slate-400">{plan.description}</p>}
+                <div className="mt-4 flex flex-wrap items-baseline gap-1 border-b border-slate-800 pb-5">
+                  <span className="font-mono text-3xl font-black text-white">{formatSar(price)}</span>
+                  <span className="text-xs font-bold text-slate-500">SAR / {yearly ? 'year' : 'month'}</span>
+                  {yearly && price > 0 && <span className="ml-2 text-[10px] text-slate-400">≈ {formatSar(Math.round(price / 12))} / month{savings > 0 ? ` · saves ${savings}%` : ''}</span>}
                 </div>
-                <p className="mt-5 text-xs font-black text-slate-200">Included features:</p>
-                <ul className="mt-3 space-y-2 text-xs">
-                  {plan.features.map((feature) => <li key={feature} className="flex items-start gap-2 text-slate-700"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{feature}</li>)}
+                <dl className="mt-4 grid grid-cols-2 gap-2 text-[11px]">
+                  {([['Seats', plan.max_seats], ['Vehicles', plan.max_vehicles], ['Storage (GB)', plan.max_storage_gb], ['Txns / month', plan.max_monthly_transactions]] as const).map(([label, value]) => (
+                    <div key={label} className="rounded-xl bg-slate-950 px-3 py-2"><dt className="text-slate-500">{label}</dt><dd className="font-mono font-bold text-slate-200">{limitLabel(value)}</dd></div>
+                  ))}
+                </dl>
+                <ul className="mt-4 space-y-2 text-xs">
+                  {(plan.display_features ?? []).map((feature) => <li key={feature} className="flex items-start gap-2 text-slate-300"><Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />{feature}</li>)}
                 </ul>
-                {plan.excluded.length > 0 && <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
-                  <p className="text-[11px] font-bold text-slate-400">Not included:</p>
-                  <ul className="space-y-1.5 text-xs text-slate-400">{plan.excluded.map((item) => <li key={item} className="flex items-start gap-2 line-through opacity-75"><span>•</span>{item}</li>)}</ul>
-                </div>}
               </div>
-              <p className="mt-8 rounded-2xl bg-slate-950 p-3 text-center text-xs font-medium text-slate-600">Tier is assigned when generating tenant license</p>
+              <button id={`admin-plan-edit-${plan.name.toLowerCase()}`} onClick={() => openEditor(plan)} className="mt-8 flex items-center justify-center gap-2 rounded-2xl border border-slate-700 bg-slate-950 py-2.5 text-xs font-bold text-slate-200 transition hover:border-blue-500 hover:text-white">
+                <Pencil className="h-3.5 w-3.5 text-blue-400" />Edit plan & pricing
+              </button>
             </article>
           );
         })}
       </div>
+
+      {editing && draft && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form onSubmit={save} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-slate-800 bg-slate-900 p-6 text-slate-100 shadow-2xl">
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="text-lg font-black">Edit {editing.name} plan</h3>
+                <p className="text-xs text-slate-500">Prices in SAR, excluding 15% VAT. {editing.subscriber_count ?? 0} tenant(s) currently on this plan.</p>
+              </div>
+              <button type="button" onClick={closeEditor} className="text-slate-400 hover:text-white"><X className="h-5 w-5" /></button>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label className="text-xs font-bold text-slate-300 sm:col-span-2">Display name
+                <input id="plan-edit-display-name" required minLength={2} maxLength={100} value={draft.display_name} onChange={(e) => set('display_name', e.target.value)} className={inputClass} /></label>
+              <label className="text-xs font-bold text-slate-300 sm:col-span-2">Description
+                <textarea id="plan-edit-description" rows={2} maxLength={600} value={draft.description} onChange={(e) => set('description', e.target.value)} className={inputClass} /></label>
+              <label className="text-xs font-bold text-slate-300">Monthly price (SAR)
+                <input id="plan-edit-monthly" required type="number" min={0} step="0.01" value={draft.monthly_price} onChange={(e) => set('monthly_price', e.target.value)} className={`${inputClass} font-mono`} /></label>
+              <label className="text-xs font-bold text-slate-300">Annual price (SAR)
+                <input id="plan-edit-annual" required type="number" min={0} step="0.01" value={draft.annual_price} onChange={(e) => set('annual_price', e.target.value)} className={`${inputClass} font-mono`} />
+                <span className="mt-1 block text-[10px] font-medium text-slate-500">
+                  {draftMonthly > 0 ? `12 × monthly = ${formatSar(draftMonthly * 12, 2)} SAR · annual saving ${draftSavings}%` : 'Free tier'}
+                </span></label>
+              <label className="text-xs font-bold text-slate-300 sm:col-span-2">Features (one per line)
+                <textarea id="plan-edit-features" required rows={6} value={draft.features} onChange={(e) => set('features', e.target.value)} className={`${inputClass} font-mono leading-relaxed`} /></label>
+              {([['max_seats', 'User seats', 1], ['max_vehicles', 'Fleet vehicles', 0], ['max_storage_gb', 'Storage (GB)', 0], ['max_monthly_transactions', 'Transactions / month', 0]] as const).map(([key, label, min]) => (
+                <label key={key} className="text-xs font-bold text-slate-300">{label}
+                  <input id={`plan-edit-${key}`} type="number" min={min} max={999999} step={1} value={draft[key]} onChange={(e) => set(key, e.target.value)} className={`${inputClass} font-mono`} />
+                  <span className="mt-1 block text-[10px] font-medium text-slate-500">999999 = Unlimited</span></label>
+              ))}
+              <label className="text-xs font-bold text-slate-300">Display order
+                <input id="plan-edit-sort" type="number" min={0} max={1000} step={1} value={draft.sort_order} onChange={(e) => set('sort_order', e.target.value)} className={`${inputClass} font-mono`} /></label>
+              <div className="flex flex-col justify-end gap-2 text-xs font-bold text-slate-300">
+                <label className="flex items-center gap-2"><input id="plan-edit-featured" type="checkbox" checked={draft.is_featured} onChange={(e) => set('is_featured', e.target.checked)} className="h-4 w-4 accent-blue-600" />Highlight as "Most Popular"</label>
+                <label className="flex items-center gap-2"><input id="plan-edit-active" type="checkbox" checked={draft.is_active} onChange={(e) => set('is_active', e.target.checked)} className="h-4 w-4 accent-blue-600" />Published in public catalog</label>
+              </div>
+            </div>
+
+            {error && <p className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-bold text-rose-300">{error}</p>}
+
+            <div className="mt-6 flex justify-end gap-2 border-t border-slate-800 pt-4">
+              <button type="button" onClick={closeEditor} className="rounded-xl border border-slate-700 px-4 py-2 text-xs font-bold text-slate-300">Cancel</button>
+              <button id="plan-edit-save" type="submit" disabled={saving} className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-60">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? 'Saving…' : 'Save & publish'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };
@@ -812,6 +1002,7 @@ export const PlatformSettingsView: React.FC = () => {
 export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'licenses' | 'pricing' | 'health' | 'settings' | 'analytics') => void }> = ({ onNavigate }) => {
   const { t } = useTranslation();
   const { companies, refreshCompanies } = useApp();
+  const { plans: catalogPlans } = usePricingPlans();
   const [busy, setBusy] = useState(false);
   const [pulse, setPulse] = useState(new Date());
   const [audit, setAudit] = useState<IsolationAudit | null>(null);
@@ -863,7 +1054,10 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
 
   const totalCenters = useMemo(() => companies.reduce((sum, company) => sum + (company.maxCostCenters ?? 25), 0), [companies]);
   const licensed = companies.filter((company) => Boolean(company.licenseKey)).length;
-  const mrr = companies.reduce((sum, company) => sum + (company.subscriptionTier === 'ENTERPRISE' ? 14000 : company.subscriptionTier === 'BASIC' ? 2500 : 6500), 0);
+  const mrr = useMemo(() => {
+    const monthlyByCode = new Map(catalogPlans.map((plan) => [plan.name.toUpperCase(), Number(plan.monthly_price)]));
+    return companies.reduce((sum, company) => sum + (monthlyByCode.get(normalizeTierCode(company.subscriptionTier)) ?? 0), 0);
+  }, [catalogPlans, companies]);
 
   const totalTenantsCount = cloudTelemetry?.tenants?.total ?? companies.length;
   const activeTenantsCount = cloudTelemetry?.tenants?.active ?? companies.length;

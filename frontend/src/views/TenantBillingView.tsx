@@ -32,6 +32,7 @@ import {
   SaaSInvoiceDto,
   EnterpriseQuoteResponse,
 } from '../services/api';
+import { annualMonthlyEquivalent, annualSavingsPercent, formatSar, isFreePlan, VAT_RATE } from '../utils/pricing';
 
 const SAUDI_BANK_DETAILS = {
   bankName: 'مصرف الإنماء (Alinma Bank)',
@@ -177,6 +178,15 @@ export const TenantBillingView: React.FC = () => {
   };
 
   const activePlanName = subscription?.plan?.name?.toUpperCase() || 'FREE';
+
+  // Catalog-derived pricing (no hard-coded prices: everything comes from /api/v1/pricing/plans)
+  const annualSavings = plans.reduce((max, plan) => Math.max(max, annualSavingsPercent(plan)), 0);
+  const enterprisePlan = plans.find((plan) => plan.name.toUpperCase() === 'ENTERPRISE');
+  const poSubtotal = enterprisePlan
+    ? Number(billingCycle === 'annual' ? enterprisePlan.annual_price : enterprisePlan.monthly_price)
+    : 0;
+  const poVat = Math.round(poSubtotal * VAT_RATE * 100) / 100;
+  const poTotal = poSubtotal + poVat;
 
   // Quota Calculations
   const seatsUsed = subscription?.meters?.current_seats_used ?? 1;
@@ -618,265 +628,130 @@ export const TenantBillingView: React.FC = () => {
               }`}
             >
               <span>{isAr ? 'سنوي' : 'Annual'}</span>
-              <span className="rounded-full bg-emerald-500 px-1.5 py-0.2 text-[9px] font-black text-white">
-                {isAr ? 'وفر شهرين' : 'Save ~17%'}
-              </span>
+              {annualSavings > 0 && (
+                <span className="rounded-full bg-emerald-500 px-1.5 py-0.2 text-[9px] font-black text-white">
+                  {isAr ? `وفر ${annualSavings}%` : `Save ~${annualSavings}%`}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
-        {/* 3 Tier Cards */}
+        {/* Plan cards: rendered from the unified pricing catalog (subscription_plans) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tier 1: FREE */}
-          <div
-            className={`relative rounded-3xl border p-6 flex flex-col justify-between transition-all ${
-              activePlanName === 'FREE'
-                ? 'border-blue-500 bg-blue-500/5 ring-2 ring-blue-500/20'
-                : isDark ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50/50'
-            }`}
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-400">
-                  Grade 1
-                </span>
-                {activePlanName === 'FREE' && (
-                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-black text-white">
-                    {isAr ? 'الخطة النشطة' : 'Current Plan'}
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">
-                {isAr ? 'المجانية (Free)' : 'Free Tier'}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                {isAr ? 'بيئة تجريبية للشركات الناشئة' : 'Sandbox evaluation & small fleet starter'}
-              </p>
-
-              <div className="mt-5 flex items-baseline gap-1 border-b border-slate-200 dark:border-slate-800 pb-5">
-                <span className="font-mono text-3xl font-black text-slate-900 dark:text-white">0</span>
-                <span className="text-xs font-bold text-slate-500">SAR / {billingCycle}</span>
-              </div>
-
-              <div className="mt-5 space-y-2.5 text-xs">
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>2</strong> {isAr ? 'مقاعد مستخدمين' : 'Active user seats'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>5</strong> {isAr ? 'شاحنات ومركبات' : 'Fleet vehicles'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>5 GB</strong> {isAr ? 'مساحة تخزين سحابي' : 'Cloud storage'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>100</strong> {isAr ? 'فاتورة وحركة شهرياً' : 'Monthly transactions'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400 line-through opacity-75">
-                  <Lock className="h-3.5 w-3.5 shrink-0" />
-                  <span>{isAr ? 'استضافة قاعدة بيانات خاصة' : 'Private External Database'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400 line-through opacity-75">
-                  <Lock className="h-3.5 w-3.5 shrink-0" />
-                  <span>{isAr ? 'توجيه النطاقات المخصصة' : 'Custom Domain Routing'}</span>
-                </div>
-              </div>
+          {plans.length === 0 && (
+            <div className="lg:col-span-3 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-6 text-center text-xs text-slate-500">
+              {loading
+                ? isAr ? 'جارٍ تحميل الباقات...' : 'Loading the live plan catalog...'
+                : isAr ? 'تعذر تحميل الباقات حالياً.' : 'The plan catalog is temporarily unavailable.'}
             </div>
-
-            <div className="mt-8">
-              <button
-                disabled={activePlanName === 'FREE'}
-                className={`w-full rounded-xl py-2.5 text-xs font-bold transition-all ${
-                  activePlanName === 'FREE'
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : 'border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
-                }`}
-              >
-                {activePlanName === 'FREE' ? (isAr ? 'الخطة الحالية' : 'Active Plan') : (isAr ? 'الرجوع للمجانية' : 'Downgrade to Free')}
-              </button>
-            </div>
-          </div>
-
-          {/* Tier 2: PROFESSIONAL */}
-          <div
-            className={`relative rounded-3xl border p-6 flex flex-col justify-between transition-all shadow-md ${
-              activePlanName === 'PROFESSIONAL'
-                ? 'border-blue-500 bg-blue-500/5 ring-2 ring-blue-500/20'
-                : 'border-blue-500/40 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent'
-            }`}
-          >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-0.5 text-[10px] font-black text-white shadow-xs">
-              {isAr ? 'الأكثر انتشاراً (Most Popular)' : 'Most Popular'}
-            </span>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-blue-500">
-                  Grade 2
-                </span>
-                {activePlanName === 'PROFESSIONAL' && (
-                  <span className="rounded-full bg-blue-600 px-2.5 py-0.5 text-[10px] font-black text-white whitespace-nowrap shrink-0">
-                    {isAr ? 'الخطة النشطة' : 'Current Plan'}
-                  </span>
-                )}
-              </div>
-              <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">
-                {isAr ? 'المهنية (Professional)' : 'Professional Tier'}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                {isAr ? 'للشركات اللوجستية المتوسطة والمتوسعة' : 'Growing logistics & transport companies'}
-              </p>
-
-              <div className="mt-5 flex items-baseline gap-1 border-b border-slate-200 dark:border-slate-800 pb-5">
-                <span className="font-mono text-3xl font-black text-blue-600 dark:text-blue-400">
-                  {billingCycle === 'annual' ? '1,850' : '185'}
-                </span>
-                <span className="text-xs font-bold text-slate-500">
-                  SAR / {billingCycle === 'annual' ? (isAr ? 'سنة' : 'year') : (isAr ? 'شهر' : 'month')}
-                </span>
-                {billingCycle === 'annual' && (
-                  <span className="text-[10px] text-emerald-500 font-bold ml-1">
-                    (~154 SAR/mo)
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-5 space-y-2.5 text-xs">
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>20</strong> {isAr ? 'مقعد مستخدم بصلاحيات متقدمة' : 'RBAC user seats'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>50</strong> {isAr ? 'مركبة وشاحنة مسجلة' : 'Fleet vehicles'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>50 GB</strong> {isAr ? 'مساحة تخزين سحابي' : 'Cloud storage'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span><strong>10,000</strong> {isAr ? 'حركة تشغيلية وفاتورة شهرياً' : 'Monthly operations & invoices'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                  <span>{isAr ? 'عزل كامل على مستوى الصفوف (PostgreSQL RLS)' : 'Schema-Level RLS isolation'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-400 line-through opacity-75">
-                  <Lock className="h-3.5 w-3.5 shrink-0" />
-                  <span>{isAr ? 'استضافة قاعدة بيانات خاصة' : 'Private External Database'}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <button
-                onClick={() => handleStripeCheckout('PROFESSIONAL')}
-                disabled={activePlanName === 'PROFESSIONAL' || checkoutLoading !== null}
-                className={`w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                  activePlanName === 'PROFESSIONAL'
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25'
-                }`}
-              >
-                {checkoutLoading === 'PROFESSIONAL' ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="h-4 w-4" />
-                )}
-                <span>
-                  {activePlanName === 'PROFESSIONAL'
-                    ? isAr ? 'الخطة الحالية النشطة' : 'Active Plan'
-                    : isAr ? 'ترقية فورية عبر البطاقة (Stripe)' : 'Instant Card Checkout (Stripe)'}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          {/* Tier 3: ENTERPRISE */}
-          <div
-            className={`relative rounded-3xl border p-6 flex flex-col justify-between transition-all shadow-xl ${
-              activePlanName === 'ENTERPRISE'
+          )}
+          {plans.map((plan, index) => {
+            const code = plan.name.toUpperCase();
+            const isActive = activePlanName === code;
+            const isEnterprise = code === 'ENTERPRISE';
+            const free = isFreePlan(plan);
+            const price = billingCycle === 'annual' ? plan.annual_price : plan.monthly_price;
+            const accent = isEnterprise ? 'purple' : plan.is_featured ? 'blue' : 'slate';
+            const cardClass = isActive
+              ? accent === 'purple'
                 ? 'border-purple-500 bg-purple-500/5 ring-2 ring-purple-500/20'
-                : 'border-purple-500/50 bg-gradient-to-b from-purple-500/10 via-slate-900/40 to-slate-900/60'
-            }`}
-          >
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-pink-600 px-3.5 py-0.5 text-[10px] font-black text-white shadow-md whitespace-nowrap shrink-0">
-              {isAr ? 'مؤسسات كبرى (Enterprise Grade)' : 'Enterprise Grade'}
-            </span>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black uppercase tracking-wider text-purple-400">
-                  Grade 3
-                </span>
-                {activePlanName === 'ENTERPRISE' && (
-                  <span className="rounded-full bg-purple-600 px-2.5 py-0.5 text-[10px] font-black text-white whitespace-nowrap shrink-0">
-                    {isAr ? 'الخطة النشطة' : 'Current Plan'}
+                : 'border-blue-500 bg-blue-500/5 ring-2 ring-blue-500/20'
+              : accent === 'purple'
+              ? 'border-purple-500/50 bg-gradient-to-b from-purple-500/10 via-slate-900/40 to-slate-900/60 shadow-xl'
+              : accent === 'blue'
+              ? 'border-blue-500/40 bg-gradient-to-b from-blue-500/5 via-transparent to-transparent shadow-md'
+              : isDark ? 'border-slate-800 bg-slate-900/40' : 'border-slate-200 bg-slate-50/50';
+            const accentText = accent === 'purple' ? 'text-purple-400' : accent === 'blue' ? 'text-blue-500' : 'text-slate-400';
+            const priceColor =
+              accent === 'purple' ? 'text-purple-600 dark:text-purple-400' : accent === 'blue' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white';
+            return (
+              <div key={plan.id} id={`tenant-plan-${code.toLowerCase()}`} className={`relative rounded-3xl border p-6 flex flex-col justify-between transition-all ${cardClass}`}>
+                {plan.is_featured && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-3.5 py-0.5 text-[10px] font-black text-white shadow-xs whitespace-nowrap">
+                    {isAr ? 'الأكثر انتشاراً (Most Popular)' : 'Most Popular'}
                   </span>
                 )}
-              </div>
-              <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">
-                {isAr ? 'المؤسسات الكبرى (Enterprise)' : 'Enterprise Tier'}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                {isAr ? 'أكبر أساطيل النقل والمجموعات مع استضافة خاصة' : 'Unlimited scale with private cloud hosting'}
-              </p>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-black uppercase tracking-wider ${accentText}`}>Grade {index + 1}</span>
+                    {isActive && (
+                      <span className={`rounded-full ${accent === 'purple' ? 'bg-purple-600' : 'bg-blue-600'} px-2.5 py-0.5 text-[10px] font-black text-white whitespace-nowrap shrink-0`}>
+                        {isAr ? 'الخطة النشطة' : 'Current Plan'}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-white">{plan.display_name}</h3>
+                  {plan.description && <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{plan.description}</p>}
 
-              <div className="mt-5 flex items-baseline gap-1 border-b border-slate-200 dark:border-slate-800 pb-5">
-                <span className="font-mono text-3xl font-black text-purple-600 dark:text-purple-400">
-                  {billingCycle === 'annual' ? '37,500' : '3,750'}
-                </span>
-                <span className="text-xs font-bold text-slate-500">
-                  SAR / {billingCycle === 'annual' ? (isAr ? 'سنة' : 'year') : (isAr ? 'شهر' : 'month')}
-                </span>
-              </div>
+                  <div className="mt-5 flex flex-wrap items-baseline gap-1 border-b border-slate-200 dark:border-slate-800 pb-5">
+                    <span className={`font-mono text-3xl font-black ${priceColor}`}>{formatSar(price)}</span>
+                    <span className="text-xs font-bold text-slate-500">
+                      SAR / {billingCycle === 'annual' ? (isAr ? 'سنة' : 'year') : (isAr ? 'شهر' : 'month')}
+                    </span>
+                    {billingCycle === 'annual' && !free && (
+                      <span className="text-[10px] text-emerald-500 font-bold ml-1">
+                        (~{formatSar(Math.round(annualMonthlyEquivalent(plan)))} SAR/{isAr ? 'شهر' : 'mo'})
+                      </span>
+                    )}
+                  </div>
 
-              <div className="mt-5 space-y-2.5 text-xs">
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-purple-500 shrink-0 font-bold" />
-                  <span><strong>{isAr ? 'غير محدود (∞)' : 'Unlimited (∞)'}</strong> {isAr ? 'مقاعد ومستخدمين' : 'User seats'}</span>
+                  <ul className="mt-5 space-y-2.5 text-xs">
+                    {(plan.display_features ?? []).map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-slate-700 dark:text-slate-300">
+                        <Check className={`mt-0.5 h-4 w-4 shrink-0 ${accent === 'purple' ? 'text-purple-500' : 'text-emerald-500'}`} />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-purple-500 shrink-0 font-bold" />
-                  <span><strong>{isAr ? 'غير محدود (∞)' : 'Unlimited (∞)'}</strong> {isAr ? 'أسطول شاحنات' : 'Fleet vehicles'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                  <Check className="h-4 w-4 text-purple-500 shrink-0 font-bold" />
-                  <span><strong>1 TB (1,000 GB)</strong> {isAr ? 'مساحة سحابية مخصصة' : 'Dedicated vault storage'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300 font-bold">
-                  <Database className="h-4 w-4 text-purple-500 shrink-0" />
-                  <span>{isAr ? 'استضافة قاعدة بيانات خاصة وترحيل مباشر' : 'Private External Database Hosting & Live Migration'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300 font-bold">
-                  <Globe2 className="h-4 w-4 text-purple-500 shrink-0" />
-                  <span>{isAr ? 'توجيه النطاق المخصص Zero-Slug' : 'Dedicated Zero-Slug Custom Domain Routing'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300 font-bold">
-                  <ShieldCheck className="h-4 w-4 text-purple-500 shrink-0" />
-                  <span>{isAr ? 'شهادات SSL تلقائية عبر Caddy On-Demand' : 'Dynamic Caddy Automated SSL Provisioning'}</span>
+
+                <div className="mt-8">
+                  {isEnterprise ? (
+                    <button
+                      onClick={() => setShowPOModal(true)}
+                      className="w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/25 transition-all"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>
+                        {isActive
+                          ? isAr ? 'طلب تجديد أمر شراء / حوالة' : 'Request PO / Wire Renewal'
+                          : isAr ? 'طلب أمر شراء وفاتورة بنكية (PO)' : 'Request Corporate PO & Wire Quote'}
+                      </span>
+                    </button>
+                  ) : free ? (
+                    <button
+                      disabled={isActive}
+                      className={`w-full rounded-xl py-2.5 text-xs font-bold transition-all ${
+                        isActive
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                          : 'border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
+                      {isActive ? (isAr ? 'الخطة الحالية' : 'Active Plan') : (isAr ? 'الرجوع للمجانية' : 'Downgrade to Free')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleStripeCheckout(code)}
+                      disabled={isActive || checkoutLoading !== null}
+                      className={`w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                        isActive
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25'
+                      }`}
+                    >
+                      {checkoutLoading === code ? <RefreshCw className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+                      <span>
+                        {isActive
+                          ? isAr ? 'الخطة الحالية النشطة' : 'Active Plan'
+                          : isAr ? 'ترقية فورية عبر البطاقة (Stripe)' : 'Instant Card Checkout (Stripe)'}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-
-            <div className="mt-8 space-y-2">
-              <button
-                onClick={() => setShowPOModal(true)}
-                className="w-full rounded-xl py-2.5 text-xs font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-lg shadow-purple-500/25 transition-all"
-              >
-                <FileText className="h-4 w-4" />
-                <span>
-                  {activePlanName === 'ENTERPRISE'
-                    ? isAr ? 'طلب تجديد أمر شراء / حوالة' : 'Request PO / Wire Renewal'
-                    : isAr ? 'طلب أمر شراء وفاتورة بنكية (PO)' : 'Request Corporate PO & Wire Quote'}
-                </span>
-              </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
 
@@ -1034,7 +909,7 @@ export const TenantBillingView: React.FC = () => {
                 <div className="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 space-y-2">
                   <div className="flex justify-between">
                     <span className="text-slate-500">{isAr ? 'الخطة المختارة' : 'Selected Plan'}:</span>
-                    <span className="font-bold text-purple-500">Grade 3: ENTERPRISE</span>
+                    <span className="font-bold text-purple-500">{enterprisePlan?.display_name ?? 'ENTERPRISE'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">{isAr ? 'دورة الفوترة' : 'Billing Cycle'}:</span>
@@ -1043,19 +918,19 @@ export const TenantBillingView: React.FC = () => {
                   <div className="flex justify-between">
                     <span className="text-slate-500">{isAr ? 'المبلغ الأساسي' : 'Subtotal'}:</span>
                     <span className="font-mono font-bold">
-                      {billingCycle === 'annual' ? '37,500.00' : '3,750.00'} SAR
+                      {formatSar(poSubtotal, 2)} SAR
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-500">{isAr ? 'ضريبة القيمة المضافة (15% ZATCA VAT)' : '15% Saudi VAT'}:</span>
                     <span className="font-mono font-bold">
-                      {billingCycle === 'annual' ? '5,625.00' : '562.50'} SAR
+                      {formatSar(poVat, 2)} SAR
                     </span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-purple-500/20 text-sm font-black text-purple-600 dark:text-purple-300">
                     <span>{isAr ? 'الإجمالي المستحق للتحويل' : 'Grand Total Due'}:</span>
                     <span className="font-mono">
-                      {billingCycle === 'annual' ? '43,125.00' : '4,312.50'} SAR
+                      {formatSar(poTotal, 2)} SAR
                     </span>
                   </div>
                 </div>

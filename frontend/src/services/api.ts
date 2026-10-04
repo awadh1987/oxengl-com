@@ -168,6 +168,32 @@ export interface SubscriptionPlanDto {
   allow_dedicated_ssl: boolean;
   description: string;
   features?: string[];
+  currency?: string;
+  max_monthly_transactions?: number;
+  /** Marketing bullets shown on every pricing view. */
+  display_features?: string[];
+  is_featured?: boolean;
+  sort_order?: number;
+  is_active?: boolean;
+  /** Super Admin endpoint only. */
+  subscriber_count?: number;
+  updated_at?: string | null;
+}
+
+/** Super Admin edit payload for PUT /api/v1/superadmin/billing/plans/{id} (prices are SAR strings). */
+export interface SubscriptionPlanUpdatePayload {
+  display_name?: string;
+  description?: string;
+  monthly_price?: string;
+  annual_price?: string;
+  display_features?: string[];
+  is_featured?: boolean;
+  is_active?: boolean;
+  sort_order?: number;
+  max_seats?: number;
+  max_vehicles?: number;
+  max_storage_gb?: number;
+  max_monthly_transactions?: number;
 }
 
 export interface TenantSubscriptionDto {
@@ -1383,7 +1409,15 @@ export const erpApi = {
     ),
   
   // Multi-Grade SaaS Subscription & Billing (Phase 4)
-  getSubscriptionPlans: () => request<SubscriptionPlanDto[]>('/api/v1/tenant/billing/plans'),
+  // Unified pricing catalog: single source of truth is the subscription_plans table.
+  getPricingPlans: () => request<SubscriptionPlanDto[]>('/api/v1/pricing/plans'),
+  getSubscriptionPlans: () => request<SubscriptionPlanDto[]>('/api/v1/pricing/plans'),
+  getAdminPricingPlans: () => request<SubscriptionPlanDto[]>('/api/v1/superadmin/billing/plans'),
+  updatePricingPlan: (planId: string, payload: SubscriptionPlanUpdatePayload) =>
+    request<SubscriptionPlanDto>(`/api/v1/superadmin/billing/plans/${planId}`, undefined, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   getTenantSubscription: (companyId?: string) => request<TenantSubscriptionDto>('/api/v1/tenant/billing/subscription', companyId),
   createStripeCheckout: (
     payload: { plan_name: string; billing_cycle: string; success_url?: string; cancel_url?: string },

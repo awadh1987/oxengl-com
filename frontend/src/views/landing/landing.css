@@ -1770,6 +1770,30 @@
       font-weight: 700;
       flex-shrink: 0;
     }
+    .landing-page-root .tier-price-note {
+      margin: -16px 0 20px;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .landing-page-root .pricing-status {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 32px;
+      border: 1px dashed var(--border-subtle);
+      border-radius: 16px;
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+    .landing-page-root .pricing-card--loading {
+      min-height: 420px;
+      background: linear-gradient(110deg, rgba(255, 255, 255, 0.02) 8%, rgba(255, 255, 255, 0.06) 18%, rgba(255, 255, 255, 0.02) 33%);
+      background-size: 200% 100%;
+      animation: pricing-shimmer 1.4s linear infinite;
+    }
+    @keyframes pricing-shimmer { to { background-position-x: -200%; } }
 
     /* ---- Provisioning gateway -------------------------------------------- */
     .landing-page-root .provision-section {
