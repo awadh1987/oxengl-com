@@ -101,7 +101,7 @@ The previous backend container `oxengl_backend_prev` (image `:pricing`) is stopp
 - Run an access-log review of the master-platform routes for the period before this fix. Look for `POST`, `DELETE`, `PATCH` and `/search` requests from non-admin IPs.
 - `backend/routers/master_platform.py` (legacy, not mounted) should be deleted so it can't be re-mounted by mistake.
 - ~~`tenant_control.py` is unauthenticated and trust-on-header.~~ **Resolved, see Addendum B.**
-- `get_authenticated_user` auto-provisions accounts for unknown token subjects. See Addendum B, Follow-ups.
+- ~~`get_authenticated_user` auto-provisions accounts for unknown token subjects. See Addendum B, Follow-ups.~~ **Fixed in Addendum C** (unknown subjects → 401; token claims no longer grant super admin).
 
 ---
 
@@ -272,5 +272,82 @@ The first verification run **accidentally deleted the Myon admin account `muath.
 
 ### Follow-ups
 
-- **`get_authenticated_user` auto-provisioning (high).** Any validly signed token whose subject isn't a known email creates a new `res_users` row. The role comes from the token, and `Super_Admin` / `is_superuser` comes from token claims. Exploiting it needs a server-signed token, but it should be removed: unknown subjects should get **401**.
+- ~~**`get_authenticated_user` auto-provisioning (high).** Any validly signed token whose subject isn't a known email creates a new `res_users` row. The role comes from the token, and `Super_Admin` / `is_superuser` comes from token claims. Exploiting it needs a server-signed token, but it should be removed: unknown subjects should get **401**.~~ **Fixed in Addendum C.**
 - Two decorative `Crown` icons remain outside the Super Admin console: `Navbar.tsx` (header badge) and `MasterLoginForm.tsx` (master login header).
+
+
+---
+
+## Addendum C — Silent account provisioning & token-claim super-admin elevation (2026-10-04, backend image `oxen-gl_backend:noclaims`)
+
+### Findings
+
+**C1. Silent auto-provisioning (high).** `get_authenticated_user()` in `backend/app/main.py` is the main auth dependency; `core/auth.py` delegates to it. If a validly signed token named a subject that was not in `res_users`, it did not reject the request. Instead it **created a new account**:
+- the email came from the token subject;
+- the role came from the token claims;
+- `is_superuser` was set if the claims looked like a super admin;
+- the account was bound to the company from the `X-Company-ID` header, or else to the first company in the database.
+
+This is how the harness created shadow accounts in Addendum B.
+
+There were related silent bindings:
+- **Users with no company.** In both `get_authenticated_user` and `get_active_company_id`, a user with `company_id = NULL` was silently attached to the company from the token claim, the header, or the first company in the database.
+- **Legacy dependencies.** The `get_current_user` functions in `backend/api/dependencies.py` and `backend/app/dependencies.py` copied `tenant_users` subjects into new `res_users` rows. If that failed, they built an in-memory "envelope" user from the token claims.
+
+Exploiting these needs a server-signed token, since the JWT secrets are required env values with no fallback. But any token-minting bug or leaked secret would turn directly into account creation.
+
+**C2. Token claims made every tenant admin a platform super admin (critical, found while verifying C1).**
+- `issue_two_tier_jwt()` (`backend/two_tier_auth.py`) set the claim `is_superuser = true` for **every tenant user with role admin, owner or super_admin**. This token comes from the normal tenant login, `/api/auth/tenant/login`.
+- `get_authenticated_user()` treated that claim as authority: it set `is_superuser = True` on the user object for the request. It did the same for any token with `tier == "master"`, a role containing "super", or a `super_admin` scope.
+- `is_super_admin_authorized()` (`backend/app/core/auth.py`) also accepted token claims as proof: `role`, `tier == "master"`, and `scopes`.
+
+**Impact:** any tenant Admin or Owner who logged in through the normal tenant login passed `require_super_admin`. This was confirmed on production before the fix: the **Myon admin's real tenant-login token received `200` from `GET /api/master/platform/tenants`**. That means they had master-platform API access: list, provision, suspend and delete tenants, feature flags, and the pricing editor.
+
+The §3 and Addendum A/B verifications did not catch this. They used `create_access_token()` session tokens, which have no `is_superuser` claim, and those correctly got 403.
+
+The exposure window is every tenant-admin login since two-tier login shipped. `platform_audit_logs` records only denials and some mutations, not successful reads. It shows **no successful master-platform mutation by any tenant-admin email**. The only `PRICING_PLAN_UPDATED` rows are from `superadmin@oxengl.com` and from a test shadow account during the 01:53 UTC harness run. Successful elevated reads would not appear in the audit log at all.
+
+### Fix
+
+| File | Change |
+|---|---|
+| `backend/app/main.py` — `get_authenticated_user` | Unknown or inactive subject → **401** `Session subject is not a registered active user`. The auto-create block is removed. Super-admin status comes **only from the database row** (`is_superuser`, or DB role `Super_Admin`); token claims are ignored. A company claim can no longer bind a user to a company: if the user has no company, or the claim names a different one, the result is **403**. |
+| `backend/app/main.py` — `get_active_company_id` | A non-super user with no company → **403** `Authenticated user is not bound to a tenant workspace`. A super admin with no `X-Company-ID` → **400** (no longer falls back to the first company). |
+| `backend/api/dependencies.py`, `backend/app/dependencies.py` — `get_current_user` | The `tenant_users`→`res_users` copy and the in-memory envelope user are removed. A `tenant_users` subject is mapped **read-only** to an existing `res_users` row by email. Otherwise → **401** `Authenticated subject is not a registered user.` |
+| `backend/app/core/auth.py` — `is_super_admin_authorized` | The token-claim checks (role / tier / scopes) are removed. The dev-mode branch no longer looks at token `sub`/`tier`. Authority comes only from the DB record (`is_superuser`, role, ACL / role_ids) or the configured `MASTER_PLATFORM_KEY`. |
+| `backend/two_tier_auth.py` — `issue_two_tier_jwt` | `is_superuser` claim = `tier == "master"` only. The backend no longer trusts this claim anyway. |
+
+Explicit provisioning flows are unchanged: registration, invites, admin user creation, and configured SSO JIT.
+
+### Verification (production)
+
+`verify_noprovision.py` passed **57/57**:
+
+| Check | Result |
+|---|---|
+| 6 validly signed forged tokens for **non-existent** subjects. Types: session (Admin / Super_Admin), two-tier master, two-tier tenant, access token with random UUID `sub`, access token with unknown email. Each sent to 6 protected endpoints, covering every auth dependency (tenant control, tenant billing, master platform, customs, `/api/v1/users`, organization) | **401** (36/36) |
+| `res_users` after the forged requests | count unchanged (6); no row for the forged email or UUID; 0 new ids; 0 UUID-email rows |
+| Myon admin: session token, real two-tier tenant token, and legacy access token on team / billing / customs / users | 200, own tenant only |
+| Myon and Alwehda admins' **real tenant-login tokens** → `/api/master/platform/tenants` | **403** (was 200) |
+| Myon identity with forged `tier=master` / `role=Super_Admin` claims; Myon token re-signed with `is_superuser=true` and `scopes=[Super_Admin]` | **403** |
+| New tenant-admin tokens | `is_superuser = false` |
+| `superadmin@oxengl.com` (DB `is_superuser`) → master platform | 200 |
+| DB invariants | `superadmin@oxengl.com` is the only `is_superuser` account; still 6 real users |
+
+**Regression:** `verify_tenant_control.py` 121/121, `verify_sec.py` 28/28, `verify_idor.py` 7/7, `verify_tenant_billing.py` 23/23. **Total 236/236.**
+
+Pre-deploy snapshot: `~/.oxengl/backups/pre_noprovision_*_res_users.sql`. No real user or tenant data was changed by this verification.
+
+**Effect on users:**
+- Existing sessions keep working; no forced logout is needed.
+- Tenant-admin tokens issued before the fix still carry `is_superuser: true`, but the claim now grants nothing.
+- Tenant admins keep full tenant-level admin rights; tenant control 121/121 still passes.
+
+**Rollback:** `oxengl_backend_prev` (image `:noprovision`, which has the C1 fixes but **not** C2) is stopped but kept. `:tenantctl2` is the image from before Addendum C. Rolling back to `:tenantctl2` **re-opens both C1 and C2**.
+
+### Follow-ups
+
+- **Review access logs (recommended).** Check nginx access logs for `/api/master/platform/*` and `/api/master/*` requests from non-platform sessions since two-tier login shipped. The application audit log cannot attribute successful reads.
+- **SSO callback reassigns existing users (high).** The SSO JIT callback (`main.py`, SSO callback) moves an *existing* user to the SSO-configured company and overrides their role. A tenant that can configure SSO for an email domain could take over accounts from another tenant. Not changed here.
+- **Legacy dependencies trust the token role (medium).** `backend/api/dependencies.get_current_user` ("Honor token's normalized role") overrides the DB role with the token's role on the in-request user object. Authority should come from the DB only, as it now does in `main.get_authenticated_user`.
+- **Test bypass still present (low).** `PYTEST_CURRENT_TEST` in `backend/api/dependencies.py` is a test-only bypass. It should be removed or guarded so it can never be active in production images.

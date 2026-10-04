@@ -448,77 +448,24 @@ async def get_current_user(
     if not user and email:
         user = db.query(ResUser).filter(ResUser.email.ilike(email.strip())).first()
 
-    if not user and (sub or email):
-        t_user = None
-        if sub:
-            try:
-                t_user = db.query(TenantUser).filter(TenantUser.id == uuid.UUID(str(sub))).first()
-            except Exception:
-                pass
-        if not t_user and email:
-            t_user = db.query(TenantUser).filter(TenantUser.email.ilike(email.strip())).first()
-
-        if t_user:
-            comp = None
-            if token_tenant_id:
-                try:
-                    comp = db.query(ResCompany).filter(ResCompany.id == uuid.UUID(str(token_tenant_id))).first()
-                except Exception:
-                    pass
-            slug_claim = payload.get("tenant_slug") or payload.get("domain_slug") or request.headers.get("x-tenant-slug")
-            if not comp and slug_claim:
-                comp = db.query(ResCompany).filter(ResCompany.slug == slug_claim).first()
-            if not comp and hasattr(t_user, "company_id") and t_user.company_id:
-                comp = db.query(ResCompany).filter(ResCompany.id == t_user.company_id).first()
-
-            resolved_cid = comp.id if comp else (uuid.UUID(str(token_tenant_id)) if token_tenant_id else None)
-            user_r = normalize_role(t_user.role)
-
-            user = ResUser(
-                id=t_user.id,
-                email=t_user.email,
-                full_name=f"{t_user.first_name} {t_user.last_name}".strip(),
-                password_hash=t_user.password_hash,
-                company_id=resolved_cid,
-                role=user_r,
-                is_active=t_user.is_active,
-            )
-            db.add(user)
-            try:
-                db.commit()
-                db.refresh(user)
-            except Exception:
-                db.rollback()
-                user = db.query(ResUser).filter(ResUser.id == t_user.id).first()
+    # SECURITY (2026-10-04, incident Addendum C): no account is ever created -- persisted or
+    # in-memory -- for a token whose subject is not a registered res_users account. Previously this
+    # dependency (a) bridged tenant_users rows into res_users with a header-chosen company and
+    # (b) returned an in-memory "envelope" user with the token's role for any unknown subject.
+    if not user and sub and not email:
+        # Read-only compatibility: a tenant_users id may be mapped to its existing res_users account.
+        try:
+            t_user = db.query(TenantUser).filter(TenantUser.id == uuid.UUID(str(sub))).first()
+        except Exception:
+            t_user = None
+        if t_user is not None and t_user.email:
+            user = db.query(ResUser).filter(ResUser.email.ilike(t_user.email.strip())).first()
 
     if not user:
-        if not email and not sub:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload: Identity missing.",
-            )
-        resolved_id = uuid.UUID(str(sub)) if sub and len(str(sub)) == 36 else uuid.uuid4()
-        resolved_cid: Optional[uuid.UUID] = None
-        if token_tenant_id:
-            try:
-                resolved_cid = uuid.UUID(str(token_tenant_id).strip())
-            except (ValueError, TypeError):
-                resolved_cid = None
-        # Fallback: resolve from request.state (set by HostHeaderMiddleware)
-        if not resolved_cid:
-            state_cid = getattr(request.state, "company_id", None) or getattr(request.state, "tenant_company_id", None)
-            if state_cid:
-                try:
-                    resolved_cid = uuid.UUID(str(state_cid).strip()) if not isinstance(state_cid, uuid.UUID) else state_cid
-                except (ValueError, TypeError):
-                    resolved_cid = None
-        user = ResUser(
-            id=resolved_id,
-            email=email or f"user_{resolved_id.hex[:6]}@oxengl.me",
-            full_name=email.split("@")[0] if email else "Workspace User",
-            company_id=resolved_cid,
-            role=normalized_role,
-            is_active=True,
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated subject is not a registered user.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Honor token's normalized role if specified

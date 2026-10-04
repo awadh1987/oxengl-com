@@ -707,65 +707,20 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 			except Exception:
 				pass
 
-	raw_role = str(claims.get("role") or "User").lower()
-	scopes_str = str(claims.get("scopes") or claims.get("scope") or "").lower()
-	is_master_or_super = (
-		"super" in raw_role
-		or claims.get("tier") == "master"
-		or "super_admin" in scopes_str
-		or bool(claims.get("is_superuser"))
-	)
-
 	user = database.scalar(select(models.ResUser).where(models.ResUser.email == email, models.ResUser.is_active.is_(True)))
-	if user is not None:
-		if user.company_id is None:
-			if target_company:
-				user.company_id = target_company.id
-			else:
-				first_comp = database.scalar(select(models.ResCompany).order_by(models.ResCompany.created_at.asc()))
-				if first_comp:
-					user.company_id = first_comp.id
-			if user.company_id:
-				try:
-					database.commit()
-					database.refresh(user)
-				except Exception:
-					database.rollback()
-		elif target_company and (tenant_slug and user.company_id != target_company.id) and not is_master_or_super:
-			pass
-	elif user is not None and not target_company and user.company_id:
-		target_company = database.scalar(select(models.ResCompany).where(models.ResCompany.id == user.company_id))
-
 	if user is None:
-		if not target_company:
-			first_comp = database.scalar(select(models.ResCompany).order_by(models.ResCompany.created_at.asc()))
-			if first_comp:
-				target_company = first_comp
+		# SECURITY (2026-10-04, incident Addendum C): a validly signed token whose subject is not a
+		# registered, active res_users account is REJECTED. Accounts are never provisioned by the auth
+		# dependency (previously an unknown subject silently created a user, role taken from token claims,
+		# bound to a header-derived or first company). Provisioning happens only via explicit flows
+		# (registration, invites, admin user creation, configured SSO JIT).
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session subject is not a registered active user")
 
-		if is_master_or_super:
-			mapped_role = "Super_Admin"
-		elif "admin" in raw_role:
-			mapped_role = "Admin"
-		elif "guest" in raw_role:
-			mapped_role = "Guest"
-		else:
-			mapped_role = "Data_Entry"
-
-		user = models.ResUser(
-			firebase_uid=f"auth-{uuid.uuid4().hex[:12]}",
-			email=email,
-			full_name=claims.get("full_name") or email.split("@")[0],
-			company_id=target_company.id if target_company else None,
-			role=mapped_role,
-			is_active=True,
-		)
-		database.add(user)
-		database.commit()
-		database.refresh(user)
-
-	if is_master_or_super and user is not None:
-		setattr(user, "is_superuser", True)
-		setattr(user, "is_super_admin", True)
+	# SECURITY (Addendum C): platform super-admin authority is taken ONLY from the database record.
+	# Token claims (role / tier / scopes / is_superuser) are never trusted to elevate a user: the tenant
+	# login token carries is_superuser=true for every tenant Admin/Owner, which previously turned all
+	# tenant admins into platform super admins on the master-platform API.
+	is_master_or_super = bool(getattr(user, "is_superuser", False)) or str(user.role or "").strip().upper().replace(" ", "_").replace("-", "_") in {"SUPER_ADMIN", "SUPERADMIN"}
 	try:
 		request.state.claims = claims
 		request.state.token_claims = claims
@@ -785,22 +740,9 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 			claim_uuid = uuid.UUID(str(claim_company_id))
 		except ValueError as error:
 			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session company claim is invalid") from error
-		if user.company_id is None:
-			user.company_id = claim_uuid
-			try:
-				database.commit()
-				database.refresh(user)
-			except Exception:
-				database.rollback()
-		elif claim_uuid != user.company_id:
+		# SECURITY (Addendum C): membership is never assigned from token claims.
+		if user.company_id is None or claim_uuid != user.company_id:
 			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Session company does not match authenticated user membership")
-	elif claim_company_id and is_exec_role and not user.company_id:
-		try:
-			user.company_id = uuid.UUID(str(claim_company_id))
-			database.commit()
-			database.refresh(user)
-		except Exception:
-			database.rollback()
 
 	# Dynamic Context Injection into request.state
 	active_user_cid = getattr(request.state, "company_id", None) or (target_company.id if (target_company and is_exec_role) else None) or user.company_id
@@ -852,34 +794,10 @@ def get_active_company_id(request: Request, x_company_id: str | None = Header(de
 		except (ValueError, TypeError) as error:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="X-Company-ID must be a UUID") from error
 
-	# Graceful fallback for NULL current_user.company_id (Requirement 2)
-	if current_user.company_id is None:
-		target_to_assign = requested_uuid
-		if not target_to_assign:
-			raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
-			if raw_host:
-				try:
-					from backend.app.core.middleware import resolve_tenant_from_host
-					tmeta = resolve_tenant_from_host(raw_host, db=database)
-					if tmeta and tmeta.get("company_id"):
-						target_to_assign = uuid.UUID(str(tmeta["company_id"]))
-				except Exception:
-					pass
-		if not target_to_assign:
-			first_comp = database.scalar(select(models.ResCompany).order_by(models.ResCompany.created_at.asc()))
-			if first_comp:
-				target_to_assign = first_comp.id
-
-		if target_to_assign:
-			existing = database.get(models.ResCompany, target_to_assign)
-			if existing:
-				try:
-					current_user.company_id = existing.id
-					database.commit()
-					database.refresh(current_user)
-				except Exception:
-					database.rollback()
-					current_user.company_id = existing.id
+	# SECURITY (Addendum C): never silently bind an unassigned account to a tenant
+	# (previously: requested header -> Host -> first company, persisted to res_users).
+	if current_user.company_id is None and not is_super_admin:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authenticated user is not bound to a tenant workspace")
 
 	if requested_uuid:
 		target_company = database.get(models.ResCompany, requested_uuid)
@@ -897,17 +815,7 @@ def get_active_company_id(request: Request, x_company_id: str | None = Header(de
 		if current_user.company_id:
 			company_id = current_user.company_id
 		else:
-			first_comp = database.scalar(select(models.ResCompany).order_by(models.ResCompany.created_at.asc()))
-			if first_comp:
-				current_user.company_id = first_comp.id
-				try:
-					database.commit()
-					database.refresh(current_user)
-				except Exception:
-					database.rollback()
-				company_id = first_comp.id
-			else:
-				raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="X-Company-ID is required")
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="X-Company-ID is required")
 
 	# Super Admin Isolation Bypass vs Standard Tenant Check (Requirement 1)
 	if is_super_admin:

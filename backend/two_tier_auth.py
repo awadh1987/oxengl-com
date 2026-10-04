@@ -190,7 +190,9 @@ def issue_two_tier_jwt(
         "identity": identity,
         "email": identity,
         "role": role,
-        "is_superuser": True if tier == "master" else (role.lower() in ("admin", "owner", "super_admin", "superadmin")),
+        # Tenant admins/owners are NOT platform superusers (Addendum C). Informational only: the
+        # backend never grants authority from this claim.
+        "is_superuser": tier == "master",
         "tenant_id": str(tenant_id) if tenant_id else None,
         "company_id": str(tenant_id) if tenant_id else None,
         "tenant_slug": tenant_slug,

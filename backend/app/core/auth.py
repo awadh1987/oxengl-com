@@ -33,8 +33,8 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
     Accepts:
     1. Direct is_superuser == True or is_super_admin == True
     2. User role matches Super_Admin (case-insensitive, normalized e.g., 'Super_Admin', 'super_admin', 'SUPER_ADMIN')
-    3. Token claims or token scopes include 'Super_Admin' or 'super_admin'
-    4. Authenticated master admin sessions (tier == 'master' or master operator)
+    3. (Removed 2026-10-04, Addendum C) token claims / scopes / tier are NOT trusted for elevation
+    4. User ACL or role_ids containing SUPER_ADMIN (database record)
     5. Permitted authenticated master admin / admin sessions during development or provisioning.
     """
     if user is None:
@@ -50,29 +50,10 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
     if normalized_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
         return True
 
-    # 3. Token claims & scopes on request.state or passed
-    token_claims: dict[str, Any] = {}
-    if request and hasattr(request, "state"):
-        token_claims = getattr(request.state, "token_claims", None) or getattr(request.state, "claims", None) or {}
-
-    claim_role = str(token_claims.get("role", "") or "").upper().replace(" ", "_").replace("-", "_")
-    if claim_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
-        return True
-
-    if str(token_claims.get("tier", "") or "").lower() == "master":
-        return True
-
-    # Check scopes claim (e.g. scopes=["Super_Admin"] or scope="Super_Admin read write")
-    raw_scopes = token_claims.get("scopes") or token_claims.get("scope") or []
-    if isinstance(raw_scopes, str):
-        scopes_list = [s.strip().upper().replace(" ", "_").replace("-", "_") for s in raw_scopes.replace(",", " ").split()]
-    elif isinstance(raw_scopes, (list, set, tuple)):
-        scopes_list = [str(s).strip().upper().replace(" ", "_").replace("-", "_") for s in raw_scopes]
-    else:
-        scopes_list = []
-
-    if any(s in {"SUPER_ADMIN", "SUPERADMIN", "MASTER", "ALL"} for s in scopes_list):
-        return True
+    # 3. SECURITY (2026-10-04, incident Addendum C): token claims (role / tier / scopes / is_superuser)
+    #    are NOT an authority source. Super-admin rights come only from the user's database record
+    #    (checks 1, 2 and 4) or the configured MASTER_PLATFORM_KEY. Previously a tenant login token
+    #    (tier/role/is_superuser claims) could satisfy this check.
 
     # 4. Check user ACL and role_ids
     acl = str(getattr(user, "access_control_list", "") or "").upper()
@@ -88,11 +69,9 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
     if dev_env:
         is_master_subject = (
             str(getattr(user, "email", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-            or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-            or str(token_claims.get("tier", "")).lower() == "master"
             or getattr(user, "company_id", None) is None
         )
-        if is_master_subject and (normalized_role in {"ADMIN", "CEO", "EXECUTIVE", "OPERATOR"} or claim_role in {"ADMIN", "CEO", "EXECUTIVE"}):
+        if is_master_subject and normalized_role in {"ADMIN", "CEO", "EXECUTIVE", "OPERATOR"}:
             return True
 
     if request:

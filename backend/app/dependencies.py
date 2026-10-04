@@ -171,73 +171,24 @@ async def get_current_user(
     if not user and email:
         user = db.query(ResUser).filter(ResUser.email.ilike(email.strip())).first()
 
-    # 3. If not found in res_users, look up in tenant_users and bridge into ResUser
-    if not user and (sub or email):
-        t_user = None
-        if sub:
-            try:
-                t_user = db.query(TenantUser).filter(TenantUser.id == uuid.UUID(str(sub))).first()
-            except Exception:
-                pass
-        if not t_user and email:
-            t_user = db.query(TenantUser).filter(TenantUser.email.ilike(email.strip())).first()
+    # SECURITY (2026-10-04, incident Addendum C): no account is ever created -- persisted or
+    # in-memory -- for a token whose subject is not a registered res_users account. Previously this
+    # dependency (a) bridged tenant_users rows into res_users with a header-chosen company and
+    # (b) returned an in-memory "envelope" user with the token's role for any unknown subject.
+    if not user and sub and not email:
+        # Read-only compatibility: a tenant_users id may be mapped to its existing res_users account.
+        try:
+            t_user = db.query(TenantUser).filter(TenantUser.id == uuid.UUID(str(sub))).first()
+        except Exception:
+            t_user = None
+        if t_user is not None and t_user.email:
+            user = db.query(ResUser).filter(ResUser.email.ilike(t_user.email.strip())).first()
 
-        if t_user:
-            # Resolve tenant company container
-            comp = None
-            if token_tenant_id:
-                try:
-                    comp = db.query(ResCompany).filter(ResCompany.id == uuid.UUID(str(token_tenant_id))).first()
-                except Exception:
-                    pass
-            slug_claim = payload.get("tenant_slug") or payload.get("domain_slug") or request.headers.get("x-tenant-slug")
-            if not comp and slug_claim:
-                comp = db.query(ResCompany).filter(ResCompany.slug == slug_claim).first()
-            if not comp and hasattr(t_user, "company_id") and t_user.company_id:
-                comp = db.query(ResCompany).filter(ResCompany.id == t_user.company_id).first()
-
-            resolved_cid = comp.id if comp else (uuid.UUID(str(token_tenant_id)) if token_tenant_id else None)
-            role_l = t_user.role.lower()
-            if role_l == "ceo":
-                normalized_role = "CEO"
-            elif role_l in ["admin", "accountant"]:
-                normalized_role = t_user.role.capitalize()
-            else:
-                normalized_role = "Admin"
-
-            user = ResUser(
-                id=t_user.id,
-                email=t_user.email,
-                full_name=f"{t_user.first_name} {t_user.last_name}".strip(),
-                password_hash=t_user.password_hash,
-                company_id=resolved_cid,
-                role=normalized_role,
-                is_active=t_user.is_active,
-            )
-            db.add(user)
-            try:
-                db.commit()
-                db.refresh(user)
-            except Exception:
-                db.rollback()
-                user = db.query(ResUser).filter(ResUser.id == t_user.id).first()
-
-    # 4. Fallback in-memory envelope if user record is not yet in db
     if not user:
-        if not email and not sub:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token payload: Identity missing.",
-            )
-        resolved_id = uuid.UUID(str(sub)) if sub else uuid.uuid4()
-        resolved_cid = uuid.UUID(str(token_tenant_id)) if token_tenant_id else None
-        user = ResUser(
-            id=resolved_id,
-            email=email or f"user_{resolved_id.hex[:6]}@oxengl.me",
-            full_name=email.split("@")[0] if email else "Workspace User",
-            company_id=resolved_cid,
-            role=token_role or "Admin",
-            is_active=True,
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authenticated subject is not a registered user.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     # Validate active status
