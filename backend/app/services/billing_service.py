@@ -102,6 +102,49 @@ DEFAULT_TIER_PLANS: list[dict[str, Any]] = [
     },
 ]
 
+# Catalog presentation defaults. Only used when a plan row is first created, or once to
+# back-fill rows that pre-date these columns. After that the Super Admin owns the values.
+DEFAULT_PLAN_PRESENTATION: dict[str, dict[str, Any]] = {
+    "FREE": {
+        "sort_order": 10,
+        "is_featured": False,
+        "display_features": [
+            "2 user seats",
+            "Up to 5 fleet vehicles",
+            "5 GB document vault storage",
+            "100 transactions & tickets / month",
+            "Shared database with standard hostname",
+        ],
+    },
+    "PROFESSIONAL": {
+        "sort_order": 20,
+        "is_featured": True,
+        "display_features": [
+            "20 user seats with RBAC roles",
+            "50 fleet vehicles & haulers",
+            "50 GB cloud storage vault",
+            "10,000 invoices & waybills / month",
+            "Strict PostgreSQL RLS tenant isolation",
+            "ZATCA Phase 2 tax invoicing engine",
+            "Automated weighbridge ticket logs",
+        ],
+    },
+    "ENTERPRISE": {
+        "sort_order": 30,
+        "is_featured": False,
+        "display_features": [
+            "Unlimited user seats & fleet vehicles",
+            "1 TB (1,000 GB) dedicated vault",
+            "Unlimited transactions & ledger volume",
+            "Private external database hosting & live migration",
+            "Dedicated zero-slug custom domain routing",
+            "Automated on-demand SSL provisioning",
+            "Corporate purchase order & bank wire billing",
+            "24/7 priority SLA & dedicated solutions architect",
+        ],
+    },
+}
+
 # Legacy tier mapping to canonical 3-tier codes
 LEGACY_TIER_ALIASES: dict[str, str] = {
     "trial": "FREE",
@@ -124,59 +167,56 @@ def normalize_tier_name(tier_name: str) -> str:
 
 def seed_default_subscription_plans(db: Session) -> list[SubscriptionPlan]:
     """
-    Idempotently seeds and updates the 3-tier subscription plans in the control plane database.
+    Idempotently ensures the default subscription plans exist in the control plane database.
+
+    The subscription_plans table is the single source of truth for pricing and is edited by
+    the Super Admin, so existing rows are NEVER overwritten here (the previous behaviour
+    re-applied the hard-coded prices on every startup, silently reverting admin edits).
+    Only missing plans are inserted; presentation fields added later (display_features,
+    sort_order, is_featured) are back-filled once while still empty.
     """
     seeded_plans: list[SubscriptionPlan] = []
     for plan_spec in DEFAULT_TIER_PLANS:
         name = plan_spec["name"]
+        presentation = DEFAULT_PLAN_PRESENTATION.get(name, {})
         plan = db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.name == name))
         if not plan:
             plan = SubscriptionPlan(
                 id=uuid.uuid4(),
-                name=name,
-                display_name=plan_spec["display_name"],
-                description=plan_spec["description"],
-                monthly_price=plan_spec["monthly_price"],
-                annual_price=plan_spec["annual_price"],
-                currency=plan_spec["currency"],
-                stripe_price_id=plan_spec["stripe_price_id"],
-                stripe_product_id=plan_spec["stripe_product_id"],
-                max_seats=plan_spec["max_seats"],
-                max_vehicles=plan_spec["max_vehicles"],
-                max_storage_gb=plan_spec["max_storage_gb"],
-                max_monthly_transactions=plan_spec["max_monthly_transactions"],
-                allow_external_database=plan_spec["allow_external_database"],
-                allow_custom_domain=plan_spec["allow_custom_domain"],
-                allow_dedicated_ssl=plan_spec["allow_dedicated_ssl"],
-                features=plan_spec["features"],
-                is_active=plan_spec["is_active"],
+                **plan_spec,
+                display_features=list(presentation.get("display_features", [])),
+                sort_order=presentation.get("sort_order", 0),
+                is_featured=presentation.get("is_featured", False),
             )
             db.add(plan)
             logger.info("Created new subscription plan: %s (%s)", name, plan_spec["display_name"])
-        else:
-            # Synchronize schema fields and capabilities
-            plan.display_name = plan_spec["display_name"]
-            plan.description = plan_spec["description"]
-            plan.monthly_price = plan_spec["monthly_price"]
-            plan.annual_price = plan_spec["annual_price"]
-            plan.currency = plan_spec["currency"]
-            plan.stripe_price_id = plan_spec["stripe_price_id"]
-            plan.stripe_product_id = plan_spec["stripe_product_id"]
-            plan.max_seats = plan_spec["max_seats"]
-            plan.max_vehicles = plan_spec["max_vehicles"]
-            plan.max_storage_gb = plan_spec["max_storage_gb"]
-            plan.max_monthly_transactions = plan_spec["max_monthly_transactions"]
-            plan.allow_external_database = plan_spec["allow_external_database"]
-            plan.allow_custom_domain = plan_spec["allow_custom_domain"]
-            plan.allow_dedicated_ssl = plan_spec["allow_dedicated_ssl"]
-            plan.features = plan_spec["features"]
-            plan.is_active = plan_spec["is_active"]
+        elif not plan.display_features:
+            plan.display_features = list(presentation.get("display_features", []))
+            plan.sort_order = presentation.get("sort_order", plan.sort_order or 0)
+            plan.is_featured = presentation.get("is_featured", False)
+            logger.info("Back-filled catalog presentation for plan %s", name)
         seeded_plans.append(plan)
 
     db.commit()
     for p in seeded_plans:
         db.refresh(p)
     return seeded_plans
+
+
+def list_catalog_plans(db: Session, include_inactive: bool = False) -> list[SubscriptionPlan]:
+    """Subscription plans in catalog order (single source of truth for every pricing view)."""
+    query = select(SubscriptionPlan)
+    if not include_inactive:
+        query = query.where(SubscriptionPlan.is_active.is_(True))
+    plans = db.scalars(
+        query.order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.monthly_price.asc())
+    ).all()
+    if not plans and not db.scalar(select(func.count(SubscriptionPlan.id))):
+        seed_default_subscription_plans(db)
+        plans = db.scalars(
+            query.order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.monthly_price.asc())
+        ).all()
+    return list(plans)
 
 
 def get_plan_by_name(db: Session, tier_name: str) -> Optional[SubscriptionPlan]:

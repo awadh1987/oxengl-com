@@ -18,8 +18,8 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
-from pydantic import BaseModel, Field
-from sqlalchemy import desc, func, select
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -31,6 +31,7 @@ from backend.app.services.billing_service import (
     create_stripe_checkout_session,
     get_or_create_tenant_subscription,
     get_plan_by_name,
+    list_catalog_plans,
     handle_stripe_checkout_completed,
     handle_stripe_invoice_failed,
     handle_stripe_invoice_paid,
@@ -44,12 +45,20 @@ from backend.app.services.billing_service import (
     SAUDI_CORPORATE_BANK_DETAILS,
 )
 from backend.app.api.v1.tenant_control import resolve_control_tenant_id
+from backend.app.core.auth import require_super_admin
 
 logger = logging.getLogger("oxengl.billing.api")
 
 # Routers
 tenant_billing_router = APIRouter(tags=["Tenant Billing"])
-superadmin_billing_router = APIRouter(prefix="/api/v1/superadmin/billing", tags=["Super Admin Billing"])
+# Every Super Admin billing endpoint (invoices, settlement, limits, pricing) requires Super_Admin.
+superadmin_billing_router = APIRouter(
+    prefix="/api/v1/superadmin/billing",
+    tags=["Super Admin Billing"],
+    dependencies=[Depends(require_super_admin)],
+)
+# Public, unauthenticated pricing catalog (landing page, tenant billing, Super Admin console).
+pricing_router = APIRouter(tags=["Pricing Catalog"])
 stripe_webhook_router = APIRouter(tags=["Platform Billing Webhooks"])
 
 
@@ -83,28 +92,71 @@ class SuperadminCustomLimitsRequest(BaseModel):
     custom_limits: Dict[str, Any] = Field(..., description="Custom quota overrides or entitlement amendments")
 
 
+PRICE_FIELD = dict(ge=Decimal("0"), le=Decimal("99999999.99"), max_digits=10, decimal_places=2)
+
+
+class SubscriptionPlanUpdateRequest(BaseModel):
+    """Super Admin edit of a catalog plan. Only provided fields are changed."""
+    display_name: Optional[str] = Field(None, min_length=2, max_length=100)
+    description: Optional[str] = Field(None, max_length=600)
+    monthly_price: Optional[Decimal] = Field(None, description="Monthly list price in SAR (excl. VAT)", **PRICE_FIELD)
+    annual_price: Optional[Decimal] = Field(None, description="Annual list price in SAR (excl. VAT)", **PRICE_FIELD)
+    display_features: Optional[List[str]] = Field(None, max_length=20)
+    is_featured: Optional[bool] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = Field(None, ge=0, le=1000)
+    max_seats: Optional[int] = Field(None, ge=1, le=999999)
+    max_vehicles: Optional[int] = Field(None, ge=0, le=999999)
+    max_storage_gb: Optional[int] = Field(None, ge=0, le=999999)
+    max_monthly_transactions: Optional[int] = Field(None, ge=0, le=999999)
+
+    @field_validator("display_name", "description")
+    @classmethod
+    def _strip_text(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() if isinstance(value, str) else value
+
+    @field_validator("display_features")
+    @classmethod
+    def _clean_features(cls, value: Optional[List[str]]) -> Optional[List[str]]:
+        if value is None:
+            return value
+        cleaned = [item.strip() for item in value if isinstance(item, str) and item.strip()]
+        if any(len(item) > 160 for item in cleaned):
+            raise ValueError("Each feature must be at most 160 characters.")
+        return cleaned
+
+
+def _public_plan_dict(plan: SubscriptionPlan) -> dict[str, Any]:
+    """Catalog representation safe for unauthenticated callers (no payment-provider IDs)."""
+    data = plan.to_dict()
+    data.pop("stripe_price_id", None)
+    data.pop("stripe_product_id", None)
+    return data
+
+
+def _plan_subscriber_counts(db: Session) -> dict[Any, int]:
+    rows = db.execute(
+        select(TenantSubscription.plan_id, func.count(TenantSubscription.id)).group_by(TenantSubscription.plan_id)
+    ).all()
+    return {plan_id: int(count) for plan_id, count in rows}
+
+
 # ==============================================================================
 # 1. Tenant-Facing Billing Endpoints
 # ==============================================================================
 
+@pricing_router.get("/plans")
 @tenant_billing_router.get("/plans")
 def list_available_subscription_plans(
     db: Session = Depends(get_db),
 ):
     """
-    Retrieves the complete catalog of active multi-grade SaaS subscription plans,
-    including pricing (SAR), resource limits, and architectural capability flags.
+    Unified pricing catalog: every active subscription plan from the subscription_plans table
+    (the single source of truth), in catalog order, with SAR prices, limits, capability flags
+    and marketing features. Served publicly at /api/v1/pricing/plans and, for backwards
+    compatibility, at /api/v1/tenant/billing/plans.
     """
-    plans = db.scalars(
-        select(SubscriptionPlan)
-        .where(SubscriptionPlan.is_active.is_(True))
-        .order_by(SubscriptionPlan.monthly_price.asc())
-    ).all()
-
-    if not plans:
-        plans = seed_default_subscription_plans(db)
-
-    return [plan.to_dict() for plan in plans]
+    return [_public_plan_dict(plan) for plan in list_catalog_plans(db)]
 
 
 @tenant_billing_router.get("/subscription")
@@ -401,6 +453,67 @@ def update_tenant_limits_endpoint(
         "custom_limits": sub.custom_limits,
         "message": "Custom limits updated successfully.",
     }
+
+
+@superadmin_billing_router.get("/plans")
+def list_superadmin_subscription_plans(db: Session = Depends(get_db)):
+    """Super Admin pricing console: all plans (including inactive) with live subscriber counts."""
+    counts = _plan_subscriber_counts(db)
+    return [
+        {**plan.to_dict(), "subscriber_count": counts.get(plan.id, 0)}
+        for plan in list_catalog_plans(db, include_inactive=True)
+    ]
+
+
+@superadmin_billing_router.put("/plans/{plan_id}")
+def update_superadmin_subscription_plan(
+    plan_id: uuid.UUID,
+    payload: SubscriptionPlanUpdateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: Any = Depends(require_super_admin),
+):
+    """
+    Super Admin: edit a plan's name, description, SAR prices, features, limits or visibility.
+    Changes apply immediately to the public landing page, tenant billing and new invoices.
+    """
+    plan = db.get(SubscriptionPlan, plan_id)
+    if plan is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription plan not found.")
+
+    changes = payload.model_dump(exclude_unset=True)
+    changes = {key: value for key, value in changes.items() if value is not None}
+    if not changes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No changes supplied.")
+    if "display_features" in changes and not changes["display_features"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A plan needs at least one feature.")
+
+    for field, value in changes.items():
+        setattr(plan, field, value)
+    if changes.get("is_featured"):
+        # A single "Most Popular" plan keeps the catalog unambiguous.
+        db.execute(update(SubscriptionPlan).where(SubscriptionPlan.id != plan.id).values(is_featured=False))
+    db.commit()
+    db.refresh(plan)
+
+    actor = getattr(current_user, "email", "unknown")
+    logger.info("Pricing plan %s updated by %s: %s", plan.name, actor, sorted(changes))
+    try:
+        from backend.app.main import get_request_id, record_platform_audit, resolve_client_ip
+        record_platform_audit(
+            db,
+            actor_email=actor,
+            action="PRICING_PLAN_UPDATED",
+            endpoint=request.url.path,
+            ip_address=resolve_client_ip(request),
+            company_id=getattr(current_user, "company_id", None),
+            request_id=get_request_id(request),
+            user_agent=request.headers.get("user-agent"),
+        )
+    except Exception as exc:  # noqa: BLE001 - auditing must never block the edit
+        logger.warning("Could not write pricing audit record: %s", exc)
+
+    return {**plan.to_dict(), "subscriber_count": _plan_subscriber_counts(db).get(plan.id, 0)}
 
 
 @superadmin_billing_router.get("/summary")

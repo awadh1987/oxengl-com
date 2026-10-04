@@ -399,6 +399,9 @@ def verify_migration_managed_schema() -> None:
 			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
 			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"))
 			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_features JSON NOT NULL DEFAULT '[]'::json;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;"))
+			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;"))
 			db.execute(text("ALTER TABLE tenant_subscriptions ALTER COLUMN stripe_customer_id DROP NOT NULL;"))
 			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(32) DEFAULT 'monthly';"))
 			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(64) DEFAULT 'card';"))
@@ -529,7 +532,10 @@ from backend.app.api.v1.billing import (
     tenant_billing_router,
     superadmin_billing_router,
     stripe_webhook_router,
+    pricing_router,
 )
+app.include_router(pricing_router, prefix="/api/v1/pricing")
+app.include_router(pricing_router, prefix="/api/pricing")
 app.include_router(tenant_billing_router, prefix="/api/v1/tenant/billing")
 app.include_router(tenant_billing_router, prefix="/api/tenant/billing")
 app.include_router(superadmin_billing_router)
@@ -1712,50 +1718,46 @@ def list_partners(
 	return database.scalars(stmt).all()
 
 
+# Operational quotas per tier. Prices are NOT here: they live in subscription_plans.
 TIER_LIMITS = {
 	"free": {
 		"max_users": 2,
 		"max_storage_gb": 5,
 		"max_cost_centers": 2,
-		"monthly_rate_sar": Decimal("0"),
-		"yearly_rate_sar": Decimal("0"),
 	},
 	"starter": {
 		"max_users": 5,
 		"max_storage_gb": 5,
 		"max_cost_centers": 5,
-		"monthly_rate_sar": Decimal("0"),
-		"yearly_rate_sar": Decimal("0"),
 	},
 	"professional": {
 		"max_users": 20,
 		"max_storage_gb": 50,
 		"max_cost_centers": 25,
-		"monthly_rate_sar": Decimal("185"),
-		"yearly_rate_sar": Decimal("1850"),
 	},
 	"standard": {
 		"max_users": 20,
 		"max_storage_gb": 50,
 		"max_cost_centers": 25,
-		"monthly_rate_sar": Decimal("185"),
-		"yearly_rate_sar": Decimal("1850"),
 	},
 	"growth": {
 		"max_users": 50,
 		"max_storage_gb": 50,
 		"max_cost_centers": 50,
-		"monthly_rate_sar": Decimal("185"),
-		"yearly_rate_sar": Decimal("1850"),
 	},
 	"enterprise": {
 		"max_users": 999999,
 		"max_storage_gb": 1000,
 		"max_cost_centers": 999999,
-		"monthly_rate_sar": Decimal("3750"),
-		"yearly_rate_sar": Decimal("37500"),
 	},
 }
+
+
+def _plan_monthly_rate_sar(database: Session, tier: str | None) -> Decimal:
+	"""Monthly list price (SAR) for a tier, read from subscription_plans (single source of truth)."""
+	from backend.app.services.billing_service import get_plan_by_name
+	plan = get_plan_by_name(database, tier or "free")
+	return plan.monthly_price if plan is not None else Decimal("0")
 
 
 @app.put("/api/master/tenants/{tenant_id}/subscription", tags=["SaaS Billing"])
@@ -1768,16 +1770,22 @@ def update_tenant_subscription(
 	database: Session = Depends(get_db),
 ):
 	"""SuperAdmin: update tenant subscription plan and usage limits."""
+	if not is_super_admin_authorized(current_user, request):
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied: changing a tenant subscription requires Super_Admin role")
 	tenant = database.get(models.MasterTenant, tenant_id)
 	if tenant is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Master tenant not found")
 
-	raw_tier = payload.subscription_tier or payload.tier or "standard"
-	tier_key = raw_tier.lower()
-	defaults = TIER_LIMITS.get(tier_key, TIER_LIMITS.get("professional", TIER_LIMITS["standard"]))
+	raw_tier = payload.subscription_tier or payload.tier or "professional"
+	tier_key = raw_tier.strip().lower()
+	from backend.app.services.billing_service import LEGACY_TIER_ALIASES, get_plan_by_name
+	plan = get_plan_by_name(database, tier_key) if tier_key in LEGACY_TIER_ALIASES else None
+	if plan is None:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown subscription plan '{raw_tier}'")
+	defaults = TIER_LIMITS.get(tier_key, TIER_LIMITS["professional"])
 	tenant.subscription_tier = tier_key
-	tenant.max_users = payload.max_users or defaults["max_users"]
-	tenant.max_storage_gb = payload.max_storage_gb or defaults["max_storage_gb"]
+	tenant.max_users = payload.max_users or plan.max_seats
+	tenant.max_storage_gb = payload.max_storage_gb or plan.max_storage_gb
 
 	# Sync to tenant company if exists in same db
 	company = database.scalar(select(models.ResCompany).where(models.ResCompany.slug == tenant.slug))
@@ -1806,7 +1814,7 @@ def update_tenant_subscription(
 		invoice_number=inv_num,
 		billing_cycle="monthly",
 		tier=tier_key,
-		amount_sar=defaults["monthly_rate_sar"],
+		amount_sar=plan.monthly_price,
 		status="paid",
 		issued_date=datetime.now(timezone.utc),
 		paid_at=datetime.now(timezone.utc),
@@ -1825,50 +1833,23 @@ def update_tenant_subscription(
 
 
 @app.get("/api/master/subscriptions/plans", tags=["SaaS Billing"])
-def list_subscription_plans():
-	"""Public / Master catalog of subscription plans and limits."""
-	return [
-		{
-			"tier": "starter",
-			"name": "Starter Logistics Plan",
-			"monthly_sar": 2500,
-			"yearly_sar": 25500,
-			"max_users": 5,
-			"max_storage_gb": 5,
-			"max_cost_centers": 5,
-			"features": ["Weighbridge Tickets", "5 Users", "Standard Invoicing"],
-		},
-		{
-			"tier": "standard",
-			"name": "Standard Logistics Plan",
-			"monthly_sar": 6500,
-			"yearly_sar": 66300,
-			"max_users": 15,
-			"max_storage_gb": 25,
-			"max_cost_centers": 25,
-			"features": ["ZATCA Phase 1 QR", "15 Users", "General Ledger", "Fleet Tracking"],
-		},
-		{
-			"tier": "growth",
-			"name": "Growth Enterprise Plan",
-			"monthly_sar": 9500,
-			"yearly_sar": 96900,
-			"max_users": 30,
-			"max_storage_gb": 50,
-			"max_cost_centers": 50,
-			"features": ["ZATCA Phase 2", "30 Users", "Yard Management", "Fleet AI"],
-		},
-		{
-			"tier": "enterprise",
-			"name": "Enterprise Conglomerate Plan",
-			"monthly_sar": 14000,
-			"yearly_sar": 142800,
-			"max_users": 999999,
-			"max_storage_gb": 999999,
-			"max_cost_centers": 999999,
-			"features": ["Unlimited Users & Storage", "Dedicated DB Partition", "24/7 SLA"],
-		},
-	]
+def list_subscription_plans(database: Session = Depends(get_db)):
+	"""Legacy catalog shape, served from subscription_plans (canonical endpoint: /api/v1/pricing/plans)."""
+	from backend.app.services.billing_service import list_catalog_plans
+	result = []
+	for plan in list_catalog_plans(database):
+		quotas = TIER_LIMITS.get(plan.name.lower(), {})
+		result.append({
+			"tier": plan.name.lower(),
+			"name": plan.display_name,
+			"monthly_sar": float(plan.monthly_price),
+			"yearly_sar": float(plan.annual_price),
+			"max_users": plan.max_seats,
+			"max_storage_gb": plan.max_storage_gb,
+			"max_cost_centers": quotas.get("max_cost_centers", 25),
+			"features": list(plan.display_features or []),
+		})
+	return result
 
 
 @app.get("/api/tenant/billing/summary", response_model=TenantBillingSummaryRead, tags=["SaaS Billing"])
@@ -1897,7 +1878,7 @@ def get_tenant_billing_summary(
 	plan = sub.plan if (sub and hasattr(sub, "plan")) else None
 	billing_cycle = sub.billing_cycle if sub else "monthly"
 	sub_status = sub.status if sub else (master_tenant.status if master_tenant else "active")
-	monthly_rate = plan.monthly_price if plan else defaults["monthly_rate_sar"]
+	monthly_rate = plan.monthly_price if plan else _plan_monthly_rate_sar(database, tier_key)
 	max_users = sub.max_seats if sub else (master_tenant.max_users if master_tenant else defaults["max_users"])
 	max_storage = plan.max_storage_gb if plan else (master_tenant.max_storage_gb if master_tenant else defaults["max_storage_gb"])
 	next_bill = sub.current_period_end if (sub and sub.current_period_end) else (datetime.now(timezone.utc) + timedelta(days=23))
@@ -1944,7 +1925,7 @@ def get_tenant_saas_invoices(
 			invoice_number=f"SAAS-INV-{datetime.now(timezone.utc):%Y%m}-001",
 			billing_cycle="monthly",
 			tier=master_tenant.subscription_tier,
-			amount_sar=defaults["monthly_rate_sar"],
+			amount_sar=_plan_monthly_rate_sar(database, master_tenant.subscription_tier),
 			status="paid",
 			issued_date=datetime.now(timezone.utc) - timedelta(days=7),
 			due_date=datetime.now(timezone.utc) + timedelta(days=23),

@@ -48,6 +48,12 @@ class SubscriptionPlan(Base):
     
     features: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    # Catalog presentation (single source of truth for the landing page, tenant billing and
+    # the Super Admin pricing console; editable via PUT /api/v1/superadmin/billing/plans/{id})
+    display_features: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    is_featured: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -75,6 +81,9 @@ class SubscriptionPlan(Base):
             "allow_custom_domain": self.allow_custom_domain,
             "allow_dedicated_ssl": self.allow_dedicated_ssl,
             "features": self.features or [],
+            "display_features": self.display_features or [],
+            "is_featured": bool(self.is_featured),
+            "sort_order": self.sort_order or 0,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
