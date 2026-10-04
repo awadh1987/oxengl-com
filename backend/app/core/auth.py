@@ -6,6 +6,7 @@ Location: backend/app/core/auth.py
 from __future__ import annotations
 
 import os
+import hmac
 from typing import Any, Optional
 
 from fastapi import Depends, HTTPException, Request, status
@@ -95,8 +96,11 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
             return True
 
     if request:
+        # Provisioning bypass via X-Master-Admin-Key. Honoured ONLY when MASTER_PLATFORM_KEY is
+        # explicitly configured: there is deliberately no hard-coded fallback key.
+        expected_key = (os.getenv("MASTER_PLATFORM_KEY") or "").strip()
         prov_header = request.headers.get("X-Master-Admin-Key") or request.headers.get("x-master-admin-key")
-        if prov_header and prov_header == os.getenv("MASTER_PLATFORM_KEY", "OxenGL@2026MasterSecureKey!"):
+        if expected_key and prov_header and hmac.compare_digest(prov_header.encode("utf-8"), expected_key.encode("utf-8")):
             return True
 
     return False
