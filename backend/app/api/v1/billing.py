@@ -26,6 +26,7 @@ from backend.database import get_db
 from backend.models import MasterTenant, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (
+    resolve_billing_tenant,
     get_tenant_invoice,
     list_tenant_invoices_scoped,
     activate_tenant_subscription,
@@ -46,13 +47,16 @@ from backend.app.services.billing_service import (
     verify_tenant_entitlement,
     SAUDI_CORPORATE_BANK_DETAILS,
 )
-from backend.app.api.v1.tenant_control import resolve_control_tenant_id
 from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized, require_super_admin
 
 logger = logging.getLogger("oxengl.billing.api")
 
 # Routers
-tenant_billing_router = APIRouter(tags=["Tenant Billing"])
+# SECURITY: every tenant billing route requires an authenticated session (cookie or Bearer).
+# The tenant is always derived from that user (resolve_billing_tenant / _invoice_scope_tenant_id),
+# never from client-supplied tenant headers or query parameters. The public pricing catalog lives
+# on pricing_router (/api/v1/pricing/plans) and stays anonymous.
+tenant_billing_router = APIRouter(tags=["Tenant Billing"], dependencies=[Depends(get_authenticated_user)])
 # Every Super Admin billing endpoint (invoices, settlement, limits, pricing) requires Super_Admin.
 superadmin_billing_router = APIRouter(
     prefix="/api/v1/superadmin/billing",
@@ -163,30 +167,14 @@ def list_available_subscription_plans(
 
 @tenant_billing_router.get("/subscription")
 def get_tenant_active_subscription(
-    request: Request,
-    tenant_id_query: Optional[str] = Query(None, alias="tenant_id"),
-    header_tenant: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    header_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """
     Retrieves the active commercial contract for the authenticated tenant,
     including live usage meters (seats, vehicles, storage) and capability entitlements.
     """
-    tenant_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id_query,
-        header_tenant=header_tenant,
-        header_slug=header_slug,
-        authorization=authorization,
-        request=request,
-        db=db,
-    )
-    if not tenant_uuid:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Unable to resolve tenant identity from request headers, token, or context.",
-        )
+    tenant_uuid = resolve_billing_tenant(db, current_user).id
 
     tenant = db.get(MasterTenant, tenant_uuid)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_uuid))
@@ -244,27 +232,14 @@ def get_tenant_active_subscription(
 @tenant_billing_router.post("/checkout")
 def create_card_checkout_session(
     payload: StripeCheckoutRequest,
-    request: Request,
-    tenant_id_query: Optional[str] = Query(None, alias="tenant_id"),
-    header_tenant: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    header_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """
     Creates a Stripe Checkout Session for self-service card billing.
     Returns session URL for instant browser redirect.
     """
-    tenant_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id_query,
-        header_tenant=header_tenant,
-        header_slug=header_slug,
-        authorization=authorization,
-        request=request,
-        db=db,
-    )
-    if not tenant_uuid:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to resolve tenant identity.")
+    tenant_uuid = resolve_billing_tenant(db, current_user).id
 
     try:
         session_info = create_stripe_checkout_session(
@@ -286,27 +261,14 @@ def create_card_checkout_session(
 @tenant_billing_router.post("/enterprise-quote")
 def create_enterprise_purchase_order_quote(
     payload: EnterprisePORequest,
-    request: Request,
-    tenant_id_query: Optional[str] = Query(None, alias="tenant_id"),
-    header_tenant: Optional[str] = Header(None, alias="X-Tenant-ID"),
-    header_slug: Optional[str] = Header(None, alias="X-Tenant-Slug"),
-    authorization: Optional[str] = Header(None, alias="Authorization"),
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
     """
     Issues a formal Enterprise Purchase Order / Bank Wire invoice in pending status.
     Generates official corporate wire instructions (IBAN, SWIFT, Beneficiary, Reference).
     """
-    tenant_uuid = resolve_control_tenant_id(
-        query_tenant=tenant_id_query,
-        header_tenant=header_tenant,
-        header_slug=header_slug,
-        authorization=authorization,
-        request=request,
-        db=db,
-    )
-    if not tenant_uuid:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to resolve tenant identity.")
+    tenant_uuid = resolve_billing_tenant(db, current_user).id
 
     quote_data = create_enterprise_po_quote(
         db=db,

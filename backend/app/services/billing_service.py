@@ -641,6 +641,7 @@ def activate_tenant_subscription(
 
 def create_stripe_checkout_session(
     db: Session,
+    *,
     tenant_id: uuid.UUID,
     plan_name: str,
     billing_cycle: str = "monthly",
@@ -656,9 +657,9 @@ def create_stripe_checkout_session(
         raise ValueError(f"Subscription plan '{plan_name}' does not exist.")
 
     amount_sar = plan.annual_price if billing_cycle in ("annual", "yearly") else plan.monthly_price
-    tenant = db.get(MasterTenant, tenant_id)
-    tenant_slug = tenant.slug if tenant else str(tenant_id)[:8]
-    customer_email = tenant.owner_email if tenant else "admin@oxengl.me"
+    tenant = require_master_tenant(db, tenant_id)
+    tenant_slug = tenant.slug
+    customer_email = tenant.owner_email or "admin@oxengl.me"
 
     session_id = f"cs_test_{uuid.uuid4().hex}"
     checkout_url = f"https://checkout.stripe.com/c/pay/{session_id}"
@@ -978,6 +979,7 @@ def handle_stripe_subscription_updated(
 
 def create_enterprise_po_quote(
     db: Session,
+    *,
     tenant_id: uuid.UUID,
     plan_name: str = "ENTERPRISE",
     billing_cycle: str = "monthly",
@@ -989,6 +991,7 @@ def create_enterprise_po_quote(
     Creates an Enterprise Purchase Order / Bank Wire invoice pending manual settlement.
     Returns invoice data and corporate banking wire instructions.
     """
+    require_master_tenant(db, tenant_id)
     plan = get_plan_by_name(db, plan_name) or get_plan_by_name(db, "ENTERPRISE")
     amount_sar = plan.annual_price if billing_cycle in ("annual", "yearly") else plan.monthly_price
 
@@ -1132,4 +1135,39 @@ def get_tenant_invoice(db: Session, *, tenant_id: uuid.UUID, invoice_id: uuid.UU
             SaaSInvoice.tenant_id == tenant_id,
         )
     )
+
+
+# ==============================================================================
+# Caller-scoped tenant resolution (anti-IDOR)
+# ==============================================================================
+
+def require_master_tenant(db: Session, tenant_id: uuid.UUID) -> MasterTenant:
+    """Return the control-plane tenant or raise: billing side effects must never be created
+    for an unknown / fabricated tenant id."""
+    tenant = db.get(MasterTenant, tenant_id)
+    if tenant is None:
+        raise ValueError(f"Unknown tenant {tenant_id}.")
+    return tenant
+
+
+def resolve_billing_tenant(db: Session, user: Any) -> MasterTenant:
+    """The billing tenant of an authenticated user.
+
+    SECURITY: derived ONLY from the authenticated user's own ``company_id`` (the account the
+    signed session token resolves to). Client-supplied tenant headers (``X-Tenant-ID``,
+    ``X-Tenant-Slug``, ``X-Company-ID``) and ``?tenant_id=`` are deliberately not consulted.
+    Raises 403 when the account has no billable tenant workspace (e.g. platform accounts).
+    """
+    company_id = getattr(user, "company_id", None)
+    if not company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenant workspace is associated with this account.")
+    tenant = db.get(MasterTenant, company_id)
+    if tenant is None:
+        company = db.get(ResCompany, company_id)
+        slug = (company.domain_slug or company.slug) if company else None
+        if slug:
+            tenant = db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has no billable tenant workspace.")
+    return tenant
 

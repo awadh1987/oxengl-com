@@ -97,11 +97,78 @@ The previous backend container `oxengl_backend_prev` (image `:pricing`) is stopp
 
 ## 5. Follow-ups (not yet done)
 
-- **`resolve_control_tenant_id` is still trust-on-header** for unauthenticated callers, and still has the "first company" fallback. It is used by these tenant billing routes, which remain unauthenticated:
-  - `/api/v1/tenant/billing/subscription`
-  - `/checkout`
-  - `/enterprise-quote`
-
-  As a result, an anonymous caller can read any tenant's subscription and create checkout sessions or PO quotes for it. Fix: require `get_authenticated_user` and derive the tenant from the user, as done for invoices. Remove the first-company fallback.
+- ~~Tenant billing `/subscription`, `/checkout` and `/enterprise-quote` are unauthenticated and trust-on-header.~~ **Resolved, see Addendum A.**
 - Run an access-log review of the master-platform routes for the period before this fix. Look for `POST`, `DELETE`, `PATCH` and `/search` requests from non-admin IPs.
 - `backend/routers/master_platform.py` (legacy, not mounted) should be deleted so it can't be re-mounted by mistake.
+
+---
+
+## Addendum A — Tenant billing router lock-down (2026-10-04, backend image `oxen-gl_backend:tenantbill`)
+
+### Finding
+
+Three remaining tenant billing routes had **no authentication**. They got the tenant from `resolve_control_tenant_id`, which without a token trusts `X-Tenant-ID`, `X-Company-ID`, `X-Tenant-Slug` and `?tenant_id=`, and finally falls back to the first company in the table.
+
+The routes, under `/api/v1/tenant/billing` (alias `/api/tenant/billing`):
+
+| Route | Impact |
+|---|---|
+| `GET /subscription` | Anyone could read any tenant's plan, usage meters, entitlements and billing period |
+| `POST /checkout` | Anyone could start a card checkout session bound to any tenant |
+| `POST /enterprise-quote` | Anyone could **create pending Purchase-Order invoices** on any tenant's account |
+
+### Fix
+
+**Router-level authentication.** `tenant_billing_router` now uses `dependencies=[Depends(get_authenticated_user)]`, so every tenant billing route needs a session cookie or Bearer token. The anonymous pricing catalog stays on its own router, `pricing_router` (`/api/v1/pricing/plans`), and is unchanged.
+
+**Caller-derived tenant.** The new `billing_service.resolve_billing_tenant(db, user)` maps the authenticated user's own `company_id` to its control-plane `MasterTenant`:
+- The three routes no longer accept any tenant header or query parameter. The spoofable parameters were removed from their signatures.
+- `resolve_control_tenant_id` is no longer imported by `billing.py`.
+- Accounts with no billable tenant get **403**. This includes the platform super admin, who uses the `/api/v1/superadmin/billing/*` endpoints instead.
+
+**Service hardening.**
+- `create_stripe_checkout_session` and `create_enterprise_po_quote` now take `tenant_id` as a keyword-only argument.
+- Both now call `require_master_tenant`. They can no longer create billing side effects for an unknown or fabricated tenant id. Previously checkout silently fell back to a generic customer email.
+
+### Verification (production)
+
+**`verify_tenant_billing.py`: 23/23 passed**
+
+| Check | Result |
+|---|---|
+| Anonymous `/subscription`, `/checkout`, `/enterprise-quote`, `/plans`, `/invoices` on both mounts, with and without spoofed headers or query | **401** (12 probes) |
+| Public `/api/v1/pricing/plans` | 200 |
+| Myon admin `/subscription`, with Alwehda's `X-Tenant-ID`, `X-Tenant-Slug`, `?tenant_id=` and `Host: wac-ye.oxengl.me` | 200, **Myon's** tenant |
+| Alwehda admin `/subscription`, spoofing Myon | 200, **Alwehda's** tenant |
+| Myon `/checkout` while spoofing Alwehda | Session bound to **Myon** (simulated: no Stripe key is configured) |
+| Myon `/enterprise-quote` while spoofing Alwehda | Invoice created on **Myon**; Alwehda's invoice count unchanged. The probe invoice was deleted (0 remain) |
+| Super admin on the three routes | **403** |
+
+**Regression:** `verify_sec.py` 28/28 and `verify_idor.py` 7/7 still pass.
+
+**Rollback:** `oxengl_backend_prev` (image `:secpatch`) is stopped but kept. Rolling back re-opens this addendum's vulnerability only.
+
+### New critical finding (not fixed in this patch)
+
+`backend/app/api/v1/tenant_control.py` is mounted at `/api/tenant/control`, `/api/v1/tenant/control`, `/tenant/control`, `/api/v1/tenant` and `/api/tenant`. It has the **same pattern**: no authentication, and 15 call sites of `resolve_control_tenant_id`.
+
+Anonymous read-only probes on 2026-10-04 returned **200** for:
+- `GET /api/v1/tenant/control/team`
+- `GET /api/v1/tenant/control/settings`
+- `GET /api/v1/tenant/control/domains`
+- `GET /api/v1/tenant/control/database/config`
+
+Its write routes use the same resolver, so they are most likely also anonymously usable against any tenant. They were not probed:
+- `POST /team/invite`
+- `DELETE /team/{id}`
+- `POST /settings`
+- domain add, delete and verify
+- `POST /database/migrate`, `POST /database/switch-back`
+
+**Recommended fix (same approach as here):**
+1. Add a router-level `Depends(get_authenticated_user)`.
+2. Derive the tenant from the user.
+3. Require a tenant Admin/Owner role on mutating routes.
+4. Delete the header and query fallback and the "first company" fallback from `resolve_control_tenant_id`.
+
+Keep `/domains/resolve` and `/resolve-domain` public if the edge or nginx needs them, but make sure they only return the minimum.
