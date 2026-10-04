@@ -4,8 +4,8 @@
   "description": "نظام إدارة عمليات النقل، الكسارات، الفواتير الضريبية والسندات المالية",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#0A0E16",
+  "background_color": "#0B1F3A",
+  "theme_color": "#0B1F3A",
   "icons": [
     {
       "src": "/icon-192.png",
