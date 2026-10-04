@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrandCrown } from './BrandCrown';
+import { BrandWordmark } from './BrandWordmark';
 
 export const LandingFooter: React.FC = () => {
   return (
@@ -7,8 +7,7 @@ export const LandingFooter: React.FC = () => {
       <div className="footer-top">
         <div className="footer-brand">
           <div className="nav-brand" style={{ marginBottom: '12px' }}>
-            <BrandCrown size={32} />
-            <span className="brand-name">Oxen<span>GL</span></span>
+            <BrandWordmark height={24} />
           </div>
           <p className="footer-desc">
             Sovereign Saudi-first Enterprise Resource Planning platform. Engineering high-density quarry, heavy contracting, and multi-tenant financial infrastructure.

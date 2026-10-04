@@ -1176,17 +1176,12 @@
       gap: 10px;
     }
 
-    .landing-page-root .brand-logo {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-sm);
-      /* OxenGL crown tile — matches the Master Console (from-blue-600 via-indigo-600 to-cyan-500) */
-      background: linear-gradient(to top right, #2563eb, #4f46e5, #06b6d4);
-      box-shadow: 0 8px 20px -6px rgba(59, 130, 246, 0.45);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    /* OxenGL wordmark (white "Oxen" + orange "GL"), see BrandWordmark.tsx */
+    .landing-page-root .brand-wordmark {
+      display: block;
+      width: auto;
       flex-shrink: 0;
+      user-select: none;
     }
 
     .landing-page-root .brand-dot {
@@ -1197,13 +1192,6 @@
       box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.85);
     }
 
-    .landing-page-root .brand-name {
-      font-size: 18px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      color: var(--text-white);
-    }
-    .landing-page-root .brand-name span { color: var(--color-primary); }
 
     /* ---- Hero ------------------------------------------------------------ */
     .landing-page-root .hero-section {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrandCrown } from './BrandCrown';
+import { BrandWordmark } from './BrandWordmark';
 
 interface LandingHeaderProps {
   onLoginClick?: () => void;
@@ -48,9 +48,8 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ onLoginClick }) =>
 
       {/* 2. Top Application Navigation */}
       <header className="main-nav">
-        <a href="#workspace-stage" onClick={scrollToSection('workspace-stage')} className="nav-brand">
-          <BrandCrown size={34} />
-          <span className="brand-name">Oxen<span>GL</span></span>
+        <a href="#workspace-stage" onClick={scrollToSection('workspace-stage')} className="nav-brand" aria-label="OxenGL home">
+          <BrandWordmark height={26} />
         </a>
 
         <nav className="nav-links">
