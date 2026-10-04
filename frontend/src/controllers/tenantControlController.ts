@@ -1,17 +1,6 @@
 import { Request, Response } from 'express';
 import { ExtendedRequest, customDomainRegistry, registeredTenants, tenantCache } from '../middleware/tenantResolver';
 
-interface TeamMember {
-  id: string;
-  tenant_id: string;
-  email: string;
-  full_name: string;
-  role: 'admin' | 'coo' | 'accountant' | 'data_entry' | 'driver' | 'guest_user';
-  department: string;
-  status: 'active' | 'invited';
-  created_at: string;
-}
-
 interface CustomDomainRecord {
   id: string;
   tenant_id: string;
@@ -22,13 +11,6 @@ interface CustomDomainRecord {
   ssl_status: 'pending' | 'validating_dns' | 'issuing' | 'active' | 'failed';
   created_at: string;
 }
-
-// In-Memory Team Members store
-const teamStore: TeamMember[] = [
-  { id: 'tm-1', tenant_id: '6ab52593-ab47-4eee-8779-0cdfbb2762da', email: 'khaled@horizon.sa', full_name: 'Khaled Al-Harbi', role: 'admin', department: 'Executive Management', status: 'active', created_at: '2026-08-01T10:00:00Z' },
-  { id: 'tm-2', tenant_id: '6ab52593-ab47-4eee-8779-0cdfbb2762da', email: 'faisal@horizon.sa', full_name: 'Eng. Faisal Al-Otaibi', role: 'coo', department: 'Operations & Fleet', status: 'active', created_at: '2026-08-05T11:30:00Z' },
-  { id: 'tm-3', tenant_id: '6ab52593-ab47-4eee-8779-0cdfbb2762da', email: 'salman@horizon.sa', full_name: 'Salman Al-Dossary', role: 'accountant', department: 'Finance & Tax', status: 'active', created_at: '2026-08-10T09:15:00Z' },
-];
 
 // In-Memory Domain store
 const domainStore: CustomDomainRecord[] = [
@@ -88,66 +70,6 @@ const tenantSettingsStore: Record<string, any> = {
 };
 
 export const tenantControlController = {
-  /**
-   * List team members belonging strictly to the active tenant
-   */
-  listTeam(req: ExtendedRequest, res: Response) {
-    const tenantId = req.tenant?.id || (req.headers['x-tenant-id'] as string) || '6ab52593-ab47-4eee-8779-0cdfbb2762da';
-    const members = teamStore.filter((m) => m.tenant_id === tenantId);
-    return res.json({ success: true, count: members.length, team: members });
-  },
-
-  /**
-   * Invite a new team member with role-based visibility
-   */
-  inviteMember(req: ExtendedRequest, res: Response) {
-    const tenantId = req.tenant?.id || (req.headers['x-tenant-id'] as string) || '6ab52593-ab47-4eee-8779-0cdfbb2762da';
-    const { email, full_name, role = 'user', department = 'Operations' } = req.body;
-
-    if (!email || !full_name) {
-      return res.status(400).json({ error: 'Email and full name are required' });
-    }
-
-    const existing = teamStore.find((m) => m.tenant_id === tenantId && m.email.toLowerCase() === email.toLowerCase());
-    if (existing) {
-      return res.status(409).json({ error: `User '${email}' already belongs to this workspace.` });
-    }
-
-    const newMember: TeamMember = {
-      id: `tm-${Date.now()}`,
-      tenant_id: tenantId,
-      email,
-      full_name,
-      role,
-      department,
-      status: 'invited',
-      created_at: new Date().toISOString(),
-    };
-
-    teamStore.push(newMember);
-    return res.status(201).json({
-      success: true,
-      message: `Invitation email dispatched to ${email}`,
-      member: newMember,
-    });
-  },
-
-  /**
-   * Remove a team member
-   */
-  deleteMember(req: ExtendedRequest, res: Response) {
-    const tenantId = req.tenant?.id || (req.headers['x-tenant-id'] as string) || '6ab52593-ab47-4eee-8779-0cdfbb2762da';
-    const { memberId } = req.params;
-
-    const index = teamStore.findIndex((m) => m.id === memberId && m.tenant_id === tenantId);
-    if (index === -1) {
-      return res.status(404).json({ error: 'Team member not found' });
-    }
-
-    const removed = teamStore.splice(index, 1)[0];
-    return res.json({ success: true, message: `Member ${removed.full_name} removed.`, member: removed });
-  },
-
   /**
    * Get Progressive Settings (General, Webhooks, API Keys, SSO)
    */

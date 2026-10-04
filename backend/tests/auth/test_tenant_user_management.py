@@ -186,26 +186,34 @@ async def test_require_role_rejection(async_client, test_tenants_and_users):
 
 
 @pytest.mark.asyncio
-async def test_invite_user_creates_tenant_scoped_record(async_client, test_tenants_and_users):
-    """Admin A can invite a new user; user is created with a temporary password under Tenant A."""
+async def test_invite_user_creates_tenant_scoped_external_record(async_client, test_tenants_and_users):
+    """Admin A can invite an *external* identity; it is tenant-scoped and no password is ever returned."""
     token_admin_a = test_tenants_and_users["token_admin_a"]
     headers = {"Authorization": f"Bearer {token_admin_a}"}
 
-    unique_email = f"new_hire_{uuid.uuid4().hex[:6]}@tenanta.com"
-    payload = {
-        "email": unique_email,
-        "role": "Data_Entry",
-        "full_name": "New Hire Staff",
-    }
-
+    unique_email = f"auditor_{uuid.uuid4().hex[:6]}@gmail.com"
+    payload = {"email": unique_email, "role": "External_Auditor", "full_name": "Ext Auditor"}
     response = await async_client.post("/api/v1/users/invite", json=payload, headers=headers)
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert data["status"] == "invited"
     assert data["email"] == unique_email
-    assert data["role"] == "Data_Entry"
-    assert "temporary_password" in data
-    assert len(data["temporary_password"]) > 6
+    assert data["role"] == "External_Auditor"
+    assert "temporary_password" not in data and "password" not in data
+
+
+@pytest.mark.asyncio
+async def test_invite_rejects_internal_roles(async_client, test_tenants_and_users):
+    """Internal staff must come through HR: the invite endpoint refuses every internal/legacy role."""
+    headers = {"Authorization": f"Bearer {test_tenants_and_users['token_admin_a']}"}
+    for role in ("Data_Entry", "Finance_Manager", "Super_Admin", "Admin"):
+        response = await async_client.post(
+            "/api/v1/users/invite",
+            json={"email": f"x_{uuid.uuid4().hex[:6]}@gmail.com", "role": role},
+            headers=headers,
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "registered via the HR module" in response.json().get("detail", "")
 
 
 @pytest.mark.asyncio
@@ -286,28 +294,28 @@ async def test_owner_can_list_tenant_users(async_client, test_tenants_and_users)
 
 
 @pytest.mark.asyncio
-async def test_owner_can_invite_and_assign_roles(async_client, test_tenants_and_users):
-    """OWNER can invite new users with Owner, Admin, or staff roles."""
+async def test_owner_can_invite_external_and_assign_standard_roles(async_client, test_tenants_and_users):
+    """OWNER invites external identities only, and can then assign any standardized role."""
     token_owner_a = test_tenants_and_users["token_owner_a"]
     headers = {"Authorization": f"Bearer {token_owner_a}"}
 
-    unique_email = f"co_owner_{uuid.uuid4().hex[:6]}@tenanta.com"
-    payload = {
-        "email": unique_email,
-        "role": "Owner",
-        "full_name": "Co-Owner Partner",
-    }
-    response = await async_client.post("/api/v1/users/invite", json=payload, headers=headers)
+    unique_email = f"contractor_{uuid.uuid4().hex[:6]}@outlook.com"
+    response = await async_client.post(
+        "/api/v1/users/invite", json={"email": unique_email, "role": "Guest", "full_name": "Contractor"}, headers=headers
+    )
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert data["role"] == "Owner"
+    assert data["role"] == "Guest"
     assert data["email"] == unique_email
 
-    # Also update role to Admin
     user_id = data["user_id"]
-    update_resp = await async_client.put(f"/api/v1/users/{user_id}/role", json={"role": "Admin"}, headers=headers)
+    update_resp = await async_client.put(f"/api/v1/users/{user_id}/role", json={"role": "Ops_Editor"}, headers=headers)
     assert update_resp.status_code == status.HTTP_200_OK
-    assert update_resp.json()["role"] == "Admin"
+    assert update_resp.json()["role"] == "Ops_Editor"
+    assert update_resp.json()["iam_role"] == "Ops_Editor"
+
+    legacy_resp = await async_client.put(f"/api/v1/users/{user_id}/role", json={"role": "Admin"}, headers=headers)
+    assert legacy_resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 @pytest.mark.asyncio

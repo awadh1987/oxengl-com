@@ -34,19 +34,16 @@ from sqlalchemy.orm import Session
 from backend import models
 from backend.app.domains.hr.audit import AuditContext, append_audit_from_context, build_audit_context
 from backend.app.domains.hr.models import Employee
-from backend.app.domains.iam.role_catalog import HR_PROVISIONED_ROLES
+from backend.app.domains.iam.role_catalog import (  # noqa: F401  (re-exported for callers/tests)
+    HR_PROVISIONED_ROLES,
+    LEGACY_ROLE_OVERRIDES,
+    PRIVILEGED_IAM_ROLES,
+)
 
 logger = logging.getLogger("oxengl.iam.provisioning")
 
 FALLBACK_ROLE = "Employee_Self_Serve"
 FALLBACK_CONSTRAINTS: Mapping[str, Any] = MappingProxyType({"hr_portal_only": True})
-
-# 'Super_Admin' in the legacy ``res_users.role`` column is interpreted platform-wide by
-# ``is_super_admin_authorized`` (cross-tenant). A tenant CEO must never receive that, so the
-# blueprint role is kept verbatim in ``res_users.iam_role`` while the legacy ``role`` column gets the
-# tenant-scoped executive equivalent. Every other blueprint role is written to both columns.
-LEGACY_ROLE_OVERRIDES: Mapping[str, str] = MappingProxyType({"Super_Admin": "CEO"})
-PRIVILEGED_IAM_ROLES = frozenset({"Super_Admin"})
 
 # Blueprint section 3 schema; always present in the payload so consumers get a stable shape.
 ABAC_DEFAULTS: Mapping[str, Any] = MappingProxyType({

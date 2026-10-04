@@ -8,7 +8,6 @@ import {
   CrusherPaymentEntry,
   BrandConfig,
   EditApprovalRequest,
-  UserApprovalRequest,
   AuditLogEntry,
   DocumentAttachment,
   FinancialVoucher,
@@ -573,33 +572,6 @@ export const INITIAL_EDIT_REQUESTS: EditApprovalRequest[] = [
       purchases_cost: 682.95,
       net_profit: 769.85,
     },
-  },
-];
-
-export const INITIAL_USER_REQUESTS: UserApprovalRequest[] = [
-  {
-    id: 'usr-req-1',
-    fullName: 'Saud Al-Mutairi',
-    fullNameAr: 'سعود المطيري (مشرف ميداني وميزان)',
-    username: 'saud.mutairi',
-    email: 's.mutairi@meayon.sa',
-    phone: '+966 53 777 8899',
-    requestedRole: 'Data_Entry',
-    requestedAt: '2026-08-26T09:10:00Z',
-    status: 'Pending',
-    notes: 'طلب حساب تسجيل موظف جديد لإدخال تذاكر ميزان كسارة طوق',
-  },
-  {
-    id: 'usr-req-2',
-    fullName: 'Majed Al-Ghamdi',
-    fullNameAr: 'ماجد الغامدي (مراجع مالي خارجي)',
-    username: 'majed.audit',
-    email: 'm.audit@alghamdi-cpa.sa',
-    phone: '+966 50 999 1122',
-    requestedRole: 'Accountant',
-    requestedAt: '2026-08-25T14:30:00Z',
-    status: 'Pending',
-    notes: 'طلب وصول مؤقت للتدقيق المالي وإعداد القوائم الربعية',
   },
 ];
 

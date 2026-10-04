@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  UserCheck,
   Edit3,
   Sliders,
   Palette,
@@ -31,7 +30,7 @@ import {
   Database,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatNumber, formatTonnage } from '../utils/formatters';
-import { UserRole, EditApprovalRequest, UserApprovalRequest, BrandConfig } from '../types';
+import { EditApprovalRequest, BrandConfig } from '../types';
 import { ImportSystemResourceModal } from '../components/ImportSystemResourceModal';
 
 export const ExecutiveAdminView: React.FC = () => {
@@ -49,9 +48,6 @@ export const ExecutiveAdminView: React.FC = () => {
     editRequests,
     approveEditRequest,
     rejectEditRequest,
-    userRequests,
-    approveUserRequest,
-    rejectUserRequest,
     brandConfig,
     updateBrandConfig,
     resetBrandConfig,
@@ -76,8 +72,7 @@ export const ExecutiveAdminView: React.FC = () => {
   >('approvals');
 
   // Approvals tab sub-filter
-  const [approvalsSubTab, setApprovalsSubTab] = useState<'edits' | 'users' | 'signatures'>('edits');
-  const [selectedUserRoles, setSelectedUserRoles] = useState<Record<string, UserRole>>({});
+  const [approvalsSubTab, setApprovalsSubTab] = useState<'edits' | 'signatures'>('edits');
   const [rejectionNotes, setRejectionNotes] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
 
@@ -178,7 +173,6 @@ export const ExecutiveAdminView: React.FC = () => {
 
   // Pending counts
   const pendingEditsCount = editRequests.filter((r) => r.status === 'Pending').length;
-  const pendingUsersCount = userRequests.filter((r) => r.status === 'Pending').length;
 
   // Filtered Grid rows
   const filteredGridRows = useMemo(() => {
@@ -284,11 +278,11 @@ export const ExecutiveAdminView: React.FC = () => {
             <span>{isAr ? 'جسر البيانات التاريخية (System Resource)' : 'Import System Resource (.xlsx)'}</span>
           </button>
 
-          {pendingEditsCount + pendingUsersCount > 0 && (
+          {pendingEditsCount > 0 && (
             <div className="flex items-center gap-2 rounded-2xl bg-amber-500/20 px-3.5 py-2 border border-amber-400/30 text-amber-200 text-xs font-bold">
               <Clock className="h-4 w-4 text-amber-400 animate-spin" />
               <span>
-                {pendingEditsCount + pendingUsersCount} {isAr ? 'طلبات بانتظار الاعتماد' : 'Pending Approvals'}
+                {pendingEditsCount} {isAr ? 'طلبات بانتظار الاعتماد' : 'Pending Approvals'}
               </span>
             </div>
           )}
@@ -300,10 +294,10 @@ export const ExecutiveAdminView: React.FC = () => {
         {[
           {
             id: 'approvals',
-            labelAr: `محرك الاعتمادات والموافقات (${pendingEditsCount + pendingUsersCount})`,
-            labelEn: `Approvals Engine (${pendingEditsCount + pendingUsersCount})`,
+            labelAr: `محرك الاعتمادات والموافقات (${pendingEditsCount})`,
+            labelEn: `Approvals Engine (${pendingEditsCount})`,
             icon: CheckCircle2,
-            badge: pendingEditsCount + pendingUsersCount > 0,
+            badge: pendingEditsCount > 0,
           },
           {
             id: 'global-grid',
@@ -371,21 +365,6 @@ export const ExecutiveAdminView: React.FC = () => {
               <span>{isAr ? 'طلبات تعديل البيانات والرحلات' : 'Data Edit Requests'}</span>
               <span className="rounded-full bg-orange-200 px-1.5 py-0.2 text-[10px] text-orange-950">
                 {pendingEditsCount}
-              </span>
-            </button>
-
-            <button
-              onClick={() => setApprovalsSubTab('users')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
-                approvalsSubTab === 'users'
-                  ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <UserCheck className="h-3.5 w-3.5" />
-              <span>{isAr ? 'طلبات تسجيل الموظفين والمستخدمين' : 'User Registration Requests'}</span>
-              <span className="rounded-full bg-orange-200 px-1.5 py-0.2 text-[10px] text-orange-950">
-                {pendingUsersCount}
               </span>
             </button>
 
@@ -573,111 +552,7 @@ export const ExecutiveAdminView: React.FC = () => {
             </div>
           )}
 
-          {/* Sub-tab 1.2: User Sign-up Approvals */}
-          {approvalsSubTab === 'users' && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-black text-slate-900">
-                  {isAr ? 'طلبات تسجيل الحسابات والموظفين الجدد' : 'Staff Account Registration Queue'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {isAr
-                    ? 'تعيين الصلاحيات والأدوار واعتماد دخول الموظفين للوحة التحكم'
-                    : 'Assign security roles and approve new staff access'}
-                </p>
-              </div>
-
-              {userRequests.length === 0 ? (
-                <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xs">
-                  <UserCheck className="mx-auto h-8 w-8 text-emerald-500" />
-                  <p className="mt-2 text-xs font-bold text-slate-700">
-                    {isAr ? 'لا توجد طلبات تسجيل موظفين بانتظار الاعتماد' : 'No pending user registrations'}
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-slate-100 rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-                  {userRequests.map((usrReq) => (
-                    <div key={usrReq.id} className="p-5 hover:bg-slate-50 transition-colors">
-                      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 font-black">
-                            {usrReq.fullName.charAt(0)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-xs font-black text-slate-900">{usrReq.fullNameAr || usrReq.fullName}</h4>
-                              <span className="rounded-md bg-orange-50 px-2 py-0.5 text-[10px] font-bold text-orange-700 font-mono">
-                                @{usrReq.username}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-500 mt-0.5">
-                              {usrReq.email} - {usrReq.phone} - {formatDate(usrReq.requestedAt)}
-                            </p>
-                            {usrReq.notes && <p className="text-[11px] text-orange-800 mt-1 font-medium">{usrReq.notes}</p>}
-                          </div>
-                        </div>
-
-                        {usrReq.status === 'Pending' ? (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-1.5">
-                              <label className="text-[11px] font-bold text-slate-700">{isAr ? 'تعيين الصلاحية:' : 'Assign Role:'}</label>
-                              <select
-                                value={selectedUserRoles[usrReq.id] || usrReq.requestedRole}
-                                onChange={(e) =>
-                                  setSelectedUserRoles((prev) => ({
-                                    ...prev,
-                                    [usrReq.id]: e.target.value as UserRole,
-                                  }))
-                                }
-                                className="rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-bold text-orange-950 focus:outline-none"
-                              >
-                                <option value="Owner">Owner (مالك المنشأة)</option>
-                                <option value="Admin">Admin (مدير عام)</option>
-                                <option value="Accountant">Accountant (محاسب)</option>
-                                <option value="Data_Entry">Data Entry (مدخل بيانات)</option>
-                                <option value="Guest">Guest (عميل)</option>
-                              </select>
-                            </div>
-
-                            <button
-                              onClick={() => rejectUserRequest(usrReq.id)}
-                              className="rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-bold text-rose-700 shadow-2xs hover:bg-rose-50"
-                            >
-                              {isAr ? 'رفض' : 'Reject'}
-                            </button>
-                            <button
-                              onClick={() =>
-                                approveUserRequest(
-                                  usrReq.id,
-                                  selectedUserRoles[usrReq.id] || usrReq.requestedRole
-                                )
-                              }
-                              className="flex items-center gap-1 rounded-xl bg-emerald-600 px-4 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-700"
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                              <span>{isAr ? 'اعتماد الحساب وتفعيله' : 'Approve & Activate'}</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-bold ${
-                              usrReq.status === 'Approved'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-rose-100 text-rose-800'
-                            }`}
-                          >
-                            {usrReq.status === 'Approved' ? (isAr ? 'تم تفعيل الحساب' : 'Activated') : (isAr ? 'مرفوض' : 'Rejected')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Sub-tab 1.3: Digital Signature & Stamping Manager */}
+          {/* Sub-tab 1.2: Digital Signature & Stamping Manager */}
           {approvalsSubTab === 'signatures' && (
             <div className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-xs space-y-6">
               <div>

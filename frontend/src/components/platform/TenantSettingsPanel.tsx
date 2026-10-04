@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   Building2,
-  Users,
   Webhook,
   Key,
   ShieldCheck,
@@ -9,8 +8,6 @@ import {
   Save,
   CheckCircle2,
   AlertCircle,
-  Plus,
-  Trash2,
   Eye,
   EyeOff,
   Copy,
@@ -33,9 +30,8 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
   const { i18n } = useTranslation();
   const isAr = i18n?.language === 'ar' || i18n?.language?.startsWith('ar');
 
-  const [activeTab, setActiveTab] = useState<'general' | 'team' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
   const [settings, setSettings] = useState<any>(null);
-  const [team, setTeam] = useState<any[]>([]);
   const [domainsList, setDomainsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -59,19 +55,8 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
   const [showDbPassword, setShowDbPassword] = useState(false);
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
 
-  // Invite member modal
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteForm, setInviteForm] = useState({
-    full_name: '',
-    email: '',
-    role: 'accountant',
-    department: 'Operations',
-  });
-
-
   useEffect(() => {
     loadSettings();
-    loadTeam();
     loadDomains();
   }, [tenantId]);
 
@@ -129,36 +114,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
     }
   };
 
-  const loadTeam = async () => {
-    try {
-      const data = await erpApi.getTenantControlTeam(tenantId);
-      if (data?.success) {
-        setTeam(data.team);
-      } else {
-        const res = await fetch('/api/tenant/control/team', {
-          headers: { 'x-tenant-id': tenantId, 'x-tenant-slug': tenantSlug },
-        });
-        const fallbackData = await res.json();
-        if (fallbackData.success) {
-          setTeam(fallbackData.team);
-        }
-      }
-    } catch (err) {
-      console.warn('API getTenantControlTeam failed, attempting direct fetch:', err);
-      try {
-        const res = await fetch('/api/tenant/control/team', {
-          headers: { 'x-tenant-id': tenantId, 'x-tenant-slug': tenantSlug },
-        });
-        const fallbackData = await res.json();
-        if (fallbackData?.success) {
-          setTeam(fallbackData.team);
-        }
-      } catch (innerErr) {
-        console.error('Failed to load team:', innerErr);
-      }
-    }
-  };
-
   const handleSaveSection = async (sectionKey: string, payload: any) => {
     setSaving(true);
     setSaveSuccess(false);
@@ -192,31 +147,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
       console.error('Error saving settings:', err);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleInviteSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const data = await erpApi.inviteTenantControlMember(inviteForm, tenantId);
-      if (data?.success) {
-        setShowInviteModal(false);
-        setInviteForm({ full_name: '', email: '', role: 'accountant', department: 'Operations' });
-        loadTeam();
-      }
-    } catch (err) {
-      console.error('Error inviting member:', err);
-    }
-  };
-
-  const handleDeleteMember = async (memberId: string) => {
-    try {
-      const data = await erpApi.deleteTenantControlMember(memberId, tenantId);
-      if (data?.success) {
-        loadTeam();
-      }
-    } catch (err) {
-      console.error('Error deleting member:', err);
     }
   };
 
@@ -346,7 +276,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
             <span>لوحة تحكم مساحة عمل المنشأة (Tenant Control Panel)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            إعدادات الهوية، أعضاء الفريق، النطاقات المخصصة، واجهات البرمجة (Webhooks / API Keys)، والربط المؤسسي.
+            إعدادات الهوية، النطاقات المخصصة، واجهات البرمجة (Webhooks / API Keys)، والربط المؤسسي.
           </p>
         </div>
 
@@ -366,14 +296,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         >
           <Building2 className="w-4 h-4 shrink-0" />
           <span>المعلومات الأساسية</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('team')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'team' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
-        >
-          <Users className="w-4 h-4 shrink-0" />
-          <span>فريق العمل والصلاحيات</span>
         </button>
 
         <button
@@ -553,65 +475,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
               {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               <span>حفظ الإعدادات الأساسية</span>
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* 2. Team Management Tab */}
-      {activeTab === 'team' && (
-        <div className="space-y-4 animate-in fade-in duration-150">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-white">أعضاء الفريق ومستويات الوصول ({team.length})</h3>
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>دعوة عضو جديد</span>
-            </button>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-800 rounded-xl">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 text-[11px] uppercase tracking-wider font-semibold">
-                <tr>
-                  <th className="px-4 py-3">الاسم الكامل</th>
-                  <th className="px-4 py-3">البريد الإلكتروني</th>
-                  <th className="px-4 py-3">الدور الوظيفي (Role)</th>
-                  <th className="px-4 py-3">القسم</th>
-                  <th className="px-4 py-3">الحالة</th>
-                  <th className="px-4 py-3 text-right">الإجراءات</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 bg-slate-900/40">
-                {team.map((member) => (
-                  <tr key={member.id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-white">{member.full_name}</td>
-                    <td className="px-4 py-3 font-mono text-slate-400">{member.email}</td>
-                    <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded font-mono text-[10px] uppercase font-bold">
-                        {member?.role ?? 'User'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-400">{member.department}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1 text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-medium text-[11px]">
-                        <CheckCircle2 className="w-3 h-3" /> {member.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleDeleteMember(member.id)}
-                        className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded transition-colors"
-                        title="إلغاء العضوية"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
       )}
@@ -1045,70 +908,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         </div>
       )}
 
-      {/* Invite Member Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <h3 className="text-base font-bold text-white">دعوة عضو جديد إلى فريق العمل</h3>
-            <form onSubmit={handleInviteSubmit} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">الاسم الكامل</label>
-                <input
-                  type="text"
-                  required
-                  placeholder={isAr ? 'محمد العتيبي' : 'Mohammed Al-Otaibi'}
-                  value={inviteForm.full_name}
-                  onChange={(e) => setInviteForm({ ...inviteForm, full_name: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">البريد الإلكتروني</label>
-                <input
-                  type="email"
-                  required
-                  placeholder={isAr ? 'm.otaibi@company.sa' : 'm.otaibi@company.sa'}
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold mb-1">الدور الوظيفي والصلاحيات</label>
-                <select
-                  value={inviteForm.role}
-                  onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="admin">مدير مساحة العمل (Workspace Admin)</option>
-                  <option value="coo">مدير العمليات والأسطول (Operations & Fleet)</option>
-                  <option value="accountant">محاسب ومسؤول الضرائب (Accountant & ZATCA)</option>
-                  <option value="data_entry">مدخل بيانات وسندات (Data Entry)</option>
-                  <option value="driver">سائق أسطول (Driver App Access)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-medium"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-bold"
-                >
-                  إرسال الدعوة فوراً
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

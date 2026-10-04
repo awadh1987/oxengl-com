@@ -20,7 +20,6 @@ import {
   DashboardKPIs,
   BrandConfig,
   EditApprovalRequest,
-  UserApprovalRequest,
   AuditLogEntry,
   DigitalSignatureStamp,
   DocumentAttachment,
@@ -39,7 +38,6 @@ import {
   INITIAL_CRUSHER_PAYMENTS,
   INITIAL_BRAND_CONFIG,
   INITIAL_EDIT_REQUESTS,
-  INITIAL_USER_REQUESTS,
   INITIAL_AUDIT_LOGS,
   INITIAL_FINANCIAL_VOUCHERS,
   generateInitialOperations,
@@ -218,9 +216,6 @@ interface AppContextType {
   createEditRequest: (req: Omit<EditApprovalRequest, 'id' | 'requestedAt' | 'status'>) => void;
   approveEditRequest: (id: string, reviewNotes?: string) => void;
   rejectEditRequest: (id: string, reviewNotes?: string) => void;
-  userRequests: UserApprovalRequest[];
-  approveUserRequest: (id: string, assignedRole: UserRole) => void;
-  rejectUserRequest: (id: string, notes?: string) => void;
   // Brand Configuration & Dynamic Theming
   brandConfig: BrandConfig;
   updateBrandConfig: (config: Partial<BrandConfig>) => void;
@@ -850,7 +845,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Workflows & Approvals State
   const [editRequests, setEditRequests] = useState<EditApprovalRequest[]>([]);
-  const [userRequests, setUserRequests] = useState<UserApprovalRequest[]>([]);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -2589,6 +2583,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           email: u.email,
           phone: '',
           role: (u.role as UserRole) || 'Guest',
+          iamRole: u.iam_role ?? null,
+          mustChangePassword: !!u.must_change_password,
           status: u.is_active ? 'Active' : 'Suspended',
           created_at: u.created_at,
         }));
@@ -2707,76 +2703,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       entityType: req.entityType as any,
       entityId: req.recordId,
       summary: `رفض طلب التعديل ${id}. السبب: ${reviewNotes || 'غير مطابق للشروط'}`,
-    });
-  };
-
-  const approveUserRequest = (id: string, assignedRole: UserRole) => {
-    const req = userRequests.find((r) => r.id === id);
-    if (!req) return;
-
-    // Create user account
-    const newUsr: User = {
-      id: `usr-${Date.now()}`,
-      username: req.username,
-      fullName: req.fullName,
-      fullNameAr: req.fullNameAr,
-      email: req.email,
-      phone: req.phone,
-      role: assignedRole,
-      status: 'Active',
-      is_deleted: false,
-      created_at: new Date().toISOString(),
-    };
-
-    setUsers((prev) => [...prev, newUsr]);
-
-    setUserRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: 'Approved',
-              assignedRole,
-              reviewedBy: currentUser.fullNameAr || currentUser.fullName,
-            }
-          : r
-      )
-    );
-
-    logAuditAction({
-      userId: currentUser.id,
-      userName: currentUser.fullNameAr || currentUser.fullName,
-      userRole: currentUser?.role ?? 'Guest',
-      action: 'APPROVE',
-      entityType: 'User',
-      entityId: newUsr.id,
-      summary: `اعتماد تسجيل المستخدم (${newUsr.fullNameAr}) وتعيين الصلاحية (${assignedRole})`,
-      newData: newUsr,
-    });
-  };
-
-  const rejectUserRequest = (id: string, notes?: string) => {
-    setUserRequests((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              status: 'Rejected',
-              notes,
-              reviewedBy: currentUser.fullNameAr || currentUser.fullName,
-            }
-          : r
-      )
-    );
-
-    logAuditAction({
-      userId: currentUser.id,
-      userName: currentUser.fullNameAr || currentUser.fullName,
-      userRole: currentUser?.role ?? 'Guest',
-      action: 'REJECT',
-      entityType: 'User',
-      entityId: id,
-      summary: `رفض طلب تسجيل المستخدم ${id}`,
     });
   };
 
@@ -2938,7 +2864,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers([]);
     setCrusherPayments([]);
     setEditRequests([]);
-    setUserRequests([]);
     setAuditLogs([]);
     setBrandConfig(INITIAL_BRAND_CONFIG);
   };
@@ -2962,9 +2887,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const crusherPayableBalance = totalCrusherPurchased - totalCrusherPaid;
 
-    const pendingApprovalsCount =
-      editRequests.filter((r) => r.status === 'Pending').length +
-      userRequests.filter((r) => r.status === 'Pending').length;
+    const pendingApprovalsCount = editRequests.filter((r) => r.status === 'Pending').length;
 
     return {
       totalSales,
@@ -2979,7 +2902,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       crusherPayableBalance,
       pendingApprovalsCount,
     };
-  }, [accessibleOperations, activeOperations, crusherPayments, editRequests, userRequests]);
+  }, [accessibleOperations, activeOperations, crusherPayments, editRequests]);
 
   return (
     <AppContext.Provider
@@ -3048,9 +2971,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createEditRequest,
         approveEditRequest,
         rejectEditRequest,
-        userRequests,
-        approveUserRequest,
-        rejectUserRequest,
         brandConfig,
         updateBrandConfig,
         resetBrandConfig,

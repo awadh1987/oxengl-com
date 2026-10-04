@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import type { User } from '../types';
 import { erpApi, Partner } from '../services/api';
 import {
   Database,
@@ -22,8 +23,10 @@ import {
   Search,
   UserPlus,
   Key,
-  Copy,
-  Check,
+  KeyRound,
+  Ban,
+  ShieldAlert,
+  Loader2,
   RefreshCw,
   Filter,
   X,
@@ -36,9 +39,46 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 import { EntityCRUDModal, CRUDModalType } from '../components/EntityCRUDModal';
+import { useIamRoles } from '../hooks/useIamRoles';
+import {
+  HR_REGISTRATION_WARNING_AR,
+  HR_REGISTRATION_WARNING_EN,
+  PRIVILEGED_IAM_ROLES,
+  iamRoleLabel,
+} from '../constants/iamRoles';
 import { CsvImportModal, CsvImportEntityType } from '../components/CsvImportModal';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { HoverIcon } from '../components/common/HoverIcon';
+
+function iamRoleBadgeClass(role: string): string {
+  if (role === 'Super_Admin' || role.endsWith('_Admin') || role === 'Admin' || role === 'Owner' || role === 'CEO') {
+    return 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-400';
+  }
+  if (role.endsWith('_Manager') || role === 'COO') {
+    return 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/50 dark:border-orange-800 dark:text-orange-400';
+  }
+  if (role.endsWith('_Editor') || role === 'Accountant' || role === 'IT_Support') {
+    return 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:border-purple-800 dark:text-purple-400';
+  }
+  if (role === 'Data_Entry' || role.endsWith('_Operator')) {
+    return 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-400';
+  }
+  return 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300';
+}
+
+function rolePermissionSummary(role: string, isAr: boolean): string {
+  if (role === 'Super_Admin') return isAr ? 'صلاحيات تنفيذية كاملة داخل مساحة العمل' : 'Full executive authority within this workspace';
+  if (role.endsWith('_Admin')) return isAr ? 'إدارة كاملة للوحدة المعنية' : 'Full administration of the module area';
+  if (role.endsWith('_Manager')) return isAr ? 'إدارة واعتماد داخل نطاق الإدارة' : 'Management and approvals within the department';
+  if (role.endsWith('_Editor')) return isAr ? 'إنشاء وتعديل السجلات داخل النطاق' : 'Create and edit records within scope';
+  if (role.endsWith('_Operator') || role === 'Data_Entry') return isAr ? 'إدخال بيانات ومهام تشغيلية يومية' : 'Daily operational and data-entry tasks';
+  if (role === 'Admin_Viewer') return isAr ? 'عرض إداري للقراءة فقط' : 'Read-only administrative view';
+  if (role === 'IT_Support') return isAr ? 'دعم فني وحل المشكلات' : 'Technical support and troubleshooting';
+  if (role === 'Employee_Self_Serve') return isAr ? 'خدمات الموظف الذاتية فقط' : 'Employee self-service only';
+  if (role === 'External_Auditor') return isAr ? 'قراءة فقط ضمن نطاق التدقيق (هوية خارجية)' : 'Read-only, audit scope (external identity)';
+  if (role === 'Guest') return isAr ? 'قراءة ومراجعة فقط (هوية خارجية)' : 'Read-only (external identity)';
+  return role;
+}
 
 export const MasterDataView: React.FC = () => {
   const {
@@ -54,11 +94,16 @@ export const MasterDataView: React.FC = () => {
     deleteCrusher,
     deleteTransporter,
     deleteMaterial,
-    deleteUser,
+    currentUser,
     language,
   } = useApp();
 
   const isAr = language === 'ar';
+  const iamRoles = useIamRoles();
+  // IAM Control Panel actions are admin-only. The backend is authoritative (it re-checks the account and tenant).
+  const canManageIam =
+    ['Super_Admin', 'Owner', 'Admin', 'CEO'].includes(String(currentUser?.role)) ||
+    PRIVILEGED_IAM_ROLES.includes(String(currentUser?.iamRole));
   const [activeSubTab, setActiveSubTab] = useState<CRUDModalType>('customer');
   const [searchQuery, setSearchQuery] = useState('');
   const [quickFilter, setQuickFilter] = useState('all');
@@ -72,15 +117,22 @@ export const MasterDataView: React.FC = () => {
   // Invite User Modal State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<'Admin' | 'Accountant' | 'Data_Entry' | 'Guest'>('Accountant');
+  const [inviteRole, setInviteRole] = useState<string>('Guest');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteResult, setInviteResult] = useState<{
     email: string;
-    temporary_password: string;
     role: string;
+    resetDispatched: boolean;
   } | null>(null);
-  const [copiedPassword, setCopiedPassword] = useState(false);
+
+  // IAM row actions (force password reset / suspend / reactivate)
+  type IamActionKind = 'reset' | 'suspend' | 'reactivate';
+  const [iamConfirm, setIamConfirm] = useState<{ user: User; kind: IamActionKind } | null>(null);
+  const [iamBusyId, setIamBusyId] = useState<string | null>(null);
+  const [iamRowErrors, setIamRowErrors] = useState<Record<string, string>>({});
+  const [iamNotice, setIamNotice] = useState<string | null>(null);
 
   // CSV Batch Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -160,31 +212,68 @@ export const MasterDataView: React.FC = () => {
   const handleInviteUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setInviteLoading(true);
+    setInviteError(null);
     try {
       const res = await erpApi.inviteUser({
         email: inviteEmail.trim(),
         role: inviteRole,
         full_name: inviteFullName.trim() || undefined,
       });
-      setInviteResult({
-        email: res.email,
-        temporary_password: res.temporary_password,
-        role: res.role,
-      });
+      setInviteResult({ email: res.email, role: res.role, resetDispatched: res.reset_dispatched });
       await refreshUsers();
       setInviteEmail('');
       setInviteFullName('');
     } catch (err: any) {
       console.error('Invite user failed:', err);
-      alert(err.message || (isAr ? 'فشلت دعوة المستخدم' : 'Failed to invite user'));
+      setInviteError(err?.message || (isAr ? 'فشلت دعوة المستخدم' : 'Failed to invite user'));
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const runIamAction = async () => {
+    if (!iamConfirm) return;
+    const { user, kind } = iamConfirm;
+    setIamBusyId(user.id);
+    setIamRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[user.id];
+      return next;
+    });
+    try {
+      if (kind === 'reset') {
+        const res = await erpApi.forcePasswordReset(user.id);
+        setIamNotice(
+          res.reset_dispatched
+            ? isAr ? `تم إبطال بيانات الدخول وإرسال رمز إعادة التعيين إلى ${user.email}.` : `Credentials invalidated and a reset code was sent to ${user.email}.`
+            : isAr ? `تم إبطال بيانات الدخول لـ ${user.email}. على المستخدم إكمال إعادة تعيين كلمة المرور.` : `Credentials invalidated for ${user.email}. The user must complete the password reset flow.`
+        );
+      } else if (kind === 'suspend') {
+        await erpApi.suspendUser(user.id);
+        setIamNotice(isAr ? `تم تعليق حساب ${user.email} وإنهاء جلساته.` : `Account ${user.email} suspended and sessions revoked.`);
+      } else {
+        await erpApi.reactivateUser(user.id);
+        setIamNotice(isAr ? `تمت إعادة تفعيل حساب ${user.email}.` : `Account ${user.email} reactivated.`);
+      }
+      setIamConfirm(null);
+      await refreshUsers();
+      setTimeout(() => setIamNotice(null), 6000);
+    } catch (err: any) {
+      setIamRowErrors((prev) => ({
+        ...prev,
+        [user.id]: err?.message || (isAr ? 'فشلت العملية' : 'Action failed'),
+      }));
+      setIamConfirm(null);
+    } finally {
+      setIamBusyId(null);
     }
   };
 
   const handleOpenCreate = (type: CRUDModalType) => {
     if (type === 'user') {
       setInviteResult(null);
+      setInviteError(null);
+      setInviteRole('Guest');
       setIsInviteModalOpen(true);
       return;
     }
@@ -326,7 +415,7 @@ export const MasterDataView: React.FC = () => {
       })
       .filter((u) => {
         if (quickFilter === 'all') return true;
-        return u.role === quickFilter;
+        return (u.iamRole || u.role) === quickFilter;
       });
     return Array.from(new Map(list.map((u) => [u.id, u])).values());
   }, [users, searchQuery, quickFilter]);
@@ -569,11 +658,9 @@ export const MasterDataView: React.FC = () => {
               {activeSubTab === 'user' && (
                 <>
                   <option value="all">{isAr ? 'كافة الأدوار والصلاحيات' : 'All Roles'}</option>
-                  <option value="Admin">{isAr ? 'مدير عام (Admin)' : 'Admin'}</option>
-                  <option value="COO">{isAr ? 'مدير تشغيل (COO)' : 'COO'}</option>
-                  <option value="Accountant">{isAr ? 'محاسب مالي (Accountant)' : 'Accountant'}</option>
-                  <option value="Data_Entry">{isAr ? 'مدخل بيانات (Data_Entry)' : 'Data Entry'}</option>
-                  <option value="Guest">{isAr ? 'زائر قراءة فقط (Guest)' : 'Guest'}</option>
+                  {[...iamRoles.roles, ...iamRoles.externalRoles.filter((r) => !iamRoles.roles.includes(r))].map((r) => (
+                    <option key={r} value={r}>{iamRoleLabel(r, isAr)} ({r})</option>
+                  ))}
                 </>
               )}
             </select>
@@ -674,7 +761,7 @@ export const MasterDataView: React.FC = () => {
                   <th className="text-start">{isAr ? 'الهاتف' : 'Phone'}</th>
                   <th className="text-start">{isAr ? 'العنوان والموقع' : 'Address'}</th>
                   <th className="text-center">{isAr ? 'الحد الائتماني' : 'Credit Limit'}</th>
-                  <th className="text-center w-14">{isAr ? 'إجراءات' : 'Actions'}</th>
+                  <th className="text-center w-28">{isAr ? 'إجراءات' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -999,6 +1086,17 @@ export const MasterDataView: React.FC = () => {
             </span>
           </div>
 
+          {!canManageIam && (
+            <p className="mx-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+              {isAr ? 'إجراءات الوصول متاحة لمدراء مساحة العمل فقط.' : 'Access actions are available to workspace administrators only.'}
+            </p>
+          )}
+          {iamNotice && (
+            <p role="status" className="mx-1 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300">
+              {iamNotice}
+            </p>
+          )}
+
           <div className="neo-data-viewport responsive-table-wrapper rounded border border-slate-200 dark:border-slate-800">
             <table className="neo-grid-table w-full text-start">
               <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -1018,7 +1116,14 @@ export const MasterDataView: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  activeUsers.map((u) => (
+                  activeUsers.map((u) => {
+                    const roleValue = u.iamRole || u.role;
+                    const isSelf = u.id === currentUser?.id;
+                    const isBusy = iamBusyId === u.id;
+                    const isSuspended = u.status === 'Suspended';
+                    const rowError = iamRowErrors[u.id];
+                    const actionsDisabled = !canManageIam || isBusy;
+                    return (
                     <tr key={u.id}>
                       <td className="font-bold text-slate-900 dark:text-slate-100">{isAr ? u.fullNameAr : u.fullName}</td>
                       <td className="neo-cell-mono text-slate-600 dark:text-slate-400">
@@ -1027,55 +1132,81 @@ export const MasterDataView: React.FC = () => {
                       </td>
                       <td>
                         <span
-                          className={`rounded px-1.5 py-0.2 text-[8.5px] font-bold ${
-                            u.role === 'Admin'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-400'
-                              : u.role === 'COO'
-                              ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/50 dark:border-orange-800 dark:text-orange-400'
-                              : u.role === 'Accountant'
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/50 dark:border-purple-800 dark:text-purple-400'
-                              : u.role === 'Data_Entry'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-400'
-                              : 'bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
-                          }`}
+                          className={`rounded px-1.5 py-0.2 text-[8.5px] font-bold ${iamRoleBadgeClass(roleValue)}`}
+                          title={roleValue}
                         >
-                          {u.role}
+                          {iamRoleLabel(roleValue, isAr)}
                         </span>
+                        {isSuspended && (
+                          <span className="ms-1 rounded px-1.5 py-0.2 text-[8.5px] font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/50 dark:border-rose-800 dark:text-rose-400">
+                            {isAr ? 'معلّق' : 'Suspended'}
+                          </span>
+                        )}
+                        {u.mustChangePassword && !isSuspended && (
+                          <span className="ms-1 rounded px-1.5 py-0.2 text-[8.5px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/50 dark:border-amber-800 dark:text-amber-400">
+                            {isAr ? 'بانتظار تغيير كلمة المرور' : 'Password change pending'}
+                          </span>
+                        )}
                       </td>
                       <td className="text-[9.5px] text-slate-600 dark:text-slate-400 truncate max-w-sm">
-                        {u.role === 'Admin' && (isAr ? 'كافة الصلاحيات (إدارة كاملة للمنظومة CEO)' : 'Full Executive Authority (CEO)')}
-                        {u.role === 'COO' && (isAr ? 'المدير التنفيذي للعمليات (اعتمادات تشغيلية ورقابة)' : 'Chief Operating Officer (COO Approvals)')}
-                        {u.role === 'Accountant' && (isAr ? 'الفواتير، الأرباح، الكسارات، والتقارير المالية' : 'Invoices, Profits, Crushers, Reports')}
-                        {u.role === 'Data_Entry' && (isAr ? 'إدخال وتعديل تذاكر الميزان والرحلات اليومية' : 'Daily Operations & Scale Tickets Input')}
-                        {u.role === 'Guest' && (isAr ? 'قراءة ومراجعة فقط (حجب الأسعار والأرباح)' : 'Read-Only (Prices Hidden)')}
+                        {rolePermissionSummary(roleValue, isAr)}
                       </td>
                       <td className="text-center">
                         <div className="flex items-center justify-center gap-1">
                           <button
                             type="button"
                             onClick={() => handleOpenEdit('user', u)}
-                            className="neo-action-btn neo-btn-edit"
-                            title={isAr ? 'تعديل الصلاحيات' : 'Edit'}
+                            disabled={actionsDisabled || isSelf}
+                            className="neo-action-btn neo-btn-edit disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={
+                              !canManageIam
+                                ? isAr ? 'للمدراء فقط' : 'Administrators only'
+                                : isAr ? 'تعديل الصلاحيات' : 'Edit Access'
+                            }
+                            aria-label={isAr ? 'تعديل الصلاحيات' : 'Edit Access'}
                           >
                             <Edit2 className="h-2.5 w-2.5" />
                           </button>
                           <button
                             type="button"
-                            onClick={async () => {
-                              if (window.confirm(isAr ? 'هل أنت متأكد من حذف هذا المستخدم نهائياً؟' : 'Permanently delete this user?')) {
-                                await deleteUser(u.id);
-                                await refreshUsers();
-                              }
-                            }}
-                            className="neo-action-btn neo-btn-delete"
-                            title={isAr ? 'أرشفة وحذف' : 'Delete'}
+                            onClick={() => setIamConfirm({ user: u, kind: 'reset' })}
+                            disabled={actionsDisabled || isSelf}
+                            className="neo-action-btn disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={
+                              !canManageIam
+                                ? isAr ? 'للمدراء فقط' : 'Administrators only'
+                                : isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset'
+                            }
+                            aria-label={isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset'}
                           >
-                            <Trash2 className="h-2.5 w-2.5" />
+                            {isBusy && iamConfirm?.kind === 'reset' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <KeyRound className="h-2.5 w-2.5" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIamConfirm({ user: u, kind: isSuspended ? 'reactivate' : 'suspend' })}
+                            disabled={actionsDisabled || isSelf}
+                            className="neo-action-btn neo-btn-delete disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={
+                              !canManageIam
+                                ? isAr ? 'للمدراء فقط' : 'Administrators only'
+                                : isSuspended
+                                ? isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account'
+                                : isAr ? 'تعليق الحساب' : 'Suspend Account'
+                            }
+                            aria-label={isSuspended ? (isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account') : (isAr ? 'تعليق الحساب' : 'Suspend Account')}
+                          >
+                            {isBusy && iamConfirm?.kind !== 'reset' ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : isSuspended ? <CheckCircle className="h-2.5 w-2.5" /> : <Ban className="h-2.5 w-2.5" />}
                           </button>
                         </div>
+                        {rowError && (
+                          <p role="alert" className="mt-1 text-[9px] font-bold text-rose-600 dark:text-rose-400 text-start">
+                            {rowError}
+                          </p>
+                        )}
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -1305,7 +1436,7 @@ export const MasterDataView: React.FC = () => {
                     {isAr ? 'دعوة مستخدم جديد للمنظومة' : 'Invite New Workspace User'}
                   </h3>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                    {isAr ? 'إنشاء حساب موظف ضمن مساحة عمل المنشأة الحالية' : 'Create employee account under current tenant'}
+                    {isAr ? 'دعوة هوية خارجية (ضيف / مدقق خارجي) إلى مساحة العمل الحالية' : 'Invite an external identity (Guest / External Auditor) to the current workspace'}
                   </p>
                 </div>
               </div>
@@ -1330,26 +1461,17 @@ export const MasterDataView: React.FC = () => {
                   </div>
                   <p className="mt-2 text-xs leading-relaxed text-emerald-800 dark:text-emerald-300">
                     {isAr
-                      ? `تم ربط المستخدم (${inviteResult.email}) بدور (${inviteResult.role}). يُرجى مشاركة كلمة المرور المؤقتة التالية بأمان مع الموظف:`
-                      : `User (${inviteResult.email}) created with role (${inviteResult.role}). Please share this temporary password securely:`}
+                      ? `تم ربط المستخدم (${inviteResult.email}) بدور (${iamRoleLabel(inviteResult.role, true)}). ${
+                          inviteResult.resetDispatched
+                            ? 'تم إرسال رمز لمرة واحدة لتعيين كلمة المرور إلى صاحب الحساب.'
+                            : 'استخدم «فرض إعادة تعيين كلمة المرور» لإرسال رمز تعيين كلمة المرور.'
+                        }`
+                      : `User (${inviteResult.email}) created with role (${iamRoleLabel(inviteResult.role, false)}). ${
+                          inviteResult.resetDispatched
+                            ? 'A one-time password-setup code was sent to the invitee.'
+                            : 'Use "Force Password Reset" to send a password-setup code.'
+                        }`}
                   </p>
-                  <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-slate-900 px-3 py-2">
-                    <code className="font-mono text-sm font-black text-emerald-950 dark:text-emerald-300">
-                      {inviteResult.temporary_password}
-                    </code>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(inviteResult.temporary_password);
-                        setCopiedPassword(true);
-                        setTimeout(() => setCopiedPassword(false), 2000);
-                      }}
-                      className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 transition-colors"
-                    >
-                      {copiedPassword ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                      <span>{copiedPassword ? (isAr ? 'تم النسخ' : 'Copied!') : (isAr ? 'نسخ' : 'Copy')}</span>
-                    </button>
-                  </div>
                 </div>
 
                 <div className="flex justify-end pt-2">
@@ -1367,14 +1489,24 @@ export const MasterDataView: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleInviteUser} className="space-y-4">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-200"
+                >
+                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <p className="text-xs font-black leading-relaxed">
+                    {isAr ? HR_REGISTRATION_WARNING_AR : HR_REGISTRATION_WARNING_EN}
+                  </p>
+                </div>
+
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {isAr ? 'البريد الإلكتروني المهني للمستخدم *' : 'Corporate Email Address *'}
+                    {isAr ? 'البريد الإلكتروني للمدعو *' : 'Invitee Email Address *'}
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder={isAr ? 'user@corporate.com' : 'user@corporate.com'}
+                    placeholder="name@example.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
@@ -1400,15 +1532,26 @@ export const MasterDataView: React.FC = () => {
                   </label>
                   <select
                     value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as any)}
+                    onChange={(e) => setInviteRole(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3.5 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:bg-white dark:focus:bg-slate-900 focus:outline-none"
                   >
-                    <option value="Admin">{isAr ? 'Admin - مدير عام (كامل الصلاحيات)' : 'Admin - Full Administrator'}</option>
-                    <option value="Accountant">{isAr ? 'Accountant - محاسب مالي (الفواتير والتقارير)' : 'Accountant - Invoices & Financial Reports'}</option>
-                    <option value="Data_Entry">{isAr ? 'Data_Entry - مدخل بيانات (العمليات والموازين)' : 'Data_Entry - Operations & Tickets'}</option>
-                    <option value="Guest">{isAr ? 'Guest - زائر (قراءة فقط بدون أسعار)' : 'Guest - Read-Only Access'}</option>
+                    {iamRoles.externalRoles.map((r) => (
+                      <option key={r} value={r}>
+                        {r === 'Guest'
+                          ? isAr ? 'Guest - ضيف (قراءة فقط)' : 'Guest - Read-only access'
+                          : r === 'External_Auditor'
+                          ? isAr ? 'External Auditor - مدقق خارجي (قراءة فقط، نطاق التدقيق)' : 'External Auditor - Read-only, audit scope'
+                          : iamRoleLabel(r, isAr)}
+                      </option>
+                    ))}
                   </select>
                 </div>
+
+                {inviteError && (
+                  <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+                    {inviteError}
+                  </p>
+                )}
 
                 <div className="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-4">
                   <button
@@ -1428,13 +1571,70 @@ export const MasterDataView: React.FC = () => {
                     ) : (
                       <>
                         <UserPlus className="h-4 w-4" />
-                        <span>{isAr ? 'إنشاء ودعوة المستخدم' : 'Create & Invite'}</span>
+                        <span>{isAr ? 'دعوة الهوية الخارجية' : 'Invite External User'}</span>
                       </>
                     )}
                   </button>
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* IAM confirmation dialog (force password reset / suspend / reactivate) */}
+      {iamConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4">
+          <div
+            dir={isAr ? 'rtl' : 'ltr'}
+            role="alertdialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#090f1c] p-5 shadow-2xl space-y-3"
+          >
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">
+              {iamConfirm.kind === 'reset'
+                ? isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset'
+                : iamConfirm.kind === 'suspend'
+                ? isAr ? 'تعليق الحساب' : 'Suspend Account'
+                : isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account'}
+            </h3>
+            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+              {iamConfirm.kind === 'reset'
+                ? isAr
+                  ? `سيتم إبطال كلمة المرور الحالية وإنهاء جميع جلسات ${iamConfirm.user.email}، وإرسال رمز لمرة واحدة لتعيين كلمة مرور جديدة.`
+                  : `This invalidates the current password and signs ${iamConfirm.user.email} out everywhere. A one-time code is sent so they can set a new password.`
+                : iamConfirm.kind === 'suspend'
+                ? isAr
+                  ? `سيتم منع ${iamConfirm.user.email} من تسجيل الدخول وإنهاء جميع جلساته فوراً.`
+                  : `${iamConfirm.user.email} will be blocked from signing in and all active sessions will end immediately.`
+                : isAr
+                ? `سيتمكن ${iamConfirm.user.email} من تسجيل الدخول مجدداً.`
+                : `${iamConfirm.user.email} will be able to sign in again.`}
+            </p>
+            <p className="text-[10px] text-slate-400">
+              {isAr ? 'يتم تسجيل هذا الإجراء في سجل التدقيق.' : 'This action is recorded in the audit log.'}
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={iamBusyId !== null}
+                onClick={() => setIamConfirm(null)}
+                className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+              >
+                {isAr ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                disabled={iamBusyId !== null}
+                onClick={runIamAction}
+                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-50 ${
+                  iamConfirm.kind === 'reactivate' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {iamBusyId !== null && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>{isAr ? 'تأكيد' : 'Confirm'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -1587,17 +1587,6 @@ export const erpApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
-  getTenantControlTeam: (companyId?: string) =>
-    request<any>('/api/v1/tenant/control/team', companyId),
-  inviteTenantControlMember: (payload: any, companyId?: string) =>
-    request<any>('/api/v1/tenant/control/team/invite', companyId, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    }),
-  deleteTenantControlMember: (memberId: string, companyId?: string) =>
-    request<any>(`/api/v1/tenant/control/team/${memberId}`, companyId, {
-      method: 'DELETE',
-    }),
   getTenantControlDomains: (companyId?: string) =>
     request<any>('/api/v1/tenant/control/domains', companyId),
   registerTenantControlDomain: (payload: any, companyId?: string) =>
@@ -1693,7 +1682,7 @@ export const erpApi = {
     }),
 
 
-  // Tenant User Management API (Live Backend Integration)
+  // Tenant User Management API (IAM Control Panel - backend: /api/v1/users)
   getUsers: () =>
     request<
       Array<{
@@ -1701,12 +1690,24 @@ export const erpApi = {
         email: string;
         full_name: string;
         role: string;
+        iam_role?: string | null;
+        must_change_password?: boolean;
         is_active: boolean;
         created_at?: string;
         tenant_id: string;
       }>
     >('/api/v1/users'),
 
+  /** Standardized role catalogue (single source of truth: backend role_catalog). */
+  getIamRoles: () =>
+    request<{
+      roles: Array<{ value: string; privileged: boolean }>;
+      external_roles: Array<{ value: string; privileged: boolean }>;
+      can_assign_privileged: boolean;
+      can_manage_users: boolean;
+    }>('/api/v1/users/roles'),
+
+  /** External / contractor identities only; internal staff are provisioned by the HR module. */
   inviteUser: (payload: { email: string; role: string; full_name?: string }) =>
     request<{
       status: string;
@@ -1714,7 +1715,7 @@ export const erpApi = {
       email: string;
       full_name: string;
       role: string;
-      temporary_password: string;
+      reset_dispatched: boolean;
       message: string;
     }>('/api/v1/users/invite', undefined, {
       method: 'POST',
@@ -1727,13 +1728,34 @@ export const erpApi = {
     }),
 
   updateUserRole: (userId: string, role: string) =>
-    request<{ status: string; user_id: string; role: string; message: string }>(
+    request<{ status: string; user_id: string; role: string; iam_role: string; message: string }>(
       `/api/v1/users/${userId}/role`,
       undefined,
       {
         method: 'PUT',
         body: JSON.stringify({ role }),
       }
+    ),
+
+  suspendUser: (userId: string) =>
+    request<{ status: string; user_id: string; is_active: boolean; message: string }>(
+      `/api/v1/users/${userId}/suspend`,
+      undefined,
+      { method: 'POST' }
+    ),
+
+  reactivateUser: (userId: string) =>
+    request<{ status: string; user_id: string; is_active: boolean; message: string }>(
+      `/api/v1/users/${userId}/reactivate`,
+      undefined,
+      { method: 'POST' }
+    ),
+
+  forcePasswordReset: (userId: string) =>
+    request<{ status: string; user_id: string; must_change_password: boolean; reset_dispatched: boolean; message: string }>(
+      `/api/v1/users/${userId}/force-password-reset`,
+      undefined,
+      { method: 'POST' }
     ),
 
   async createWeighbridgeOperation(input: {

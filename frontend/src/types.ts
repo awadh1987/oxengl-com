@@ -63,6 +63,9 @@ export interface User {
   email: string;
   phone?: string;
   role: UserRole;
+  /** Standardized IAM role (res_users.iam_role); falls back to the legacy `role` when absent. */
+  iamRole?: string | null;
+  mustChangePassword?: boolean;
   companyId?: string;
   companyName?: string;
   company_name?: string;
@@ -336,21 +339,6 @@ export interface EditApprovalRequest {
   oldValues: Record<string, any>;
   newValues: Record<string, any>;
   diffSummary: string;
-}
-
-export interface UserApprovalRequest {
-  id: string;
-  fullName: string;
-  fullNameAr: string;
-  username: string;
-  email: string;
-  phone: string;
-  requestedRole: UserRole;
-  requestedAt: string;
-  status: 'Pending' | 'Approved' | 'Rejected';
-  reviewedBy?: string;
-  assignedRole?: UserRole;
-  notes?: string;
 }
 
 export interface BrandConfig {
