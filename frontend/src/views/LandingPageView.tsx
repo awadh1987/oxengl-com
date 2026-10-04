@@ -63,9 +63,10 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
   }, []);
 
   return (
-    <div className="platform-dark landing-page-root">
+    <div className="platform-dark landing-page-root flex flex-col min-h-dvh w-full">
       <LandingHeader onLoginClick={onLoginSuccess} />
-      
+
+      <main className="landing-main flex-1 w-full">
       <LandingHero
         onRestoreWindow={handleRestoreWindow}
         openWindows={openWindows}
@@ -86,7 +87,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
       <PricingSection onSelectTier={handleTierSelect} />
       
       <ProvisioningTerminal />
-      
+      </main>
+
       <LandingFooter />
     </div>
   );
