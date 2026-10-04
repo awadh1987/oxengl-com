@@ -14,7 +14,7 @@ from typing import List, Optional
 from urllib.parse import quote
 
 from fastapi import (
-    APIRouter, Depends, File, Form, HTTPException, Query, Request, Response,
+    APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Response,
     Security, UploadFile, status,
 )
 from pydantic import BaseModel, ConfigDict, Field
@@ -31,6 +31,7 @@ from backend.api.dependencies import (
 )
 from backend import models as platform_models
 from backend.app.domains.hr.audit import append_hr_audit
+from backend.app.domains.iam.provisioning import schedule_employee_provisioning
 from backend.app.domains.hr.schemas import (
     DOCUMENT_TYPES,
     EmployeeCreate,
@@ -295,6 +296,7 @@ def list_employees(
 def create_employee(
     payload: EmployeeCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     context: TenantContext = Depends(get_tenant_context),
     db: Session = Depends(get_db),
 ):
@@ -375,6 +377,14 @@ def create_employee(
     )
     db.commit()
     db.refresh(emp)
+    # Only after the employee commit succeeded: provision the native login in the background
+    # (own DB session, IDs only). Never affects this response.
+    schedule_employee_provisioning(
+        background_tasks, request,
+        employee_id=emp.id, tenant_id=effective_tenant_id,
+        actor_id=getattr(context.user, "id", None),
+        actor_identifier=getattr(context.user, "email", None),
+    )
     return emp
 
 

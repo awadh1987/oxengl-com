@@ -7,7 +7,7 @@ and automated General Ledger financial posting upon payroll approvals.
 import uuid
 from datetime import date
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -17,6 +17,7 @@ from backend.app.security.abac import enforce_abac, get_abac_user_context, ABACU
 from backend.models import ResUser
 from backend.app.domains.hr.models import Employee, AttendanceLog, HrmsAttendanceLog
 from backend.app.domains.hr.audit import append_hr_audit
+from backend.app.domains.iam.provisioning import schedule_employee_provisioning
 from backend.app.domains.hr.schemas import EmployeeCreate, EmployeeResponse
 from backend.app.domains.hr.services import AutomatedPayrollEngine
 try:
@@ -55,6 +56,7 @@ def _require_hr_role(
 async def create_employee(
     payload: EmployeeCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: ABACUserContext = Depends(get_abac_user_context),
 ):
@@ -196,6 +198,14 @@ async def create_employee(
     )
     db.commit()
     db.refresh(emp)
+
+    # Only after the employee commit succeeded: provision the native login in the background
+    # (own DB session, IDs only). Never affects this response.
+    schedule_employee_provisioning(
+        background_tasks, request,
+        employee_id=emp.id, tenant_id=tenant_uuid,
+        actor_id=user.user_id, actor_identifier=f"user:{user.user_id}",
+    )
 
     result = EmployeeResponse.model_validate(emp).model_dump(mode="json")
     result.update({

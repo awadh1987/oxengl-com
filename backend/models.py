@@ -18,6 +18,7 @@ try:
 except ImportError:
     from database import Base
 from backend.app.domains.inventory.models import Material
+from backend.app.domains.iam.role_catalog import ALLOWED_RES_USER_ROLES_SQL
 
 
 class UserRole(str, Enum):
@@ -315,9 +316,14 @@ class ResUser(TimestampMixin, Base):
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mfa_secret: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     mfa_backup_codes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    # HR-to-IAM provisioning (docs/oxengl_hr_iam_provisioning_blueprint.md): exact blueprint RBAC role,
+    # ABAC constraint payload, and the first-login password-change gate.
+    iam_role: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)
+    abac_context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
 
     __table_args__ = (
-        CheckConstraint("role IN ('Super_Admin', 'super_admin', 'SUPER_ADMIN', 'SUPERADMIN', 'Owner', 'owner', 'OWNER', 'Admin', 'admin', 'ADMIN', 'User', 'user', 'USER', 'COO', 'CEO', 'Accountant', 'Data_Entry', 'Guest')", name="ck_res_user_role"),
+        CheckConstraint(f"role IN ({ALLOWED_RES_USER_ROLES_SQL})", name="ck_res_user_role"),
     )
 
     @property

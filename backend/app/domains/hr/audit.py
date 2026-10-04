@@ -5,6 +5,7 @@ from __future__ import annotations
 import ipaddress
 import os
 import uuid
+from dataclasses import dataclass
 from typing import Optional
 
 from fastapi import Request
@@ -55,6 +56,68 @@ def resolve_hr_client_ip(request: Request) -> Optional[str]:
     return str(chain[0]) if chain else str(peer_ip)
 
 
+@dataclass(frozen=True)
+class AuditContext:
+    """Plain-data snapshot of the request facts an audit row needs.
+
+    Safe to hand to a BackgroundTask: it holds no ORM objects, no Request, and no secrets.
+    """
+
+    actor_id: Optional[uuid.UUID]
+    actor_identifier: Optional[str]
+    ip_address: Optional[str]
+    user_agent: str
+    request_id: str
+    endpoint: str
+
+
+def build_audit_context(
+    request: Request,
+    *,
+    actor_id: Optional[uuid.UUID],
+    actor_identifier: Optional[str],
+) -> AuditContext:
+    """Capture the real client IP (trusted-proxy aware) and request facts for later auditing."""
+    return AuditContext(
+        actor_id=actor_id,
+        actor_identifier=(actor_identifier or (f"user:{actor_id}" if actor_id else "unknown"))[:255],
+        ip_address=resolve_hr_client_ip(request),
+        user_agent=(request.headers.get("user-agent") or "unknown")[:512],
+        request_id=(request.headers.get("x-request-id") or str(uuid.uuid4()))[:64],
+        endpoint=request.url.path[:255],
+    )
+
+
+def append_audit_from_context(
+    db: Session,
+    context: AuditContext,
+    *,
+    action: str,
+    outcome: str,
+    tenant_id: Optional[uuid.UUID],
+) -> None:
+    """Append an event to platform_audit_logs in the caller's transaction (no request needed)."""
+    company_id = None
+    if tenant_id:
+        # platform_audit_logs.company_id references res_companies; tenant_id is
+        # retained separately so test, legacy, and non-company tenant IDs are auditable.
+        company_id = db.query(models.ResCompany.id).filter(models.ResCompany.id == tenant_id).scalar()
+    db.add(
+        models.PlatformAuditLog(
+            actor_email=(context.actor_identifier or "unknown")[:255],
+            actor_id=context.actor_id,
+            tenant_id=tenant_id,
+            action=action[:120],
+            outcome=outcome[:40],
+            endpoint_accessed=context.endpoint,
+            request_id=context.request_id,
+            user_agent=context.user_agent,
+            ip_address=context.ip_address,
+            company_id=company_id,
+        )
+    )
+
+
 def append_hr_audit(
     db: Session,
     request: Request,
@@ -66,22 +129,10 @@ def append_hr_audit(
     actor_identifier: Optional[str],
 ) -> None:
     """Append an HR event to platform_audit_logs in the caller's transaction."""
-    company_id = None
-    if tenant_id:
-        # platform_audit_logs.company_id references res_companies; tenant_id is
-        # retained separately so test, legacy, and non-company tenant IDs are auditable.
-        company_id = db.query(models.ResCompany.id).filter(models.ResCompany.id == tenant_id).scalar()
-    db.add(
-        models.PlatformAuditLog(
-            actor_email=(actor_identifier or (f"user:{actor_id}" if actor_id else "unknown"))[:255],
-            actor_id=actor_id,
-            tenant_id=tenant_id,
-            action=action[:120],
-            outcome=outcome[:40],
-            endpoint_accessed=request.url.path[:255],
-            request_id=(request.headers.get("x-request-id") or str(uuid.uuid4()))[:64],
-            user_agent=(request.headers.get("user-agent") or "unknown")[:512],
-            ip_address=resolve_hr_client_ip(request),
-            company_id=company_id,
-        )
+    append_audit_from_context(
+        db,
+        build_audit_context(request, actor_id=actor_id, actor_identifier=actor_identifier),
+        action=action,
+        outcome=outcome,
+        tenant_id=tenant_id,
     )

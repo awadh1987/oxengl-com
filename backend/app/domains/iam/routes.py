@@ -45,6 +45,8 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int = 900  # 15 minutes in seconds
+    # True for HR-provisioned accounts until the temporary password has been replaced.
+    must_change_password: bool = False
 
 
 class RefreshRequest(BaseModel):
@@ -164,6 +166,7 @@ def login(
         "refresh_token": raw_refresh,
         "token_type": "bearer",
         "expires_in": 900,
+        "must_change_password": bool(getattr(user, "must_change_password", False)),
     }
 
 

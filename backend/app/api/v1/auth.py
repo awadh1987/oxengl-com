@@ -422,7 +422,7 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
 
     try:
         res = db.execute(
-            text("UPDATE public.res_users SET password_hash = :h WHERE LOWER(email) = :e"),
+            text("UPDATE public.res_users SET password_hash = :h, must_change_password = FALSE WHERE LOWER(email) = :e"),
             {"h": argon2_hash, "e": norm_email},
         )
         updated_count += res.rowcount
