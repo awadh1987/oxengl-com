@@ -1180,9 +1180,10 @@
       width: 32px;
       height: 32px;
       border-radius: var(--radius-sm);
-      background: linear-gradient(135deg, var(--color-primary), #c2410c);
-      box-shadow: 0 0 16px var(--color-primary-glow);
-      display: flex;
+      /* OxenGL crown tile — matches the Master Console (from-blue-600 via-indigo-600 to-cyan-500) */
+      background: linear-gradient(to top right, #2563eb, #4f46e5, #06b6d4);
+      box-shadow: 0 8px 20px -6px rgba(59, 130, 246, 0.45);
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       flex-shrink: 0;

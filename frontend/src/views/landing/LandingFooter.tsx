@@ -1,4 +1,5 @@
 import React from 'react';
+import { BrandCrown } from './BrandCrown';
 
 export const LandingFooter: React.FC = () => {
   return (
@@ -6,9 +7,7 @@ export const LandingFooter: React.FC = () => {
       <div className="footer-top">
         <div className="footer-brand">
           <div className="nav-brand" style={{ marginBottom: '12px' }}>
-            <div className="brand-logo">
-              <span className="brand-dot" />
-            </div>
+            <BrandCrown size={32} />
             <span className="brand-name">Oxen<span>GL</span></span>
           </div>
           <p className="footer-desc">
