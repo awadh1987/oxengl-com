@@ -871,6 +871,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => setIsProfileOpen(true)}
+            aria-haspopup="dialog"
+            className={`inline-flex h-7.5 items-center rounded-lg border px-2 text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
+              isDark
+                ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
+                : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+            }`}
+          >
+            {isAr ? 'ملفي الشخصي' : 'My Profile'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
             aria-label={isAr ? 'فتح الملف الشخصي' : 'Open user profile'}
             aria-haspopup="dialog"
             className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"

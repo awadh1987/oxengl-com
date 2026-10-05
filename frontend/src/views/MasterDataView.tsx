@@ -63,9 +63,14 @@ export const MasterDataView: React.FC = () => {
   const { users, refreshUsers, currentUser, language } = useApp();
   const isAr = language === 'ar';
   const iamRoles = useIamRoles();
-  const canManageIam =
-    ['Super_Admin', 'Owner', 'Admin', 'CEO'].includes(String(currentUser?.role)) ||
-    PRIVILEGED_IAM_ROLES.includes(String(currentUser?.iamRole));
+  const currentRoles = [currentUser?.role, currentUser?.iamRole].map((role) =>
+    String(role || '').trim().toLowerCase(),
+  );
+  const isAdminOrOwner = currentRoles.some((role) => ['owner', 'admin'].includes(role));
+  const canManageIam = isAdminOrOwner || currentRoles.some((role) => {
+    return ['super_admin', 'ceo'].includes(role) ||
+      PRIVILEGED_IAM_ROLES.some((privilegedRole) => privilegedRole.toLowerCase() === role);
+  });
 
   const [searchQuery, setSearchQuery] = useState('');
   const [quickFilter, setQuickFilter] = useState('all');
@@ -336,7 +341,7 @@ export const MasterDataView: React.FC = () => {
                 const isBusy = iamBusyId === user.id;
                 const isSuspended = user.status === 'Suspended';
                 const rowError = iamRowErrors[user.id];
-                const actionsDisabled = !canManageIam || isBusy;
+                const actionsDisabled = isBusy || (!canManageIam && !isAdminOrOwner);
                 return (
                   <tr key={user.id}>
                     <td className="font-bold text-slate-900 dark:text-slate-100">{isAr ? user.fullNameAr : user.fullName}</td>
@@ -367,7 +372,7 @@ export const MasterDataView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setSelectedUser(user)}
-                          disabled={actionsDisabled || isSelf}
+                          disabled={actionsDisabled}
                           className="neo-action-btn neo-btn-edit disabled:cursor-not-allowed disabled:opacity-40"
                           title={!canManageIam ? (isAr ? 'للمدراء فقط' : 'Administrators only') : (isAr ? 'تعديل الصلاحيات' : 'Edit Access')}
                           aria-label={isAr ? 'تعديل الصلاحيات' : 'Edit Access'}
@@ -375,7 +380,7 @@ export const MasterDataView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setPasswordResetUser(user)}
-                          disabled={actionsDisabled || isSelf}
+                          disabled={actionsDisabled}
                           className="neo-action-btn disabled:cursor-not-allowed disabled:opacity-40"
                           title={!canManageIam ? (isAr ? 'للمدراء فقط' : 'Administrators only') : (isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset')}
                           aria-label={isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset'}
