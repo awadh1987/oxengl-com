@@ -2589,10 +2589,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             created_at: u.created_at,
           };
         });
-        setUsers(Array.from(new Map(mapped.map((u) => [u.id, u])).values()));
+        const unique = Array.from(new Map(mapped.map((u) => [u.id, u])).values());
+        setUsers(unique.length > 0 || !currentUser?.id ? unique : [currentUser]);
       }
     } catch (err) {
       console.warn('Notice loading users from live backend API:', err);
+      // Never leave the matrix empty: show the authenticated session user.
+      setUsers((prev) => (prev.length > 0 || !currentUser?.id ? prev : [currentUser]));
     }
   };
 
