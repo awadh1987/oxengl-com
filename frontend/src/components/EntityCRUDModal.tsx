@@ -306,9 +306,9 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
       aria-labelledby="entity-crud-title"
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs"
     >
-      <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+      <div       className="erp-modal-shell relative w-full max-w-2xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 px-6 py-4">
+        <div className="erp-modal-header flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400">
               <HeaderIcon className="h-5 w-5" />
@@ -321,7 +321,9 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
           >
             <X className="h-5 w-5" />
@@ -329,7 +331,7 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
         </div>
 
         {/* Scrollable Form Body */}
-        <form noValidate onSubmit={handleSubmit} className="overflow-y-auto p-6 space-y-4 flex-1">
+        <form noValidate onSubmit={handleSubmit} className="erp-modal-body p-6 space-y-4">
           {/* CUSTOMER FORM */}
           {entityType === 'customer' && (
             <>
@@ -789,7 +791,7 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
           )}
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="erp-modal-footer flex items-center justify-end gap-2.5 border-t border-slate-100 bg-white pt-4 dark:border-slate-800 dark:bg-slate-900">
             <button
               type="button"
               onClick={onClose}

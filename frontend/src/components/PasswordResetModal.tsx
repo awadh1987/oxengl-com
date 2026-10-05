@@ -34,9 +34,9 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
         aria-modal="true"
         aria-labelledby="password-reset-title"
         dir={isArabic ? 'rtl' : 'ltr'}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]"
+        className="erp-modal-shell w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]"
       >
-        <header className="flex items-start justify-between gap-3">
+        <header className="erp-modal-header flex items-start justify-between gap-3 border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-[#090f1c]">
           <div>
             <h2 id="password-reset-title" className="text-sm font-black text-slate-900 dark:text-slate-100">
               {isArabic ? 'إعادة تعيين كلمة المرور' : 'Reset password'}
@@ -54,6 +54,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
           </button>
         </header>
 
+        <div className="erp-modal-body space-y-4 p-5">
         <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
           {isArabic
             ? 'سيتم إبطال بيانات الاعتماد الحالية وإرسال إرشادات إعادة التعيين إلى قناة الاتصال المسجلة. لا يتم عرض كلمة المرور أو رمز الاستعادة في هذه الشاشة.'
@@ -84,7 +85,9 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
           {isArabic ? 'سيتم تسجيل الإجراء وقرار الإلزام في سجل التدقيق.' : 'The reset and this requirement choice are recorded in the audit log.'}
         </p>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+        </div>
+
+        <footer className="erp-modal-footer flex items-center justify-end gap-2 border-t border-slate-100 bg-white px-5 py-3 dark:border-slate-800 dark:bg-[#090f1c]">
           <button
             type="button"
             onClick={onClose}

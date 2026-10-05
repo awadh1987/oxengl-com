@@ -19,12 +19,12 @@ import {
   Truck,
   FileText,
   Sparkles,
-  Thermometer,
   ExternalLink,
   Network,
   FileCheck2,
   ChevronDown,
   ChevronUp,
+  X,
   Landmark,
   Radio,
   Wrench,
@@ -46,10 +46,23 @@ import { UserProfilePanel } from './UserProfilePanel';
 import { TenantAvatar } from './TenantAvatar';
 import { HoverIcon } from './common/HoverIcon';
 import { isApexDomain, getSubdomain, getEffectiveDomainIdentifier, isCustomDomain } from '../utils/subdomain';
+import { getAuthToken, getTenantId } from '../services/api';
+
+const DISMISSED_ALERTS_SESSION_KEY = 'oxengl:dismissed-alerts';
+
+function getDismissedAlertIds(): string[] {
+  try {
+    const stored = sessionStorage.getItem(DISMISSED_ALERTS_SESSION_KEY);
+    const parsed: unknown = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 export interface SystemAlert {
   id: string;
-  type: 'wastage' | 'billing' | 'cold_chain';
+  type: 'wastage' | 'approval' | 'route_deviation';
   titleAr: string;
   titleEn: string;
   descAr: string;
@@ -63,6 +76,17 @@ export interface SystemAlert {
   vehicleId?: string;
   targetUrl: string;
   targetTab: string;
+}
+
+function formatAlertAge(timestamp: string, isArabic: boolean): string {
+  const elapsedMinutes = Math.floor((Date.now() - new Date(timestamp).getTime()) / 60_000);
+  if (!Number.isFinite(elapsedMinutes)) return isArabic ? 'حديثاً' : 'Recently';
+  if (elapsedMinutes < 1) return isArabic ? 'الآن' : 'Now';
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 1) return isArabic ? `منذ ${elapsedMinutes} د` : `${elapsedMinutes}m ago`;
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 1) return isArabic ? `منذ ${elapsedHours} س` : `${elapsedHours}h ago`;
+  return isArabic ? `منذ ${elapsedDays} يوم` : `${elapsedDays}d ago`;
 }
 
 export interface NavbarProps {
@@ -104,12 +128,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     tenantSlug,
     authTier,
     isDriverMode,
+    accessibleOperations,
+    vouchers,
   } = useApp();
 
   const [internalDomain, setInternalDomain] = useState<'Operations & Logistics' | 'Finance, Accounting & Control'>(() => {
     if (selectedDomainProp) return selectedDomainProp;
     if (activeTab) {
-      if (['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab)) {
+      if (['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-audit-closing', 'ai-insights'].includes(activeTab)) {
         return 'Finance, Accounting & Control';
       }
     }
@@ -133,7 +159,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   useEffect(() => {
     if (!activeTab) return;
-    const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab);
+    const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-audit-closing', 'ai-insights'].includes(activeTab);
     const isOps = ['operations', 'fleet-map', 'maintenance', 'transporters', 'crushers', 'customs', 'planning', 'procurement', 'inventory', 'dashboard'].includes(activeTab);
     if (isFinance && activeNavDomain !== 'Finance, Accounting & Control') {
       handleDomainSelect('Finance, Accounting & Control');
@@ -159,7 +185,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         if (!isOps) onNavigateTab?.('operations');
       } else {
         setIsFinanceExpanded(true);
-        const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-trial-balance', 'finance-audit-closing', 'ai-insights'].includes(activeTab || '');
+        const isFinance = ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-audit-closing', 'ai-insights'].includes(activeTab || '');
         if (!isFinance) onNavigateTab?.('invoicing');
       }
     }
@@ -190,13 +216,23 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'vouchers', labelAr: 'السندات المالية', labelEn: 'Financial Vouchers', icon: Receipt },
     { id: 'finance-chart', labelAr: 'دليل الحسابات', labelEn: 'Chart of Accounts', icon: Network },
     { id: 'financial-reports', labelAr: 'التقارير المالية المجمعة', labelEn: 'Financial Reports Engine', icon: TrendingUp },
-    { id: 'finance-trial-balance', labelAr: 'ميزان المراجعة', labelEn: 'Trial Balance', icon: Scale },
     { id: 'finance-audit-closing', labelAr: 'الإقفال السنوي والتدقيق', labelEn: 'Annual Audit Closing', icon: FileCheck2 },
     { id: 'ai-insights', labelAr: 'مدقق العمليات والمالية الذكي', labelEn: 'AI Financial Auditor', icon: Sparkles },
   ], []);
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(
+    () => new Set(getDismissedAlertIds()),
+  );
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(DISMISSED_ALERTS_SESSION_KEY, JSON.stringify([...dismissedAlertIds]));
+    } catch (error) {
+      console.warn('Could not persist dismissed alerts for this browser session.', error);
+    }
+  }, [dismissedAlertIds]);
 
   const settingsRef = useOutsideClick<HTMLDivElement>(() => {
     if (showSettings) setShowSettings(false);
@@ -274,56 +310,134 @@ export const Navbar: React.FC<NavbarProps> = ({
     },
   };
 
-  const [alerts, setAlerts] = useState<SystemAlert[]>([
-    {
-      id: 'alert-wastage-3190',
-      type: 'wastage',
-      titleAr: 'تنبيه فاقد وزن زائد (ميزان البسكول)',
-      titleEn: 'Excess Weighbridge Wastage',
-      descAr: 'رحلة شاحنة (3190-ر س ب) سجلت فاقداً 1.4 طن لعميل يوني بيتون.',
-      descEn: 'Truck 3190 recorded 1.4 tons loss to UniBeton.',
-      timeAgoAr: 'منذ 10 د',
-      timeAgoEn: '10m ago',
-      read: false,
-      truckNo: '3190',
-      anomalyId: 'anom-3190',
-      targetUrl: '/operations/daily?search=3190',
-      targetTab: 'operations',
-    },
-    {
-      id: 'alert-billing-kifah',
-      type: 'billing',
-      titleAr: 'جاهزية الفاتورة الشهرية للعميل',
-      titleEn: 'Monthly Invoices Ready',
-      descAr: 'تم تجميع بيانات شهر أغسطس لشركة الكفاح وجاهزة للتصدير الضريبي.',
-      descEn: 'August logs ready for Kifah billing.',
-      timeAgoAr: 'منذ 35 د',
-      timeAgoEn: '35m ago',
-      read: false,
-      partnerId: 'kifah',
-      targetUrl: '/finance/invoices?action=draft-batch&partner=kifah',
-      targetTab: 'invoicing',
-    },
-    {
-      id: 'alert-coldchain-v1002',
-      type: 'cold_chain',
-      titleAr: 'تجاوز حراري لسلسلة التبريد (SLA Breach)',
-      titleEn: 'Cold-Chain SLA Breach',
-      descAr: 'المركبة (V-1002 - سعد القحطاني) سجلت حرارة +5.4°C متجاوزة الحد (+4.2°C).',
-      descEn: 'Vehicle V-1002 breached cold-chain threshold (+5.4°C > +4.2°C).',
-      timeAgoAr: 'منذ 1 ساعة',
-      timeAgoEn: '1h ago',
-      read: false,
-      vehicleId: 'V-1002',
-      targetUrl: '/operations/fleet-map?vehicle=V-1002',
-      targetTab: 'fleet-map',
-    },
-  ]);
+  const [liveAlerts, setLiveAlerts] = useState<SystemAlert[]>([]);
+  const [readAlertIds, setReadAlertIds] = useState<Set<string>>(() => new Set());
 
-  const unreadAlertsCount = alerts.filter((a) => !a.read).length;
+  const alerts = useMemo<SystemAlert[]>(() => {
+    const wastageAlerts = accessibleOperations
+      .filter((operation) => {
+        const wastagePercentage = Number(operation.wastage_percentage) ||
+          (Number(operation.qty_loaded) > 0
+            ? (Number(operation.qty_wastage) / Number(operation.qty_loaded)) * 100
+            : 0);
+        return !operation.is_deleted && wastagePercentage > 2;
+      })
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+      .slice(0, 10)
+      .map((operation): SystemAlert => {
+        const wastagePercentage = Number(operation.wastage_percentage) ||
+          (Number(operation.qty_loaded) > 0
+            ? (Number(operation.qty_wastage) / Number(operation.qty_loaded)) * 100
+            : 0);
+        const truckNo = operation.truck_no || operation.id;
+        const recordTimestamp = operation.updated_at || operation.created_at;
+        return {
+          id: `alert-wastage-${operation.id}-${recordTimestamp}`,
+          type: 'wastage',
+          titleAr: 'فاقد وزن يتجاوز حد العمليات',
+          titleEn: 'Weighbridge loss exceeds threshold',
+          descAr: `الشاحنة ${truckNo} سجلت فاقداً ${Number(operation.qty_wastage || 0).toFixed(2)} ${operation.uom || 'طن'} (${wastagePercentage.toFixed(1)}%) في رحلة إلى ${operation.destination_customer || '—'}.`,
+          descEn: `Truck ${truckNo} recorded ${Number(operation.qty_wastage || 0).toFixed(2)} ${operation.uom || 'MT'} loss (${wastagePercentage.toFixed(1)}%) on a trip to ${operation.destination_customer || '—'}.`,
+          timeAgoAr: formatAlertAge(recordTimestamp, true),
+          timeAgoEn: formatAlertAge(recordTimestamp, false),
+          read: false,
+          truckNo,
+          anomalyId: operation.id,
+          targetUrl: `/operations/daily?search=${encodeURIComponent(truckNo)}`,
+          targetTab: 'operations',
+        };
+      });
+
+    const approvalAlerts = vouchers
+      .filter((voucher) => voucher.status === 'Pending_Approval')
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+      .slice(0, 10)
+      .map((voucher): SystemAlert => ({
+        id: `alert-voucher-approval-${voucher.id}-${voucher.updated_at}`,
+        type: 'approval',
+        titleAr: 'سند مالي بانتظار الاعتماد',
+        titleEn: 'Voucher awaiting approval',
+        descAr: `السند ${voucher.voucherNumber || voucher.id} للطرف ${voucher.partyName} بمبلغ ${Number(voucher.amount).toLocaleString('ar-SA')} ريال بانتظار المراجعة.`,
+        descEn: `Voucher ${voucher.voucherNumber || voucher.id} for ${voucher.partyName} (${Number(voucher.amount).toLocaleString('en-US')} SAR) is awaiting review.`,
+        timeAgoAr: formatAlertAge(voucher.updated_at, true),
+        timeAgoEn: formatAlertAge(voucher.updated_at, false),
+        read: false,
+        partnerId: voucher.partyId,
+        targetUrl: '/finance/vouchers?status=Pending_Approval',
+        targetTab: 'vouchers',
+      }));
+
+    return [...liveAlerts, ...wastageAlerts, ...approvalAlerts]
+      .map((alert) => ({ ...alert, read: readAlertIds.has(alert.id) }))
+      .slice(0, 20);
+  }, [accessibleOperations, liveAlerts, readAlertIds, vouchers]);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) return undefined;
+
+    const tenantId = getTenantId();
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const params = new URLSearchParams({ token });
+    if (tenantId) params.set('tenant_id', tenantId);
+
+    let socket: WebSocket | null = null;
+    try {
+      socket = new WebSocket(
+        `${protocol}//${window.location.host}/api/v1/logistics/ws/fleet-stream?${params.toString()}`,
+      );
+      socket.onmessage = (event) => {
+        try {
+          const packet = JSON.parse(event.data);
+          if (packet.routing_status !== 'VECTOR_DEVIATION_ALERT') return;
+
+          const vehicleId = String(packet.vehicle_id || 'unknown');
+          const eventId = String(packet.event_id || packet.id || vehicleId);
+          const deviation = Number(packet.deviation_magnitude_km) || 0;
+          const alertId = `alert-vector-${eventId}`;
+          const newAlert: SystemAlert = {
+            id: alertId,
+            type: 'route_deviation',
+            titleAr: 'انحراف عن مسار الأسطول',
+            titleEn: 'Fleet route deviation',
+            descAr: `المركبة (${vehicleId}) انحرفت ${deviation.toFixed(2)} كم عن المسار المحدد.`,
+            descEn: `Vehicle ${vehicleId} deviated ${deviation.toFixed(2)} km from its route.`,
+            timeAgoAr: 'الآن',
+            timeAgoEn: 'Now',
+            read: false,
+            vehicleId,
+            targetUrl: `/operations/fleet-map?vehicle=${encodeURIComponent(vehicleId)}`,
+            targetTab: 'fleet-map',
+          };
+          setLiveAlerts((previous) => [
+            newAlert,
+            ...previous.filter((alert) => alert.id !== alertId),
+          ].slice(0, 10));
+        } catch (error) {
+          console.warn('Could not process fleet alert message.', error);
+        }
+      };
+      socket.onerror = () => {
+        console.warn('Fleet alert stream connection failed.');
+      };
+    } catch (error) {
+      console.warn('Could not connect to the fleet alert stream.', error);
+    }
+
+    return () => {
+      socket?.close();
+    };
+  }, []);
+
+  const visibleAlerts = alerts.filter((alert) => !dismissedAlertIds.has(alert.id));
+  const unreadAlertsCount = visibleAlerts.filter((alert) => !alert.read).length;
+
+  const dismissAlert = (alertId: string) => {
+    setDismissedAlertIds((previous) => new Set(previous).add(alertId));
+  };
 
   const handleNavigateAlert = (alert: SystemAlert, customUrl?: string, customTab?: string) => {
-    setAlerts((prev) => prev.map((a) => (a.id === alert.id ? { ...a, read: true } : a)));
+    setReadAlertIds((previous) => new Set(previous).add(alert.id));
     setShowNotifications(false);
 
     const destUrl = customUrl || alert.targetUrl;
@@ -709,7 +823,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex items-center gap-2">
                     {unreadAlertsCount > 0 && (
                       <button
-                        onClick={() => setAlerts((prev) => prev.map((a) => ({ ...a, read: true })))}
+                        onClick={() => {
+                          const visibleAlertIds = new Set(visibleAlerts.map((alert) => alert.id));
+                          setReadAlertIds((previous) => new Set([...previous, ...visibleAlertIds]));
+                        }}
                         className="text-[10px] font-medium text-slate-500 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
                       >
                         {isAr ? 'تحديد الكل كمقروء' : 'Mark all read'}
@@ -722,7 +839,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div className="space-y-2.5 text-xs">
-                  {alerts.length === 0 || unreadAlertsCount === 0 && alerts.every((a) => a.read) ? (
+                  {visibleAlerts.length === 0 || unreadAlertsCount === 0 && visibleAlerts.every((a) => a.read) ? (
                     <div className="rounded-xl border border-dashed border-slate-200 dark:border-slate-800 p-4 text-center text-slate-500 dark:text-slate-400">
                       <p className="font-semibold">{isAr ? 'لا توجد تنبيهات جديدة معلقة' : 'All clear! No pending alerts'}</p>
                       <p className="text-[11px] mt-1 text-slate-400 dark:text-slate-500">
@@ -731,10 +848,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   ) : null}
 
-                  {alerts.map((alert) => {
+                  {visibleAlerts.map((alert) => {
                     const isWastage = alert.type === 'wastage';
-                    const isBilling = alert.type === 'billing';
-                    const isColdChain = alert.type === 'cold_chain';
+                    const isApproval = alert.type === 'approval';
+                    const isRouteDeviation = alert.type === 'route_deviation';
 
                     return (
                       <div
@@ -744,7 +861,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                             ? 'opacity-60 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-800/40'
                             : isWastage
                             ? 'bg-amber-50/90 dark:bg-amber-950/30 text-amber-950 dark:text-amber-200 border-amber-200 dark:border-amber-800/60 shadow-2xs hover:border-amber-400'
-                            : isBilling
+                            : isApproval
                             ? 'bg-orange-50/90 dark:bg-orange-950/30 text-orange-950 dark:text-orange-200 border-orange-200 dark:border-orange-800/60 shadow-2xs hover:border-orange-400'
                             : 'bg-rose-50/90 dark:bg-rose-950/30 text-rose-950 dark:text-rose-200 border-rose-200 dark:border-rose-800/60 shadow-2xs hover:border-rose-400'
                         }`}
@@ -754,11 +871,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {isWastage && (
                             <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
                           )}
-                          {isBilling && (
-                            <FileText className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 mt-0.5" />
+                          {isApproval && (
+                            <ShieldCheck className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400 mt-0.5" />
                           )}
-                          {isColdChain && (
-                            <Thermometer className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                          {isRouteDeviation && (
+                            <Truck className="h-4 w-4 shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
                           )}
 
                           <div className="flex-1 min-w-0">
@@ -780,15 +897,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 <ExternalLink className="h-2.5 w-2.5" />
                                 {isWastage
                                   ? isAr
-                                    ? <>فحص رحلة الشاحنة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">3190</span></>
-                                    : <>Inspect Truck <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">3190</span> Log</>
-                                  : isBilling
+                                    ? <>فحص رحلة الشاحنة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{alert.truckNo}</span></>
+                                    : <>Inspect Truck <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{alert.truckNo}</span> Log</>
+                                  : isApproval
                                   ? isAr
-                                    ? 'إصدار دفعة فواتير الكفاح'
-                                    : 'Draft Kifah Batch'
+                                    ? 'مراجعة واعتماد السند'
+                                    : 'Review pending voucher'
                                   : isAr
-                                  ? <>تتبع المركبة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">V-1002</span> على الخريطة</>
-                                  : <>Track <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">V-1002</span> on Map</>}
+                                  ? <>عرض المركبة <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{alert.vehicleId}</span> على الخريطة</>
+                                  : <>View vehicle <span dir="ltr" className="inline-block unicode-bidi-isolate font-mono">{alert.vehicleId}</span> on map</>}
                               </span>
 
                               {isWastage && (
@@ -798,7 +915,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                     e.stopPropagation();
                                     handleNavigateAlert(
                                       alert,
-                                      '/finance/ai-auditor?focusAnomaly=anom-3190',
+                                      `/finance/ai-auditor?focusAnomaly=${encodeURIComponent(alert.anomalyId || '')}`,
                                       'ai-insights'
                                     );
                                   }}
@@ -814,6 +931,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                           {!alert.read && (
                             <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0 mt-1" />
                           )}
+                          <button
+                            type="button"
+                            aria-label={isAr ? 'إخفاء التنبيه حتى نهاية الجلسة' : 'Dismiss alert for this session'}
+                            title={isAr ? 'إخفاء لهذه الجلسة' : 'Dismiss for this session'}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              dismissAlert(alert.id);
+                            }}
+                            className="shrink-0 rounded-md p-1 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-white"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </div>
                     );

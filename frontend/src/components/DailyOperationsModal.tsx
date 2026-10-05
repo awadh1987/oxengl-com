@@ -300,10 +300,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
     >
       <div
         id="daily-operations-modal"
-        className="relative my-6 w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-all"
+        className="erp-modal-shell relative w-full max-w-4xl rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-2xl transition-all"
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div className="erp-modal-header flex items-center justify-between border-b border-slate-100 bg-white pb-4 dark:border-slate-800 dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-600 text-white shadow-md shadow-orange-200 dark:shadow-none">
               <Scale className="h-6 w-6" />
@@ -334,7 +334,9 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
           >
             <X className="h-4 w-4" />
@@ -395,7 +397,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         </div>
 
         {/* Main Form Body */}
-        <form noValidate onSubmit={handleSubmit} className="mt-4 space-y-4">
+        <form noValidate onSubmit={handleSubmit} className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="erp-modal-body space-y-4">
           {/* Group 1: Logistics & Identification */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
             <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -786,7 +789,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
           </div>
 
           {/* Form Actions Footer */}
-          <div className="flex items-center justify-end gap-3 border-t border-slate-100 dark:border-slate-800 pt-4">
+          </div>
+          <div className="erp-modal-footer flex items-center justify-end gap-3 border-t border-slate-100 bg-white pt-4 dark:border-slate-800 dark:bg-slate-900">
             <button
               type="button"
               onClick={onClose}

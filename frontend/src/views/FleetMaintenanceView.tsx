@@ -24,6 +24,7 @@ import {
 import { useApp } from '../context/AppContext';
 import { erpApi } from '../services/api';
 import { FleetTracker } from '../components/FleetTracker';
+import { ActionsMenu } from '../components/ActionsMenu';
 import { VehicleVitals, MaintenanceWorkOrder } from '../types';
 
 type Vehicle = VehicleVitals;
@@ -326,33 +327,15 @@ export const FleetMaintenanceView: React.FC = () => {
               <Fuel className="h-4 w-4" />
               {isAr ? 'تسجيل وقود' : 'Log Fuel'}
             </button>
-            <button
-              id="export-fleet-json-btn"
-              onClick={handleExportJSONSnapshot}
-              className="flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-500/20 px-3 py-2 text-xs font-bold text-amber-200 hover:bg-amber-500/30 transition-colors"
-              title={isAr ? 'تصدير لقطة بيانات JSON' : 'Export JSON Snapshot'}
-            >
-              <Download className="h-3.5 w-3.5 text-amber-300" />
-              <span>{isAr ? 'لقطة JSON' : 'JSON'}</span>
-            </button>
-            <button
-              id="export-fleet-excel-btn"
-              onClick={handleExportExcel}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/20 px-3 py-2 text-xs font-bold text-emerald-200 hover:bg-emerald-500/30 transition-colors"
-              title={isAr ? 'تصدير Excel' : 'Export Excel'}
-            >
-              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-300" />
-              <span>{isAr ? 'تصدير Excel' : 'Excel'}</span>
-            </button>
-            <button
-              id="print-fleet-btn"
-              onClick={handlePrint}
-              className="flex items-center gap-1.5 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-xs font-bold text-white hover:bg-white/20 transition-colors"
-              title={isAr ? 'طباعة التقرير' : 'Print'}
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span>{isAr ? 'طباعة' : 'Print'}</span>
-            </button>
+            <ActionsMenu
+              isArabic={isAr}
+              isDark
+              items={[
+                { id: 'export-fleet-json-btn', label: isAr ? 'لقطة JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
+                { id: 'export-fleet-excel-btn', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
+                { id: 'print-fleet-btn', label: isAr ? 'طباعة التقرير' : 'Export & Print', icon: Printer, onSelect: handlePrint },
+              ]}
+            />
             <button
               onClick={fetchData}
               disabled={loading}

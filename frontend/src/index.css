@@ -3,6 +3,67 @@
 
 @custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *, .dark, .dark *));
 
+.fixed.inset-0 {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: max(0.75rem, env(safe-area-inset-top));
+}
+
+.fixed.inset-0 > :first-child:not(.erp-modal-shell) {
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  margin-block: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fixed.inset-0.items-start > :first-child:not(.erp-modal-shell) {
+  margin-block: 0;
+}
+
+.fixed.inset-0 header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.fixed.inset-0 footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+
+.erp-modal-shell {
+  display: flex;
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.erp-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex: none;
+}
+
+.erp-modal-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.erp-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex: none;
+  background-color: inherit;
+}
+
 :root {
   --color-primary: #f97316;
   --color-accent: #0f172a;

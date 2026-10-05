@@ -53,7 +53,6 @@ export type ActiveTab =
   | 'vouchers'
   | 'financial-hub'
   | 'finance-chart'
-  | 'finance-trial-balance'
   | 'financial-reports'
   | 'finance-audit-closing'
   | 'data-observability'
@@ -347,22 +346,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: '5-Deep',
       },
       {
-        id: 'finance-trial-balance',
-        labelAr: 'ميزان المراجعة العام',
-        labelEn: 'Trial Balance',
-        path: '/finance/trial-balance',
-        icon: Scale,
-        roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
-        badge: 'GL',
-      },
-      {
         id: 'financial-reports',
         labelAr: 'التقارير والتحليلات المالية المجمعة',
         labelEn: 'Financial Reports Engine',
         path: '/finance/reports',
         icon: TrendingUp,
         roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
-        badge: 'P&L / BS',
+        badge: 'TB / P&L / BS',
       },
       {
         id: 'finance-audit-closing',
@@ -420,8 +410,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       },
       {
         id: 'master-data',
-        labelAr: 'البيانات الرئيسية (Master Data & RBAC)',
-        labelEn: 'Master Data & RBAC',
+        labelAr: 'مصفوفة المستخدمين والأدوار والصلاحيات',
+        labelEn: 'Users, Roles & Permissions Matrix',
         path: '/settings/master-data',
         icon: Database,
         roles: ['Super_Admin', 'Owner', 'Admin', 'COO'],
@@ -532,7 +522,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           'sales-receivables',
           'vouchers',
           'finance-chart',
-          'finance-trial-balance',
           'financial-reports',
           'finance-audit-closing',
           'ai-insights',
@@ -615,7 +604,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         operations: ['dashboard', 'planning', 'operations', 'customs'],
         procurement: ['procurement', 'procurement-p2p', 'inventory'],
         fleet: ['fleet-map', 'maintenance', 'transporters', 'crushers'],
-        finance: ['invoicing', 'vouchers', 'finance-chart', 'finance-trial-balance', 'financial-reports', 'finance-audit-closing', 'ai-insights', 'data-observability'],
+        finance: ['invoicing', 'vouchers', 'finance-chart', 'financial-reports', 'finance-audit-closing', 'ai-insights', 'data-observability'],
         hr: ['hr'],
         customs: ['customs'],
         analytics: ['financial-reports', 'ai-insights', 'dashboard', 'data-observability'],

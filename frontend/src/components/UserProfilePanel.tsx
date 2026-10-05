@@ -185,9 +185,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
         aria-modal="true"
         aria-labelledby="user-profile-title"
         dir={isArabic ? 'rtl' : 'ltr'}
-        className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+        className="erp-modal-shell w-full max-w-4xl rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl dark:border-slate-700 dark:bg-slate-950"
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 sm:px-8">
+        <header className="erp-modal-header flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 sm:px-8">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-orange-100 p-2.5 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
               <UserRound className="h-5 w-5" />
@@ -211,7 +211,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
           </button>
         </header>
 
-        <div className="grid gap-5 p-4 sm:p-7 lg:grid-cols-2">
+        <div className="erp-modal-body grid gap-5 p-4 sm:p-7 lg:grid-cols-2">
           <form onSubmit={saveProfile} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:p-6">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
               <UserRound className="h-4 w-4 text-orange-600" />
@@ -379,6 +379,15 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
             </form>
           </div>
         </div>
+        <footer className="erp-modal-footer border-t border-slate-200 bg-slate-50 px-5 py-3 text-end dark:border-slate-800 dark:bg-slate-950 sm:px-8">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900"
+          >
+            {isArabic ? 'إغلاق الملف الشخصي' : 'Close profile'}
+          </button>
+        </footer>
       </section>
     </div>
   );

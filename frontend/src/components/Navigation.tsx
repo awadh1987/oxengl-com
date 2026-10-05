@@ -120,8 +120,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     },
     {
       id: 'master-data',
-      labelAr: 'البيانات الأساسية للشركاء',
-      labelEn: 'Master Data & Partners',
+      labelAr: 'مصفوفة المستخدمين والأدوار والصلاحيات',
+      labelEn: 'Users, Roles & Permissions Matrix',
       icon: Users,
       allowedRoles: ['Super_Admin', 'Admin', 'COO'],
     },

@@ -771,11 +771,11 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="employee-registration-title"
-        className={`flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border shadow-2xl ${
+        className={`erp-modal-shell w-full max-w-5xl rounded-3xl border shadow-2xl ${
           isDark ? 'border-slate-800 bg-slate-950 text-white' : 'border-slate-200 bg-white text-slate-900'
         }`}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-slate-800 sm:p-6">
+        <header className="erp-modal-header flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950 sm:p-6">
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-600">
               <UserPlus className="h-5 w-5" />
@@ -833,7 +833,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         )}
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">
+          <div className="erp-modal-body min-h-0 px-5 py-5 sm:px-6">
             {error && (
               <div role="alert" className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-bold text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{error}</span>
@@ -852,7 +852,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                       : renderQualificationsTab()}
           </div>
 
-          <footer className="flex items-center justify-between gap-3 border-t border-slate-200 p-4 dark:border-slate-800 sm:px-6">
+          <footer className="erp-modal-footer flex items-center justify-between gap-3 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 sm:px-6">
             <div className="flex items-center gap-1 text-[11px] text-slate-500">
               <Calendar className="h-3.5 w-3.5" />
               {isAr ? 'الحقول المتوافقة مطلوبة قبل الحفظ' : 'ID and WPS compliance fields are checked before save'}

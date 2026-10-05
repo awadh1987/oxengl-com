@@ -44,6 +44,7 @@ import { OfficialLetterheadHeader } from '../components/OfficialLetterheadHeader
 import { BulkImportModal } from '../components/BulkImportModal';
 import { OfficialLetterheadFooter } from '../components/OfficialLetterheadFooter';
 import { HoverIcon } from '../components/common/HoverIcon';
+import { ActionsMenu } from '../components/ActionsMenu';
 
 export const CustomerInvoicingView: React.FC = () => {
   const {
@@ -756,43 +757,6 @@ Myon Economic Contracting Co. Ltd.`;
             </span>
           </button>
 
-          {/* Universal Bulk Import Button (REM-P7) */}
-          <button
-            id="bulk-import-invoicing-btn"
-            onClick={() => setIsBulkImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-emerald-300 dark:border-emerald-800/60 bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-2 text-xs font-bold text-emerald-900 dark:text-emerald-300 shadow-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-            title={isAr ? 'استيراد فواتير وعمليات وقاعدة البيانات الشاملة (CSV / Excel)' : 'Bulk Import (CSV/Excel)'}
-          >
-            <HoverIcon className="h-3.5 w-3.5">
-              <Upload className="h-full w-full text-emerald-700 dark:text-emerald-400" />
-            </HoverIcon>
-            <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
-          </button>
-
-          {/* JSON Data Snapshot */}
-          <button
-            id="export-invoice-json-btn"
-            onClick={handleExportJSONSnapshot}
-            className="group flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-800/60 bg-amber-50/80 dark:bg-amber-950/40 px-3 py-2 text-xs font-bold text-amber-900 dark:text-amber-300 shadow-xs hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-            title={isAr ? 'تصدير لقطة بيانات JSON للفاتورة' : 'Export JSON Snapshot'}
-          >
-            <HoverIcon className="h-3.5 w-3.5">
-              <Download className="h-full w-full text-amber-700 dark:text-amber-400" />
-            </HoverIcon>
-            <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
-          </button>
-
-          {/* Excel Export */}
-          <button
-            onClick={handleExcelExport}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 shadow-xs hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-          >
-            <HoverIcon className="h-4 w-4">
-              <FileSpreadsheet className="h-full w-full text-emerald-600 dark:text-emerald-400" />
-            </HoverIcon>
-            <span>{isAr ? 'تصدير كشف Excel' : 'Export Excel'}</span>
-          </button>
-
           {/* Copy Magic Link */}
           <button
             id="copy-invoice-magic-link-top-btn"
@@ -806,16 +770,15 @@ Myon Economic Contracting Co. Ltd.`;
             <span>{isAr ? 'الرابط السحري' : 'Magic Link'}</span>
           </button>
 
-          {/* Print / Live Preview Export */}
-          <button
-            onClick={() => setIsExportPrintModalOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl bg-slate-900 dark:bg-orange-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:hover:bg-orange-700 transition-colors"
-          >
-            <HoverIcon className="h-4 w-4">
-              <Printer className="h-full w-full" />
-            </HoverIcon>
-            <span>{isAr ? 'معاينة وطباعة (Print Preview)' : 'Print / Export Studio'}</span>
-          </button>
+          <ActionsMenu
+            isArabic={isAr}
+            items={[
+              { id: 'bulk-import-invoicing-btn', label: isAr ? 'استيراد جماعي (CSV/Excel)' : 'Bulk Import (CSV/Excel)', icon: Upload, onSelect: () => setIsBulkImportOpen(true) },
+              { id: 'export-invoice-json-btn', label: isAr ? 'لقطة JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
+              { id: 'invoicing-export-excel-action', label: isAr ? 'تصدير كشف Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExcelExport },
+              { id: 'invoicing-export-print-action', label: isAr ? 'معاينة وطباعة' : 'Export & Print', icon: Printer, onSelect: () => setIsExportPrintModalOpen(true) },
+            ]}
+          />
         </div>
       </div>
 

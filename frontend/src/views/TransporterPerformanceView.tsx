@@ -17,6 +17,7 @@ import { ApiSettlement, erpApi } from '../services/api';
 import { formatCurrency, formatTonnage } from '../utils/formatters';
 import { CreateVoucherModal } from '../components/CreateVoucherModal';
 import { EntityQuickAdd } from '../components/EntityQuickAdd';
+import { ActionsMenu } from '../components/ActionsMenu';
 
 type Partner = { id: string; name: string; partner_type: string };
 
@@ -270,38 +271,15 @@ export const TransporterPerformanceView: React.FC = () => {
             <span>{isAr ? (isRefreshing ? 'تحديث...' : 'تحديث') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
 
-          {/* JSON Snapshot Button */}
-          <button
-            id="export-transporters-json-btn"
-            onClick={handleExportJSONSnapshot}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50/80 px-3 py-2 text-xs font-bold text-amber-900 shadow-xs hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-900/40 transition-colors"
-            title={isAr ? 'تصدير لقطة بيانات JSON' : 'Export JSON Snapshot'}
-          >
-            <Download className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-            <span>{isAr ? 'لقطة JSON' : 'JSON Snapshot'}</span>
-          </button>
-
-          {/* Export Excel Button */}
-          <button
-            id="export-transporters-excel-btn"
-            onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-xs hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 transition-colors"
-            title={isAr ? 'تصدير كشف Excel' : 'Export Excel'}
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-600" />
-            <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
-          </button>
-
-          {/* Print Button */}
-          <button
-            id="print-transporters-btn"
-            onClick={handlePrint}
-            className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
-            title={isAr ? 'معاينة وطباعة التقرير' : 'Print Report'}
-          >
-            <Printer className="h-3.5 w-3.5" />
-            <span>{isAr ? 'معاينة وطباعة' : 'Export & Print'}</span>
-          </button>
+          <ActionsMenu
+            isArabic={isAr}
+            isDark={isDark}
+            items={[
+              { id: 'export-transporters-json-btn', label: isAr ? 'لقطة JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
+              { id: 'export-transporters-excel-btn', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
+              { id: 'print-transporters-btn', label: isAr ? 'معاينة وطباعة' : 'Export & Print', icon: Printer, onSelect: handlePrint },
+            ]}
+          />
         </div>
       </header>
 

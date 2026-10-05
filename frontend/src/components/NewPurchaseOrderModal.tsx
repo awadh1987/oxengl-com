@@ -122,18 +122,21 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className={`w-full max-w-xl rounded-3xl border shadow-2xl transition-all ${
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="purchase-order-title"
+        className={`erp-modal-shell w-full max-w-xl rounded-3xl border shadow-2xl transition-all ${
           isDark ? 'border-slate-800 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-900'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 p-6 dark:border-slate-800/80">
+        <header className="erp-modal-header flex items-center justify-between border-b border-slate-100 bg-white p-6 dark:border-slate-800/80 dark:bg-slate-900">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500/10 text-[#F05627]">
               <ShoppingCart className="h-6 w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-black tracking-tight">
+              <h2 id="purchase-order-title" className="text-lg font-black tracking-tight">
                 {isAr ? 'إنشاء أمر شراء جديد' : 'New Purchase Order'}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -146,16 +149,18 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label={isAr ? 'إغلاق' : 'Close'}
             className="group rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200 transition-colors"
           >
             <HoverIcon className="h-5 w-5">
               <X className="h-full w-full" />
             </HoverIcon>
           </button>
-        </div>
+        </header>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="erp-modal-body space-y-4 p-6">
           {error && (
             <div className="flex items-center gap-2 rounded-xl bg-red-50 p-3 text-xs font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-900/50">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -324,7 +329,8 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+          </div>
+          <div className="erp-modal-footer flex items-center justify-end gap-3 border-t border-slate-100 bg-white px-6 py-4 dark:border-slate-800/80 dark:bg-slate-900">
             <button
               type="button"
               onClick={onClose}

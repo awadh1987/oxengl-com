@@ -19,6 +19,8 @@ import {
   RefreshCw,
   CheckCircle2,
   Printer,
+  Upload,
+  Database,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatTonnage } from '../utils/formatters';
 import { exportOperationsToExcel } from '../utils/excelExporter';
@@ -29,8 +31,8 @@ import { MultiAttachmentModal } from '../components/MultiAttachmentModal';
 import { ExportPrintModal } from '../components/ExportPrintModal';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { ImportSystemResourceModal } from '../components/ImportSystemResourceModal';
-import { Paperclip, Upload, Database } from 'lucide-react';
 import { HoverIcon } from '../components/common/HoverIcon';
+import { ActionsMenu } from '../components/ActionsMenu';
 
 export const OperationsLogView: React.FC = () => {
   const {
@@ -240,66 +242,17 @@ export const OperationsLogView: React.FC = () => {
             <span>{isAr ? (isRefreshing ? 'جارِ التحديث...' : 'تحديث السجل') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
 
-          {/* JSON Data Snapshot Export Button */}
-          <button
-            id="export-json-snapshot-btn"
-            onClick={handleExportJSONSnapshot}
-            className="group flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-bold text-amber-300 shadow-xs hover:bg-amber-500/20 transition-colors"
-            title={isAr ? 'تصدير لقطة بيانات JSON لعمليات اليوم للتدقيق والمطابقة' : 'Export Today JSON Snapshot for Local Audit'}
-          >
-            <HoverIcon className="h-4 w-4">
-              <Download className="h-full w-full text-amber-400" />
-            </HoverIcon>
-            <span>{isAr ? 'لقطة بيانات JSON' : 'JSON Snapshot'}</span>
-          </button>
-
-          <button
-            onClick={() => setIsPrintModalOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2 text-xs font-bold text-orange-400 shadow-xs hover:bg-orange-500/20 transition-colors"
-            title={isAr ? 'معاينة وطباعة سجل العمليات اليومية' : 'Live Print Preview & Export'}
-          >
-            <HoverIcon className="h-4 w-4">
-              <Printer className="h-full w-full text-orange-400" />
-            </HoverIcon>
-            <span>{isAr ? 'معاينة وطباعة (Print)' : 'Export & Print'}</span>
-          </button>
-
-          {/* Universal Bulk Import Button (REM-P7) */}
-          <button
-            id="bulk-import-operations-btn"
-            onClick={() => setIsBulkImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-400 shadow-xs hover:bg-emerald-500/20 transition-colors"
-            title={isAr ? 'استيراد عمليات وقاعدة البيانات الشاملة من ملف Excel أو CSV' : 'Bulk Import Operations & Comprehensive Log from Excel/CSV'}
-          >
-            <HoverIcon className="h-4 w-4">
-              <Upload className="h-full w-full text-emerald-400" />
-            </HoverIcon>
-            <span>{isAr ? 'استيراد بيانات / Bulk Import (CSV/Excel)' : 'Bulk Import (CSV/Excel)'}</span>
-          </button>
-
-          {/* Legacy System Resource Bridge Button (Sprint 7) */}
-          <button
-            id="import-system-resource-btn"
-            onClick={() => setIsLegacyImportOpen(true)}
-            className="group flex items-center gap-1.5 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3.5 py-2 text-xs font-bold text-orange-400 shadow-xs hover:bg-orange-500/20 transition-colors"
-            title={isAr ? 'استيراد وامتصاص ملف قاعدة البيانات التاريخية System Resource.xlsx' : 'Import Legacy System Resource Excel (.xlsx)'}
-          >
-            <HoverIcon className="h-4 w-4">
-              <Database className="h-full w-full text-orange-400" />
-            </HoverIcon>
-            <span>{isAr ? 'جسر البيانات التاريخية (System Resource)' : 'Import System Resource (.xlsx)'}</span>
-          </button>
-
-          <button
-            onClick={handleExportExcel}
-            className="group flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3.5 py-2 text-xs font-bold text-slate-200 shadow-xs hover:bg-slate-700 transition-colors"
-            title={isAr ? 'تصدير جدول العمليات إلى Excel' : 'Export to Excel'}
-          >
-            <HoverIcon className="h-4 w-4">
-              <FileSpreadsheet className="h-full w-full text-emerald-400" />
-            </HoverIcon>
-            <span>{isAr ? 'تصدير Excel' : 'Export Excel'}</span>
-          </button>
+          <ActionsMenu
+            isArabic={isAr}
+            isDark
+            items={[
+              { id: 'export-json-snapshot-btn', label: isAr ? 'لقطة بيانات JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
+              { id: 'operations-export-print-action', label: isAr ? 'معاينة وطباعة' : 'Export & Print', icon: Printer, onSelect: () => setIsPrintModalOpen(true) },
+              { id: 'bulk-import-operations-btn', label: isAr ? 'استيراد جماعي (CSV/Excel)' : 'Bulk Import (CSV/Excel)', icon: Upload, onSelect: () => setIsBulkImportOpen(true) },
+              { id: 'import-system-resource-btn', label: isAr ? 'استيراد موارد النظام (.xlsx)' : 'Import System Resource (.xlsx)', icon: Database, onSelect: () => setIsLegacyImportOpen(true) },
+              { id: 'operations-export-excel-action', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
+            ]}
+          />
 
           {canEditOperations && (
             <button

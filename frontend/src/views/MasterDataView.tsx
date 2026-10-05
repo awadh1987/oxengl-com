@@ -239,7 +239,7 @@ export const MasterDataView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             <h1 className="text-base font-black text-slate-900 dark:text-white">
-              {isAr ? 'المستخدمون والأدوار ومصفوفة الصلاحيات' : 'Users, Roles & Permissions Matrix'}
+              {isAr ? 'مصفوفة المستخدمين والأدوار والصلاحيات' : 'Users, Roles & Permissions Matrix'}
             </h1>
           </div>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
@@ -305,7 +305,7 @@ export const MasterDataView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 text-purple-500" />
             <h2 className="text-sm font-black text-slate-900 dark:text-white">
-              {isAr ? 'إدارة المستخدمين ومصفوفة RBAC' : 'User Management & RBAC'}
+              {isAr ? 'مصفوفة المستخدمين والأدوار والصلاحيات' : 'Users, Roles & Permissions Matrix'}
             </h2>
           </div>
           <span className="rounded-md border border-purple-200 bg-purple-50 px-2 py-1 text-[10px] font-bold text-purple-700 dark:border-purple-800 dark:bg-purple-950/60 dark:text-purple-300">

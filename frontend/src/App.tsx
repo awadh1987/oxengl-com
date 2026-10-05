@@ -1,7 +1,6 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
-import { NotificationTopBar } from './components/NotificationTopBar';
 import { Sidebar, ActiveTab } from './components/Sidebar';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AIAssistantWidget } from './components/AIAssistantWidget';
@@ -162,7 +161,6 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   'financial-hub': '/finance/analytics-hub',
   vouchers: '/finance/vouchers',
   'finance-chart': '/finance/chart',
-  'finance-trial-balance': '/finance/trial-balance',
   'financial-reports': '/finance/reports',
   'finance-audit-closing': '/finance/audit-closing',
   'ai-insights': '/finance/ai-auditor',
@@ -248,7 +246,6 @@ export const tenantNavigation: {
   { id: 'vouchers', path: '/finance/vouchers', labelAr: 'السندات المالية', labelEn: 'Financial Vouchers', icon: Receipt, group: 'Finance, Accounting & Control' },
   { id: 'finance-chart', path: '/finance/chart', labelAr: 'شجرة الحسابات', labelEn: 'Chart of Accounts', icon: Landmark, group: 'Finance, Accounting & Control' },
   { id: 'financial-reports', path: '/finance/reports', labelAr: 'التقارير المالية المجمعة', labelEn: 'Financial Reports Engine', icon: TrendingUp, group: 'Finance, Accounting & Control' },
-  { id: 'finance-trial-balance', path: '/finance/trial-balance', labelAr: 'ميزان المراجعة', labelEn: 'Trial Balance', icon: Scale, group: 'Finance, Accounting & Control' },
   { id: 'finance-audit-closing', path: '/finance/audit-closing', labelAr: 'الإقفال السنوي والتدقيق', labelEn: 'Annual Audit Closing', icon: FileSpreadsheet, group: 'Finance, Accounting & Control' },
   { id: 'ai-insights', path: '/finance/ai-auditor', labelAr: 'مدقق العمليات الذكي', labelEn: 'AI Financial Auditor', icon: Sparkles, group: 'Finance, Accounting & Control' },
 ];
@@ -318,7 +315,7 @@ function AppContent() {
     const tab = typeof window !== 'undefined' ? getTabFromPath(window.location.pathname) : 'operations';
     const item = tenantNavigation.find(n => n.id === tab);
     if (item?.group) return item.group;
-    if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
+    if (tab === 'finance-chart' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
       return 'Finance, Accounting & Control';
     }
     return 'Operations & Logistics';
@@ -330,7 +327,7 @@ function AppContent() {
     const navItem = tenantNavigation.find(n => n.id === tab);
     if (navItem) {
       setSelectedDomain(navItem.group);
-    } else if (tab === 'finance-chart' || tab === 'finance-trial-balance' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
+    } else if (tab === 'finance-chart' || tab === 'financial-reports' || tab === 'finance-audit-closing' || tab === 'invoicing' || tab === 'sales-receivables' || tab === 'vouchers' || tab === 'ai-insights') {
       setSelectedDomain('Finance, Accounting & Control');
     } else {
       setSelectedDomain('Operations & Logistics');
@@ -824,7 +821,6 @@ function AppContent() {
     'corporate-vault': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     'fleet-map': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     'finance-chart': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
-    'finance-trial-balance': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     'financial-reports': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Read_Only'],
     'finance-audit-closing': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant'],
     'data-observability': ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only'],
@@ -877,8 +873,6 @@ function AppContent() {
         return <FinancialVouchersView />;
       case 'finance-chart':
         return <FinanceReportsView initialMode="chart" />;
-      case 'finance-trial-balance':
-        return <FinancialReportsView initialReport="trial-balance" />;
       case 'financial-reports':
         return <FinancialReportsView />;
       case 'finance-audit-closing':
@@ -925,7 +919,6 @@ function AppContent() {
         themeMode === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-neutral-900'
       }`}
     >
-      <NotificationTopBar />
       {activeTab !== 'hub' && <Navbar
         onOpenAIModal={() => setIsAIChatOpen(true)}
         onOpenExportPrintModal={() => setIsExportPrintModalOpen(true)}

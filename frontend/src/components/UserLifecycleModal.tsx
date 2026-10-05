@@ -33,9 +33,9 @@ export const UserLifecycleModal: React.FC<UserLifecycleModalProps> = ({
         aria-modal="true"
         aria-labelledby="user-lifecycle-title"
         dir={isArabic ? 'rtl' : 'ltr'}
-        className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]"
+        className="erp-modal-shell w-full max-w-md rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]"
       >
-        <header className="flex items-start justify-between gap-3">
+        <header className="erp-modal-header flex items-start justify-between gap-3 border-b border-slate-100 bg-white p-5 dark:border-slate-800 dark:bg-[#090f1c]">
           <div className="flex items-start gap-2.5">
             <span className={`mt-0.5 rounded-lg p-2 ${isSuspend || isSoftDelete ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400'}`}>
               <Icon className="h-4 w-4" />
@@ -62,6 +62,7 @@ export const UserLifecycleModal: React.FC<UserLifecycleModalProps> = ({
           </button>
         </header>
 
+        <div className="erp-modal-body space-y-4 p-5">
         <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
           {isSuspend
             ? isArabic
@@ -86,7 +87,9 @@ export const UserLifecycleModal: React.FC<UserLifecycleModalProps> = ({
           {isArabic ? 'سيتم تسجيل القرار في سجل التدقيق.' : 'This access decision is recorded in the audit log.'}
         </p>
 
-        <footer className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+        </div>
+
+        <footer className="erp-modal-footer flex items-center justify-end gap-2 border-t border-slate-100 bg-white px-5 py-3 dark:border-slate-800 dark:bg-[#090f1c]">
           {isSuspend && (
             <button
               type="button"
