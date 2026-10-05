@@ -45,7 +45,16 @@ router = APIRouter(
 # nothing but the Host header / ?host= and never expose tenant-private data.
 public_router = APIRouter(tags=["Tenant Control Panel (Public)"])
 
-TENANT_ADMIN_ROLES = frozenset({"ADMIN", "OWNER"})
+# Mirrors the tenant-plane role set used for branding administration.
+TENANT_ADMIN_ROLES = frozenset({
+    "OWNER",
+    "ADMIN",
+    "ADMINISTRATOR",
+    "TENANT_OWNER",
+    "TENANT_ADMIN",
+    "COMPANY_OWNER",
+    "COMPANY_ADMIN",
+})
 
 
 def _normalize_role(role: Optional[str]) -> str:
@@ -394,7 +403,7 @@ def update_tenant_settings(
 @router.get("/domains", status_code=status.HTTP_200_OK)
 def list_custom_domains(
     request: Request,
-    current_user: ResUser = Depends(get_authenticated_user),
+    current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
     """Lists registered custom domains for the tenant."""

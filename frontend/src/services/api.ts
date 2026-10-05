@@ -1774,8 +1774,12 @@ export const erpApi = {
       body: JSON.stringify(payload),
     }),
   verifyTenantControlDomain: (domainId: string, companyId?: string) =>
-    request<any>(`/api/v1/tenant/control/domains/${domainId}/verify`, companyId, {
+    request<any>(`/api/v1/tenant/control/domains/${encodeURIComponent(domainId)}/verify`, companyId, {
       method: 'POST',
+    }),
+  removeTenantControlDomain: (domainId: string, companyId?: string) =>
+    request<any>(`/api/v1/tenant/control/domains/${encodeURIComponent(domainId)}`, companyId, {
+      method: 'DELETE',
     }),
 
   // Enterprise Database & Migration (Phase 1)

@@ -39,6 +39,7 @@ import {
 import { TenantAvatar } from './TenantAvatar';
 import { BrandMark, BrandWordmark } from '../views/landing/BrandWordmark';
 import { HoverIcon } from './common/HoverIcon';
+import { erpApi } from '../services/api';
 
 export type ActiveTab =
   | 'hub'
@@ -145,7 +146,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const sidebarPrimaryColor = currentCompany?.uiPrimaryColor || '#F05627';
   const sidebarTier = currentCompany?.subscriptionTier || (isAr ? 'مرخص' : 'LICENSED');
 
-  // Fetch tenant configurations using active X-Tenant-ID header
+  // Fetch tenant configurations through the authenticated API client.
   useEffect(() => {
     const activeTenantId =
       tenantId ||
@@ -154,34 +155,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       localStorage.getItem('tenant_id');
     if (!activeTenantId) return;
 
-    const token = localStorage.getItem('oxengl_auth_jwt') || localStorage.getItem('token');
     const fetchTenantConfig = async () => {
       try {
-        let response = await fetch('/api/v1/tenant/control/settings', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            'X-Tenant-ID': activeTenantId,
-          },
-        });
-        if (!response.ok && response.status === 404) {
-          response = await fetch('/api/tenant/control/settings', {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              'X-Tenant-ID': activeTenantId,
-            },
-          });
-        }
-        if (response.ok) {
-          const data = await response.json();
-          const views =
-            data?.settings?.available_views || data?.availableViews;
-          if (Array.isArray(views) && views.length > 0) {
-            setAvailableViews(views);
-          }
+        const data = await erpApi.getTenantControlSettings(activeTenantId);
+        const views = data?.settings?.available_views || data?.availableViews;
+        if (Array.isArray(views) && views.length > 0) {
+          setAvailableViews(views);
         }
       } catch (err) {
         console.warn('Tenant config lookup failed, using local schema fallback:', err);

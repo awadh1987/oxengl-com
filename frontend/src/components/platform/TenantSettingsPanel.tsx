@@ -66,18 +66,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
 
   const loadDomains = async () => {
     try {
-      const token = typeof window !== 'undefined' ? (localStorage.getItem('access_token') || localStorage.getItem('oxengl_token') || '') : '';
-      const headers: Record<string, string> = {
-        'x-tenant-id': tenantId,
-        'x-company-id': tenantId,
-        'x-tenant-slug': tenantSlug,
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-      let res = await fetch('/api/v1/tenant/control/domains', { headers });
-      if (!res.ok) {
-        res = await fetch('/api/tenant/control/domains', { headers });
-      }
-      const data = await res.json();
+      const data = await erpApi.getTenantControlDomains(tenantId);
       if (data?.success && data.domains) {
         setDomainsList(data.domains);
       }
@@ -91,28 +80,9 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
       const data = await erpApi.getTenantControlSettings(tenantId);
       if (data?.success) {
         setSettings(data.settings);
-      } else {
-        const res = await fetch('/api/tenant/control/settings', {
-          headers: { 'x-tenant-id': tenantId, 'x-tenant-slug': tenantSlug },
-        });
-        const fallbackData = await res.json();
-        if (fallbackData.success) {
-          setSettings(fallbackData.settings);
-        }
       }
     } catch (err) {
-      console.warn('API getTenantControlSettings failed, attempting direct fetch:', err);
-      try {
-        const res = await fetch('/api/tenant/control/settings', {
-          headers: { 'x-tenant-id': tenantId, 'x-tenant-slug': tenantSlug },
-        });
-        const fallbackData = await res.json();
-        if (fallbackData?.success) {
-          setSettings(fallbackData.settings);
-        }
-      } catch (innerErr) {
-        console.error('Failed to load settings:', innerErr);
-      }
+      console.error('Failed to load settings:', err);
     } finally {
       setLoading(false);
     }
@@ -130,22 +100,6 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         setSettings(data.settings || { ...settings, [sectionKey]: payload });
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        const res = await fetch('/api/tenant/control/settings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-tenant-id': tenantId,
-            'x-tenant-slug': tenantSlug,
-          },
-          body: JSON.stringify({ section: sectionKey, settings: payload }),
-        });
-        const fallbackData = await res.json();
-        if (fallbackData.success) {
-          setSettings(fallbackData.settings || { ...settings, [sectionKey]: payload });
-          setSaveSuccess(true);
-          setTimeout(() => setSaveSuccess(false), 3000);
-        }
       }
     } catch (err) {
       console.error('Error saving settings:', err);

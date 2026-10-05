@@ -14,6 +14,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { erpApi } from '../../services/api';
 
 interface DomainRecord {
   id: string;
@@ -47,19 +48,6 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  const getHeaders = () => {
-    const token = typeof window !== 'undefined'
-      ? (localStorage.getItem('access_token') || localStorage.getItem('oxengl_token') || '')
-      : '';
-    return {
-      'Content-Type': 'application/json',
-      'x-tenant-id': tenantId,
-      'x-company-id': tenantId,
-      'x-tenant-slug': tenantSlug,
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-  };
-
   useEffect(() => {
     fetchDomains();
   }, [tenantId]);
@@ -67,16 +55,8 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
   const fetchDomains = async () => {
     setLoading(true);
     try {
-      let res = await fetch('/api/v1/tenant/control/domains', {
-        headers: getHeaders(),
-      });
-      if (!res.ok) {
-        res = await fetch('/api/tenant/control/domains', {
-          headers: getHeaders(),
-        });
-      }
-      const data = await res.json();
-      if (data.success && data.domains) {
+      const data = await erpApi.getTenantControlDomains(tenantId);
+      if (data?.success && data.domains) {
         setDomains(data.domains);
       }
     } catch (err) {
@@ -103,23 +83,7 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
     clean = clean.split('/')[0].split(':')[0].trim();
 
     try {
-      let res = await fetch('/api/v1/tenant/control/domains', {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({ domain_name: clean }),
-      });
-      if (!res.ok) {
-        res = await fetch('/api/tenant/control/domains', {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify({ domain_name: clean }),
-        });
-      }
-      const data = await res.json();
-      if (!res.ok) {
-        setErrorMessage(data.error || data.detail || 'فشل تسجيل النطاق');
-        return;
-      }
+      const data = await erpApi.registerTenantControlDomain({ domain_name: clean }, tenantId);
       setActiveDomain(data.domain);
       setStep(2);
       fetchDomains();
@@ -136,17 +100,7 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
     setActionSuccess(null);
 
     try {
-      let res = await fetch(`/api/v1/tenant/control/domains/${encodeURIComponent(domainId)}/verify`, {
-        method: 'POST',
-        headers: getHeaders(),
-      });
-      if (!res.ok) {
-        res = await fetch(`/api/tenant/control/domains/${encodeURIComponent(domainId)}/verify`, {
-          method: 'POST',
-          headers: getHeaders(),
-        });
-      }
-      const data = await res.json();
+      const data = await erpApi.verifyTenantControlDomain(domainId, tenantId);
       setVerificationResult(data);
       if (data.success) {
         setStep(3);
@@ -170,26 +124,12 @@ export const CustomDomainWizard: React.FC<CustomDomainWizardProps> = ({ tenantId
     setErrorMessage(null);
     setActionSuccess(null);
     try {
-      let res = await fetch(`/api/v1/tenant/control/domains/${encodeURIComponent(domainId)}`, {
-        method: 'DELETE',
-        headers: getHeaders(),
-      });
-      if (!res.ok) {
-        res = await fetch(`/api/tenant/control/domains/${encodeURIComponent(domainId)}`, {
-          method: 'DELETE',
-          headers: getHeaders(),
-        });
-      }
-      if (res.ok) {
-        setActionSuccess(`تم إلغاء ربط النطاق ${domainName} بنجاح`);
-        fetchDomains();
-        if (activeDomain?.id === domainId || activeDomain?.domain_name === domainName) {
-          setActiveDomain(null);
-          setStep(1);
-        }
-      } else {
-        const data = await res.json();
-        setErrorMessage(data.error || data.detail || 'فشل حذف النطاق');
+      await erpApi.removeTenantControlDomain(domainId, tenantId);
+      setActionSuccess(`تم إلغاء ربط النطاق ${domainName} بنجاح`);
+      fetchDomains();
+      if (activeDomain?.id === domainId || activeDomain?.domain_name === domainName) {
+        setActiveDomain(null);
+        setStep(1);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'خطأ أثناء حذف النطاق');
