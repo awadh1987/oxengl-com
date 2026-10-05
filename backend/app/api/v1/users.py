@@ -139,6 +139,7 @@ class UserResponse(BaseModel):
     iam_role: Optional[str] = None
     must_change_password: bool = False
     is_active: bool
+    status: str = "active"
     created_at: Optional[datetime] = None
     tenant_id: str
 
@@ -529,6 +530,7 @@ def get_tenant_users(
             iam_role=u.iam_role,
             must_change_password=bool(u.must_change_password),
             is_active=u.is_active,
+            status=("suspended" if not u.is_active else "pending" if u.must_change_password else "active"),
             created_at=u.created_at,
             tenant_id=str(u.company_id),
         )

@@ -351,7 +351,7 @@ export const MasterDataView: React.FC = () => {
                     <td>
                       <span className={`rounded px-1.5 py-1 text-[10px] font-bold ${iamRoleBadgeClass(role)}`} title={role}>{iamRoleLabel(role, isAr)}</span>
                       {isSuspended && <span className="ms-1 rounded border border-rose-200 bg-rose-50 px-1.5 py-1 text-[10px] font-bold text-rose-700 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-400">{isAr ? 'معلّق' : 'Suspended'}</span>}
-                      {user.mustChangePassword && !isSuspended && <span className="ms-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-1 text-[10px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">{isAr ? 'بانتظار تغيير كلمة المرور' : 'Password change pending'}</span>}
+                      {user.mustChangePassword && !isSuspended && <span className="ms-1 rounded border border-orange-300 bg-orange-50 px-1.5 py-1 text-[10px] font-bold text-orange-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">{isAr ? 'بانتظار القبول' : 'Pending Acceptance'}</span>}
                     </td>
                     <td className="max-w-sm text-xs text-slate-600 dark:text-slate-400">{rolePermissionSummary(role, isAr)}</td>
                     <td>

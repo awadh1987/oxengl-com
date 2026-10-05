@@ -1933,6 +1933,7 @@ export const erpApi = {
         iam_role?: string | null;
         must_change_password?: boolean;
         is_active: boolean;
+        status?: string;
         created_at?: string;
         tenant_id: string;
       }>
