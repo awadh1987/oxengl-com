@@ -317,6 +317,7 @@ class ResUser(TimestampMixin, Base):
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     mfa_secret: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     mfa_backup_codes: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     # HR-to-IAM provisioning (docs/oxengl_hr_iam_provisioning_blueprint.md): exact blueprint RBAC role,
     # ABAC constraint payload, and the first-login password-change gate.
     iam_role: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)

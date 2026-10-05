@@ -19,6 +19,8 @@ import type { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { erpApi } from '../services/api';
 import { EntityCRUDModal } from '../components/EntityCRUDModal';
+import { PasswordResetModal } from '../components/PasswordResetModal';
+import { UserLifecycleModal } from '../components/UserLifecycleModal';
 import { useIamRoles } from '../hooks/useIamRoles';
 import {
   HR_REGISTRATION_WARNING_AR,
@@ -57,8 +59,6 @@ function rolePermissionSummary(role: string, isAr: boolean): string {
   return role;
 }
 
-type IamActionKind = 'reset' | 'suspend' | 'reactivate';
-
 export const MasterDataView: React.FC = () => {
   const { users, refreshUsers, currentUser, language } = useApp();
   const isAr = language === 'ar';
@@ -86,7 +86,11 @@ export const MasterDataView: React.FC = () => {
     role: string;
     temporaryPassword?: string;
   } | null>(null);
-  const [iamConfirm, setIamConfirm] = useState<{ user: User; kind: IamActionKind } | null>(null);
+  const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+  const [lifecycleAction, setLifecycleAction] = useState<{
+    user: User;
+    action: 'suspend' | 'reactivate' | 'soft-delete';
+  } | null>(null);
   const [iamBusyId, setIamBusyId] = useState<string | null>(null);
   const [iamRowErrors, setIamRowErrors] = useState<Record<string, string>>({});
   const [iamNotice, setIamNotice] = useState<string | null>(null);
@@ -158,9 +162,9 @@ export const MasterDataView: React.FC = () => {
     }
   };
 
-  const runIamAction = async () => {
-    if (!iamConfirm) return;
-    const { user, kind } = iamConfirm;
+  const runPasswordReset = async (requirePasswordChange: boolean) => {
+    if (!passwordResetUser) return;
+    const user = passwordResetUser;
     const contact = user.phone || user.email;
     setIamBusyId(user.id);
     setIamRowErrors((previous) => {
@@ -169,21 +173,13 @@ export const MasterDataView: React.FC = () => {
       return next;
     });
     try {
-      if (kind === 'reset') {
-        const result = await erpApi.forcePasswordReset(user.id);
-        setIamNotice(
-          result.reset_dispatched
-            ? isAr ? `تم إبطال بيانات الدخول وإرسال بيانات مؤقتة إلى ${contact}.` : `Credentials invalidated and a reset credential was sent to ${contact}.`
-            : isAr ? `تم إبطال بيانات الدخول لـ ${contact}. على المستخدم إكمال إعادة تعيين كلمة المرور.` : `Credentials invalidated for ${contact}. The user must complete the password reset flow.`
-        );
-      } else if (kind === 'suspend') {
-        await erpApi.suspendUser(user.id);
-        setIamNotice(isAr ? `تم تعليق حساب ${contact} وإنهاء جلساته.` : `Account ${contact} suspended and sessions revoked.`);
-      } else {
-        await erpApi.reactivateUser(user.id);
-        setIamNotice(isAr ? `تمت إعادة تفعيل حساب ${contact}.` : `Account ${contact} reactivated.`);
-      }
-      setIamConfirm(null);
+      const result = await erpApi.forcePasswordReset(user.id, requirePasswordChange);
+      setIamNotice(result.message || (
+        result.reset_dispatched
+          ? isAr ? `تم إبطال بيانات الدخول وإرسال تعليمات الاستعادة إلى ${contact}.` : `Credentials invalidated and reset instructions sent to ${contact}.`
+          : isAr ? `تم إبطال بيانات الدخول لـ ${contact}.` : `Credentials invalidated for ${contact}.`
+      ));
+      setPasswordResetUser(null);
       await refreshUsers();
       setTimeout(() => setIamNotice(null), 6000);
     } catch (error) {
@@ -191,7 +187,41 @@ export const MasterDataView: React.FC = () => {
         ...previous,
         [user.id]: error instanceof Error ? error.message : (isAr ? 'فشلت العملية' : 'Action failed'),
       }));
-      setIamConfirm(null);
+    } finally {
+      setIamBusyId(null);
+    }
+  };
+
+  const runLifecycleAction = async (action: 'suspend' | 'reactivate' | 'soft-delete') => {
+    if (!lifecycleAction) return;
+    const { user } = lifecycleAction;
+    setLifecycleAction({ user, action });
+    const contact = user.phone || user.email;
+    setIamBusyId(user.id);
+    setIamRowErrors((previous) => {
+      const next = { ...previous };
+      delete next[user.id];
+      return next;
+    });
+    try {
+      if (action === 'suspend') {
+        await erpApi.suspendUser(user.id);
+        setIamNotice(isAr ? `تم تعليق حساب ${contact} وإنهاء جلساته.` : `Account ${contact} suspended and sessions revoked.`);
+      } else if (action === 'reactivate') {
+        await erpApi.reactivateUser(user.id);
+        setIamNotice(isAr ? `تمت إعادة تفعيل حساب ${contact}.` : `Account ${contact} reactivated.`);
+      } else {
+        await erpApi.softDeleteUser(user.id);
+        setIamNotice(isAr ? `تم حذف حساب ${contact} من القائمة النشطة مع الاحتفاظ بسجله.` : `Account ${contact} was hidden from active users; its record was retained.`);
+      }
+      setLifecycleAction(null);
+      await refreshUsers();
+      setTimeout(() => setIamNotice(null), 6000);
+    } catch (error) {
+      setIamRowErrors((previous) => ({
+        ...previous,
+        [user.id]: error instanceof Error ? error.message : (isAr ? 'فشلت العملية' : 'Action failed'),
+      }));
     } finally {
       setIamBusyId(null);
     }
@@ -344,20 +374,20 @@ export const MasterDataView: React.FC = () => {
                         ><Edit2 className="h-3 w-3" /></button>
                         <button
                           type="button"
-                          onClick={() => setIamConfirm({ user, kind: 'reset' })}
+                          onClick={() => setPasswordResetUser(user)}
                           disabled={actionsDisabled || isSelf}
                           className="neo-action-btn disabled:cursor-not-allowed disabled:opacity-40"
                           title={!canManageIam ? (isAr ? 'للمدراء فقط' : 'Administrators only') : (isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset')}
                           aria-label={isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset'}
-                        >{isBusy && iamConfirm?.kind === 'reset' ? <Loader2 className="h-3 w-3 animate-spin" /> : <KeyRound className="h-3 w-3" />}</button>
+                        >{isBusy && passwordResetUser?.id === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <KeyRound className="h-3 w-3" />}</button>
                         <button
                           type="button"
-                          onClick={() => setIamConfirm({ user, kind: isSuspended ? 'reactivate' : 'suspend' })}
+                          onClick={() => setLifecycleAction({ user, action: isSuspended ? 'reactivate' : 'suspend' })}
                           disabled={actionsDisabled || isSelf}
                           className="neo-action-btn neo-btn-delete disabled:cursor-not-allowed disabled:opacity-40"
                           title={!canManageIam ? (isAr ? 'للمدراء فقط' : 'Administrators only') : isSuspended ? (isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account') : (isAr ? 'تعليق الحساب' : 'Suspend Account')}
                           aria-label={isSuspended ? (isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account') : (isAr ? 'تعليق الحساب' : 'Suspend Account')}
-                        >{isBusy && iamConfirm?.kind !== 'reset' ? <Loader2 className="h-3 w-3 animate-spin" /> : isSuspended ? <CheckCircle className="h-3 w-3" /> : <Ban className="h-3 w-3" />}</button>
+                        >{isBusy && lifecycleAction?.user.id === user.id ? <Loader2 className="h-3 w-3 animate-spin" /> : isSuspended ? <CheckCircle className="h-3 w-3" /> : <Ban className="h-3 w-3" />}</button>
                       </div>
                       {rowError && <p role="alert" className="mt-1 text-start text-[10px] font-bold text-rose-600 dark:text-rose-400">{rowError}</p>}
                     </td>
@@ -454,26 +484,27 @@ export const MasterDataView: React.FC = () => {
         </div>
       )}
 
-      {iamConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
-          <div role="alertdialog" aria-modal="true" className="w-full max-w-sm space-y-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]" dir={isAr ? 'rtl' : 'ltr'}>
-            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">{iamConfirm.kind === 'reset' ? (isAr ? 'فرض إعادة تعيين كلمة المرور' : 'Force Password Reset') : iamConfirm.kind === 'suspend' ? (isAr ? 'تعليق الحساب' : 'Suspend Account') : (isAr ? 'إعادة تفعيل الحساب' : 'Reactivate Account')}</h3>
-            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
-              {iamConfirm.kind === 'reset'
-                ? isAr ? `سيتم إبطال كلمة المرور الحالية وإنهاء جميع جلسات ${iamConfirm.user.email}، وإرسال رمز لمرة واحدة لتعيين كلمة مرور جديدة.` : `This invalidates the current password and signs ${iamConfirm.user.email} out everywhere. A one-time code is sent so they can set a new password.`
-                : iamConfirm.kind === 'suspend'
-                  ? isAr ? `سيتم منع ${iamConfirm.user.email} من تسجيل الدخول وإنهاء جميع جلساته فوراً.` : `${iamConfirm.user.email} will be blocked from signing in and all active sessions will end immediately.`
-                  : isAr ? `سيتمكن ${iamConfirm.user.email} من تسجيل الدخول مجدداً.` : `${iamConfirm.user.email} will be able to sign in again.`}
-            </p>
-            <p className="text-[10px] text-slate-400">{isAr ? 'يتم تسجيل هذا الإجراء في سجل التدقيق.' : 'This action is recorded in the audit log.'}</p>
-            <div className="flex items-center justify-end gap-2 pt-1">
-              <button type="button" disabled={iamBusyId !== null} onClick={() => setIamConfirm(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800">{isAr ? 'إلغاء' : 'Cancel'}</button>
-              <button type="button" disabled={iamBusyId !== null} onClick={runIamAction} className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold text-white disabled:opacity-50 ${iamConfirm.kind === 'reactivate' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}`}>
-                {iamBusyId !== null && <Loader2 className="h-3.5 w-3.5 animate-spin" />}<span>{isAr ? 'تأكيد' : 'Confirm'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
+      {passwordResetUser && (
+        <PasswordResetModal
+          user={passwordResetUser}
+          isOpen
+          isArabic={isAr}
+          isBusy={iamBusyId === passwordResetUser.id}
+          onClose={() => setPasswordResetUser(null)}
+          onConfirm={runPasswordReset}
+        />
+      )}
+
+      {lifecycleAction && (
+        <UserLifecycleModal
+          user={lifecycleAction.user}
+          action={lifecycleAction.action}
+          isOpen
+          isArabic={isAr}
+          isBusy={iamBusyId === lifecycleAction.user.id}
+          onClose={() => setLifecycleAction(null)}
+          onConfirm={runLifecycleAction}
+        />
       )}
 
       {selectedUser && (

@@ -28,10 +28,10 @@ import re
 import secrets
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
@@ -61,7 +61,7 @@ from backend.app.domains.iam.role_catalog import (
     resolve_external_role,
     resolve_internal_role,
 )
-from backend.two_tier_auth import hash_password
+from backend.two_tier_auth import hash_password, verify_password
 
 logger = logging.getLogger("oxengl.api.users")
 
@@ -220,6 +220,47 @@ class UserActionResponse(BaseModel):
     message: str
 
 
+class UserProfileResponse(BaseModel):
+    id: str
+    email: str
+    full_name: str
+    phone: Optional[str] = None
+    sync_reference_id: Optional[str] = None
+    role: str
+    iam_role: Optional[str] = None
+    company_id: Optional[str] = None
+
+
+class UserProfileUpdateRequest(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=1, max_length=255)
+    phone: Optional[str] = Field(None, max_length=64)
+
+    @field_validator("full_name")
+    @classmethod
+    def _clean_full_name(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Full name cannot be empty.")
+        return cleaned
+
+    @field_validator("phone")
+    @classmethod
+    def _clean_phone(cls, value: Optional[str]) -> Optional[str]:
+        cleaned = value.strip() if value is not None else None
+        return cleaned or None
+
+
+class ChangeOwnPasswordRequest(BaseModel):
+    current_password: str = Field(..., min_length=1, max_length=1024)
+    new_password: str = Field(..., min_length=10, max_length=128)
+
+
+class ForcePasswordResetRequest(BaseModel):
+    require_password_change: bool = True
+
+
 # ==============================================================================
 # Authority & audit helpers
 # ==============================================================================
@@ -337,6 +378,9 @@ def _load_target(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cross-tenant violation: You do not have permission to modify users from another tenant.",
         )
+    if target.deleted_at is not None:
+        _commit_audit(db, actor.audit, f"IAM_{action}_DENIED:soft_deleted", "DENIED", target.company_id, target_uuid)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     if not allow_self and actor.user_id is not None and target.id == actor.user_id:
         _commit_audit(db, actor.audit, f"IAM_{action}_DENIED:self_target", "DENIED", target.company_id, target_uuid)
@@ -455,7 +499,7 @@ def get_tenant_users(
         scope = _tenant_scope(db, actor) or []
         query = query.filter(ResUser.company_id.in_(scope))
 
-    users = query.order_by(ResUser.created_at.desc()).all()
+    users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
     return [
         UserResponse(
             id=str(u.id),
@@ -472,6 +516,134 @@ def get_tenant_users(
         )
         for u in users
     ]
+
+
+def _load_own_profile(
+    request: Request,
+    current_user: User,
+    db: Session,
+) -> tuple[ResUser, AuditContext]:
+    """Load only the authenticated account; callers cannot select another user's or tenant's identity."""
+    try:
+        user_id = uuid.UUID(str(current_user.id))
+    except (AttributeError, TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user is unavailable.")
+
+    target = db.query(ResUser).filter(ResUser.id == user_id).first()
+    identifier = (target.email if target else getattr(current_user, "email", None)) or f"user:{user_id}"
+    audit = build_audit_context(request, actor_id=user_id, actor_identifier=identifier)
+    if target is None:
+        _commit_audit(db, audit, "USER_PROFILE_ACCESS_DENIED:not_found", "DENIED", None, user_id)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found.")
+    if not target.is_active or target.deleted_at is not None:
+        _commit_audit(
+            db, audit, "USER_PROFILE_ACCESS_DENIED:inactive", "DENIED", target.company_id, target.id
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account is suspended.")
+    return target, audit
+
+
+def _profile_response(user: ResUser) -> UserProfileResponse:
+    return UserProfileResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        phone=user.phone,
+        sync_reference_id=user.sync_reference_id,
+        role=user.role,
+        iam_role=user.iam_role,
+        company_id=str(user.company_id) if user.company_id else None,
+    )
+
+
+@router.get("/me/profile", response_model=UserProfileResponse)
+def get_own_user_profile(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Return the caller's own safe profile fields, including the read-only sync reference."""
+    user, _audit = _load_own_profile(request, current_user, db)
+    return _profile_response(user)
+
+
+@router.patch("/me/profile", response_model=UserProfileResponse)
+def update_own_user_profile(
+    payload: UserProfileUpdateRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Allow only the authenticated user to edit their own display name and phone number."""
+    user, audit = _load_own_profile(request, current_user, db)
+    fields = payload.model_fields_set
+    if not fields:
+        _commit_audit(db, audit, "USER_PROFILE_UPDATE_DENIED:empty_payload", "DENIED", user.company_id, user.id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Provide a profile field to update.")
+
+    changed_fields = []
+    if "full_name" in fields:
+        if payload.full_name is None:
+            _commit_audit(db, audit, "USER_PROFILE_UPDATE_DENIED:empty_name", "DENIED", user.company_id, user.id)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Full name cannot be empty.")
+        user.full_name = payload.full_name or ""
+        changed_fields.append("full_name")
+    if "phone" in fields:
+        user.phone = payload.phone
+        changed_fields.append("phone")
+
+    append_audit_from_context(
+        db,
+        _with_target(audit, user.id),
+        action=f"USER_PROFILE_UPDATED:fields={','.join(sorted(changed_fields))}",
+        outcome="SUCCESS",
+        tenant_id=user.company_id,
+    )
+    db.commit()
+    db.refresh(user)
+    return _profile_response(user)
+
+
+@router.post("/me/change-password", status_code=status.HTTP_200_OK)
+def change_own_password(
+    payload: ChangeOwnPasswordRequest,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Change the authenticated user's password using a backend-verified current password."""
+    user, audit = _load_own_profile(request, current_user, db)
+    if not verify_password(payload.current_password, user.password_hash):
+        _commit_audit(
+            db, audit, "USER_PASSWORD_CHANGE_DENIED:invalid_current_password", "DENIED", user.company_id, user.id
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Current password is incorrect.")
+    if verify_password(payload.new_password, user.password_hash):
+        _commit_audit(
+            db, audit, "USER_PASSWORD_CHANGE_DENIED:password_reuse", "DENIED", user.company_id, user.id
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Choose a new password that differs from the current password.",
+        )
+
+    password_hash = hash_password(payload.new_password)
+    user.password_hash = password_hash
+    user.must_change_password = False
+    mirror = db.query(TenantUser).filter(TenantUser.id == user.id).first()
+    if mirror is not None:
+        mirror.password_hash = password_hash
+    append_audit_from_context(
+        db,
+        _with_target(audit, user.id),
+        action="USER_PASSWORD_CHANGED",
+        outcome="SUCCESS",
+        tenant_id=user.company_id,
+    )
+    user_id = user.id
+    db.commit()
+    _revoke_sessions(db, user_id, "user_password_changed")
+    return {"status": "changed", "message": "Password updated. Sign in again with your new password."}
 
 
 # ==============================================================================
@@ -647,6 +819,38 @@ def delete_tenant_user(
     return {"status": "deleted", "user_id": str(target_id), "message": "User deleted successfully."}
 
 
+@router.post("/{user_id}/soft-delete", response_model=UserActionResponse)
+def soft_delete_tenant_user(
+    user_id: str,
+    actor: IamActor = Depends(require_iam_admin),
+    db: Session = Depends(get_db),
+):
+    """Hide a user from active workspace administration without deleting its record."""
+    target = _load_target(db, actor, user_id, "USER_SOFT_DELETE")
+
+    target.deleted_at = datetime.now(timezone.utc)
+    target.is_active = False
+    mirror = db.query(TenantUser).filter(TenantUser.id == target.id).first()
+    if mirror is not None:
+        mirror.is_active = False
+    append_audit_from_context(
+        db,
+        _with_target(actor.audit, target.id),
+        action="IAM_USER_SOFT_DELETED",
+        outcome="SUCCESS",
+        tenant_id=target.company_id,
+    )
+    target_id = target.id
+    db.commit()
+    _revoke_sessions(db, target_id, "user_soft_deleted")
+    return UserActionResponse(
+        status="soft_deleted",
+        user_id=str(target_id),
+        is_active=False,
+        message="User was soft-deleted. The record is retained and hidden from active user lists.",
+    )
+
+
 # ==============================================================================
 # 4. PUT /api/v1/users/{user_id}/role  (Edit Access)
 # ==============================================================================
@@ -768,6 +972,7 @@ def reactivate_tenant_user(
 async def force_password_reset(
     user_id: str,
     background_tasks: BackgroundTasks,
+    payload: Optional[ForcePasswordResetRequest] = Body(default=None),
     actor: IamActor = Depends(require_iam_admin),
     db: Session = Depends(get_db),
 ):
@@ -776,6 +981,7 @@ async def force_password_reset(
     phone-only users receive a temporary password over SMS before the stored hash is replaced. Nothing secret is returned.
     """
     target = _load_target(db, actor, user_id, "FORCE_RESET")
+    require_password_change = payload.require_password_change if payload is not None else True
     sms_delivery = _is_sms_placeholder_email(target.email)
     dispatched = False
 
@@ -820,11 +1026,13 @@ async def force_password_reset(
         new_hash = _unusable_password_hash()
 
     target.password_hash = new_hash
-    target.must_change_password = True
+    target.must_change_password = require_password_change
     mirror = db.query(TenantUser).filter(TenantUser.id == target.id).first()
     if mirror is not None:
         mirror.password_hash = new_hash
     audit_action = "IAM_FORCE_PASSWORD_RESET:channel=sms" if sms_delivery else "IAM_FORCE_PASSWORD_RESET"
+    if not require_password_change:
+        audit_action += ":require_change=false"
     append_audit_from_context(
         db,
         _with_target(actor.audit, target.id),
@@ -839,7 +1047,10 @@ async def force_password_reset(
     if not sms_delivery:
         dispatched = await _dispatch_existing_reset_flow(db, background_tasks, email, company_id)
     if sms_delivery:
-        reset_message = "Credentials invalidated. A temporary password was sent by SMS."
+        reset_message = (
+            "Credentials invalidated. A temporary password was sent by SMS."
+            + (" The user must change it at next sign-in." if require_password_change else "")
+        )
     elif dispatched:
         reset_message = "Credentials invalidated. A one-time password-reset code was sent to the user."
     else:
@@ -848,7 +1059,7 @@ async def force_password_reset(
     return UserActionResponse(
         status="reset_required",
         user_id=str(target_id),
-        must_change_password=True,
+        must_change_password=require_password_change,
         reset_dispatched=dispatched,
         message=reset_message,
     )

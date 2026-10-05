@@ -1,3 +1,14 @@
+export interface UserProfileDto {
+  id: string;
+  email: string;
+  full_name: string;
+  phone?: string | null;
+  sync_reference_id?: string | null;
+  role: string;
+  iam_role?: string | null;
+  company_id?: string | null;
+}
+
 export interface ApiOperation {
   picking_id: string;
   picking_reference: string;
@@ -1820,6 +1831,21 @@ export const erpApi = {
 
 
   // Tenant User Management API (IAM Control Panel - backend: /api/v1/users)
+  getMyProfile: () =>
+    request<UserProfileDto>('/api/v1/users/me/profile'),
+
+  updateMyProfile: (payload: { full_name?: string; phone?: string | null }) =>
+    request<UserProfileDto>('/api/v1/users/me/profile', undefined, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
+  changeMyPassword: (payload: { current_password: string; new_password: string }) =>
+    request<{ status: string; message: string }>('/api/v1/users/me/change-password', undefined, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   getUsers: () =>
     request<
       Array<{
@@ -1886,6 +1912,13 @@ export const erpApi = {
       { method: 'POST' }
     ),
 
+  softDeleteUser: (userId: string) =>
+    request<{ status: string; user_id: string; is_active: boolean; message: string }>(
+      `/api/v1/users/${userId}/soft-delete`,
+      undefined,
+      { method: 'POST' }
+    ),
+
   reactivateUser: (userId: string) =>
     request<{ status: string; user_id: string; is_active: boolean; message: string }>(
       `/api/v1/users/${userId}/reactivate`,
@@ -1893,11 +1926,14 @@ export const erpApi = {
       { method: 'POST' }
     ),
 
-  forcePasswordReset: (userId: string) =>
+  forcePasswordReset: (userId: string, requirePasswordChange = true) =>
     request<{ status: string; user_id: string; must_change_password: boolean; reset_dispatched: boolean; message: string }>(
       `/api/v1/users/${userId}/force-password-reset`,
       undefined,
-      { method: 'POST' }
+      {
+        method: 'POST',
+        body: JSON.stringify({ require_password_change: requirePasswordChange }),
+      }
     ),
 
   async createWeighbridgeOperation(input: {

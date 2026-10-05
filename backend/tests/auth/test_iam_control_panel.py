@@ -180,6 +180,36 @@ def test_list_is_tenant_scoped_and_has_iam_fields(h):
     assert str(mine) in ids and str(foreign) not in ids
     row = next(r for r in rows if r["id"] == str(mine))
     assert row["iam_role"] == "Finance_Manager" and row["must_change_password"] is False
+    assert row["sync_reference_id"] is None
+
+
+def test_soft_delete_retains_record_deactivates_and_hides_from_list(h):
+    target = h.add_user("Guest")
+
+    response = h.client.post(f"/api/v1/users/{target}/soft-delete")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "soft_deleted"
+    deleted = h.user(target)
+    assert deleted is not None
+    assert deleted.deleted_at is not None
+    assert deleted.is_active is False
+    assert (target, "user_soft_deleted") in h.revoked
+    assert str(target) not in {row["id"] for row in h.client.get("/api/v1/users").json()}
+    assert any(a.action == "IAM_USER_SOFT_DELETED" for a in h.audit())
+    assert h.client.post(f"/api/v1/users/{target}/reactivate").status_code == 404
+    assert h.user(target).is_active is False
+
+
+def test_soft_delete_rejects_self_and_preserves_account(h):
+    response = h.client.post(f"/api/v1/users/{h.actor_id}/soft-delete")
+
+    assert response.status_code == 400
+    actor = h.user(h.actor_id)
+    assert actor is not None
+    assert actor.deleted_at is None
+    assert actor.is_active is True
+    assert "IAM_USER_SOFT_DELETE_DENIED:self_target" in {a.action for a in h.audit()}
 
 
 # ----------------------------------------------------------------------------- invite
@@ -329,6 +359,84 @@ def test_force_password_reset_invalidates_credential_and_never_returns_secrets(h
     entry = next(a for a in h.audit() if a.action == "IAM_FORCE_PASSWORD_RESET")
     assert entry.outcome == "SUCCESS" and entry.tenant_id == h.company
     assert entry.actor_email == h.user(h.actor_id).email and entry.actor_id == h.actor_id and str(target) in entry.endpoint_accessed
+
+
+def test_self_profile_is_company_bound_and_profile_edits_are_audited(h):
+    with h.factory() as db:
+        db.query(models.ResUser).filter(models.ResUser.id == h.actor_id).update(
+            {models.ResUser.sync_reference_id: "sync-actor-001"}
+        )
+        db.commit()
+
+    response = h.client.get("/api/v1/users/me/profile")
+    assert response.status_code == 200, response.text
+    assert response.json()["sync_reference_id"] == "sync-actor-001"
+    assert response.json()["company_id"] == str(h.company)
+
+    updated = h.client.patch(
+        "/api/v1/users/me/profile",
+        json={"full_name": "Updated Actor", "phone": "+966501234567", "company_id": str(h.other_company)},
+    )
+    assert updated.status_code == 200, updated.text
+    assert updated.json()["full_name"] == "Updated Actor"
+    assert updated.json()["phone"] == "+966501234567"
+    assert updated.json()["company_id"] == str(h.company)
+    persisted = h.user(h.actor_id)
+    assert persisted.full_name == "Updated Actor" and persisted.phone == "+966501234567"
+    event = next(a for a in h.audit() if a.action.startswith("USER_PROFILE_UPDATED:"))
+    assert event.outcome == "SUCCESS" and event.tenant_id == h.company and event.actor_id == h.actor_id
+
+
+def test_password_change_verifies_old_password_hashes_new_and_audits(h, monkeypatch):
+    monkeypatch.setattr(
+        users_api,
+        "verify_password",
+        lambda submitted, stored: submitted == "current-password" and stored == "original-hash",
+    )
+    response = h.client.post(
+        "/api/v1/users/me/change-password",
+        json={"current_password": "current-password", "new_password": "a-new-password-123"},
+    )
+    assert response.status_code == 200, response.text
+    user = h.user(h.actor_id)
+    assert user.password_hash.startswith("hashed::") and user.password_hash != "original-hash"
+    assert user.must_change_password is False
+    assert (h.actor_id, "user_password_changed") in h.revoked
+    assert any(a.action == "USER_PASSWORD_CHANGED" and a.outcome == "SUCCESS" for a in h.audit())
+
+    rejected = h.client.post(
+        "/api/v1/users/me/change-password",
+        json={"current_password": "wrong-password", "new_password": "another-password-123"},
+    )
+    assert rejected.status_code == 403
+    assert any(
+        a.action == "USER_PASSWORD_CHANGE_DENIED:invalid_current_password" and a.outcome == "DENIED"
+        for a in h.audit()
+    )
+
+
+def test_sms_password_reset_can_toggle_next_login_change_requirement(h, monkeypatch):
+    target = h.add_user("Guest", phone="+966501234567")
+    with h.factory() as db:
+        user = db.get(models.ResUser, target)
+        user.email = f"invite-{target.hex}@sms-invite.oxengl.invalid"
+        db.commit()
+
+    async def fake_dispatch(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(users_api, "dispatch_temporary_credentials", fake_dispatch)
+    response = h.client.post(
+        f"/api/v1/users/{target}/force-password-reset",
+        json={"require_password_change": False},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["must_change_password"] is False
+    assert h.user(target).must_change_password is False
+    assert any(
+        a.action == "IAM_FORCE_PASSWORD_RESET:channel=sms:require_change=false" and a.outcome == "SUCCESS"
+        for a in h.audit()
+    )
 
 
 def test_unknown_or_malformed_target(h):

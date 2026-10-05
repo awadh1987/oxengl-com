@@ -42,6 +42,7 @@ import { TENANT_PALETTES } from '../theme/designTokens';
 import { BrandLogo } from './BrandLogo';
 import { BrandWordmark } from '../views/landing/BrandWordmark';
 import { UserAvatar } from './UserAvatar';
+import { UserProfilePanel } from './UserProfilePanel';
 import { TenantAvatar } from './TenantAvatar';
 import { HoverIcon } from './common/HoverIcon';
 import { isApexDomain, getSubdomain, getEffectiveDomainIdentifier, isCustomDomain } from '../utils/subdomain';
@@ -117,6 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [isOpsExpanded, setIsOpsExpanded] = useState<boolean>(true);
   const [isFinanceExpanded, setIsFinanceExpanded] = useState<boolean>(true);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const activeNavDomain = selectedDomainProp ?? internalDomain;
 
@@ -866,7 +868,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* User Profile Avatar & Logout */}
         <div className="flex items-center gap-1 sm:gap-1.5">
-          <UserAvatar user={currentUser} sizeClassName="h-7.5 w-7.5 text-xs" />
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
+            aria-label={isAr ? 'فتح الملف الشخصي' : 'Open user profile'}
+            aria-haspopup="dialog"
+            className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+            title={isAr ? 'الملف الشخصي' : 'My profile'}
+          >
+            <UserAvatar user={currentUser} sizeClassName="h-7.5 w-7.5 text-xs" />
+          </button>
           {onLogout && (
             <button
               onClick={() => {
@@ -887,6 +898,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
       </div>
+      {isProfileOpen && <UserProfilePanel onClose={() => setIsProfileOpen(false)} />}
     </div>
 
       {/* Bottom Row: Stacked Horizontal Domain Tabs (Phase 2) */}
@@ -1040,4 +1052,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-
