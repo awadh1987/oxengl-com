@@ -54,8 +54,8 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
         setPhone(profile.phone || '');
         setSyncReferenceId(profile.sync_reference_id || '');
         setAvatarUrl(profile.avatar_url || '');
-        setCurrentUser({
-          ...currentUser,
+        setCurrentUser((previousUser) => ({
+          ...previousUser,
           id: profile.id,
           email: profile.email,
           fullName: profile.full_name,
@@ -63,9 +63,9 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
           phone: profile.phone || '',
           syncReferenceId: profile.sync_reference_id || null,
           avatar_url: profile.avatar_url || undefined,
-          companyId: profile.company_id || currentUser.companyId,
-          iamRole: profile.iam_role || currentUser.iamRole,
-        });
+          companyId: profile.company_id || previousUser.companyId,
+          iamRole: profile.iam_role || previousUser.iamRole,
+        }));
       })
       .catch((error: unknown) => {
         if (!cancelled) {
@@ -101,14 +101,14 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
       setPhone(profile.phone || '');
       setSyncReferenceId(profile.sync_reference_id || '');
       setAvatarUrl(profile.avatar_url || avatarUrl);
-      setCurrentUser({
-        ...currentUser,
+      setCurrentUser((previousUser) => ({
+        ...previousUser,
         fullName: profile.full_name,
         fullNameAr: profile.full_name,
         phone: profile.phone || '',
         syncReferenceId: profile.sync_reference_id || null,
         avatar_url: profile.avatar_url || avatarUrl || undefined,
-      });
+      }));
       setProfileNotice(isArabic ? 'تم تحديث بياناتك الشخصية.' : 'Your personal details were updated.');
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : (isArabic ? 'تعذر حفظ التغييرات.' : 'Could not save profile changes.'));
@@ -137,10 +137,10 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
       const profile = await erpApi.uploadMyAvatar(file);
       const newAvatarUrl = profile.avatar_url || '';
       setAvatarUrl(newAvatarUrl);
-      setCurrentUser({
-        ...currentUser,
+      setCurrentUser((previousUser) => ({
+        ...previousUser,
         avatar_url: newAvatarUrl || undefined,
-      });
+      }));
       setProfileNotice(isArabic ? 'تم تحديث الصورة الشخصية.' : 'Your profile photo was updated.');
     } catch (error) {
       setAvatarError(error instanceof Error ? error.message : (isArabic ? 'تعذر رفع الصورة.' : 'Could not upload the image.'));

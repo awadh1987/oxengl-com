@@ -145,7 +145,7 @@ function sanitizeUserSession(rawUser: any): User {
 interface AppContextType {
   isAuthReady: boolean;
   currentUser: User;
-  setCurrentUser: (user: User) => void;
+  setCurrentUser: React.Dispatch<React.SetStateAction<User>>;
   currentCompany: Company | null;
   setCurrentCompany: (company: Company) => void;
   companies: Company[];

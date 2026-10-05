@@ -889,7 +889,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
             }`}
           >
-            <UserAvatar user={currentUser} sizeClassName="h-7 w-7 text-[10px]" shape="circle" />
+            <UserAvatar
+              key={currentUser?.avatar_url || currentUser?.avatar || 'avatar-fallback'}
+              user={currentUser}
+              sizeClassName="h-7 w-7 text-[10px]"
+              shape="circle"
+            />
             <span className="hidden max-w-28 truncate text-xs font-bold sm:inline">
               {currentUser?.fullName || (isAr ? 'الحساب' : 'Account')}
             </span>
