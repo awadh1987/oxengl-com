@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { erpApi, CustomFieldDefinition } from '../services/api';
 
-export type DynamicEntity = 'partner' | 'weighbridge_ticket' | 'fleet_trip';
+export type DynamicEntity = 'partner' | 'weighbridge_ticket' | 'fleet_trip' | 'invoice' | 'voucher';
 
 interface DynamicFieldRendererProps {
   entity: DynamicEntity;

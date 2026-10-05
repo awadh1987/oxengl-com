@@ -957,6 +957,7 @@ class AccountMove(TimestampMixin, Base):
     date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     state: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     ref: Mapped[Optional[str]] = mapped_column(String(128))
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
     posted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
     lines: Mapped[list[AccountMoveLine]] = relationship(back_populates="move", cascade="all, delete-orphan")
@@ -1007,6 +1008,7 @@ class CustomerInvoice(TimestampMixin, Base):
     customer_tax_number: Mapped[Optional[str]] = mapped_column(String(64))
     issue_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="Draft")
     subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
     vat_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))

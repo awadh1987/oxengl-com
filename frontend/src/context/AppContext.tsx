@@ -2053,6 +2053,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           journal_code: 'MISC',
           move_type: 'settlement',
           ref: newVoucher.voucherNumber,
+          custom_attributes: newVoucher.custom_attributes,
           name: newVoucher.purpose || newVoucher.voucherNumber,
           lines: [
             { account_id: isReceipt ? cashAccount?.id : counterAccount?.id, account_code: isReceipt ? (cashAccount?.code || '101000') : (counterAccount?.code || '201000'), debit: isReceipt ? newVoucher.amount : 0, credit: isReceipt ? 0 : newVoucher.amount, name: newVoucher.partyName },

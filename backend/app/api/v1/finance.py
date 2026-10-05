@@ -5,7 +5,7 @@ Guarantees strict Double-Entry balancing and audit validation.
 
 import uuid
 from decimal import Decimal
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from pydantic import BaseModel, Field, model_validator
 from sqlalchemy.orm import Session, selectinload
@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from backend.database import get_db
 from backend.app.services.sequence_service import SequenceService
+from backend.app.services.custom_fields import sanitize_attributes
 from backend.app.domains.finance.models import (
     Account,
     JournalEntry,
@@ -69,6 +70,7 @@ class JournalEntryCreate(BaseModel):
     amount: Optional[float] = None
     payment_method: Optional[str] = None
     cost_center_id: Optional[uuid.UUID] = None
+    custom_attributes: Dict[str, Any] = Field(default_factory=dict)
     lines: List[JournalLineItem] = Field(default_factory=list)
 
     @model_validator(mode="before")
@@ -179,6 +181,7 @@ def create_journal_entry(
         total_debit=total_debit,
         total_credit=total_credit,
         status="POSTED",
+        custom_attributes=sanitize_attributes(payload.custom_attributes),
         posted_by=user_uuid,
     )
     db.add(entry)
@@ -346,6 +349,7 @@ def post_balanced_financial_voucher(
         total_debit=total_debit,
         total_credit=total_credit,
         status="SUCCESS",
+        custom_attributes=sanitize_attributes(payload.custom_attributes),
         posted_by=user_uuid,
     )
     db.add(entry)

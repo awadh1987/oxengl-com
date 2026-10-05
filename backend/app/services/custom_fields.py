@@ -26,6 +26,11 @@ ENTITY_ALIASES: Dict[str, str] = {
     "operation": "weighbridge_ticket",
     "fleet_trip": "fleet_trip",
     "trip": "fleet_trip",
+    "invoice": "invoice",
+    "customer_invoice": "invoice",
+    "voucher": "voucher",
+    "payment_voucher": "voucher",
+    "receipt_voucher": "voucher",
 }
 DATA_TYPES = ("text", "number", "date", "boolean", "select")
 MAX_KEY_LEN = 96

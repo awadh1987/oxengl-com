@@ -482,6 +482,7 @@ export interface FinancialVoucher {
   partyId?: string;
   partyName: string; // اسم المستفيد / المستلم منه
   partyTaxNumber?: string;
+  custom_attributes?: Record<string, any>;
   paymentMethod: 'Bank Transfer' | 'Cash' | 'Cheque' | 'Credit Memo';
   bankName?: string;
   checkNumber?: string;

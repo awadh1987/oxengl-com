@@ -97,6 +97,7 @@ class TransactionProcessingService:
         """
         from datetime import datetime, timezone
         from backend import models
+        from backend.app.services.custom_fields import sanitize_attributes
 
         # 1. Enforce mathematical double-entry invariance
         total_dr, total_cr = validate_double_entry_invariance(payload.lines)
@@ -225,6 +226,7 @@ class TransactionProcessingService:
             date=move_date,
             state="posted",
             ref=getattr(payload, "ref", None),
+            custom_attributes=sanitize_attributes(getattr(payload, "custom_attributes", None)),
             posted_at=datetime.now(timezone.utc),
         )
         database.add(move)

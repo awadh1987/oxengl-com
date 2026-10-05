@@ -18,9 +18,10 @@ from sqlalchemy import (
     Index,
     UniqueConstraint,
     func,
+    JSON,
 )
 from sqlalchemy.types import UserDefinedType
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, backref
 
 from backend.database import Base
@@ -144,6 +145,7 @@ class FinanceJournalEntry(Base):
     total_credit: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0.0000"), nullable=False)
 
     status: Mapped[str] = mapped_column(String(32), default="POSTED", nullable=False)
+    custom_attributes: Mapped[dict] = mapped_column(JSON().with_variant(JSONB(), "postgresql"), default=dict, nullable=False)
     posted_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)
 

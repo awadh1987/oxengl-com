@@ -467,6 +467,7 @@ export interface AccountMoveCreatePayload {
   cost_center_id?: string | null;
   date?: string;
   ref?: string;
+  custom_attributes?: Record<string, any>;
   lines: AccountMoveLinePayload[];
 }
 
@@ -503,6 +504,7 @@ export interface ApiCustomerInvoice {
   public_token?: string | null;
   journal_entry_id?: string | null;
   is_posted?: boolean;
+  custom_attributes?: Record<string, any>;
 }
 
 export type InvoiceOut = ApiCustomerInvoice;
@@ -693,6 +695,7 @@ export interface CustomerInvoiceCreatePayload {
   subtotal: number;
   vat_amount: number;
   grand_total: number;
+  custom_attributes?: Record<string, any>;
 }
 
 export interface CustomerInvoiceUpdatePayload {
@@ -705,6 +708,7 @@ export interface CustomerInvoiceUpdatePayload {
   vat_amount?: number;
   grand_total?: number;
   status?: 'Draft' | 'Approved' | 'Issued' | 'Cancelled';
+  custom_attributes?: Record<string, any>;
 }
 
 export interface ApiSettlement {

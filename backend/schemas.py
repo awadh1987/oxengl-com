@@ -528,6 +528,7 @@ class AccountMoveCreate(BaseModel):
     cost_center_id: UUID | None = None
     date: datetime | None = None
     ref: str | None = Field(default=None, max_length=128)
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     lines: list[AccountMoveLineCreate] = Field(min_length=2)
 
     @model_validator(mode="after")
@@ -555,6 +556,7 @@ class AccountMoveRead(ORMReadModel):
     state: str
     ref: str | None
     posted_at: datetime | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     lines: list[AccountMoveLineRead] = []
 
     @computed_field
@@ -573,6 +575,7 @@ class CustomerInvoiceCreate(BaseModel):
     subtotal: Decimal = Field(default=Decimal("0.00"), ge=0)
     vat_amount: Decimal = Field(default=Decimal("0.00"), ge=0)
     grand_total: Decimal = Field(default=Decimal("0.00"), ge=0)
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def totals_must_balance(self) -> "CustomerInvoiceCreate":
@@ -594,6 +597,7 @@ class CustomerInvoiceUpdate(BaseModel):
     vat_amount: Decimal | None = Field(default=None, ge=0)
     grand_total: Decimal | None = Field(default=None, ge=0)
     status: Literal["Draft", "Approved", "Issued", "Cancelled"] | None = None
+    custom_attributes: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def totals_must_balance(self) -> "CustomerInvoiceUpdate":
@@ -631,6 +635,7 @@ class CustomerInvoiceRead(ORMReadModel):
     public_token: Optional[str] = None
     journal_entry_id: Optional[UUID] = None
     is_posted: bool = False
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class InvoiceOut(CustomerInvoiceRead):

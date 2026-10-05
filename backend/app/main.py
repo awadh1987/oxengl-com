@@ -231,6 +231,7 @@ except ImportError:
 	from backend.app.services.sequence_service import SequenceService, get_next_sequence  # type: ignore[no-redef]
 	from backend.app.services.bulk_import_service import BulkImportService, parse_raw_rows_from_excel, parse_raw_rows_from_csv  # type: ignore[no-redef]
 
+from backend.app.services.custom_fields import sanitize_attributes
 try:
 	data_observability_router
 except NameError:
@@ -2424,6 +2425,38 @@ async def bulk_import_partners(
 	return result
 
 
+@app.post("/api/v1/finance/invoices/bulk-import", tags=["Customer Invoices"])
+@app.post("/api/v1/finance/vouchers/bulk-import", tags=["Finance"])
+async def bulk_import_finance_documents(
+	request: Request,
+	company_id: uuid.UUID = Depends(get_active_company_id),
+	database: Session = Depends(get_db),
+):
+	"""Excel/CSV/JSON import of invoices or vouchers; unknown columns land in custom_attributes."""
+	from backend.app.services.finance_document_import import import_customer_invoices, import_journal_vouchers
+
+	is_voucher = "/vouchers/" in request.url.path
+	content_type = request.headers.get("content-type", "").lower()
+	raw_rows = None
+	if "multipart/form-data" in content_type:
+		form = await request.form()
+		uploaded_file = form.get("file")
+		if uploaded_file and hasattr(uploaded_file, "read"):
+			content = await uploaded_file.read()
+			filename = (getattr(uploaded_file, "filename", "") or "").lower()
+			raw_rows = stream_raw_rows_from_excel(content) if filename.endswith((".xlsx", ".xls")) else stream_raw_rows_from_csv(content)
+	else:
+		try:
+			body = await request.json()
+		except Exception as parse_err:
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid JSON payload: {parse_err}")
+		raw_rows = body if isinstance(body, list) else (body.get("records") or body.get("rows") or body.get("items")) if isinstance(body, dict) else None
+	if raw_rows is None:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No rows or file provided for bulk import")
+	importer = import_journal_vouchers if is_voucher else import_customer_invoices
+	return importer(database, company_id, raw_rows)
+
+
 @app.get("/api/accounting/accounts", response_model=list[AccountAccountRead], tags=["Accounting"])
 @app.get("/api/v1/accounting/accounts", response_model=list[AccountAccountRead], tags=["Accounting"])
 def list_accounts(company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
@@ -2715,6 +2748,8 @@ def create_customer_invoice(payload: CustomerInvoiceCreate, company_id: uuid.UUI
 				existing_invoice.customer_tax_number = payload.customer_tax_number
 			if payload.due_date:
 				existing_invoice.due_date = payload.due_date
+			if payload.custom_attributes:
+				existing_invoice.custom_attributes = {**(existing_invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
 			database.commit()
 			database.refresh(existing_invoice)
 			return existing_invoice
@@ -2743,6 +2778,7 @@ def create_customer_invoice(payload: CustomerInvoiceCreate, company_id: uuid.UUI
 				vat_amount=calc_vat,
 				grand_total=calc_grand,
 				status="Draft",
+				custom_attributes=sanitize_attributes(payload.custom_attributes),
 			)
 			database.add(invoice)
 		database.commit()
@@ -2812,6 +2848,8 @@ def update_customer_invoice(
 		invoice.issue_date = payload.issue_date
 	if payload.due_date is not None:
 		invoice.due_date = payload.due_date
+	if payload.custom_attributes is not None:
+		invoice.custom_attributes = {**(invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
 
 	# Strict Math Enforcement: Ignore client subtotal, vat_amount, and grand_total.
 	# Query trips for that month/partner, calculate accurate totals using Decimal.

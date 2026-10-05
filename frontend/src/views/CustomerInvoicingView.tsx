@@ -41,6 +41,7 @@ import { MultiAttachmentModal } from '../components/MultiAttachmentModal';
 import { InvoiceExportShareModal } from '../components/InvoiceExportShareModal';
 import { ExportPrintModal } from '../components/ExportPrintModal';
 import { OfficialLetterheadHeader } from '../components/OfficialLetterheadHeader';
+import { DynamicFieldRenderer } from '../components/DynamicFieldRenderer';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { OfficialLetterheadFooter } from '../components/OfficialLetterheadFooter';
 import { HoverIcon } from '../components/common/HoverIcon';
@@ -92,6 +93,10 @@ export const CustomerInvoicingView: React.FC = () => {
   const [isExportShareModalOpen, setIsExportShareModalOpen] = useState(false);
   const [isExportPrintModalOpen, setIsExportPrintModalOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [invoiceCustomAttributes, setInvoiceCustomAttributes] = useState<Record<string, any>>({});
+  useEffect(() => {
+    setInvoiceCustomAttributes(currentBackendInvoice?.custom_attributes || {});
+  }, [currentBackendInvoice?.id]);
   const [invoiceAttachments, setInvoiceAttachments] = useState<DocumentAttachment[]>([]);
 
   // Deep-link URL parameter synchronization
@@ -383,6 +388,7 @@ export const CustomerInvoicingView: React.FC = () => {
           partner_id: selectedCustomer?.id || null,
           issue_date: issueDate,
           due_date: dueDate,
+          custom_attributes: invoiceCustomAttributes,
         });
         setCurrentBackendInvoice(updated);
         setInvoiceStatus((updated.status as any) || 'Draft');
@@ -394,6 +400,7 @@ export const CustomerInvoicingView: React.FC = () => {
           partner_id: selectedCustomer?.id || null,
           issue_date: issueDate,
           due_date: dueDate,
+          custom_attributes: invoiceCustomAttributes,
           subtotal: 0,
           vat_amount: 0,
           grand_total: 0,
@@ -451,6 +458,7 @@ export const CustomerInvoicingView: React.FC = () => {
           partner_id: selectedCustomer?.id || null,
           issue_date: issueDate,
           due_date: dueDate,
+          custom_attributes: invoiceCustomAttributes,
         });
       } else {
         const created = await erpApi.createCustomerInvoice(currentCompany.id, {
@@ -460,6 +468,7 @@ export const CustomerInvoicingView: React.FC = () => {
           partner_id: selectedCustomer?.id || null,
           issue_date: issueDate,
           due_date: dueDate,
+          custom_attributes: invoiceCustomAttributes,
           subtotal: 0,
           vat_amount: 0,
           grand_total: 0,
@@ -914,6 +923,10 @@ Myon Economic Contracting Co. Ltd.`;
               </div>
             </div>
           </div>
+
+          {invoiceStatus === 'Draft' && !isGuestUser && (
+            <DynamicFieldRenderer entity="invoice" values={invoiceCustomAttributes} onChange={setInvoiceCustomAttributes} isAr={isAr} />
+          )}
 
           {/* Action buttons based on state machine & role */}
           <div className="flex flex-wrap items-center gap-2">

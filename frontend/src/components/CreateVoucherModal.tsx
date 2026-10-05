@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import { FinancialVoucher, VoucherType, VoucherCategory } from '../types';
 import { tafqeetArabic, tafqeetEnglish } from '../utils/tafqeet';
 import { X, CreditCard, Building, FileText, CheckCircle2, DollarSign, Sparkles } from 'lucide-react';
+import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import { HoverIcon } from './common/HoverIcon';
 
 interface CreateVoucherModalProps {
@@ -74,6 +75,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
   const [purpose, setPurpose] = useState<string>(initialPurpose);
   const [notes, setNotes] = useState<string>('');
   const [receivedBy, setReceivedBy] = useState<string>('');
+  const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [autoApprove, setAutoApprove] = useState<boolean>(isAdmin);
 
   // Sync initial props whenever modal opens with new pre-fill
@@ -181,6 +183,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
       linkedReferenceNo: linkedReferenceNo || undefined,
       purpose: purpose.trim() || (isAr ? `سند ${type === 'Payment' ? 'صرف' : 'قبض'} رسمي` : `Official ${type} Voucher`),
       notes: notes.trim() || undefined,
+      custom_attributes: customAttributes,
       month: new Date(date).getMonth() + 1,
       year: new Date(date).getFullYear(),
       preparedBy: currentUser.fullNameAr || currentUser.fullName,
@@ -588,6 +591,8 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
               />
             </div>
           )}
+
+          <DynamicFieldRenderer entity="voucher" values={customAttributes} onChange={setCustomAttributes} isAr={isAr} />
 
           {/* Modal Actions */}
           <div className="flex items-center justify-end gap-3 border-t border-slate-200 dark:border-slate-800 pt-4">
