@@ -541,7 +541,7 @@ async def invite_tenant_user(
     temporary_password = secrets.token_urlsafe(18)
     password_hash = hash_password(temporary_password)
     company = db.get(ResCompany, tenant_id)
-    workspace_name = company.company_name if company else "Workspace"
+    workspace_name = (company.name if company else None) or "Workspace"
     destination = email_clean if payload.channel == "email" else phone_clean
 
     try:
@@ -797,7 +797,7 @@ async def force_password_reset(
                 target.phone,
                 temporary_password,
                 full_name=target.full_name or "External User",
-                workspace_name=company.company_name if company else "Workspace",
+                workspace_name=(company.name if company else None) or "Workspace",
                 tenant_id=target.company_id,
             )
         except NotificationDeliveryError as exc:

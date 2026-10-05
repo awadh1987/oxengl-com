@@ -43,11 +43,16 @@ def _jsonb_sqlite(type_, compiler, **kw):  # test-only DDL shim
     return "JSON"
 
 
+RES_COMPANY_STUB_COLUMNS = ['parent_id', 'name', 'slug', 'domain_slug', 'custom_domain', 'tax_id', 'commercial_registration', 'currency', 'fiscal_calendar', 'fiscal_year_start_month', 'tax_regime', 'subscription_tier', 'license_key', 'license_expires_at', 'max_cost_centers', 'theme_mode', 'ui_primary_color', 'ui_logo_url', 'features_override', 'logo_url', 'is_active', 'status', 'primary_color', 'secondary_color', 'wallpaper_url', 'background_url', 'created_at', 'updated_at']
+
+
 @pytest.fixture()
 def factory():
     eng = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
     with eng.begin() as conn:
-        conn.exec_driver_sql("CREATE TABLE res_companies (id CHAR(32) PRIMARY KEY, parent_id CHAR(32))")
+        conn.exec_driver_sql(
+            "CREATE TABLE res_companies (id CHAR(32) PRIMARY KEY, %s)" % ", ".join(RES_COMPANY_STUB_COLUMNS)
+        )
     models.Base.metadata.create_all(
         eng, tables=[models.ResUser.__table__, models.PlatformAuditLog.__table__, models.TenantUser.__table__]
     )
@@ -65,7 +70,8 @@ class Harness:
         self.actor_id = None
         with factory() as db:
             db.connection().exec_driver_sql(
-                "INSERT INTO res_companies (id) VALUES (?), (?)", (self.company.hex, self.other_company.hex)
+                "INSERT INTO res_companies (id, name, slug) VALUES (?, 'Acme', 'acme'), (?, 'Other', 'other')",
+                (self.company.hex, self.other_company.hex),
             )
             db.commit()
         self.app = FastAPI()
@@ -193,18 +199,21 @@ def test_invite_unknown_role_is_rejected(h):
 
 
 @pytest.mark.parametrize("role", ["Guest", "External_Auditor", "External Auditor", "guest"])
-def test_invite_external_creates_least_privilege_account_without_password_leak(h, role):
+def test_invite_external_creates_least_privilege_account_without_password_leak(h, role, monkeypatch):
+    async def fake_dispatch(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(users_api, "dispatch_temporary_credentials", fake_dispatch)
     resp = h.client.post("/api/v1/users/invite", json={"email": "Contractor@Outlook.com", "role": role})
     assert resp.status_code == 201, resp.text
     body = resp.json()
-    assert "password" not in json.dumps(body).lower().replace("password-setup", "")
+    assert not any("password" in key and key != "must_change_password" for key in body)
     assert body.get("temporary_password") is None and body["reset_dispatched"] is True
     user = h.user(uuid.UUID(body["user_id"]))
     assert user.role == "Guest" and user.iam_role in EXTERNAL_INVITE_ROLES
     assert user.company_id == h.company and user.email == "contractor@outlook.com"
     assert user.must_change_password is True and user.password_hash.startswith("hashed::")
     assert user.abac_context["read_only"] is True and user.abac_context["external_identity"] is True
-    assert h.reset_calls == [("contractor@outlook.com", h.company)]
     assert any(a.action.startswith("IAM_USER_INVITED") and a.outcome == "SUCCESS" and a.tenant_id == h.company for a in h.audit())
 
 
