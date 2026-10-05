@@ -4,6 +4,7 @@ export interface UserProfileDto {
   full_name: string;
   phone?: string | null;
   sync_reference_id?: string | null;
+  avatar_url?: string | null;
   role: string;
   iam_role?: string | null;
   company_id?: string | null;
@@ -1840,6 +1841,15 @@ export const erpApi = {
       body: JSON.stringify(payload),
     }),
 
+  uploadMyAvatar: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return request<UserProfileDto>('/api/v1/users/me/avatar', undefined, {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
   changeMyPassword: (payload: { current_password: string; new_password: string }) =>
     request<{ status: string; message: string }>('/api/v1/users/me/change-password', undefined, {
       method: 'POST',
@@ -1853,6 +1863,7 @@ export const erpApi = {
         email: string;
         phone?: string | null;
         sync_reference_id?: string | null;
+        avatar_url?: string | null;
         full_name: string;
         role: string;
         iam_role?: string | null;

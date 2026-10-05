@@ -102,6 +102,8 @@ services:
     # posture (all public traffic must go through the edge nginx).
     ports:
       - "127.0.0.1:8000:8000"
+    volumes:
+      - avatar_files_volume:/app/backend/static/avatars
     depends_on:
       postgres_db:
         condition: service_healthy
@@ -161,6 +163,8 @@ volumes:
     name: oxengl_pg_data_volume
   redis_data_volume:
     name: oxengl_redis_data_volume
+  avatar_files_volume:
+    name: oxengl_avatar_files_volume
 
 networks:
   # Data plane (compose-managed; carries the `postgres_db` / `redis_cache` aliases).

@@ -72,7 +72,7 @@ export interface User {
   company_name?: string;
   assignedCustomerId?: string | null;
   avatar?: string;
-  avatar_url?: string;
+  avatar_url?: string | null;
   status?: 'Active' | 'Pending' | 'Suspended';
   is_deleted?: boolean;
   deleted_at?: string;

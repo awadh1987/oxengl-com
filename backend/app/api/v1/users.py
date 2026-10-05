@@ -29,12 +29,15 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, List, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, HTTPException, Request, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
-from sqlalchemy import inspect as sa_inspect
+from sqlalchemy import inspect as sa_inspect, or_
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -66,6 +69,13 @@ from backend.two_tier_auth import hash_password, verify_password
 logger = logging.getLogger("oxengl.api.users")
 
 router = APIRouter(prefix="/api/v1/users", tags=["Tenant User Management"])
+AVATAR_STORAGE_DIR = Path(__file__).resolve().parents[3] / "static" / "avatars"
+MAX_AVATAR_BYTES = 5 * 1024 * 1024
+_AVATAR_FORMATS = {
+    "image/jpeg": (".jpg", lambda data: data.startswith(b"\xff\xd8\xff")),
+    "image/png": (".png", lambda data: data.startswith(b"\x89PNG\r\n\x1a\n")),
+    "image/webp": (".webp", lambda data: len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP"),
+}
 
 # ABAC keys that only make sense for external identities; dropped when an account is moved to an internal role.
 _EXTERNAL_ONLY_ABAC_KEYS = ("external_identity", "read_only", "audit_scope_only")
@@ -123,6 +133,7 @@ class UserResponse(BaseModel):
     email: str
     phone: Optional[str] = None
     sync_reference_id: Optional[str] = None
+    avatar_url: Optional[str] = None
     full_name: str
     role: str
     iam_role: Optional[str] = None
@@ -226,6 +237,7 @@ class UserProfileResponse(BaseModel):
     full_name: str
     phone: Optional[str] = None
     sync_reference_id: Optional[str] = None
+    avatar_url: Optional[str] = None
     role: str
     iam_role: Optional[str] = None
     company_id: Optional[str] = None
@@ -506,6 +518,7 @@ def get_tenant_users(
             email="" if _is_sms_placeholder_email(u.email) else u.email,
             phone=u.phone,
             sync_reference_id=u.sync_reference_id,
+            avatar_url=u.avatar_url,
             full_name=u.full_name or u.email.split("@")[0],
             role=u.role,
             iam_role=u.iam_role,
@@ -550,6 +563,7 @@ def _profile_response(user: ResUser) -> UserProfileResponse:
         full_name=user.full_name,
         phone=user.phone,
         sync_reference_id=user.sync_reference_id,
+        avatar_url=user.avatar_url,
         role=user.role,
         iam_role=user.iam_role,
         company_id=str(user.company_id) if user.company_id else None,
@@ -602,6 +616,122 @@ def update_own_user_profile(
     db.commit()
     db.refresh(user)
     return _profile_response(user)
+
+
+@router.post("/me/avatar", response_model=UserProfileResponse)
+async def upload_own_user_avatar(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Store a bounded raster avatar for the authenticated user only."""
+    user, audit = _load_own_profile(request, current_user, db)
+    image_data = await file.read(MAX_AVATAR_BYTES + 1)
+    if not image_data or len(image_data) > MAX_AVATAR_BYTES:
+        _commit_audit(db, audit, "USER_AVATAR_UPLOAD_DENIED:invalid_size", "DENIED", user.company_id, user.id)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Avatar must be a non-empty image no larger than 5 MB.",
+        )
+
+    image_format = next(
+        (
+            (extension, media_type)
+            for media_type, (extension, matches_signature) in _AVATAR_FORMATS.items()
+            if matches_signature(image_data)
+        ),
+        None,
+    )
+    if image_format is None:
+        _commit_audit(db, audit, "USER_AVATAR_UPLOAD_DENIED:unsupported_format", "DENIED", user.company_id, user.id)
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Upload a valid JPEG, PNG, or WebP image.",
+        )
+
+    extension, media_type = image_format
+    filename = f"{uuid.uuid4().hex}{extension}"
+    avatar_path = AVATAR_STORAGE_DIR / filename
+    try:
+        AVATAR_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        avatar_path.write_bytes(image_data)
+    except OSError as exc:
+        logger.exception("Could not persist user avatar for user %s", user.id)
+        _commit_audit(db, audit, "USER_AVATAR_UPLOAD_FAILED:storage_error", "FAILURE", user.company_id, user.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Avatar upload could not be saved.",
+        ) from exc
+
+    user.avatar_url = f"/api/v1/users/avatars/{filename}"
+    try:
+        append_audit_from_context(
+            db,
+            _with_target(audit, user.id),
+            action=f"USER_AVATAR_UPDATED:format={media_type.split('/')[-1]}",
+            outcome="SUCCESS",
+            tenant_id=user.company_id,
+        )
+        db.commit()
+    except SQLAlchemyError as exc:
+        db.rollback()
+        try:
+            avatar_path.unlink(missing_ok=True)
+        except OSError:
+            logger.exception("Could not clean up unreferenced avatar file for user %s", user.id)
+        logger.exception("Could not update avatar record for user %s", user.id)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Avatar upload could not be saved.",
+        ) from exc
+    return _profile_response(user)
+
+
+@router.get("/avatars/{filename}", include_in_schema=False)
+def get_user_avatar(
+    filename: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Serve a user's avatar only to that user or another authenticated tenant member."""
+    match = re.fullmatch(r"([0-9a-f]{32})(\.jpg|\.png|\.webp)", filename)
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar not found.")
+    try:
+        current_user_id = uuid.UUID(str(current_user.id))
+    except (AttributeError, TypeError, ValueError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user is unavailable.")
+    avatar_url = f"/api/v1/users/avatars/{filename}"
+    avatar_query = db.query(ResUser).filter(
+        ResUser.avatar_url == avatar_url,
+        ResUser.is_active.is_(True),
+        ResUser.deleted_at.is_(None),
+    )
+    company_id = getattr(current_user, "company_id", None)
+    if company_id is not None:
+        avatar_query = avatar_query.filter(
+            or_(
+                ResUser.id == current_user_id,
+                ResUser.company_id == company_id,
+            )
+        )
+    else:
+        avatar_query = avatar_query.filter(ResUser.id == current_user_id)
+    if avatar_query.first() is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar not found.")
+    avatar_path = AVATAR_STORAGE_DIR / filename
+    if not avatar_path.is_file():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avatar not found.")
+    media_type = {".jpg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}[match.group(2)]
+    return FileResponse(
+        avatar_path,
+        media_type=media_type,
+        headers={
+            "Cache-Control": "private, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.post("/me/change-password", status_code=status.HTTP_200_OK)

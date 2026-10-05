@@ -303,6 +303,7 @@ class ResUser(TimestampMixin, Base):
     firebase_uid: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     sync_reference_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[Optional[str]] = mapped_column(String(64))
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False, default="")

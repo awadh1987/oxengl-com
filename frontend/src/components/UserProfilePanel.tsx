@@ -1,5 +1,16 @@
-import React, { useEffect, useState } from 'react';
-import { KeyRound, Loader2, Save, UserRound, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Camera,
+  Check,
+  KeyRound,
+  Loader2,
+  LockKeyhole,
+  Mail,
+  Save,
+  ShieldCheck,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { erpApi } from '../services/api';
 
@@ -8,24 +19,38 @@ interface UserProfilePanelProps {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 outline-none focus:border-orange-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+  'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-orange-500 focus:bg-white focus:ring-4 focus:ring-orange-500/10 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:bg-slate-950';
+const acceptedAvatarTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const maxAvatarBytes = 5 * 1024 * 1024;
 
 export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) => {
   const { currentUser, setCurrentUser, language } = useApp();
   const isArabic = language === 'ar';
+  const avatarInput = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(currentUser.fullName || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [syncReferenceId, setSyncReferenceId] = useState(currentUser.syncReferenceId || '');
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar_url || currentUser.avatar || '');
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [profileError, setProfileError] = useState('');
   const [profileNotice, setProfileNotice] = useState('');
+  const [avatarError, setAvatarError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [passwordNotice, setPasswordNotice] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const initials = (fullName || currentUser.username || 'U')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 
   useEffect(() => {
     let cancelled = false;
@@ -35,6 +60,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
         setFullName(profile.full_name || '');
         setPhone(profile.phone || '');
         setSyncReferenceId(profile.sync_reference_id || '');
+        setAvatarUrl(profile.avatar_url || '');
         setCurrentUser({
           ...currentUser,
           id: profile.id,
@@ -43,6 +69,7 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
           fullNameAr: profile.full_name,
           phone: profile.phone || '',
           syncReferenceId: profile.sync_reference_id || null,
+          avatar_url: profile.avatar_url || undefined,
           companyId: profile.company_id || currentUser.companyId,
           iamRole: profile.iam_role || currentUser.iamRole,
         });
@@ -80,18 +107,52 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
       setFullName(profile.full_name);
       setPhone(profile.phone || '');
       setSyncReferenceId(profile.sync_reference_id || '');
+      setAvatarUrl(profile.avatar_url || avatarUrl);
       setCurrentUser({
         ...currentUser,
         fullName: profile.full_name,
         fullNameAr: profile.full_name,
         phone: profile.phone || '',
         syncReferenceId: profile.sync_reference_id || null,
+        avatar_url: profile.avatar_url || avatarUrl || undefined,
       });
       setProfileNotice(isArabic ? 'تم تحديث بياناتك الشخصية.' : 'Your personal details were updated.');
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : (isArabic ? 'تعذر حفظ التغييرات.' : 'Could not save profile changes.'));
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setAvatarError('');
+    setProfileNotice('');
+    if (!acceptedAvatarTypes.includes(file.type)) {
+      setAvatarError(isArabic ? 'اختر صورة JPEG أو PNG أو WebP.' : 'Choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size <= 0 || file.size > maxAvatarBytes) {
+      setAvatarError(isArabic ? 'يجب ألا يتجاوز حجم الصورة 5 ميغابايت.' : 'The image must be no larger than 5 MB.');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const profile = await erpApi.uploadMyAvatar(file);
+      const newAvatarUrl = profile.avatar_url || '';
+      setAvatarUrl(newAvatarUrl);
+      setCurrentUser({
+        ...currentUser,
+        avatar_url: newAvatarUrl || undefined,
+      });
+      setProfileNotice(isArabic ? 'تم تحديث الصورة الشخصية.' : 'Your profile photo was updated.');
+    } catch (error) {
+      setAvatarError(error instanceof Error ? error.message : (isArabic ? 'تعذر رفع الصورة.' : 'Could not upload the image.'));
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -125,40 +186,91 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/65 p-3 backdrop-blur-sm sm:p-6">
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-profile-title"
         dir={isArabic ? 'rtl' : 'ltr'}
-        className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-[#090f1c]"
+        className="max-h-[94vh] w-full max-w-4xl overflow-y-auto rounded-3xl border border-slate-200 bg-slate-50 shadow-2xl dark:border-slate-700 dark:bg-slate-950"
       >
-        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white/95 px-5 py-4 backdrop-blur dark:border-slate-800 dark:bg-[#090f1c]/95">
-          <div className="flex items-center gap-2">
-            <UserRound className="h-4 w-4 text-orange-600" />
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/95 sm:px-8">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-orange-100 p-2.5 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300">
+              <UserRound className="h-5 w-5" />
+            </div>
             <div>
-              <h2 id="user-profile-title" className="text-sm font-black text-slate-900 dark:text-slate-100">
-                {isArabic ? 'الملف الشخصي' : 'My profile'}
+              <h2 id="user-profile-title" className="text-base font-black text-slate-900 dark:text-white">
+                {isArabic ? 'ملفي الشخصي' : 'My profile'}
               </h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">{currentUser.email}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {isArabic ? 'إدارة هويتك وتفضيلات أمان الحساب' : 'Manage your identity and account security'}
+              </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={isArabic ? 'إغلاق' : 'Close'}
-            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-xl p-2.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/20 dark:hover:bg-slate-800 dark:hover:text-white"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </header>
 
-        <div className="grid gap-5 p-5 md:grid-cols-2">
-          <form onSubmit={saveProfile} className="space-y-3">
-            <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">
-              {isArabic ? 'البيانات الشخصية' : 'Personal details'}
-            </h3>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+        <div className="grid gap-5 p-4 sm:p-7 lg:grid-cols-2">
+          <form onSubmit={saveProfile} className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:p-6">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
+              <UserRound className="h-4 w-4 text-orange-600" />
+              <div>
+                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                  {isArabic ? 'الهوية الشخصية' : 'Profile identity'}
+                </h3>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                  {isArabic ? 'حدّث صورتك ومعلومات التواصل' : 'Update your photo and contact details'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-3 py-1">
+              <input
+                ref={avatarInput}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                aria-label={isArabic ? 'اختر صورة شخصية' : 'Choose a profile photo'}
+                onChange={uploadAvatar}
+              />
+              <button
+                type="button"
+                onClick={() => avatarInput.current?.click()}
+                disabled={isUploadingAvatar || isLoading}
+                aria-label={isArabic ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
+                className="group relative h-28 w-28 overflow-hidden rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-3xl font-black text-white shadow-lg shadow-orange-900/15 ring-4 ring-white transition focus:outline-none focus-visible:ring-orange-400 dark:ring-slate-900"
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
+                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/55 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                  {isUploadingAvatar ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
+                </span>
+              </button>
+              <div className="text-center">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                  {isUploadingAvatar
+                    ? (isArabic ? 'جارٍ رفع الصورة...' : 'Uploading photo...')
+                    : (isArabic ? 'انقر لتغيير الصورة' : 'Click to change photo')}
+                </p>
+                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
+                  {isArabic ? 'JPEG أو PNG أو WebP، بحد أقصى 5 ميغابايت' : 'JPEG, PNG, or WebP · up to 5 MB'}
+                </p>
+              </div>
+              {avatarError && <p role="alert" className="text-center text-xs font-semibold text-rose-600 dark:text-rose-400">{avatarError}</p>}
+            </div>
+
+            <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
               <span>{isArabic ? 'الاسم الكامل' : 'Full name'}</span>
               <input
                 value={fullName}
@@ -166,10 +278,11 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
                 autoComplete="name"
                 maxLength={255}
                 required
+                placeholder={isArabic ? 'أدخل اسمك الكامل' : 'Enter your full name'}
                 className={inputClass}
               />
             </label>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+            <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
               <span>{isArabic ? 'رقم الهاتف' : 'Mobile phone'}</span>
               <input
                 type="tel"
@@ -178,71 +291,99 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
                 onChange={(event) => setPhone(event.target.value)}
                 autoComplete="tel"
                 maxLength={64}
+                placeholder="+966 5X XXX XXXX"
                 className={inputClass}
               />
             </label>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <span>{isArabic ? 'البريد الإلكتروني (للتواصل)' : 'Email address (contact)'}</span>
-              <input value={currentUser.email} readOnly className={`${inputClass} cursor-not-allowed opacity-70`} />
-              <span className="block font-normal text-slate-400">
-                {isArabic ? 'لا يمكن تغيير البريد من هنا؛ يتطلب ذلك مسار تحقق مستقل.' : 'Email changes require a separate verification flow and are not enabled here.'}
-              </span>
-            </label>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <span>{isArabic ? 'مرجع المزامنة' : 'Sync reference ID'}</span>
-              <input
-                value={syncReferenceId || (isArabic ? 'غير مرتبط' : 'Not linked')}
-                readOnly
-                className={`${inputClass} cursor-not-allowed font-mono opacity-70`}
-              />
-            </label>
             {profileError && <p role="alert" className="text-xs font-semibold text-rose-600 dark:text-rose-400">{profileError}</p>}
-            {profileNotice && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{profileNotice}</p>}
+            {profileNotice && <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400"><Check className="h-4 w-4" />{profileNotice}</p>}
             <button
               type="submit"
               disabled={isLoading || isSavingProfile}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-orange-600 px-3.5 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/25 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSavingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              <span>{isArabic ? 'حفظ البيانات' : 'Save details'}</span>
+              {isSavingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              <span>{isArabic ? 'حفظ بيانات الهوية' : 'Save identity details'}</span>
             </button>
           </form>
 
-          <form onSubmit={changePassword} className="space-y-3 border-t border-slate-100 pt-4 dark:border-slate-800 md:border-s-0 md:border-t-0 md:border-s md:pt-0 md:ps-5">
-            <div className="flex items-center gap-2">
-              <KeyRound className="h-4 w-4 text-orange-600" />
-              <h3 className="text-xs font-black text-slate-800 dark:text-slate-100">
-                {isArabic ? 'تغيير كلمة المرور' : 'Change password'}
-              </h3>
-            </div>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <span>{isArabic ? 'كلمة المرور الحالية' : 'Current password'}</span>
-              <input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required className={inputClass} />
-            </label>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <span>{isArabic ? 'كلمة المرور الجديدة' : 'New password'}</span>
-              <input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required className={inputClass} />
-            </label>
-            <label className="block space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-              <span>{isArabic ? 'تأكيد كلمة المرور الجديدة' : 'Confirm new password'}</span>
-              <input type="password" autoComplete="new-password" minLength={10} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required className={inputClass} />
-            </label>
-            <p className="text-[10px] leading-relaxed text-slate-500 dark:text-slate-400">
-              {isArabic
-                ? 'يتم التحقق من كلمة المرور الحالية وتجزئة الجديدة على الخادم. سيؤدي التغيير إلى إبطال الجلسات النشطة.'
-                : 'Your current password is verified and the new password is hashed on the server. Active sessions are revoked after the change.'}
-            </p>
-            {passwordError && <p role="alert" className="text-xs font-semibold text-rose-600 dark:text-rose-400">{passwordError}</p>}
-            {passwordNotice && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">{passwordNotice}</p>}
-            <button
-              type="submit"
-              disabled={isChangingPassword}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
-            >
-              {isChangingPassword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
-              <span>{isArabic ? 'تحديث كلمة المرور' : 'Update password'}</span>
-            </button>
-          </form>
+          <div className="space-y-5">
+            <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:p-6">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
+                <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    {isArabic ? 'أمان الحساب' : 'Account security'}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'بيانات الحساب ومعرّفات الربط' : 'Account details and linked identifiers'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center gap-1.5"><Mail className="h-3.5 w-3.5 text-slate-400" />{isArabic ? 'البريد الإلكتروني' : 'Email address'}</span>
+                  <input value={currentUser.email} readOnly className={`${inputClass} cursor-not-allowed opacity-70`} />
+                </label>
+                <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5 text-slate-400" />{isArabic ? 'مرجع المزامنة' : 'Sync reference'}</span>
+                  <input
+                    value={syncReferenceId || (isArabic ? 'غير مرتبط' : 'Not linked')}
+                    readOnly
+                    className={`${inputClass} cursor-not-allowed font-mono opacity-70`}
+                  />
+                </label>
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                {isArabic
+                  ? 'البريد الإلكتروني ومرجع المزامنة للعرض فقط. يتطلب تغيير البريد التحقق من الهوية.'
+                  : 'Email and sync reference are read-only. Changing your email requires a separate identity verification flow.'}
+              </p>
+            </section>
+
+            <form onSubmit={changePassword} className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 sm:p-6">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-4 dark:border-slate-800">
+                <KeyRound className="h-4 w-4 text-orange-600" />
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                    {isArabic ? 'تغيير كلمة المرور' : 'Change password'}
+                  </h3>
+                  <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
+                    {isArabic ? 'استخدم كلمة مرور فريدة لا تقل عن 10 أحرف' : 'Choose a unique password with at least 10 characters'}
+                  </p>
+                </div>
+              </div>
+              <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <span>{isArabic ? 'كلمة المرور الحالية' : 'Current password'}</span>
+                <input type="password" autoComplete="current-password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} required className={inputClass} />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span>{isArabic ? 'كلمة المرور الجديدة' : 'New password'}</span>
+                  <input type="password" autoComplete="new-password" minLength={10} value={newPassword} onChange={(event) => setNewPassword(event.target.value)} required className={inputClass} />
+                </label>
+                <label className="block space-y-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <span>{isArabic ? 'تأكيد كلمة المرور' : 'Confirm password'}</span>
+                  <input type="password" autoComplete="new-password" minLength={10} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required className={inputClass} />
+                </label>
+              </div>
+              <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                {isArabic
+                  ? 'يتم التحقق من كلمة المرور الحالية وتجزئة الجديدة على الخادم. سيؤدي التغيير إلى إبطال الجلسات النشطة.'
+                  : 'Your current password is verified and the new password is securely hashed on the server. Active sessions are revoked after the change.'}
+              </p>
+              {passwordError && <p role="alert" className="text-xs font-semibold text-rose-600 dark:text-rose-400">{passwordError}</p>}
+              {passwordNotice && <p role="status" className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400"><Check className="h-4 w-4" />{passwordNotice}</p>}
+              <button
+                type="submit"
+                disabled={isChangingPassword}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-orange-500/15 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                {isChangingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                <span>{isArabic ? 'تحديث كلمة المرور' : 'Update password'}</span>
+              </button>
+            </form>
+          </div>
         </div>
       </section>
     </div>

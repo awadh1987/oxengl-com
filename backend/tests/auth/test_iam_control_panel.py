@@ -387,6 +387,45 @@ def test_self_profile_is_company_bound_and_profile_edits_are_audited(h):
     assert event.outcome == "SUCCESS" and event.tenant_id == h.company and event.actor_id == h.actor_id
 
 
+def test_self_avatar_upload_is_validated_persisted_and_audited(h, monkeypatch, tmp_path):
+    monkeypatch.setattr(users_api, "AVATAR_STORAGE_DIR", tmp_path)
+    uploader_id = h.actor_id
+    png_data = b"\x89PNG\r\n\x1a\n" + b"test-image-content"
+
+    response = h.client.post(
+        "/api/v1/users/me/avatar",
+        files={"file": ("avatar.png", png_data, "image/png")},
+    )
+
+    assert response.status_code == 200, response.text
+    avatar_url = response.json()["avatar_url"]
+    assert avatar_url.startswith("/api/v1/users/avatars/")
+    assert h.user(h.actor_id).avatar_url == avatar_url
+    served = h.client.get(avatar_url)
+    assert served.status_code == 200
+    assert served.content == png_data
+    assert served.headers["content-type"] == "image/png"
+    other_tenant_user = h.add_user(company=h.other_company)
+    h.login_as(other_tenant_user)
+    assert h.client.get(avatar_url).status_code == 404
+    audit = next(a for a in h.audit() if a.action.startswith("USER_AVATAR_UPDATED:"))
+    assert audit.outcome == "SUCCESS" and audit.tenant_id == h.company and audit.actor_id == uploader_id
+
+
+def test_self_avatar_upload_rejects_non_image_content(h, monkeypatch, tmp_path):
+    monkeypatch.setattr(users_api, "AVATAR_STORAGE_DIR", tmp_path)
+
+    response = h.client.post(
+        "/api/v1/users/me/avatar",
+        files={"file": ("avatar.png", b"not an image", "image/png")},
+    )
+
+    assert response.status_code == 415
+    assert list(tmp_path.iterdir()) == []
+    audit = next(a for a in h.audit() if a.action.startswith("USER_AVATAR_UPLOAD_DENIED:"))
+    assert audit.outcome == "DENIED" and audit.tenant_id == h.company
+
+
 def test_password_change_verifies_old_password_hashes_new_and_audits(h, monkeypatch):
     monkeypatch.setattr(
         users_api,
