@@ -270,6 +270,8 @@ class UploadResult:
     error: str | None = None
     attempts: int = 1
     verified: str | None = None  # "size" or "size+sha256"
+    started_at: datetime | None = None  # per-destination timing (all attempts), used for run-log rows
+    finished_at: datetime | None = None
 
 
 @dataclass
@@ -445,10 +447,38 @@ def _run(
     return proc
 
 
+_PEM_BLOCK_RE = re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)", re.S)
+_BEARER_RE = re.compile(r"(?i)\b(bearer|basic)\s+[A-Za-z0-9._~+/=-]{8,}")
+_KV_SECRET_RE = re.compile(
+    r"(?i)\b([\w.-]*(?:secret|token|password|passwd|private[_-]?key|access[_-]?key|authorization|credential)[\w.-]*)"
+    r"(\s*[=:]\s*)(\"[^\"]*\"|'[^']*'|\S+)"
+)
+_LONG_TOKEN_RE = re.compile(r"[A-Za-z0-9+/_=-]{40,}")
+_MAX_ERROR_LEN = 500
+
+
+def redact_secrets(message: str, known_secrets: Iterable[str] = (), *, max_len: int = _MAX_ERROR_LEN) -> str:
+    """Scrub anything credential-shaped from a message destined for logs / audit / API responses, then truncate.
+
+    Removes PEM private keys, bearer/basic credentials, ``secret=...`` style pairs, long opaque tokens, and every
+    literal value in ``known_secrets`` (the credential values resolved for the destination in question).
+    """
+    text = str(message or "")
+    for secret in known_secrets:
+        if secret and len(secret) >= 4:
+            text = text.replace(secret, "[REDACTED]")
+    text = _PEM_BLOCK_RE.sub("[REDACTED]", text)
+    text = _BEARER_RE.sub(lambda m: f"{m.group(1)} [REDACTED]", text)
+    text = _KV_SECRET_RE.sub(lambda m: f"{m.group(1)}{m.group(2)}[REDACTED]", text)
+    text = _LONG_TOKEN_RE.sub(lambda m: m.group(0) if m.group(0).startswith("oxengl-") else "[REDACTED]", text)
+    text = "".join(ch if ch.isprintable() or ch in "\n\t" else " " for ch in text).strip()
+    return text if len(text) <= max_len else text[: max_len - 3] + "..."
+
+
 def _safe_error(err: BaseException) -> str:
-    """Audit-safe error string: our own messages verbatim, third-party errors by class name only."""
+    """Audit-safe error string: our own messages (credential-scrubbed), third-party errors by class name only."""
     if isinstance(err, BackupError):
-        return f"{type(err).__name__}: {err}"
+        return redact_secrets(f"{type(err).__name__}: {err}")
     return type(err).__name__
 
 
@@ -2676,6 +2706,13 @@ class BackupService:
         return [self._upload_one(artifact, cfg) for cfg in destinations if cfg.enabled]
 
     def _upload_one(self, artifact: BackupArtifact, cfg: DestinationConfig) -> UploadResult:
+        started_at = datetime.now(timezone.utc)
+        result = self._upload_one_inner(artifact, cfg)
+        result.started_at = started_at
+        result.finished_at = datetime.now(timezone.utc)
+        return result
+
+    def _upload_one_inner(self, artifact: BackupArtifact, cfg: DestinationConfig) -> UploadResult:
         last_error = "unknown error"
         attempt = 0
         for attempt in range(1, self.upload_attempts + 1):

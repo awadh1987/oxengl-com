@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
+from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
@@ -414,6 +414,73 @@ class PlatformAuditLog(Base):
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))
     company_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+
+BACKUP_PROVIDER_TYPES = ("gdrive", "onedrive", "sftp")
+BACKUP_RUN_STATUSES = ("success", "failed", "running")
+# Portable JSON column: JSONB on PostgreSQL, plain JSON elsewhere (unit tests run on SQLite).
+_PortableJSON = JSON().with_variant(JSONB(), "postgresql")
+
+
+class BackupDestination(Base):
+    """External backup target. ``tenant_id`` NULL = platform-wide destination (platform archive only).
+
+    ``config`` holds NON-secret settings only. Secrets never live in this column: they are stored AES-256-GCM
+    encrypted in ``credentials_encrypted`` (bound to this row via AAD) or referenced by ``credential_ref``
+    (``db:<id>`` for the encrypted column, or an OXENGL_BACKUP_CRED_<REF> environment reference).
+    """
+
+    __tablename__ = "backup_destinations"
+    __table_args__ = (
+        CheckConstraint("provider_type IN ('gdrive', 'onedrive', 'sftp')", name="ck_backup_destinations_provider"),
+        CheckConstraint(
+            "credential_ref IS NULL OR credential_ref ~ '^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$'",
+            name="ck_backup_destinations_credential_ref",
+        ).ddl_if(dialect="postgresql"),
+        Index("ix_backup_destinations_tenant_id", "tenant_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True
+    )
+    provider_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    config: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
+    credential_ref: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    credentials_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+
+class BackupRunLog(Base):
+    """One row per upload attempt per destination. ``error_message`` is credential-scrubbed and truncated."""
+
+    __tablename__ = "backup_run_logs"
+    __table_args__ = (
+        CheckConstraint("status IN ('success', 'failed', 'running')", name="ck_backup_run_logs_status"),
+        Index("ix_backup_run_logs_tenant_started", "tenant_id", "started_at"),
+        Index("ix_backup_run_logs_destination_id", "destination_id"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    destination_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("backup_destinations.id", ondelete="SET NULL"), nullable=True
+    )
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True
+    )
+    destination_name: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)  # survives destination delete
+    provider_type: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    file_size_bytes: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class ResPartner(TimestampMixin, Base):

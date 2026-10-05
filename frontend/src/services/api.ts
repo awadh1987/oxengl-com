@@ -1247,6 +1247,65 @@ async function findOrCreate<T extends { id: string }>(path: string, companyId: s
   return records.find(predicate) ?? request<T>(path, companyId, { method: 'POST', body: JSON.stringify(payload) });
 }
 
+/** External backup destinations. The API never returns credential material: only `has_credential`. */
+export type BackupProviderType = 'gdrive' | 'onedrive' | 'sftp';
+
+export interface BackupDestinationDto {
+  id: string;
+  tenant_id: string | null;
+  tenant_name?: string | null;
+  scope: 'platform' | 'tenant';
+  provider_type: BackupProviderType;
+  name: string;
+  config: Record<string, any>;
+  is_active: boolean;
+  has_credential: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+  last_backup_at?: string | null;
+  last_status?: 'success' | 'failed' | 'running' | null;
+}
+
+export interface BackupRunLogDto {
+  id: string;
+  destination_id: string | null;
+  destination_name: string | null;
+  provider_type: BackupProviderType | null;
+  tenant_id: string | null;
+  tenant_name?: string | null;
+  scope: 'platform' | 'tenant';
+  status: 'success' | 'failed' | 'running';
+  file_size_bytes: number | null;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface BackupPage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+/** Write-only payload: credentials are sent once and never read back. */
+export interface BackupDestinationWritePayload {
+  provider_type?: BackupProviderType;
+  name?: string;
+  config?: Record<string, any>;
+  credentials?: Record<string, string>;
+  is_active?: boolean;
+}
+
+function backupQuery(params?: Record<string, string | number | undefined | null>): string {
+  const qs = new URLSearchParams();
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') qs.set(key, String(value));
+  });
+  return qs.toString() ? `?${qs.toString()}` : '';
+}
+
+
 export const erpApi = {
   resolveDomain: (host?: string) => resolveDomain(host),
   checkDomainSslStatus: (domain: string, port?: number) => checkDomainSslStatus(domain, port),
@@ -1513,6 +1572,36 @@ export const erpApi = {
       method: 'PUT',
       body: JSON.stringify({ custom_limits: customLimits }),
     }),
+
+  // Data Backups & Archives (tenant scope: company is derived server-side from the session)
+  listBackupDestinations: (params?: { page?: number; page_size?: number }) =>
+    request<BackupPage<BackupDestinationDto>>(`/api/v1/tenant-control/backups/destinations${backupQuery(params)}`),
+  createBackupDestination: (payload: BackupDestinationWritePayload) =>
+    request<BackupDestinationDto>('/api/v1/tenant-control/backups/destinations', undefined, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateBackupDestination: (id: string, payload: BackupDestinationWritePayload) =>
+    request<BackupDestinationDto>(`/api/v1/tenant-control/backups/destinations/${id}`, undefined, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+  deleteBackupDestination: (id: string) =>
+    request<any>(`/api/v1/tenant-control/backups/destinations/${id}`, undefined, { method: 'DELETE' }),
+  testBackupDestination: (id: string) =>
+    request<{ ok: boolean; message: string }>(`/api/v1/tenant-control/backups/destinations/${id}/test`, undefined, { method: 'POST' }),
+  listBackupRunLogs: (params?: { page?: number; page_size?: number; status?: string; destination_id?: string }) =>
+    request<BackupPage<BackupRunLogDto>>(`/api/v1/tenant-control/backups/logs${backupQuery(params)}`),
+
+  // Super Admin backup oversight (platform superadmin only)
+  getSuperAdminBackupDestinations: (params?: { page?: number; page_size?: number; tenant_id?: string; scope?: string }) =>
+    request<BackupPage<BackupDestinationDto>>(`/api/v1/superadmin/backups/destinations${backupQuery(params)}`),
+  getSuperAdminBackupLogs: (params?: { page?: number; page_size?: number; tenant_id?: string; status?: string; scope?: string }) =>
+    request<BackupPage<BackupRunLogDto>>(`/api/v1/superadmin/backups/logs${backupQuery(params)}`),
+  testSuperAdminBackupDestination: (id: string) =>
+    request<{ ok: boolean; message: string }>(`/api/v1/superadmin/backups/destinations/${id}/test`, undefined, { method: 'POST' }),
+  deleteSuperAdminBackupDestination: (id: string) =>
+    request<any>(`/api/v1/superadmin/backups/destinations/${id}`, undefined, { method: 'DELETE' }),
   
   // Phase 5: Mobile Fleet Operations & Driver Proof of Delivery
   getMobileTrips: (companyId: string) => request<any[]>('/api/mobile/trips', companyId),

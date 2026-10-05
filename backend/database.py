@@ -177,6 +177,7 @@ def get_db(request: Request = None):
         if path.startswith((
             "/api/v1/tenant/control",
             "/api/tenant/control",
+            "/api/v1/tenant-control",
             "/api/v1/superadmin",
             "/api/superadmin",
             "/api/v1/platform",

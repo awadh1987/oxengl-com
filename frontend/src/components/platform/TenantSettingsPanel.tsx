@@ -16,8 +16,10 @@ import {
   Server,
   ArrowRightLeft,
   ExternalLink,
+  CloudUpload,
 } from 'lucide-react';
 import { CustomDomainWizard } from './CustomDomainWizard';
+import { BackupDestinationsTab } from './BackupDestinationsTab';
 import { erpApi } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +32,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
   const { i18n } = useTranslation();
   const isAr = i18n?.language === 'ar' || i18n?.language?.startsWith('ar');
 
-  const [activeTab, setActiveTab] = useState<'general' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'domains' | 'database' | 'webhooks' | 'api_keys' | 'sso' | 'backups'>('general');
   const [settings, setSettings] = useState<any>(null);
   const [domainsList, setDomainsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -336,6 +338,13 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
         >
           <ShieldCheck className="w-4 h-4 shrink-0" />
           <span>الدخول الموحد (SSO / SAML)</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('backups')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl transition-all whitespace-nowrap shrink-0 ${activeTab === 'backups' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+        >
+          <CloudUpload className="w-4 h-4 shrink-0" />
+          <span>{isAr ? 'النسخ الاحتياطي والأرشفة (Data Backups & Archives)' : 'Data Backups & Archives'}</span>
         </button>
       </div>
 
@@ -907,6 +916,9 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
           </div>
         </div>
       )}
+
+      {/* 7. Data Backups & Archives Tab */}
+      {activeTab === 'backups' && <BackupDestinationsTab isAr={isAr} />}
 
     </div>
   );

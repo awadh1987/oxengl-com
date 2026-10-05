@@ -18,13 +18,20 @@ import os
 from pathlib import Path
 import sys
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 import uuid
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from backend.app.database import SessionLocal
+from backend.app.services.backup_destination_service import (
+    PreparedDestinations,
+    StoredCredentialProvider,
+    build_run_log_rows,
+    prepare_destinations,
+    record_run_logs,
+)
 from backend.app.services.backup_service import (
     BackupKind,
     BackupPolicy,
@@ -154,6 +161,76 @@ def get_active_tenants(db: Session) -> List[Dict[str, Any]]:
 
 
 # ==============================================================================
+# External Destinations (backup_destinations) & Per-Upload Run Logs
+# ==============================================================================
+
+def load_policy_destinations(
+    session_factory: Callable[[], Session],
+    tenant_id: Optional[uuid.UUID],
+    credentials: StoredCredentialProvider,
+) -> PreparedDestinations:
+    """Active destinations for exactly one policy scope.
+
+    ``tenant_id=None`` (platform policy) -> only ``backup_destinations.tenant_id IS NULL`` rows.
+    ``tenant_id=<id>`` (tenant policy)   -> only rows with ``tenant_id == <id>``; platform-wide and other
+    tenants' destinations are never visible to a tenant policy.
+    A short-lived session is used so no connection is held across a (potentially hours-long) backup run.
+    """
+    with session_factory() as db:
+        try:
+            return prepare_destinations(db, tenant_id, credentials)
+        finally:
+            db.rollback()  # read-only: release the transaction before the long-running backup starts
+
+
+def _run_scope(
+    service: Any,
+    session_factory: Callable[[], Session],
+    credentials: StoredCredentialProvider,
+    *,
+    scope: BackupScope,
+    tenant_id: Optional[uuid.UUID],
+    kind: BackupKind,
+    label: str,
+    results: Dict[str, Any],
+):
+    """Build the scope's policy from its own destinations, run it, and write one run-log row per destination."""
+    try:
+        prepared = load_policy_destinations(session_factory, tenant_id, credentials)
+    except Exception as exc:  # DB trouble must not stop the local archive; it is reported instead
+        logger.error("[%s] Could not load backup destinations: %s", label, type(exc).__name__)
+        results["errors"].append({"scope": label, "error": "backup destinations could not be loaded"})
+        results["status"] = "PARTIAL_FAILURE"
+        prepared = PreparedDestinations(configs=[], meta={}, secrets={}, failures=[])
+
+    policy = BackupPolicy(
+        id=uuid.uuid4(),
+        scope=scope,
+        tenant_id=tenant_id,
+        destinations=list(prepared.configs),
+        retention_daily=BACKUP_KEEP_DAILY,
+        retention_weekly=BACKUP_KEEP_WEEKLY,
+    )
+    run = service.run_policy(policy, kind)
+    try:
+        rows = build_run_log_rows(
+            tenant_id=tenant_id,
+            prepared=prepared,
+            uploads=list(run.uploads or []),
+            artifact_size=run.artifact.size_bytes if run.artifact else None,
+            run_started=run.started_at,
+            run_finished=run.finished_at,
+            run_error=run.error,
+        )
+        written = record_run_logs(session_factory, rows)
+        if written:
+            logger.info("[%s] Recorded %d destination run log(s).", label, written)
+    except Exception as exc:  # run logs are best-effort; never mask the backup outcome
+        logger.error("[%s] Could not record destination run logs: %s", label, type(exc).__name__)
+    return run, policy
+
+
+# ==============================================================================
 # Core Scheduled Execution Routine
 # ==============================================================================
 
@@ -161,6 +238,9 @@ def execute_scheduled_backups(
     scopes: Optional[List[str]] = None,
     backup_kind: str = "full",
     layout: Optional[StorageLayout] = None,
+    *,
+    service: Optional[Any] = None,
+    session_factory: Optional[Callable[[], Session]] = None,
 ) -> Dict[str, Any]:
     """
     Synchronous execution routine invoked by Celery Beat workers or Asyncio daemon threads.
@@ -179,7 +259,10 @@ def execute_scheduled_backups(
     except (ValueError, AttributeError):
         kind = BackupKind.FULL
 
-    service = BackupService(layout=layout, keep_local_artifacts=True)
+    session_factory = session_factory or SessionLocal
+    credentials = StoredCredentialProvider(session_factory)
+    if service is None:
+        service = BackupService(layout=layout, keep_local_artifacts=True, credentials=credentials)
     results: Dict[str, Any] = {
         "status": "SUCCESS",
         "started_at": timestamp_iso,
@@ -193,17 +276,16 @@ def execute_scheduled_backups(
     if "platform" in scopes:
         logger.info("[Platform] Initiating full platform backup...")
         try:
-            policy = BackupPolicy(
-                id=uuid.uuid4(),
-                scope=BackupScope.PLATFORM,
-                tenant_id=None,
-                destinations=[],
-                retention_daily=BACKUP_KEEP_DAILY,
-                retention_weekly=BACKUP_KEEP_WEEKLY,
+            p_run, _policy = _run_scope(
+                service, session_factory, credentials,
+                scope=BackupScope.PLATFORM, tenant_id=None, kind=kind, label="platform", results=results,
             )
-            p_run = service.run_policy(policy, kind)
             if p_run.status == BackupRunStatus.FAILED:
-                raise RuntimeError(p_run.error or "Platform backup execution failed")
+                if p_run.artifact is None:
+                    raise RuntimeError(p_run.error or "Platform backup execution failed")
+                # Archive exists locally; every external destination failed (details are in backup_run_logs).
+                results["errors"].append({"scope": "platform", "error": "all external destinations failed; local archive retained"})
+                results["status"] = "PARTIAL_FAILURE"
 
             keep_count = BACKUP_KEEP_DAILY if kind == BackupKind.INCREMENTAL else BACKUP_KEEP_WEEKLY
             pruned_count = p_run.pruned + prune_local_artifacts(
@@ -234,7 +316,7 @@ def execute_scheduled_backups(
 
     # 2. Tenant-Level Backups
     if "tenants" in scopes:
-        with SessionLocal() as db:
+        with session_factory() as db:
             active_tenants = get_active_tenants(db)
 
         logger.info("[Tenants] Discovered %d active tenant partitions.", len(active_tenants))
@@ -249,17 +331,15 @@ def execute_scheduled_backups(
 
             logger.info("[Tenant:%s] Initiating backup for %s (%s)...", t_id_str[:8], t_name, t_id_str)
             try:
-                policy = BackupPolicy(
-                    id=uuid.uuid4(),
-                    scope=BackupScope.TENANT,
-                    tenant_id=t_uuid,
-                    destinations=[],
-                    retention_daily=BACKUP_KEEP_DAILY,
-                    retention_weekly=BACKUP_KEEP_WEEKLY,
+                t_run, _policy = _run_scope(
+                    service, session_factory, credentials,
+                    scope=BackupScope.TENANT, tenant_id=t_uuid, kind=kind, label=f"tenant:{t_id_str}", results=results,
                 )
-                t_run = service.run_policy(policy, kind)
                 if t_run.status == BackupRunStatus.FAILED:
-                    raise RuntimeError(t_run.error or f"Tenant {t_id_str} backup execution failed")
+                    if t_run.artifact is None:
+                        raise RuntimeError(t_run.error or f"Tenant {t_id_str} backup execution failed")
+                    results["errors"].append({"scope": f"tenant:{t_id_str}", "error": "all external destinations failed; local archive retained"})
+                    results["status"] = "PARTIAL_FAILURE"
 
                 keep_count = BACKUP_KEEP_DAILY if kind == BackupKind.INCREMENTAL else BACKUP_KEEP_WEEKLY
                 t_pruned = t_run.pruned + prune_local_artifacts(
