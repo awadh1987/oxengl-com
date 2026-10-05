@@ -1846,17 +1846,18 @@ export const erpApi = {
     }>('/api/v1/users/roles'),
 
   /** External / contractor identities only; internal staff are provisioned by the HR module. */
-  inviteUser: (payload: { email?: string; phone?: string; channel: 'email' | 'sms'; role: string; full_name?: string }) =>
+  inviteUser: (payload: { email?: string; phone?: string; channel: 'email' | 'sms' | 'manual'; role: string; full_name?: string }) =>
     request<{
       status: string;
       user_id: string;
       email: string | null;
       phone: string | null;
-      channel: 'email' | 'sms';
+      channel: 'email' | 'sms' | 'manual';
       full_name: string;
       role: string;
       reset_dispatched: boolean;
       message: string;
+      temporary_password?: string | null;
     }>('/api/v1/users/invite', undefined, {
       method: 'POST',
       body: JSON.stringify(payload),

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { erpApi } from '../services/api';
-import { EXTERNAL_INVITE_ROLES, IAM_ROLES } from '../constants/iamRoles';
+import { EXTERNAL_INVITE_ROLES, ASSIGNABLE_IAM_ROLES } from '../constants/iamRoles';
 
 export interface IamRolesState {
   roles: string[];
@@ -12,7 +12,7 @@ export interface IamRolesState {
 }
 
 const FALLBACK: IamRolesState = {
-  roles: [...IAM_ROLES],
+  roles: [...ASSIGNABLE_IAM_ROLES],
   externalRoles: [...EXTERNAL_INVITE_ROLES],
   canAssignPrivileged: false,
   fromServer: false,

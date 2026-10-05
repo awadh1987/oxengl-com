@@ -141,7 +141,7 @@ def test_catalog_is_exactly_the_25_standard_roles_and_accepted_by_db_constraint(
 
 def test_roles_endpoint_returns_exact_catalog(h):
     body = h.client.get("/api/v1/users/roles").json()
-    assert [r["value"] for r in body["roles"]] == EXPECTED_ROLES
+    assert [r["value"] for r in body["roles"]] == EXPECTED_ROLES + ["Owner"]
     assert [r["value"] for r in body["external_roles"]] == list(EXTERNAL_INVITE_ROLES) == ["Guest", "External_Auditor"]
     assert body["can_manage_users"] is True and body["can_assign_privileged"] is False
 
@@ -198,7 +198,7 @@ def test_invite_external_creates_least_privilege_account_without_password_leak(h
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert "password" not in json.dumps(body).lower().replace("password-setup", "")
-    assert "temporary_password" not in body and body["reset_dispatched"] is True
+    assert body.get("temporary_password") is None and body["reset_dispatched"] is True
     user = h.user(uuid.UUID(body["user_id"]))
     assert user.role == "Guest" and user.iam_role in EXTERNAL_INVITE_ROLES
     assert user.company_id == h.company and user.email == "contractor@outlook.com"
@@ -230,11 +230,21 @@ def test_edit_access_accepts_every_standard_role(h, role):
     assert any(a.action.startswith("IAM_ROLE_CHANGED") and a.outcome == "SUCCESS" for a in h.audit())
 
 
-@pytest.mark.parametrize("role", ["Owner", "Admin", "Guest", "COO", "External_Auditor", "root", "", "DROP TABLE"])
+@pytest.mark.parametrize("role", ["Admin", "Guest", "COO", "External_Auditor", "root", "", "DROP TABLE"])
 def test_edit_access_rejects_non_catalog_roles(h, role):
     target = h.add_user("Guest")
     assert h.client.put(f"/api/v1/users/{target}/role", json={"role": role}).status_code == 400
     assert h.user(target).role == "Guest"
+
+
+def test_owner_role_is_assignable_only_by_an_owner(h):
+    target = h.add_user("Guest")
+    assert h.client.put(f"/api/v1/users/{target}/role", json={"role": "Owner"}).status_code == 403
+    assert h.user(target).role == "Guest"
+    h.login_as(h.add_user("Owner"))
+    assert h.client.put(f"/api/v1/users/{target}/role", json={"role": "owner"}).status_code == 200
+    user = h.user(target)
+    assert (user.role, user.iam_role, user.company_id, user.is_superuser) == ("Owner", "Owner", h.company, False)
 
 
 def test_tenant_admin_cannot_escalate_to_super_admin(h):

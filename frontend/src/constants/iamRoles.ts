@@ -34,12 +34,15 @@ export const IAM_ROLES = [
 
 export type IamRole = (typeof IAM_ROLES)[number];
 
+/** Workspace-assignable roles: the 25 standardized roles plus the workspace Owner. */
+export const ASSIGNABLE_IAM_ROLES = [...IAM_ROLES, 'Owner'] as const;
+
 /** External / contractor identities - the only roles the Invite flow may assign. */
 export const EXTERNAL_INVITE_ROLES = ['Guest', 'External_Auditor'] as const;
 export type ExternalInviteRole = (typeof EXTERNAL_INVITE_ROLES)[number];
 
 /** Roles whose assignment is restricted (Owner/CEO/platform admin) and audited server-side. */
-export const PRIVILEGED_IAM_ROLES: readonly string[] = ['Super_Admin'];
+export const PRIVILEGED_IAM_ROLES: readonly string[] = ['Super_Admin', 'Owner'];
 
 export const HR_REGISTRATION_WARNING_EN =
   'Internal staff must be registered via the HR module to generate payroll and compliance profiles.';

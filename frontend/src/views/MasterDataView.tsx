@@ -73,7 +73,7 @@ export const MasterDataView: React.FC = () => {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
-  const [inviteChannel, setInviteChannel] = useState<'email' | 'sms'>('email');
+  const [inviteChannel, setInviteChannel] = useState<'email' | 'sms' | 'manual'>('email');
   const [inviteRole, setInviteRole] = useState<string>('Guest');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -81,8 +81,9 @@ export const MasterDataView: React.FC = () => {
   const [inviteResult, setInviteResult] = useState<{
     email: string;
     phone: string;
-    channel: 'email' | 'sms';
+    channel: 'email' | 'sms' | 'manual';
     role: string;
+    temporaryPassword?: string;
   } | null>(null);
   const [iamConfirm, setIamConfirm] = useState<{ user: User; kind: IamActionKind } | null>(null);
   const [iamBusyId, setIamBusyId] = useState<string | null>(null);
@@ -122,13 +123,17 @@ export const MasterDataView: React.FC = () => {
 
   const handleInviteUser = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (inviteChannel === 'manual' && !inviteEmail.trim() && !invitePhone.trim()) {
+      setInviteError(isAr ? 'أدخل البريد الإلكتروني أو رقم الهاتف لتعريف الحساب.' : 'Enter an email address or phone number to identify the account.');
+      return;
+    }
     setInviteLoading(true);
     setInviteError(null);
     try {
       const result = await erpApi.inviteUser({
         channel: inviteChannel,
-        email: inviteChannel === 'email' ? inviteEmail.trim() : undefined,
-        phone: inviteChannel === 'sms' ? invitePhone.trim() : undefined,
+        email: inviteChannel !== 'sms' ? inviteEmail.trim() || undefined : undefined,
+        phone: inviteChannel !== 'email' ? invitePhone.trim() || undefined : undefined,
         role: inviteRole,
         full_name: inviteFullName.trim() || undefined,
       });
@@ -137,6 +142,7 @@ export const MasterDataView: React.FC = () => {
         phone: result.phone || '',
         channel: result.channel,
         role: result.role,
+        temporaryPassword: result.channel === 'manual' ? result.temporary_password || undefined : undefined,
       });
       await refreshUsers();
       setInviteEmail('');
@@ -367,9 +373,18 @@ export const MasterDataView: React.FC = () => {
                   <div className="flex items-center gap-2 text-xs font-black"><CheckCircle className="h-4 w-4 text-emerald-600" /><span>{isAr ? 'تم إنشاء حساب المستخدم بنجاح!' : 'User created successfully!'}</span></div>
                   <p className="mt-2 text-xs leading-relaxed">
                     {isAr
-                      ? `تم ربط المستخدم (${inviteResult.email || inviteResult.phone}) بدور (${iamRoleLabel(inviteResult.role, true)}). أُرسلت بيانات الدخول المؤقتة عبر ${inviteResult.channel.toUpperCase()} ويجب تغيير كلمة المرور عند أول تسجيل دخول.`
-                      : `User (${inviteResult.email || inviteResult.phone}) created with role (${iamRoleLabel(inviteResult.role, false)}). Temporary credentials were sent by ${inviteResult.channel.toUpperCase()}; a password change is required on first login.`}
+                      ? `تم ربط المستخدم (${inviteResult.email || inviteResult.phone}) بدور (${iamRoleLabel(inviteResult.role, true)}). ${inviteResult.channel === 'manual' ? 'لم تُرسل أي رسالة؛ سلّم كلمة المرور المؤقتة يدوياً' : `أُرسلت بيانات الدخول المؤقتة عبر ${inviteResult.channel.toUpperCase()}`} ويجب تغيير كلمة المرور عند أول تسجيل دخول.`
+                      : `User (${inviteResult.email || inviteResult.phone}) created with role (${iamRoleLabel(inviteResult.role, false)}). ${inviteResult.channel === 'manual' ? 'No message was sent; hand over the temporary password manually' : `Temporary credentials were sent by ${inviteResult.channel.toUpperCase()}`}; a password change is required on first login.`}
                   </p>
+                  {inviteResult.temporaryPassword && (
+                    <div role="status" className="mt-3 rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                      <p className="text-[11px] font-black">{isAr ? 'كلمة المرور المؤقتة — تظهر مرة واحدة فقط. انسخها الآن وسلّمها للمستخدم بشكل آمن.' : 'Temporary password — shown once only. Copy it now and hand it over securely.'}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <code dir="ltr" className="flex-1 select-all break-all rounded-lg bg-white px-3 py-2 font-mono text-sm font-black text-slate-900 dark:bg-slate-900 dark:text-slate-100">{inviteResult.temporaryPassword}</code>
+                        <button type="button" onClick={() => { void navigator.clipboard?.writeText(inviteResult.temporaryPassword || ''); }} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800">{isAr ? 'نسخ' : 'Copy'}</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-end"><button type="button" onClick={() => { setIsInviteModalOpen(false); setInviteResult(null); }} className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800">{isAr ? 'إغلاق ومتابعة' : 'Close'}</button></div>
               </div>
@@ -381,20 +396,22 @@ export const MasterDataView: React.FC = () => {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'قناة إرسال بيانات الدخول *' : 'Credential Delivery Channel *'}</label>
-                  <select value={inviteChannel} onChange={(event) => setInviteChannel(event.target.value as 'email' | 'sms')} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                  <select value={inviteChannel} onChange={(event) => setInviteChannel(event.target.value as 'email' | 'sms' | 'manual')} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
                     <option value="email">Email</option>
                     <option value="sms">SMS</option>
+                    <option value="manual">{isAr ? 'يدوي / نسخ كلمة المرور' : 'Manual / Copy Password'}</option>
                   </select>
                 </div>
-                {inviteChannel === 'email' ? (
+                {inviteChannel !== 'sms' && (
                   <div>
                     <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'البريد الإلكتروني للمدعو *' : 'Invitee Email Address *'}</label>
-                    <input type="email" required placeholder="name@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                    <input type="email" required={inviteChannel === 'email'} placeholder="name@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
                   </div>
-                ) : (
+                )}
+                {inviteChannel !== 'email' && (
                   <div>
                     <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'رقم الهاتف المحمول *' : 'Mobile Phone Number *'}</label>
-                    <input type="tel" inputMode="tel" required placeholder="+966 5X XXX XXXX (or 05X XXX XXXX)" value={invitePhone} onChange={(event) => setInvitePhone(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                    <input type="tel" inputMode="tel" required={inviteChannel === 'sms'} placeholder="+966 5X XXX XXXX (or 05X XXX XXXX)" value={invitePhone} onChange={(event) => setInvitePhone(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
                     <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{isAr ? 'استخدم تنسيق E.164؛ يقبل رقم السعودية المحلي 05 ويحوّله تلقائياً إلى +966.' : 'Use E.164 format; Saudi local 05 numbers are accepted and normalized to +966.'}</p>
                   </div>
                 )}

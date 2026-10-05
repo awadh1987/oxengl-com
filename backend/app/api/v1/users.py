@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, List, Literal, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
@@ -51,7 +51,7 @@ from backend.app.services.notification_service import (
 )
 from backend.app.domains.iam.role_catalog import (
     EXTERNAL_INVITE_ROLES,
-    HR_PROVISIONED_ROLES,
+    WORKSPACE_ASSIGNABLE_ROLES,
     HR_REGISTRATION_REQUIRED_MESSAGE,
     PLATFORM_WIDE_LEGACY_ROLES,
     PRIVILEGED_IAM_ROLES,
@@ -137,7 +137,9 @@ class UserResponse(BaseModel):
 class InviteUserRequest(BaseModel):
     email: Optional[str] = Field(None, description="Email address of the external invitee")
     phone: Optional[str] = Field(None, description="E.164 phone number for SMS delivery")
-    channel: Literal["email", "sms"] = Field("email", description="Temporary credential delivery channel")
+    channel: Literal["email", "sms", "manual"] = Field(
+        "email", description="Temporary credential delivery channel; 'manual' returns the password once to the admin"
+    )
     role: str = Field("Guest", description="External identity type: Guest or External_Auditor")
     full_name: Optional[str] = Field(None, description="Full name of user")
 
@@ -154,6 +156,17 @@ class InviteUserRequest(BaseModel):
                 raise ValueError("A valid email address is required for email delivery.")
             self.email = email
             self.phone = None
+            return self
+
+        if self.channel == "manual":
+            email = (self.email or "").strip().lower()
+            phone = (self.phone or "").strip()
+            if not email and not phone:
+                raise ValueError("An email address or phone number is required to identify the account.")
+            if email and not _is_valid_invite_email(email):
+                raise ValueError("Enter a valid email address.")
+            self.email = email or None
+            self.phone = _normalize_invite_phone(phone) if phone else None
             return self
 
         phone = (self.phone or "").strip()
@@ -173,11 +186,12 @@ class InviteUserResponse(BaseModel):
     user_id: str
     email: Optional[str] = None
     phone: Optional[str] = None
-    channel: Literal["email", "sms"]
+    channel: Literal["email", "sms", "manual"]
     full_name: str
     role: str
     reset_dispatched: bool
     message: str
+    temporary_password: Optional[str] = Field(None, description="Present ONLY for the manual channel")
 
 
 class UpdateRoleRequest(BaseModel):
@@ -355,6 +369,8 @@ def _mirror_role(iam_role: str, legacy_role: str) -> str:
     """Value for the legacy tenant_users.role column (restricted by ck_tenant_user_role)."""
     if legacy_role == "Guest":
         return "guest_user"
+    if iam_role == "Owner":
+        return "Owner"
     if iam_role in PRIVILEGED_IAM_ROLES:
         return "ceo"
     return "user"
@@ -402,7 +418,7 @@ def get_assignable_roles(
     ).first()
     level = _authority_level(row.role, row.iam_role, bool(row.is_superuser)) if row is not None and row.is_active else LEVEL_NONE
     return RoleCatalogResponse(
-        roles=[RoleCatalogItem(value=r, privileged=r in PRIVILEGED_IAM_ROLES) for r in HR_PROVISIONED_ROLES],
+        roles=[RoleCatalogItem(value=r, privileged=r in PRIVILEGED_IAM_ROLES) for r in WORKSPACE_ASSIGNABLE_ROLES],
         external_roles=[RoleCatalogItem(value=r) for r in EXTERNAL_INVITE_ROLES],
         can_assign_privileged=level >= LEVEL_OWNER,
         can_manage_users=level >= LEVEL_ADMIN,
@@ -459,18 +475,21 @@ def get_tenant_users(
 # ==============================================================================
 # 2. POST /api/v1/users/invite  (external / contractor identities ONLY)
 # ==============================================================================
-@router.post("/invite", response_model=InviteUserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/invite", response_model=InviteUserResponse, response_model_exclude_none=True, status_code=status.HTTP_201_CREATED
+)
 async def invite_tenant_user(
     payload: InviteUserRequest,
     actor: IamActor = Depends(require_iam_admin),
     db: Session = Depends(get_db),
+    response: Response = None,  # type: ignore[assignment]  # injected by FastAPI
 ):
     """
     Invite an external identity (Guest / External_Auditor) into the caller's own workspace.
 
     Internal staff must be registered through HR. A temporary password is sent out-of-band through
     the selected channel, stored only as a strong hash, and marked for change on first login.
-    Credentials are never returned or logged.
+    Credentials are never logged; they are returned once, only for the explicit manual channel.
     """
     tenant_id = actor.company_id
     if tenant_id is None:
@@ -489,7 +508,7 @@ async def invite_tenant_user(
         )
 
     email_clean = (payload.email or "").strip().lower() or None
-    phone_clean = payload.phone if payload.channel == "sms" else None
+    phone_clean = payload.phone if payload.channel in ("sms", "manual") else None
     duplicate_email = (
         db.query(ResUser.id).filter(ResUser.email.ilike(email_clean)).first()
         if email_clean
@@ -526,14 +545,15 @@ async def invite_tenant_user(
     destination = email_clean if payload.channel == "email" else phone_clean
 
     try:
-        await dispatch_temporary_credentials(
-            payload.channel,
-            destination,
-            temporary_password,
-            full_name=full_name,
-            workspace_name=workspace_name,
-            tenant_id=tenant_id,
-        )
+        if payload.channel != "manual":
+            await dispatch_temporary_credentials(
+                payload.channel,
+                destination,
+                temporary_password,
+                full_name=full_name,
+                workspace_name=workspace_name,
+                tenant_id=tenant_id,
+            )
     except NotificationDeliveryError as exc:
         _commit_audit(
             db,
@@ -579,6 +599,9 @@ async def invite_tenant_user(
         payload.channel,
     )
 
+    manual = payload.channel == "manual"
+    if manual and response is not None:
+        response.headers["Cache-Control"] = "no-store"
     return InviteUserResponse(
         status="invited",
         user_id=str(user_id),
@@ -587,9 +610,13 @@ async def invite_tenant_user(
         channel=payload.channel,
         full_name=full_name,
         role=external_role,
-        reset_dispatched=True,
+        reset_dispatched=not manual,
+        temporary_password=temporary_password if manual else None,
         message=(
-            f"External user created. Temporary credentials were sent via {payload.channel.upper()}; "
+            "External user created. Copy the temporary password now; it is shown only once and a "
+            "password change is required on first login."
+            if manual
+            else f"External user created. Temporary credentials were sent via {payload.channel.upper()}; "
             "a password change is required on first login."
         ),
     )

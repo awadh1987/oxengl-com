@@ -259,3 +259,49 @@ def test_unavailable_sms_provider_fails_closed_without_creating_user(monkeypatch
     assert "SMS" in error.value.detail
     assert not any(isinstance(value, users.ResUser) for value in db.added)
     assert any(event["outcome"] == "FAILED" and "channel=sms" in event["action"] for event in audits)
+
+
+def test_manual_invite_skips_dispatch_and_returns_password_once(monkeypatch):
+    db = FakeDB()
+    monkeypatch.setattr(users, "append_audit_from_context", lambda *_a, **_k: None)
+
+    async def must_not_dispatch(*_a, **_k):
+        raise AssertionError("manual channel must not dispatch")
+
+    monkeypatch.setattr(users, "dispatch_temporary_credentials", must_not_dispatch)
+    request = users.InviteUserRequest(channel="manual", email="Vendor@Gmail.com", role="Guest")
+    response = asyncio.run(users.invite_tenant_user(request, _actor(uuid.uuid4()), db))
+
+    stored = next(value for value in db.added if isinstance(value, users.ResUser))
+    assert response.channel == "manual" and response.temporary_password
+    assert verify_password(response.temporary_password, stored.password_hash)
+    assert stored.password_hash != response.temporary_password
+    assert stored.must_change_password is True
+
+
+def test_manual_request_needs_an_identifier_and_other_channels_never_return_password(monkeypatch):
+    with pytest.raises(ValidationError):
+        users.InviteUserRequest(channel="manual")
+    assert users.InviteUserRequest(channel="manual", phone="0501234567").phone == "+966501234567"
+
+    db = FakeDB()
+    monkeypatch.setattr(users, "append_audit_from_context", lambda *_a, **_k: None)
+
+    async def ok(*_a, **_k):
+        return None
+
+    monkeypatch.setattr(users, "dispatch_temporary_credentials", ok)
+    response = asyncio.run(
+        users.invite_tenant_user(users.InviteUserRequest(email="a@gmail.com"), _actor(uuid.uuid4()), db)
+    )
+    assert response.temporary_password is None
+    assert "temporary_password\":null" in response.model_dump_json().replace(" ", "")
+
+
+def test_owner_is_an_assignable_privileged_role():
+    from backend.app.domains.iam.role_catalog import HR_PROVISIONED_ROLES, PRIVILEGED_IAM_ROLES, resolve_internal_role
+
+    assert resolve_internal_role("owner") == "Owner"
+    assert "Owner" in PRIVILEGED_IAM_ROLES and "Owner" not in HR_PROVISIONED_ROLES
+    assert users._mirror_role("Owner", "Owner") == "Owner"
+    assert "Owner" in users.WORKSPACE_ASSIGNABLE_ROLES

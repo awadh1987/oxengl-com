@@ -65,7 +65,10 @@ ALLOWED_RES_USER_ROLES_SQL: str = ", ".join(f"'{role}'" for role in ALLOWED_RES_
 # blueprint role is kept verbatim in ``res_users.iam_role`` while the legacy ``role`` column gets the
 # tenant-scoped executive equivalent. Every other blueprint role is written to both columns.
 LEGACY_ROLE_OVERRIDES: Mapping[str, str] = MappingProxyType({"Super_Admin": "CEO"})
-PRIVILEGED_IAM_ROLES = frozenset({"Super_Admin"})
+# "Owner" is the workspace owner role: assignable in the control panel but not part of the 25-role HR matrix.
+OWNER_ROLE = "Owner"
+WORKSPACE_ASSIGNABLE_ROLES: tuple[str, ...] = HR_PROVISIONED_ROLES + (OWNER_ROLE,)
+PRIVILEGED_IAM_ROLES = frozenset({"Super_Admin", OWNER_ROLE})
 
 # Legacy ``role`` values that grant platform-wide (cross-tenant) authority. Never assignable by a
 # tenant-scoped actor; stored only by the platform itself.
@@ -79,7 +82,7 @@ def normalize_role_token(raw: Optional[str]) -> str:
 def resolve_internal_role(raw: Optional[str]) -> Optional[str]:
     """Return the canonical standardized role for ``raw`` (case-insensitive) or None if not in the catalogue."""
     token = normalize_role_token(raw).lower()
-    for role in HR_PROVISIONED_ROLES:
+    for role in WORKSPACE_ASSIGNABLE_ROLES:
         if role.lower() == token:
             return role
     return None
