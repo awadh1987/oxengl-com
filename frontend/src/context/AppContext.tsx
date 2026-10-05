@@ -2574,6 +2574,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             fullNameAr: u.full_name,
             email: u.email || '',
             phone: u.phone || '',
+            syncReferenceId: u.sync_reference_id ?? null,
             role: (u.role as UserRole) || 'Guest',
             iamRole: u.iam_role ?? null,
             mustChangePassword: !!u.must_change_password,

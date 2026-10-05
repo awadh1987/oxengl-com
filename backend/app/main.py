@@ -537,6 +537,8 @@ from backend.app.api.v1 import system as system_api
 app.include_router(system_api.router)
 from backend.api.routes.platform_billing import router as platform_billing_router
 app.include_router(platform_billing_router)
+from backend.api.webhooks.sync import router as user_sync_webhook_router
+app.include_router(user_sync_webhook_router)
 from backend.app.api.v1.billing import (
     tenant_billing_router,
     superadmin_billing_router,

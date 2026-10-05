@@ -122,6 +122,7 @@ class UserResponse(BaseModel):
     id: str
     email: str
     phone: Optional[str] = None
+    sync_reference_id: Optional[str] = None
     full_name: str
     role: str
     iam_role: Optional[str] = None
@@ -460,6 +461,7 @@ def get_tenant_users(
             id=str(u.id),
             email="" if _is_sms_placeholder_email(u.email) else u.email,
             phone=u.phone,
+            sync_reference_id=u.sync_reference_id,
             full_name=u.full_name or u.email.split("@")[0],
             role=u.role,
             iam_role=u.iam_role,

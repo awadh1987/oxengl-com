@@ -62,6 +62,7 @@ export interface User {
   fullNameAr: string;
   email: string;
   phone?: string;
+  syncReferenceId?: string | null;
   role: UserRole;
   /** Standardized IAM role (res_users.iam_role); falls back to the legacy `role` when absent. */
   iamRole?: string | null;
@@ -852,4 +853,3 @@ export interface HrmsJournalEntry {
   status: string;
   lines?: HrmsJournalLine[];
 }
-

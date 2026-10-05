@@ -5,6 +5,7 @@ import {
   Edit2,
   Filter,
   KeyRound,
+  Link2,
   Loader2,
   RefreshCw,
   Search,
@@ -105,6 +106,7 @@ export const MasterDataView: React.FC = () => {
           user.username,
           user.email,
           user.phone,
+          user.syncReferenceId,
         ].some((value) => String(value || '').toLowerCase().includes(query))) return false;
         return quickFilter === 'all' || (user.iamRole || user.role) === quickFilter;
       });
@@ -291,12 +293,13 @@ export const MasterDataView: React.FC = () => {
                 <th className="text-start">{isAr ? 'اسم المستخدم / البريد / الهاتف' : 'Username / Email / Phone'}</th>
                 <th className="text-start">{isAr ? 'الدور الوظيفي' : 'Role'}</th>
                 <th className="text-start">{isAr ? 'الصلاحيات المتاحة' : 'Permissions'}</th>
+                <th className="text-start">{isAr ? 'مرجع المزامنة' : 'Sync reference'}</th>
                 <th className="text-center">{isAr ? 'إجراءات' : 'Actions'}</th>
               </tr>
             </thead>
             <tbody>
               {activeUsers.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-xs text-slate-400">{isAr ? 'لا يوجد مستخدمون مطابقون للبحث أو التصفية.' : 'No users match the active query.'}</td></tr>
+                <tr><td colSpan={6} className="py-8 text-center text-xs text-slate-400">{isAr ? 'لا يوجد مستخدمون مطابقون للبحث أو التصفية.' : 'No users match the active query.'}</td></tr>
               ) : activeUsers.map((user) => {
                 const role = user.iamRole || user.role;
                 const isSelf = user.id === currentUser?.id;
@@ -316,6 +319,19 @@ export const MasterDataView: React.FC = () => {
                       {user.mustChangePassword && !isSuspended && <span className="ms-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-1 text-[10px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-400">{isAr ? 'بانتظار تغيير كلمة المرور' : 'Password change pending'}</span>}
                     </td>
                     <td className="max-w-sm text-xs text-slate-600 dark:text-slate-400">{rolePermissionSummary(role, isAr)}</td>
+                    <td>
+                      {user.syncReferenceId ? (
+                        <span
+                          title={user.syncReferenceId}
+                          className="inline-flex max-w-48 items-center gap-1.5 rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] font-semibold text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300"
+                        >
+                          <Link2 className="h-3 w-3 shrink-0" />
+                          <span className="truncate font-mono">{user.syncReferenceId}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">{isAr ? 'محلي' : 'Local'}</span>
+                      )}
+                    </td>
                     <td className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button

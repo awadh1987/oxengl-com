@@ -96,6 +96,7 @@ services:
       REDIS_URL: "redis://redis_cache:6379/0"
       POSTGRES_HOST: postgres_db
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      SYNC_WEBHOOK_SECRETS_JSON: ${SYNC_WEBHOOK_SECRETS_JSON:-}
       PYTHONPATH: "/app"
     # Live host currently publishes 0.0.0.0:8000; loopback-only is the intended
     # posture (all public traffic must go through the edge nginx).

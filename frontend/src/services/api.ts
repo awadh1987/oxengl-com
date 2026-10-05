@@ -1826,6 +1826,7 @@ export const erpApi = {
         id: string;
         email: string;
         phone?: string | null;
+        sync_reference_id?: string | null;
         full_name: string;
         role: string;
         iam_role?: string | null;
