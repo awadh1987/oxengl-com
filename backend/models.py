@@ -1778,6 +1778,7 @@ class StockMovement(TimestampMixin, Base):
     performed_by_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_users.id", ondelete="SET NULL"), index=True)
     balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 4), nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
     stock_item: Mapped[StockItem] = relationship(back_populates="movements")

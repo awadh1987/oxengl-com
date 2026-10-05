@@ -2129,6 +2129,22 @@ export const erpApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+  updateHrmsEmployee: (employeeId: string, payload: any, companyId?: string) =>
+    request<any>(`/api/hrms/employees/${employeeId}`, companyId, { method: 'PUT', body: JSON.stringify(payload) }),
+  getEmployeeAllowances: (employeeId: string, companyId?: string) =>
+    request<any[]>(`/api/hrms/employees/${employeeId}/allowances`, companyId),
+  createEmployeeAllowance: (employeeId: string, payload: any, companyId?: string) =>
+    request<any>(`/api/hrms/employees/${employeeId}/allowances`, companyId, { method: 'POST', body: JSON.stringify(payload) }),
+  getPurchaseRequisitions: (companyId?: string) =>
+    request<any[]>('/api/v1/procurement/purchase-requisitions', companyId),
+  createPurchaseRequisition: (payload: any, companyId?: string) =>
+    request<any>('/api/v1/procurement/purchase-requisitions', companyId, { method: 'POST', body: JSON.stringify(payload) }),
+  getSupplierContracts: (companyId?: string) =>
+    request<any[]>('/api/v1/procurement/supplier-contracts', companyId),
+  createSupplierContract: (payload: any, companyId?: string) =>
+    request<any>('/api/v1/procurement/supplier-contracts', companyId, { method: 'POST', body: JSON.stringify(payload) }),
+  updateSupplierContract: (id: string, payload: any, companyId?: string) =>
+    request<any>(`/api/v1/procurement/supplier-contracts/${id}`, companyId, { method: 'PUT', body: JSON.stringify(payload) }),
   uploadEmployeeDocument: (employeeId: string, documentType: string, file: File, companyId?: string) => {
     const formData = new FormData();
     formData.append('document_type', documentType);

@@ -114,6 +114,29 @@ class Vendor(Base):
     bills: Mapped[List["VendorBill"]] = relationship("VendorBill", back_populates="vendor")
 
 
+class SupplierContract(Base):
+    """Framework agreements with suppliers (pricing, validity, terms)."""
+    __tablename__ = "supplier_contracts"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    contract_number: Mapped[str] = mapped_column(String(64), nullable=False)
+    supplier_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    vendor_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    start_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    end_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    contract_value: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0.0000"), nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), default="SAR", nullable=False)
+    payment_terms: Mapped[Optional[str]] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(String(32), default="DRAFT", nullable=False)
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), onupdate=func.now(), nullable=False)
+
+    __table_args__ = (Index("uq_supplier_contracts_tenant_number", "tenant_id", "contract_number", unique=True),)
+
+
 class PurchaseRequisition(Base):
     """Internal departmental purchase requests triggering multi-level approvals."""
     __tablename__ = "purchase_requisitions"

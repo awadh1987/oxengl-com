@@ -24,6 +24,7 @@ from backend.app.domains.procurement.models import (
     WorkflowStep,
     Vendor,
     PurchaseRequisition,
+    SupplierContract,
     PurchaseRequisitionLine,
     PurchaseOrderLine,
     GoodsReceiptBatchLog,
@@ -58,6 +59,8 @@ from backend.two_tier_auth import (
 )
 from backend.app.services.workflow_service import WorkflowEngineService
 from backend.app.security.abac import enforce_abac
+
+from backend.app.dependencies import get_active_company_id
 
 router = APIRouter(prefix="/api/v1/procurement", tags=["Procurement & S2P"])
 
@@ -275,11 +278,11 @@ def match_vendor_invoice(
 def create_purchase_requisition(
     payload: PurchaseRequisitionCreate,
     db: Session = Depends(get_db),
-    x_tenant_id: Optional[str] = Header(None),
+    company_id: uuid.UUID = Depends(get_active_company_id),
     x_user_id: Optional[str] = Header(None),
 ):
     """Creates a new PR and initiates threshold approval matrix workflow."""
-    tenant_uuid = uuid.UUID(x_tenant_id) if x_tenant_id else uuid.UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
+    tenant_uuid = company_id
     user_uuid = uuid.UUID(x_user_id) if x_user_id else uuid.UUID("00000000-0000-0000-0000-000000000000")
 
     pr_number = f"PR-{datetime.utcnow().strftime('%Y%m')}-{uuid.uuid4().hex[:6].upper()}"
@@ -335,6 +338,122 @@ def create_purchase_requisition(
         "status": pr.status,
         "workflow": str(wf_result),
     }
+
+
+def _requisition_dict(pr: PurchaseRequisition) -> dict:
+    return {
+        "id": str(pr.id),
+        "pr_number": pr.pr_number,
+        "title": pr.title,
+        "department": pr.department,
+        "status": pr.status,
+        "currency": pr.currency,
+        "total_estimated_amount": float(pr.total_estimated_amount or 0),
+        "custom_attributes": pr.custom_attributes or {},
+        "created_at": pr.created_at.isoformat() if pr.created_at else None,
+    }
+
+
+@router.get("/purchase-requisitions")
+def list_purchase_requisitions(
+    db: Session = Depends(get_db),
+    company_id: uuid.UUID = Depends(get_active_company_id),
+):
+    rows = db.scalars(
+        select(PurchaseRequisition)
+        .where(PurchaseRequisition.tenant_id == company_id)
+        .order_by(PurchaseRequisition.created_at.desc())
+    ).all()
+    return [_requisition_dict(r) for r in rows]
+
+
+# ==============================================================================
+# Supplier Contracts
+# ==============================================================================
+class SupplierContractPayload(BaseModel):
+    contract_number: Optional[str] = None
+    supplier_name: str
+    title: str
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    contract_value: Decimal = Decimal("0")
+    currency: str = "SAR"
+    payment_terms: Optional[str] = None
+    status: str = "DRAFT"
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
+
+
+def _contract_dict(c: SupplierContract) -> dict:
+    return {
+        "id": str(c.id),
+        "contract_number": c.contract_number,
+        "supplier_name": c.supplier_name,
+        "title": c.title,
+        "start_date": c.start_date.isoformat() if c.start_date else None,
+        "end_date": c.end_date.isoformat() if c.end_date else None,
+        "contract_value": float(c.contract_value or 0),
+        "currency": c.currency,
+        "payment_terms": c.payment_terms,
+        "status": c.status,
+        "custom_attributes": c.custom_attributes or {},
+    }
+
+
+@router.get("/supplier-contracts")
+def list_supplier_contracts(
+    db: Session = Depends(get_db),
+    company_id: uuid.UUID = Depends(get_active_company_id),
+):
+    rows = db.scalars(
+        select(SupplierContract).where(SupplierContract.tenant_id == company_id).order_by(SupplierContract.created_at.desc())
+    ).all()
+    return [_contract_dict(c) for c in rows]
+
+
+@router.post("/supplier-contracts", status_code=status.HTTP_201_CREATED)
+def create_supplier_contract(
+    payload: SupplierContractPayload,
+    db: Session = Depends(get_db),
+    company_id: uuid.UUID = Depends(get_active_company_id),
+):
+    number = payload.contract_number or f"SC-{datetime.utcnow():%Y%m}-{uuid.uuid4().hex[:6].upper()}"
+    if db.scalar(select(SupplierContract.id).where(SupplierContract.tenant_id == company_id, SupplierContract.contract_number == number)):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Contract number already exists.")
+    contract = SupplierContract(
+        tenant_id=company_id,
+        contract_number=number,
+        supplier_name=payload.supplier_name,
+        title=payload.title,
+        start_date=payload.start_date,
+        end_date=payload.end_date,
+        contract_value=payload.contract_value,
+        currency=payload.currency,
+        payment_terms=payload.payment_terms,
+        status=payload.status,
+        custom_attributes=sanitize_attributes(payload.custom_attributes),
+    )
+    db.add(contract)
+    db.commit()
+    return _contract_dict(contract)
+
+
+@router.put("/supplier-contracts/{contract_id}")
+def update_supplier_contract(
+    contract_id: uuid.UUID,
+    payload: SupplierContractPayload,
+    db: Session = Depends(get_db),
+    company_id: uuid.UUID = Depends(get_active_company_id),
+):
+    contract = db.scalar(
+        select(SupplierContract).where(SupplierContract.id == contract_id, SupplierContract.tenant_id == company_id)
+    )
+    if contract is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier contract not found.")
+    for field in ("supplier_name", "title", "start_date", "end_date", "contract_value", "currency", "payment_terms", "status"):
+        setattr(contract, field, getattr(payload, field))
+    contract.custom_attributes = {**(contract.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
+    db.commit()
+    return _contract_dict(contract)
 
 
 # ==============================================================================

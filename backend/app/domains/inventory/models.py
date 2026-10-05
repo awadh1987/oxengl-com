@@ -17,6 +17,7 @@ from sqlalchemy import (
     CheckConstraint,
     Index,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship, synonym
@@ -131,6 +132,7 @@ class InventoryMovement(Base):
     reason: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     reference: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="COMPLETED", nullable=False)  # 'DRAFT', 'COMPLETED', 'POSTED'
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     is_posted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     journal_entry_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("finance_journal_entries.id", ondelete="SET NULL"), nullable=True, index=True)
 

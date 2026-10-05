@@ -5140,6 +5140,7 @@ def process_stock_movement(
 			reference_id=payload.reference_id,
 			balance_after=new_balance,
 			notes=payload.notes or f"FIFO Receipt for lot {lot.lot_number}",
+			custom_attributes=sanitize_attributes(payload.custom_attributes),
 		)
 		database.add(movement)
 		database.flush()
@@ -5242,6 +5243,7 @@ def process_stock_movement(
 				reference_id=payload.reference_id,
 				balance_after=running_balance,
 				notes=payload.notes or f"FIFO consumption from lot {lot.lot_number}",
+				custom_attributes=sanitize_attributes(payload.custom_attributes),
 			)
 			database.add(movement)
 			database.flush()

@@ -34,13 +34,15 @@ import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
 import { BulkImportModal } from '../components/BulkImportModal';
 import { NewPurchaseOrderModal, PurchaseOrderRecord } from '../components/NewPurchaseOrderModal';
+import { NewRequisitionModal } from '../components/NewRequisitionModal';
+import { SupplierContractModal } from '../components/SupplierContractModal';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { erpApi, ApiProcurementBill, ApiProcurementTender, ApiProcurementBid } from '../services/api';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 
 export const ProcurementView: React.FC = () => {
-  const { language, themeMode } = useApp();
+  const { language, themeMode, currentCompany } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
 
@@ -48,6 +50,15 @@ export const ProcurementView: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const [isNewPoOpen, setIsNewPoOpen] = useState(false);
+  const [isNewPrOpen, setIsNewPrOpen] = useState(false);
+  const [contractModal, setContractModal] = useState<{ open: boolean; contract?: any }>({ open: false });
+  const [requisitions, setRequisitions] = useState<any[]>([]);
+  const [contracts, setContracts] = useState<any[]>([]);
+
+  useEffect(() => {
+    erpApi.getPurchaseRequisitions(currentCompany?.id).then((r) => setRequisitions(Array.isArray(r) ? r : [])).catch(() => setRequisitions([]));
+    erpApi.getSupplierContracts(currentCompany?.id).then((r) => setContracts(Array.isArray(r) ? r : [])).catch(() => setContracts([]));
+  }, [currentCompany?.id]);
 
   // Tenders & eSourcing State (Phase 10)
   const [tenders, setTenders] = useState<ApiProcurementTender[]>([]);
@@ -461,6 +472,20 @@ export const ProcurementView: React.FC = () => {
             <span>{isAr ? 'استيراد بيانات / Bulk Import' : 'Bulk Import'}</span>
           </button>
 
+          <button
+            type="button"
+            onClick={() => setIsNewPrOpen(true)}
+            className="rounded-xl border border-orange-500/40 px-4 py-2.5 text-xs font-black text-orange-500 hover:bg-orange-500/10 transition-colors"
+          >
+            {isAr ? `طلب شراء (${requisitions.length})` : `New Requisition (${requisitions.length})`}
+          </button>
+          <button
+            type="button"
+            onClick={() => setContractModal({ open: true })}
+            className="rounded-xl border border-orange-500/40 px-4 py-2.5 text-xs font-black text-orange-500 hover:bg-orange-500/10 transition-colors"
+          >
+            {isAr ? `عقد مورد (${contracts.length})` : `Supplier Contract (${contracts.length})`}
+          </button>
           <button
             id="new-po-btn"
             type="button"
@@ -1388,6 +1413,23 @@ export const ProcurementView: React.FC = () => {
           setPurchaseOrders((prev) => [newPo, ...prev]);
         }}
       />
+      {isNewPrOpen && (
+        <NewRequisitionModal
+          isAr={isAr}
+          companyId={currentCompany?.id}
+          onClose={() => setIsNewPrOpen(false)}
+          onCreated={(pr) => setRequisitions((prev) => [pr, ...prev])}
+        />
+      )}
+      {contractModal.open && (
+        <SupplierContractModal
+          isAr={isAr}
+          companyId={currentCompany?.id}
+          contract={contractModal.contract}
+          onClose={() => setContractModal({ open: false })}
+          onSaved={(c) => setContracts((prev) => [c, ...prev.filter((x) => x.id !== c.id)])}
+        />
+      )}
     </div>
   );
 };

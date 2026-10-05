@@ -2090,6 +2090,7 @@ class StockMovementRead(ORMReadModel):
     performed_by_id: UUID | None = None
     balance_after: Decimal
     notes: str | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     updated_at: datetime
 

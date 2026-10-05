@@ -136,6 +136,7 @@ class InventoryMovementCreate(BaseModel):
     total_cost: Optional[Decimal] = None
     reason: Optional[str] = None
     reference: Optional[str] = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class InventoryMovementResponse(BaseModel):
@@ -158,6 +159,7 @@ class InventoryMovementResponse(BaseModel):
     status: str
     is_posted: bool
     journal_entry_id: Optional[uuid.UUID] = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
 
@@ -177,6 +179,14 @@ def _resolve_company_id(db: Session, comp_id: Optional[uuid.UUID] = None) -> uui
         return comp_id
     comp = db.query(ResCompany).first()
     return comp.id if comp else uuid.UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
+
+
+def _sanitize_custom(value: Any) -> dict[str, Any]:
+    try:
+        from backend.app.services.custom_fields import sanitize_attributes
+    except ImportError:
+        from app.services.custom_fields import sanitize_attributes
+    return sanitize_attributes(value)
 
 
 def _format_movement_response(movement: InventoryMovement, db: Session) -> InventoryMovementResponse:
@@ -214,6 +224,7 @@ def _format_movement_response(movement: InventoryMovement, db: Session) -> Inven
         status=movement.status,
         is_posted=movement.is_posted,
         journal_entry_id=movement.journal_entry_id,
+        custom_attributes=movement.custom_attributes or {},
         created_at=movement.created_at,
     )
 
@@ -420,6 +431,7 @@ def create_inventory_movement(
         reference=payload.reference,
         status="COMPLETED",
         is_posted=False,
+        custom_attributes=_sanitize_custom(payload.custom_attributes),
     )
     db.add(movement)
     db.commit()

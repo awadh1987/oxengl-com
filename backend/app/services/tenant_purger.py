@@ -113,6 +113,7 @@ def purge_single_tenant_data(
         ("procurement_bids", "DELETE FROM procurement_bids WHERE tender_id IN (SELECT id FROM procurement_tenders WHERE company_id = :cid)"),
         ("procurement_tenders", "DELETE FROM procurement_tenders WHERE company_id = :cid"),
         ("purchasing_organizations", "DELETE FROM purchasing_organizations WHERE company_id = :cid"),
+        ("supplier_contracts", "DELETE FROM supplier_contracts WHERE tenant_id = :cid"),
         ("purchase_requisitions", "DELETE FROM purchase_requisitions WHERE tenant_id = :cid"),
         ("vendor_bills", "DELETE FROM vendor_bills WHERE tenant_id = :cid OR company_id = :cid"),
         ("vendors", "DELETE FROM vendors WHERE tenant_id = :cid"),
@@ -165,6 +166,7 @@ def purge_single_tenant_data(
         # HR & Personnel
         ("hrms_attendance_logs", "DELETE FROM hrms_attendance_logs WHERE tenant_id = :cid"),
         ("attendance_logs", "DELETE FROM attendance_logs WHERE tenant_id = :cid"),
+        ("payroll_allowances", "DELETE FROM payroll_allowances WHERE tenant_id = :cid"),
         ("payroll_runs", "DELETE FROM payroll_runs WHERE tenant_id = :cid"),
         ("employees", "DELETE FROM employees WHERE tenant_id = :cid OR user_id IN (SELECT id FROM res_users WHERE company_id = :cid)"),
 

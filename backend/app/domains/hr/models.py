@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Optional
 from sqlalchemy import (
     String, ForeignKey, DateTime, Boolean, Numeric, Date, Integer,
-    LargeBinary, CheckConstraint, Index, func, text,
+    LargeBinary, CheckConstraint, Index, Text, func, text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -182,6 +182,21 @@ class AttendanceLog(Base):
     check_in: Mapped[dt_class] = mapped_column(DateTime(timezone=True), nullable=False)
     check_out: Mapped[Optional[dt_class]] = mapped_column(DateTime(timezone=True), nullable=True)
     device_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+
+class PayrollAllowance(Base):
+    """Per-employee recurring allowance line (housing, transport, custom)."""
+    __tablename__ = "payroll_allowances"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True, nullable=False)
+    employee_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("employees.id", ondelete="CASCADE"), nullable=False, index=True)
+    allowance_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
+    is_taxable: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
+    created_at: Mapped[dt_class] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)
 
 
 class PayrollRun(Base):

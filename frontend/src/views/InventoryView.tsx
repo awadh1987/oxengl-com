@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { DynamicFieldRenderer } from '../components/DynamicFieldRenderer';
 import { StockItemModal } from '../components/StockItemModal';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { useApp } from '../context/AppContext';
@@ -67,6 +68,7 @@ export const InventoryView: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [isStockItemModalOpen, setIsStockItemModalOpen] = useState(false);
+  const [adjustmentAttributes, setAdjustmentAttributes] = useState<Record<string, any>>({});
   const [formData, setFormData] = useState({
     warehouse_id: '',
     product_id: '',
@@ -222,9 +224,11 @@ export const InventoryView: React.FC = () => {
         total_cost: totalCost,
         reason: formData.reason,
         reference: formData.reference || `ADJ-${Date.now().toString().slice(-4)}`,
+        custom_attributes: adjustmentAttributes,
       });
 
       setMovements((prev) => [created, ...prev]);
+      setAdjustmentAttributes({});
       setIsModalOpen(false);
       setNotification({
         type: 'success',
@@ -1166,6 +1170,8 @@ export const InventoryView: React.FC = () => {
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
+
+              <DynamicFieldRenderer entity="stock_adjustment" values={adjustmentAttributes} onChange={setAdjustmentAttributes} isAr={isAr} />
 
               {/* Footer Actions */}
               <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">

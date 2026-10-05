@@ -564,6 +564,122 @@ def get_employee(
     return emp
 
 
+class EmployeeProfileUpdate(BaseModel):
+    department: Optional[str] = None
+    job_title: Optional[str] = None
+    base_salary: Optional[Decimal] = None
+    is_active: Optional[bool] = None
+    custom_attributes: dict = Field(default_factory=dict)
+
+
+@router.put(
+    "/employees/{employee_id}",
+    response_model=EmployeeResponse,
+    dependencies=[Security(require_write_access), Security(require_admin_or_accountant)],
+)
+def update_employee_profile(
+    employee_id: uuid.UUID,
+    payload: EmployeeProfileUpdate,
+    request: Request,
+    context: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    """Update profile fields and merge custom_attributes, strictly within the caller's tenant."""
+    from backend.app.services.custom_fields import sanitize_attributes
+
+    emp = _get_scoped_employee(db, employee_id, context.tenant_id)
+    updates = payload.model_dump(exclude_unset=True, exclude={"custom_attributes"})
+    columns = {c.name for c in Employee.__table__.columns}
+    for key, value in updates.items():
+        if key in columns and value is not None:
+            setattr(emp, key, value)
+    if payload.custom_attributes:
+        emp.custom_attributes = {**(emp.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
+    append_hr_audit(
+        db, request, action="EMPLOYEE_PROFILE_UPDATE", outcome="SUCCESS",
+        tenant_id=context.tenant_id, actor_id=getattr(context.user, "id", None),
+        actor_identifier=getattr(context.user, "email", None),
+    )
+    db.commit()
+    db.refresh(emp)
+    return emp
+
+
+class PayrollAllowancePayload(BaseModel):
+    allowance_type: str = Field(min_length=1, max_length=64)
+    amount: Decimal = Field(ge=Decimal("0"))
+    is_taxable: bool = False
+    notes: Optional[str] = None
+    custom_attributes: dict = Field(default_factory=dict)
+
+
+def _allowance_dict(a) -> dict:
+    return {
+        "id": str(a.id),
+        "employee_id": str(a.employee_id),
+        "allowance_type": a.allowance_type,
+        "amount": float(a.amount or 0),
+        "is_taxable": a.is_taxable,
+        "notes": a.notes,
+        "custom_attributes": a.custom_attributes or {},
+    }
+
+
+@router.get(
+    "/employees/{employee_id}/allowances",
+    dependencies=[Security(require_admin_or_accountant)],
+)
+def list_employee_allowances(
+    employee_id: uuid.UUID,
+    context: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    from backend.app.domains.hr.models import PayrollAllowance
+
+    _get_scoped_employee(db, employee_id, context.tenant_id)
+    rows = db.scalars(
+        select(PayrollAllowance).where(
+            PayrollAllowance.employee_id == employee_id, PayrollAllowance.tenant_id == context.tenant_id
+        )
+    ).all()
+    return [_allowance_dict(a) for a in rows]
+
+
+@router.post(
+    "/employees/{employee_id}/allowances",
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Security(require_write_access), Security(require_admin_or_accountant)],
+)
+def create_employee_allowance(
+    employee_id: uuid.UUID,
+    payload: PayrollAllowancePayload,
+    request: Request,
+    context: TenantContext = Depends(get_tenant_context),
+    db: Session = Depends(get_db),
+):
+    from backend.app.domains.hr.models import PayrollAllowance
+    from backend.app.services.custom_fields import sanitize_attributes
+
+    _get_scoped_employee(db, employee_id, context.tenant_id)
+    allowance = PayrollAllowance(
+        tenant_id=context.tenant_id,
+        employee_id=employee_id,
+        allowance_type=payload.allowance_type,
+        amount=payload.amount,
+        is_taxable=payload.is_taxable,
+        notes=payload.notes,
+        custom_attributes=sanitize_attributes(payload.custom_attributes),
+    )
+    db.add(allowance)
+    append_hr_audit(
+        db, request, action="PAYROLL_ALLOWANCE_CREATE", outcome="SUCCESS",
+        tenant_id=context.tenant_id, actor_id=getattr(context.user, "id", None),
+        actor_identifier=getattr(context.user, "email", None),
+    )
+    db.commit()
+    return _allowance_dict(allowance)
+
+
 # ==============================================================================
 # Payroll Runs & GL Integration Endpoints
 # ==============================================================================

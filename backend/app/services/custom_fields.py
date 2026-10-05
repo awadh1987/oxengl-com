@@ -40,6 +40,13 @@ ENTITY_ALIASES: Dict[str, str] = {
     "employee": "employee",
     "hr_profile": "employee",
     "payroll": "employee",
+    "supplier_contract": "supplier_contract",
+    "contract": "supplier_contract",
+    "stock_adjustment": "stock_adjustment",
+    "inventory_movement": "stock_adjustment",
+    "stock_movement": "stock_adjustment",
+    "payroll_allowance": "payroll_allowance",
+    "allowance": "payroll_allowance",
     "payment_voucher": "voucher",
     "receipt_voucher": "voucher",
 }

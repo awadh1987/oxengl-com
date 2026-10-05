@@ -19,6 +19,7 @@ import {
   DollarSign,
   ArrowRight,
 } from 'lucide-react';
+import { EmployeeProfileModal } from '../components/EmployeeProfileModal';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { BulkImportModal } from '../components/BulkImportModal';
@@ -37,6 +38,7 @@ export const HRMSView: React.FC = () => {
   const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
 
   // Live Backend Data States
+  const [profileEmployee, setProfileEmployee] = useState<EmployeeRecord | null>(null);
   const [employees, setEmployees] = useState<EmployeeRecord[]>([]);
 
   const [payrollRuns, setPayrollRuns] = useState<ApiPayrollRun[]>([]);
@@ -441,7 +443,8 @@ export const HRMSView: React.FC = () => {
                   filteredEmployees.map((emp) => (
                     <tr
                       key={emp.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      onClick={() => setProfileEmployee(emp)}
+                      className="cursor-pointer hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
                     >
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
                         <span dir="ltr" className="inline-block unicode-bidi-isolate">{emp.employeeNumber}</span>
@@ -701,6 +704,15 @@ export const HRMSView: React.FC = () => {
       />
 
       {/* Add Employee Modal with Direct Backend Persistence & Optimistic Update */}
+      {profileEmployee && (
+        <EmployeeProfileModal
+          isAr={isAr}
+          companyId={currentCompany?.id}
+          employee={profileEmployee}
+          onClose={() => setProfileEmployee(null)}
+          onSaved={loadEmployees}
+        />
+      )}
       <AddEmployeeModal
         isOpen={isAddEmployeeOpen}
         onClose={() => setIsAddEmployeeOpen(false)}
