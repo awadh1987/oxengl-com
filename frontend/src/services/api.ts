@@ -250,22 +250,17 @@ export interface SaaSInvoiceDto {
 }
 
 export interface SuperAdminBillingSummaryDto {
-  mrr_sar: number;
-  arr_sar: number;
-  total_active_subscriptions: number;
-  subscribers_by_tier: {
+  active_subscribers_count: number;
+  tier_distribution: {
     FREE: number;
     PROFESSIONAL: number;
     ENTERPRISE: number;
   };
-  pending_wire_invoices_count: number;
-  pending_wire_volume_sar: number;
-  bank_details: {
-    bank_name: string;
-    account_name: string;
-    iban: string;
-    swift: string;
-  };
+  estimated_mrr_sar: number;
+  estimated_arr_sar: number;
+  pending_invoices_count: number;
+  pending_amount_sar: number;
+  total_collected_sar: number;
 }
 
 export interface EnterpriseQuoteResponse {
@@ -1777,6 +1772,7 @@ export const erpApi = {
       Array<{
         id: string;
         email: string;
+        phone?: string | null;
         full_name: string;
         role: string;
         iam_role?: string | null;
@@ -1797,11 +1793,13 @@ export const erpApi = {
     }>('/api/v1/users/roles'),
 
   /** External / contractor identities only; internal staff are provisioned by the HR module. */
-  inviteUser: (payload: { email: string; role: string; full_name?: string }) =>
+  inviteUser: (payload: { email?: string; phone?: string; channel: 'email' | 'sms'; role: string; full_name?: string }) =>
     request<{
       status: string;
       user_id: string;
-      email: string;
+      email: string | null;
+      phone: string | null;
+      channel: 'email' | 'sms';
       full_name: string;
       role: string;
       reset_dispatched: boolean;

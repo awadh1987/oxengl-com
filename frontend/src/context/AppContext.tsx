@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useRef } from 'react';
 import i18n, { syncHtmlDirectionAndLanguage, LOCALE_STORAGE_KEY } from '../i18n';
 import {
   db,
@@ -322,16 +322,24 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const recentToastKeys = useRef(new Map<string, { id: string; createdAt: number; visibleUntil: number }>());
 
   const dismissToast = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   const showToast = (message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const now = Date.now();
+    const key = `${type}\u0000${message}`;
+    const previous = recentToastKeys.current.get(key);
+    if (previous && (now - previous.createdAt < 3000 || previous.visibleUntil > now)) return;
+
+    const id = `toast-${now}-${Math.random().toString(36).slice(2, 7)}`;
+    recentToastKeys.current.set(key, { id, createdAt: now, visibleUntil: now + 4000 });
     setToasts((prev) => [...prev.slice(-4), { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
+      if (recentToastKeys.current.get(key)?.id === id) recentToastKeys.current.delete(key);
     }, 4000);
   };
 
@@ -2557,19 +2565,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const apiUsers = await erpApi.getUsers();
       if (Array.isArray(apiUsers)) {
-        const mapped: User[] = apiUsers.map((u) => ({
-          id: u.id,
-          username: u.email.split('@')[0],
-          fullName: u.full_name,
-          fullNameAr: u.full_name,
-          email: u.email,
-          phone: '',
-          role: (u.role as UserRole) || 'Guest',
-          iamRole: u.iam_role ?? null,
-          mustChangePassword: !!u.must_change_password,
-          status: u.is_active ? 'Active' : 'Suspended',
-          created_at: u.created_at,
-        }));
+        const mapped: User[] = apiUsers.map((u) => {
+          const contact = u.email || u.phone || '';
+          return {
+            id: u.id,
+            username: contact.includes('@') ? contact.split('@')[0] : contact,
+            fullName: u.full_name,
+            fullNameAr: u.full_name,
+            email: u.email || '',
+            phone: u.phone || '',
+            role: (u.role as UserRole) || 'Guest',
+            iamRole: u.iam_role ?? null,
+            mustChangePassword: !!u.must_change_password,
+            status: u.is_active ? 'Active' : 'Suspended',
+            created_at: u.created_at,
+          };
+        });
         setUsers(Array.from(new Map(mapped.map((u) => [u.id, u])).values()));
       }
     } catch (err) {

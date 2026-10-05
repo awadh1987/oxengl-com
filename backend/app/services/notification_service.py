@@ -11,7 +11,7 @@ import logging
 import os
 import secrets
 from datetime import timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional, Protocol
 
 try:
     from backend.app.core.redis import redis_client
@@ -19,6 +19,63 @@ except ImportError:
     from app.core.redis import redis_client
 
 logger = logging.getLogger("oxengl.notification_service")
+
+
+class NotificationDeliveryError(RuntimeError):
+    """A credential notification could not be delivered safely."""
+
+
+class TemporaryCredentialDeliveryProvider(Protocol):
+    """Configured channel adapter; implementations must never log delivered credentials."""
+
+    async def send_credentials(
+        self,
+        destination: str,
+        temporary_password: str,
+        *,
+        full_name: str,
+        workspace_name: str,
+    ) -> bool: ...
+
+
+_temporary_credential_delivery_providers: dict[str, TemporaryCredentialDeliveryProvider] = {}
+
+
+def register_temporary_credential_provider(
+    channel: Literal["email", "sms"], provider: TemporaryCredentialDeliveryProvider
+) -> None:
+    """Register the deployment's provider-specific adapter for temporary credentials."""
+    _temporary_credential_delivery_providers[channel] = provider
+
+
+async def dispatch_temporary_credentials(
+    channel: Literal["email", "sms"],
+    destination: str,
+    temporary_password: str,
+    *,
+    full_name: str,
+    workspace_name: str,
+) -> None:
+    """Deliver a temporary password; fail explicitly when no channel adapter is configured."""
+    provider = _temporary_credential_delivery_providers.get(channel)
+    if provider is None:
+        raise NotificationDeliveryError(
+            f"No {channel.upper()} credential delivery provider is configured."
+        )
+    try:
+        delivered = await provider.send_credentials(
+            destination,
+            temporary_password,
+            full_name=full_name,
+            workspace_name=workspace_name,
+        )
+        if delivered is not True:
+            raise RuntimeError("Provider did not confirm delivery.")
+    except Exception:
+        # Provider exception text may contain message contents or credentials.
+        raise NotificationDeliveryError(
+            f"{channel.upper()} credential delivery failed."
+        ) from None
 
 
 class VerificationService:

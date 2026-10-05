@@ -537,6 +537,7 @@ app.include_router(platform_billing_router)
 from backend.app.api.v1.billing import (
     tenant_billing_router,
     superadmin_billing_router,
+    billing_summary_router,
     stripe_webhook_router,
     pricing_router,
 )
@@ -545,6 +546,7 @@ app.include_router(pricing_router, prefix="/api/pricing")
 app.include_router(tenant_billing_router, prefix="/api/v1/tenant/billing")
 app.include_router(tenant_billing_router, prefix="/api/tenant/billing")
 app.include_router(superadmin_billing_router)
+app.include_router(billing_summary_router)
 app.include_router(stripe_webhook_router, prefix="/api/v1/platform/webhooks")
 app.include_router(stripe_webhook_router, prefix="/api/platform/webhooks")
 from backend.api.routes.finance_payments import router as finance_payments_router

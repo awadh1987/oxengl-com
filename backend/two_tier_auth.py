@@ -755,7 +755,14 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             if not found_user_row:
                 try:
                     with tenant_db.begin_nested():
-                        res = tenant_db.execute(text('SELECT id, email, password_hash, full_name as name, role FROM res_users WHERE LOWER(email) = :val LIMIT 1'), {"val": normalized_val}).mappings().first()
+                        res = tenant_db.execute(
+                            text(
+                                "SELECT id, email, phone, password_hash, full_name as name, role "
+                                "FROM res_users WHERE company_id = :tenant_id "
+                                "AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
+                            ),
+                            {"val": normalized_val, "tenant_id": tenant.id},
+                        ).mappings().first()
                         if res:
                             found_user_row = res
                 except Exception:
@@ -769,7 +776,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                 user = TenantUser(
                     id=found_user_row["id"] if isinstance(found_user_row["id"], uuid.UUID) else uuid.UUID(str(found_user_row["id"])),
                     email=found_user_row["email"],
-                    mobile_number=f"+9665{secrets.randbelow(90000000) + 10000000}",
+                    mobile_number=found_user_row.get("phone") or f"+9665{secrets.randbelow(90000000) + 10000000}",
                     first_name=first_name,
                     last_name=last_name,
                     password_hash=found_user_row["password_hash"],
@@ -809,7 +816,13 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             if not matched_fallback:
                 try:
                     with tenant_db.begin_nested():
-                        res = tenant_db.execute(text('SELECT password_hash FROM res_users WHERE LOWER(email) = :val LIMIT 1'), {"val": normalized_val}).mappings().first()
+                        res = tenant_db.execute(
+                        text(
+                            "SELECT password_hash FROM res_users WHERE company_id = :tenant_id "
+                            "AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
+                        ),
+                        {"val": normalized_val, "tenant_id": tenant.id},
+                    ).mappings().first()
                         if res and verify_password(payload.password, res["password_hash"]):
                             matched_fallback = True
                 except Exception:

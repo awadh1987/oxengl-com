@@ -72,14 +72,17 @@ export const MasterDataView: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
+  const [inviteChannel, setInviteChannel] = useState<'email' | 'sms'>('email');
   const [inviteRole, setInviteRole] = useState<string>('Guest');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [inviteResult, setInviteResult] = useState<{
     email: string;
+    phone: string;
+    channel: 'email' | 'sms';
     role: string;
-    resetDispatched: boolean;
   } | null>(null);
   const [iamConfirm, setIamConfirm] = useState<{ user: User; kind: IamActionKind } | null>(null);
   const [iamBusyId, setIamBusyId] = useState<string | null>(null);
@@ -100,6 +103,7 @@ export const MasterDataView: React.FC = () => {
           user.fullNameAr,
           user.username,
           user.email,
+          user.phone,
         ].some((value) => String(value || '').toLowerCase().includes(query))) return false;
         return quickFilter === 'all' || (user.iamRole || user.role) === quickFilter;
       });
@@ -122,13 +126,21 @@ export const MasterDataView: React.FC = () => {
     setInviteError(null);
     try {
       const result = await erpApi.inviteUser({
-        email: inviteEmail.trim(),
+        channel: inviteChannel,
+        email: inviteChannel === 'email' ? inviteEmail.trim() : undefined,
+        phone: inviteChannel === 'sms' ? invitePhone.trim() : undefined,
         role: inviteRole,
         full_name: inviteFullName.trim() || undefined,
       });
-      setInviteResult({ email: result.email, role: result.role, resetDispatched: result.reset_dispatched });
+      setInviteResult({
+        email: result.email || '',
+        phone: result.phone || '',
+        channel: result.channel,
+        role: result.role,
+      });
       await refreshUsers();
       setInviteEmail('');
+      setInvitePhone('');
       setInviteFullName('');
     } catch (error) {
       console.error('Invite user failed:', error);
@@ -141,6 +153,7 @@ export const MasterDataView: React.FC = () => {
   const runIamAction = async () => {
     if (!iamConfirm) return;
     const { user, kind } = iamConfirm;
+    const contact = user.phone || user.email;
     setIamBusyId(user.id);
     setIamRowErrors((previous) => {
       const next = { ...previous };
@@ -152,15 +165,15 @@ export const MasterDataView: React.FC = () => {
         const result = await erpApi.forcePasswordReset(user.id);
         setIamNotice(
           result.reset_dispatched
-            ? isAr ? `تم إبطال بيانات الدخول وإرسال رمز إعادة التعيين إلى ${user.email}.` : `Credentials invalidated and a reset code was sent to ${user.email}.`
-            : isAr ? `تم إبطال بيانات الدخول لـ ${user.email}. على المستخدم إكمال إعادة تعيين كلمة المرور.` : `Credentials invalidated for ${user.email}. The user must complete the password reset flow.`
+            ? isAr ? `تم إبطال بيانات الدخول وإرسال بيانات مؤقتة إلى ${contact}.` : `Credentials invalidated and a reset credential was sent to ${contact}.`
+            : isAr ? `تم إبطال بيانات الدخول لـ ${contact}. على المستخدم إكمال إعادة تعيين كلمة المرور.` : `Credentials invalidated for ${contact}. The user must complete the password reset flow.`
         );
       } else if (kind === 'suspend') {
         await erpApi.suspendUser(user.id);
-        setIamNotice(isAr ? `تم تعليق حساب ${user.email} وإنهاء جلساته.` : `Account ${user.email} suspended and sessions revoked.`);
+        setIamNotice(isAr ? `تم تعليق حساب ${contact} وإنهاء جلساته.` : `Account ${contact} suspended and sessions revoked.`);
       } else {
         await erpApi.reactivateUser(user.id);
-        setIamNotice(isAr ? `تمت إعادة تفعيل حساب ${user.email}.` : `Account ${user.email} reactivated.`);
+        setIamNotice(isAr ? `تمت إعادة تفعيل حساب ${contact}.` : `Account ${contact} reactivated.`);
       }
       setIamConfirm(null);
       await refreshUsers();
@@ -196,6 +209,7 @@ export const MasterDataView: React.FC = () => {
             setInviteResult(null);
             setInviteError(null);
             setInviteRole('Guest');
+            setInviteChannel('email');
             setIsInviteModalOpen(true);
           }}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow-xs transition-colors hover:bg-orange-700"
@@ -268,7 +282,7 @@ export const MasterDataView: React.FC = () => {
             <thead className="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
               <tr>
                 <th className="text-start">{isAr ? 'الاسم الكامل' : 'Full Name'}</th>
-                <th className="text-start">{isAr ? 'اسم المستخدم / البريد' : 'Username / Email'}</th>
+                <th className="text-start">{isAr ? 'اسم المستخدم / البريد / الهاتف' : 'Username / Email / Phone'}</th>
                 <th className="text-start">{isAr ? 'الدور الوظيفي' : 'Role'}</th>
                 <th className="text-start">{isAr ? 'الصلاحيات المتاحة' : 'Permissions'}</th>
                 <th className="text-center">{isAr ? 'إجراءات' : 'Actions'}</th>
@@ -288,7 +302,7 @@ export const MasterDataView: React.FC = () => {
                   <tr key={user.id}>
                     <td className="font-bold text-slate-900 dark:text-slate-100">{isAr ? user.fullNameAr : user.fullName}</td>
                     <td className="text-slate-600 dark:text-slate-400">
-                      {user.email}<span className="ms-1 text-[10px] text-slate-400">(@{user.username})</span>
+                      {user.phone || user.email}<span className="ms-1 text-[10px] text-slate-400">(@{user.username})</span>
                     </td>
                     <td>
                       <span className={`rounded px-1.5 py-1 text-[10px] font-bold ${iamRoleBadgeClass(role)}`} title={role}>{iamRoleLabel(role, isAr)}</span>
@@ -353,8 +367,8 @@ export const MasterDataView: React.FC = () => {
                   <div className="flex items-center gap-2 text-xs font-black"><CheckCircle className="h-4 w-4 text-emerald-600" /><span>{isAr ? 'تم إنشاء حساب المستخدم بنجاح!' : 'User created successfully!'}</span></div>
                   <p className="mt-2 text-xs leading-relaxed">
                     {isAr
-                      ? `تم ربط المستخدم (${inviteResult.email}) بدور (${iamRoleLabel(inviteResult.role, true)}). ${inviteResult.resetDispatched ? 'تم إرسال رمز لمرة واحدة لتعيين كلمة المرور إلى صاحب الحساب.' : 'استخدم «فرض إعادة تعيين كلمة المرور» لإرسال رمز تعيين كلمة المرور.'}`
-                      : `User (${inviteResult.email}) created with role (${iamRoleLabel(inviteResult.role, false)}). ${inviteResult.resetDispatched ? 'A one-time password-setup code was sent to the invitee.' : 'Use "Force Password Reset" to send a password-setup code.'}`}
+                      ? `تم ربط المستخدم (${inviteResult.email || inviteResult.phone}) بدور (${iamRoleLabel(inviteResult.role, true)}). أُرسلت بيانات الدخول المؤقتة عبر ${inviteResult.channel.toUpperCase()} ويجب تغيير كلمة المرور عند أول تسجيل دخول.`
+                      : `User (${inviteResult.email || inviteResult.phone}) created with role (${iamRoleLabel(inviteResult.role, false)}). Temporary credentials were sent by ${inviteResult.channel.toUpperCase()}; a password change is required on first login.`}
                   </p>
                 </div>
                 <div className="flex justify-end"><button type="button" onClick={() => { setIsInviteModalOpen(false); setInviteResult(null); }} className="rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white hover:bg-slate-800">{isAr ? 'إغلاق ومتابعة' : 'Close'}</button></div>
@@ -366,9 +380,24 @@ export const MasterDataView: React.FC = () => {
                   <p className="text-xs font-black leading-relaxed">{isAr ? HR_REGISTRATION_WARNING_AR : HR_REGISTRATION_WARNING_EN}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'البريد الإلكتروني للمدعو *' : 'Invitee Email Address *'}</label>
-                  <input type="email" required placeholder="name@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                  <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'قناة إرسال بيانات الدخول *' : 'Credential Delivery Channel *'}</label>
+                  <select value={inviteChannel} onChange={(event) => setInviteChannel(event.target.value as 'email' | 'sms')} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                  </select>
                 </div>
+                {inviteChannel === 'email' ? (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'البريد الإلكتروني للمدعو *' : 'Invitee Email Address *'}</label>
+                    <input type="email" required placeholder="name@example.com" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                  </div>
+                ) : (
+                  <div>
+                    <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'رقم الهاتف المحمول *' : 'Mobile Phone Number *'}</label>
+                    <input type="tel" inputMode="tel" required placeholder="+966 5X XXX XXXX (or 05X XXX XXXX)" value={invitePhone} onChange={(event) => setInvitePhone(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />
+                    <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">{isAr ? 'استخدم تنسيق E.164؛ يقبل رقم السعودية المحلي 05 ويحوّله تلقائياً إلى +966.' : 'Use E.164 format; Saudi local 05 numbers are accepted and normalized to +966.'}</p>
+                  </div>
+                )}
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'الاسم الكامل (اختياري)' : 'Full Name (Optional)'}</label>
                   <input type="text" placeholder={isAr ? 'مثال: أحمد محمد' : 'e.g. Ahmed Mohamed'} value={inviteFullName} onChange={(event) => setInviteFullName(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-semibold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100" />

@@ -223,7 +223,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
-              {Number(summary?.mrr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+              {Number(summary?.estimated_mrr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
               <span className="text-xs font-normal text-slate-400">SAR</span>
             </div>
             <p className="mt-1 text-[11px] text-emerald-400 font-bold flex items-center gap-1">
@@ -242,7 +242,7 @@ export const SuperAdminFinancialHubView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
-              {Number(summary?.arr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
+              {Number(summary?.estimated_arr_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}{' '}
               <span className="text-xs font-normal text-slate-400">SAR</span>
             </div>
             <p className="mt-1 text-[11px] text-slate-400">
@@ -261,14 +261,14 @@ export const SuperAdminFinancialHubView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="font-mono text-2xl font-black text-white ltr-isolate-num">
-              {summary?.total_active_subscriptions ?? 0}
+              {summary?.active_subscribers_count ?? 0}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-slate-400">
-              <span className="whitespace-nowrap">Free: {summary?.subscribers_by_tier?.FREE ?? 0}</span>
+              <span className="whitespace-nowrap">Free: {summary?.tier_distribution?.FREE ?? 0}</span>
               <span>•</span>
-              <span className="text-orange-400 font-bold whitespace-nowrap">Pro: {summary?.subscribers_by_tier?.PROFESSIONAL ?? 0}</span>
+              <span className="text-orange-400 font-bold whitespace-nowrap">Pro: {summary?.tier_distribution?.PROFESSIONAL ?? 0}</span>
               <span>•</span>
-              <span className="text-amber-400 font-bold whitespace-nowrap">Ent: {summary?.subscribers_by_tier?.ENTERPRISE ?? 0}</span>
+              <span className="text-amber-400 font-bold whitespace-nowrap">Ent: {summary?.tier_distribution?.ENTERPRISE ?? 0}</span>
             </div>
           </div>
         </SpotlightCard>
@@ -283,11 +283,11 @@ export const SuperAdminFinancialHubView: React.FC = () => {
           </div>
           <div className="mt-3">
             <div className="font-mono text-2xl font-black text-amber-300 ltr-isolate-num">
-              {summary?.pending_wire_invoices_count ?? pendingWireInvoices.length}{' '}
+              {summary?.pending_invoices_count ?? pendingWireInvoices.length}{' '}
               <span className="text-xs font-normal text-slate-400">Invoices</span>
             </div>
             <p className="mt-1 font-mono text-[11px] text-amber-400 ltr-isolate">
-              Vol: {Number(summary?.pending_wire_volume_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR
+              Vol: {Number(summary?.pending_amount_sar || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })} SAR
             </p>
           </div>
         </SpotlightCard>

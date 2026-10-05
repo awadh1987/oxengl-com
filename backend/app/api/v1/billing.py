@@ -48,6 +48,7 @@ from backend.app.services.billing_service import (
     SAUDI_CORPORATE_BANK_DETAILS,
 )
 from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized, require_super_admin
+from backend.app.domains.hr.audit import append_audit_from_context, build_audit_context
 
 logger = logging.getLogger("oxengl.billing.api")
 
@@ -62,6 +63,11 @@ superadmin_billing_router = APIRouter(
     prefix="/api/v1/superadmin/billing",
     tags=["Super Admin Billing"],
     dependencies=[Depends(require_super_admin)],
+)
+# The summary has a separate authorization boundary; all other routes above remain Super Admin-only.
+billing_summary_router = APIRouter(
+    prefix="/api/v1/superadmin/billing",
+    tags=["Billing Analytics"],
 )
 # Public, unauthenticated pricing catalog (landing page, tenant billing, Super Admin console).
 pricing_router = APIRouter(tags=["Pricing Catalog"])
@@ -485,42 +491,97 @@ def update_superadmin_subscription_plan(
     return {**plan.to_dict(), "subscriber_count": _plan_subscriber_counts(db).get(plan.id, 0)}
 
 
-@superadmin_billing_router.get("/summary")
+def _is_platform_super_admin_for_summary(user: Any, request: Request) -> bool:
+    role = str(getattr(user, "role", "") or "").strip().upper().replace(" ", "_").replace("-", "_")
+    iam_role = str(getattr(user, "iam_role", "") or "").strip().upper().replace(" ", "_").replace("-", "_")
+    acl = str(getattr(user, "access_control_list", "") or "").upper()
+    role_ids = str(getattr(user, "role_ids", "") or "").upper()
+    explicit_platform_grant = (
+        bool(getattr(user, "is_superuser", False))
+        or role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}
+        or "SUPER_ADMIN" in acl
+        or "SUPER_ADMIN" in role_ids
+        or (iam_role in {"SUPER_ADMIN", "SUPERADMIN"} and not getattr(user, "company_id", None))
+    )
+    # Avoid the development-mode fallback in is_super_admin_authorized from elevating a tenant-less CEO/Admin.
+    if not explicit_platform_grant:
+        return False
+    if iam_role in {"SUPER_ADMIN", "SUPERADMIN"} and not getattr(user, "company_id", None):
+        return True
+    return is_super_admin_authorized(user, request)
+
+
+def _audit_billing_summary_access(
+    db: Session, request: Request, user: Any, tenant_id: Optional[uuid.UUID], outcome: str
+) -> None:
+    user_id = getattr(user, "id", None)
+    context = build_audit_context(
+        request,
+        actor_id=user_id if isinstance(user_id, uuid.UUID) else None,
+        actor_identifier=getattr(user, "email", None) or (f"user:{user_id}" if user_id else "unknown"),
+    )
+    append_audit_from_context(
+        db,
+        context,
+        action="BILLING_SUMMARY_ACCESS",
+        outcome=outcome,
+        tenant_id=tenant_id,
+    )
+    db.commit()
+
+
+@billing_summary_router.get("/summary")
 def get_superadmin_billing_summary(
+    request: Request,
+    current_user: Any = Depends(get_authenticated_user),
     db: Session = Depends(get_db),
 ):
-    """
-    SuperAdmin SaaS financial telemetry: MRR, ARR, active subscriber distribution,
-    and pending offline invoices awaiting wire verification.
-    """
-    # 1. Total counts by tier
-    active_subs = db.scalars(
-        select(TenantSubscription).where(TenantSubscription.status == "active")
-    ).all()
+    """Return platform billing totals to Super Admins and own-workspace totals to tenant Owners/CEOs."""
+    raw_company_id = getattr(current_user, "company_id", None)
+    company_id = uuid.UUID(str(raw_company_id)) if raw_company_id else None
+    role = str(getattr(current_user, "role", "") or "").strip().upper().replace(" ", "_").replace("-", "_")
+    iam_role = str(getattr(current_user, "iam_role", "") or "").strip().upper().replace(" ", "_").replace("-", "_")
+    is_platform_admin = _is_platform_super_admin_for_summary(current_user, request)
+    is_tenant_owner = role in {"OWNER", "CEO"} or iam_role in {"OWNER", "CEO"}
 
+    if is_platform_admin:
+        tenant_scope = None
+    elif is_tenant_owner and company_id is not None:
+        tenant_scope = company_id
+    else:
+        _audit_billing_summary_access(db, request, current_user, company_id, "DENIED")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Owner, CEO, or platform Super Admin role required.",
+        )
+
+    _audit_billing_summary_access(db, request, current_user, tenant_scope, "SUCCESS")
+
+    subscription_query = select(TenantSubscription).where(TenantSubscription.status == "active")
+    pending_query = select(SaaSInvoice).where(SaaSInvoice.status == "pending")
+    settled_query = select(SaaSInvoice).where(SaaSInvoice.status == "paid")
+    if tenant_scope is not None:
+        subscription_query = subscription_query.where(TenantSubscription.tenant_id == tenant_scope)
+        pending_query = pending_query.where(SaaSInvoice.tenant_id == tenant_scope)
+        settled_query = settled_query.where(SaaSInvoice.tenant_id == tenant_scope)
+
+    active_subs = db.scalars(subscription_query).all()
     tier_counts: dict[str, int] = {"FREE": 0, "PROFESSIONAL": 0, "ENTERPRISE": 0}
     mrr_sar = Decimal("0.00")
 
-    for s in active_subs:
-        plan_name = s.plan.name if s.plan else "FREE"
+    for subscription in active_subs:
+        plan_name = subscription.plan.name if subscription.plan else "FREE"
         tier_counts[plan_name] = tier_counts.get(plan_name, 0) + 1
-        if s.plan:
-            if s.billing_cycle in ("annual", "yearly"):
-                mrr_sar += (s.plan.annual_price / Decimal("12")).quantize(Decimal("0.01"))
+        if subscription.plan:
+            if subscription.billing_cycle in ("annual", "yearly"):
+                mrr_sar += (subscription.plan.annual_price / Decimal("12")).quantize(Decimal("0.01"))
             else:
-                mrr_sar += s.plan.monthly_price
+                mrr_sar += subscription.plan.monthly_price
 
-    # 2. Pending invoices count and sum
-    pending_invoices = db.scalars(
-        select(SaaSInvoice).where(SaaSInvoice.status == "pending")
-    ).all()
-    pending_total_sar = sum((inv.amount_sar for inv in pending_invoices), Decimal("0.00"))
-
-    # 3. Settled total revenue
-    settled_invoices = db.scalars(
-        select(SaaSInvoice).where(SaaSInvoice.status == "paid")
-    ).all()
-    settled_total_sar = sum((inv.amount_sar for inv in settled_invoices), Decimal("0.00"))
+    pending_invoices = db.scalars(pending_query).all()
+    pending_total_sar = sum((invoice.amount_sar for invoice in pending_invoices), Decimal("0.00"))
+    settled_invoices = db.scalars(settled_query).all()
+    settled_total_sar = sum((invoice.amount_sar for invoice in settled_invoices), Decimal("0.00"))
 
     return {
         "active_subscribers_count": len(active_subs),

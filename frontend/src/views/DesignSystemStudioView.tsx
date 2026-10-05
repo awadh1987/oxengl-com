@@ -201,6 +201,9 @@ export function FleetLogisticsView() {
             <p className="mt-2 max-w-2xl text-xs text-slate-300 sm:text-sm">
               {t('design_studio.subtitle', 'Deep-dark enterprise aesthetics, tenant-aware white-labeling across 11 color palettes, density switching (Comfortable vs Compact), modular card architectures, and strict isolation telemetry.')}
             </p>
+            <p className="mt-3 max-w-2xl rounded-lg border border-indigo-400/30 bg-indigo-950/40 px-3 py-2 text-xs text-indigo-100">
+              {t('design_studio.sandboxNote', 'Active design-token sandbox for shaping tenant workspace themes and interface patterns.')}
+            </p>
           </div>
 
           {/* Quick Studio Controls */}

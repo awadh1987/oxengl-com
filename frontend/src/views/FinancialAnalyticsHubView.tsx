@@ -197,7 +197,7 @@ export const FinancialAnalyticsHubView: React.FC = () => {
       if (sumRes) {
         setKpiData((prev) => ({
           ...prev,
-          totalRevenueSar: sumRes.total_revenue || prev.totalRevenueSar,
+          totalRevenueSar: sumRes.total_collected_sar ?? prev.totalRevenueSar,
         }));
       }
     } catch (err) {

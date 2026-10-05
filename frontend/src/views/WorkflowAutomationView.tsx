@@ -26,6 +26,9 @@ export const WorkflowAutomationView: React.FC = () => {
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
             {t('workflows.subtitle', 'Configure cross-departmental approval chains, real-time dispatch triggers, and automated ZATCA tax invoice generation.')}
           </p>
+          <p className="mt-2 max-w-2xl rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900 dark:border-indigo-800/60 dark:bg-indigo-950/30 dark:text-indigo-200">
+            {t('workflows.sandboxNote', 'Active architectural and workflow sandbox for designing tenant workspace processes.')}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">

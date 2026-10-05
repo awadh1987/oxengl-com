@@ -24,14 +24,15 @@ Security invariants:
 
 import dataclasses
 import logging
+import re
 import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any, List, Literal, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -44,6 +45,10 @@ from backend.api.dependencies import (
     get_tenant_context,
 )
 from backend.app.domains.hr.audit import AuditContext, append_audit_from_context, build_audit_context
+from backend.app.services.notification_service import (
+    NotificationDeliveryError,
+    dispatch_temporary_credentials,
+)
 from backend.app.domains.iam.role_catalog import (
     EXTERNAL_INVITE_ROLES,
     HR_PROVISIONED_ROLES,
@@ -67,11 +72,56 @@ _EXTERNAL_ONLY_ABAC_KEYS = ("external_identity", "read_only", "audit_scope_only"
 
 # Authority levels (evaluated from the DB row).
 LEVEL_NONE, LEVEL_ADMIN, LEVEL_OWNER, LEVEL_PLATFORM = 0, 1, 2, 3
+_EMAIL_PATTERN = re.compile(
+    r"^[A-Z0-9.!#$%&'*+/=?^_`{|}~-]+@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,63}$",
+    re.IGNORECASE,
+)
+_SMS_PLACEHOLDER_DOMAIN = "sms-invite.oxengl.invalid"
+
+
+def _is_valid_invite_email(email: str) -> bool:
+    local, separator, domain = email.rpartition("@")
+    return bool(
+        separator
+        and len(email) <= 255
+        and len(local) <= 64
+        and not local.startswith(".")
+        and not local.endswith(".")
+        and ".." not in local
+        and _EMAIL_PATTERN.fullmatch(email)
+    )
+
+
+def _normalize_invite_phone(value: str) -> str:
+    phone = re.sub(r"[\s().-]", "", value)
+    if phone.startswith("00"):
+        phone = "+" + phone[2:]
+    elif re.fullmatch(r"05\d{8}", phone):
+        phone = "+966" + phone[1:]
+    elif re.fullmatch(r"5\d{8}", phone):
+        phone = "+966" + phone
+    elif phone.startswith("966"):
+        phone = "+" + phone
+
+    if not re.fullmatch(r"\+[1-9]\d{7,14}", phone):
+        raise ValueError("Enter a valid phone number in E.164 format (for example, +9665XXXXXXXX).")
+    if phone.startswith("+966") and not re.fullmatch(r"\+9665\d{8}", phone):
+        raise ValueError("Enter a valid Saudi mobile number, such as +9665XXXXXXXX or 05XXXXXXXX.")
+    return phone
+
+
+def _is_sms_placeholder_email(email: str) -> bool:
+    return email.lower().endswith(f"@{_SMS_PLACEHOLDER_DOMAIN}")
+
+
+def _sms_placeholder_email(user_id: uuid.UUID) -> str:
+    return f"invite-{user_id.hex}@{_SMS_PLACEHOLDER_DOMAIN}"
 
 
 class UserResponse(BaseModel):
     id: str
     email: str
+    phone: Optional[str] = None
     full_name: str
     role: str
     iam_role: Optional[str] = None
@@ -85,15 +135,45 @@ class UserResponse(BaseModel):
 
 
 class InviteUserRequest(BaseModel):
-    email: str = Field(..., description="Email address of the external invitee")
+    email: Optional[str] = Field(None, description="Email address of the external invitee")
+    phone: Optional[str] = Field(None, description="E.164 phone number for SMS delivery")
+    channel: Literal["email", "sms"] = Field("email", description="Temporary credential delivery channel")
     role: str = Field("Guest", description="External identity type: Guest or External_Auditor")
     full_name: Optional[str] = Field(None, description="Full name of user")
+
+    @field_validator("channel", mode="before")
+    @classmethod
+    def _normalize_channel(cls, value: Any) -> Any:
+        return value.strip().lower() if isinstance(value, str) else value
+
+    @model_validator(mode="after")
+    def _validate_delivery_address(self):
+        if self.channel == "email":
+            email = (self.email or "").strip().lower()
+            if not _is_valid_invite_email(email):
+                raise ValueError("A valid email address is required for email delivery.")
+            self.email = email
+            self.phone = None
+            return self
+
+        phone = (self.phone or "").strip()
+        if not phone:
+            raise ValueError("A phone number is required for SMS delivery.")
+        self.phone = _normalize_invite_phone(phone)
+        if self.email:
+            email = self.email.strip().lower()
+            if not _is_valid_invite_email(email):
+                raise ValueError("Enter a valid email address when providing an optional email.")
+            self.email = email
+        return self
 
 
 class InviteUserResponse(BaseModel):
     status: str
     user_id: str
-    email: str
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    channel: Literal["email", "sms"]
     full_name: str
     role: str
     reset_dispatched: bool
@@ -362,7 +442,8 @@ def get_tenant_users(
     return [
         UserResponse(
             id=str(u.id),
-            email=u.email,
+            email="" if _is_sms_placeholder_email(u.email) else u.email,
+            phone=u.phone,
             full_name=u.full_name or u.email.split("@")[0],
             role=u.role,
             iam_role=u.iam_role,
@@ -381,53 +462,96 @@ def get_tenant_users(
 @router.post("/invite", response_model=InviteUserResponse, status_code=status.HTTP_201_CREATED)
 async def invite_tenant_user(
     payload: InviteUserRequest,
-    background_tasks: BackgroundTasks,
     actor: IamActor = Depends(require_iam_admin),
     db: Session = Depends(get_db),
 ):
     """
     Invite an external identity (Guest / External_Auditor) into the caller's own workspace.
 
-    Internal staff must be registered through HR. The account is created with an unusable random
-    credential and ``must_change_password``; the invitee sets their own password through the existing
-    OTP reset flow. No password is generated for display or returned.
+    Internal staff must be registered through HR. A temporary password is sent out-of-band through
+    the selected channel, stored only as a strong hash, and marked for change on first login.
+    Credentials are never returned or logged.
     """
     tenant_id = actor.company_id
     if tenant_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No workspace is bound to this account.")
 
     if is_internal_or_privileged_role_name(payload.role):
-        _commit_audit(db, actor.audit, "IAM_INVITE_DENIED:internal_role", "DENIED", tenant_id)
+        _commit_audit(db, actor.audit, f"IAM_INVITE_DENIED:internal_role:channel={payload.channel}", "DENIED", tenant_id)
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=HR_REGISTRATION_REQUIRED_MESSAGE)
 
     external_role = resolve_external_role(payload.role or "Guest")
     if not external_role:
-        _commit_audit(db, actor.audit, "IAM_INVITE_DENIED:unknown_role", "DENIED", tenant_id)
+        _commit_audit(db, actor.audit, f"IAM_INVITE_DENIED:unknown_role:channel={payload.channel}", "DENIED", tenant_id)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid invite role. Allowed: {', '.join(EXTERNAL_INVITE_ROLES)}",
         )
 
-    email_clean = (payload.email or "").strip().lower()
-    if not email_clean or "@" not in email_clean or len(email_clean) > 255:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email address format.")
-
-    if db.query(ResUser.id).filter(ResUser.email.ilike(email_clean)).first():
-        # Generic message: never reveal whether the address exists in another workspace.
-        _commit_audit(db, actor.audit, "IAM_INVITE_DENIED:duplicate_identity", "DENIED", tenant_id)
+    email_clean = (payload.email or "").strip().lower() or None
+    phone_clean = payload.phone if payload.channel == "sms" else None
+    duplicate_email = (
+        db.query(ResUser.id).filter(ResUser.email.ilike(email_clean)).first()
+        if email_clean
+        else None
+    )
+    duplicate_phone = (
+        db.query(ResUser.id)
+        .filter(ResUser.company_id == tenant_id, ResUser.phone == phone_clean)
+        .first()
+        if phone_clean
+        else None
+    )
+    if duplicate_email or duplicate_phone:
+        _commit_audit(
+            db,
+            actor.audit,
+            f"IAM_INVITE_DENIED:duplicate_identity:channel={payload.channel}",
+            "DENIED",
+            tenant_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="This email address cannot be invited. It may already be registered.",
+            detail="This contact cannot be invited. It may already be registered.",
         )
 
     spec = EXTERNAL_INVITE_ROLES[external_role]
     user_id = uuid.uuid4()
-    full_name = (payload.full_name or email_clean.split("@")[0].replace(".", " ").title()).strip()[:255]
+    name_fallback = email_clean.split("@")[0].replace(".", " ").title() if email_clean else "External User"
+    full_name = ((payload.full_name or name_fallback).strip() or "External User")[:255]
+    temporary_password = secrets.token_urlsafe(18)
+    password_hash = hash_password(temporary_password)
+    company = db.get(ResCompany, tenant_id)
+    workspace_name = company.company_name if company else "Workspace"
+    destination = email_clean if payload.channel == "email" else phone_clean
+
+    try:
+        await dispatch_temporary_credentials(
+            payload.channel,
+            destination,
+            temporary_password,
+            full_name=full_name,
+            workspace_name=workspace_name,
+        )
+    except NotificationDeliveryError as exc:
+        _commit_audit(
+            db,
+            actor.audit,
+            f"IAM_INVITE_DELIVERY_FAILED:channel={payload.channel}",
+            "FAILED",
+            tenant_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{payload.channel.upper()} invite delivery failed; no account was created. {exc}",
+        ) from None
+
     new_user = ResUser(
         id=user_id,
-        email=email_clean,
+        email=email_clean or _sms_placeholder_email(user_id),
         full_name=full_name,
-        password_hash=_unusable_password_hash(),
+        phone=phone_clean,
+        password_hash=password_hash,
         company_id=tenant_id,
         role=spec["legacy_role"],
         iam_role=external_role,
@@ -438,24 +562,34 @@ async def invite_tenant_user(
     )
     db.add(new_user)
     append_audit_from_context(
-        db, _with_target(actor.audit, user_id), action=f"IAM_USER_INVITED:{external_role}", outcome="SUCCESS", tenant_id=tenant_id
+        db,
+        _with_target(actor.audit, user_id),
+        action=f"IAM_USER_INVITED:{external_role}:channel={payload.channel}",
+        outcome="SUCCESS",
+        tenant_id=tenant_id,
     )
     db.commit()
 
-    dispatched = await _dispatch_existing_reset_flow(db, background_tasks, email_clean, tenant_id)
-    logger.info("IAM invite created user=%s role=%s tenant=%s", user_id, external_role, tenant_id)
+    logger.info(
+        "IAM invite created user=%s role=%s tenant=%s channel=%s",
+        user_id,
+        external_role,
+        tenant_id,
+        payload.channel,
+    )
 
     return InviteUserResponse(
         status="invited",
         user_id=str(user_id),
         email=email_clean,
+        phone=phone_clean,
+        channel=payload.channel,
         full_name=full_name,
         role=external_role,
-        reset_dispatched=dispatched,
+        reset_dispatched=True,
         message=(
-            "External user created. A one-time password-setup code was sent to the invitee."
-            if dispatched
-            else "External user created. Use Force Password Reset to send a password-setup code."
+            f"External user created. Temporary credentials were sent via {payload.channel.upper()}; "
+            "a password change is required on first login."
         ),
     )
 
@@ -608,33 +742,82 @@ async def force_password_reset(
     db: Session = Depends(get_db),
 ):
     """
-    Invalidate the current credential and require a new one. The stored hash is replaced with the hash of an
-    unrecoverable random secret, ``must_change_password`` is set, sessions are revoked, and the existing OTP
-    reset flow delivers a one-time code to the user. Nothing secret is returned.
+    Invalidate the current credential and require a new one. Email users receive the existing OTP reset flow;
+    phone-only users receive a temporary password over SMS before the stored hash is replaced. Nothing secret is returned.
     """
     target = _load_target(db, actor, user_id, "FORCE_RESET")
-    new_hash = _unusable_password_hash()
+    sms_delivery = _is_sms_placeholder_email(target.email)
+    dispatched = False
+
+    if sms_delivery:
+        if not target.phone:
+            _commit_audit(
+                db,
+                actor.audit,
+                "IAM_FORCE_PASSWORD_RESET:channel=sms",
+                "FAILED",
+                target.company_id,
+                target.id,
+            )
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="The SMS account has no registered phone number.")
+        temporary_password = secrets.token_urlsafe(18)
+        new_hash = hash_password(temporary_password)
+        company = db.get(ResCompany, target.company_id) if target.company_id else None
+        try:
+            await dispatch_temporary_credentials(
+                "sms",
+                target.phone,
+                temporary_password,
+                full_name=target.full_name or "External User",
+                workspace_name=company.company_name if company else "Workspace",
+            )
+        except NotificationDeliveryError as exc:
+            _commit_audit(
+                db,
+                actor.audit,
+                "IAM_FORCE_PASSWORD_RESET:channel=sms",
+                "FAILED",
+                target.company_id,
+                target.id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"SMS reset delivery failed; account credentials were not changed. {exc}",
+            ) from None
+        dispatched = True
+    else:
+        new_hash = _unusable_password_hash()
+
     target.password_hash = new_hash
     target.must_change_password = True
     mirror = db.query(TenantUser).filter(TenantUser.id == target.id).first()
     if mirror is not None:
         mirror.password_hash = new_hash
+    audit_action = "IAM_FORCE_PASSWORD_RESET:channel=sms" if sms_delivery else "IAM_FORCE_PASSWORD_RESET"
     append_audit_from_context(
-        db, _with_target(actor.audit, target.id), action="IAM_FORCE_PASSWORD_RESET", outcome="SUCCESS", tenant_id=target.company_id
+        db,
+        _with_target(actor.audit, target.id),
+        action=audit_action,
+        outcome="SUCCESS",
+        tenant_id=target.company_id,
     )
     target_id, email, company_id = target.id, target.email, target.company_id
     db.commit()
     _revoke_sessions(db, target_id, "forced_password_reset")
 
-    dispatched = await _dispatch_existing_reset_flow(db, background_tasks, email, company_id)
+    if not sms_delivery:
+        dispatched = await _dispatch_existing_reset_flow(db, background_tasks, email, company_id)
+    if sms_delivery:
+        reset_message = "Credentials invalidated. A temporary password was sent by SMS."
+    elif dispatched:
+        reset_message = "Credentials invalidated. A one-time password-reset code was sent to the user."
+    else:
+        reset_message = "Credentials invalidated. The user must complete the password reset flow (code delivery could not be started)."
+
     return UserActionResponse(
         status="reset_required",
         user_id=str(target_id),
         must_change_password=True,
         reset_dispatched=dispatched,
-        message=(
-            "Credentials invalidated. A one-time password-reset code was sent to the user."
-            if dispatched
-            else "Credentials invalidated. The user must complete the password reset flow (code delivery could not be started)."
-        ),
+        message=reset_message,
     )
