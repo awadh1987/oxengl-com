@@ -1243,6 +1243,37 @@ async function findOrCreate<T extends { id: string }>(path: string, companyId: s
 }
 
 /** External backup destinations. The API never returns credential material: only `has_credential`. */
+export type CommunicationChannel = 'email' | 'sms';
+export type CommunicationProvider = 'smtp' | 'sendgrid' | 'twilio' | 'unifonic' | 'taqnyat';
+
+export interface CommunicationSettingDto {
+  id: string;
+  tenant_id: string | null;
+  scope: 'platform' | 'tenant';
+  tenant_name?: string | null;
+  channel: CommunicationChannel;
+  provider: CommunicationProvider;
+  sender_identity: string;
+  config: Record<string, unknown>;
+  is_active: boolean;
+  has_credential: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
+  created_by?: string | null;
+  last_test_at?: string | null;
+  last_test_status?: 'success' | 'failed' | null;
+  last_test_error?: string | null;
+}
+
+export interface CommunicationSettingWritePayload {
+  channel?: CommunicationChannel;
+  provider?: CommunicationProvider;
+  sender_identity?: string;
+  config?: Record<string, string | number>;
+  credentials?: Record<string, string>;
+  is_active?: boolean;
+}
+
 export type BackupProviderType = 'gdrive' | 'onedrive' | 'sftp';
 
 export interface BackupDestinationDto {
@@ -1567,6 +1598,28 @@ export const erpApi = {
       method: 'PUT',
       body: JSON.stringify({ custom_limits: customLimits }),
     }),
+
+  // Outbound transactional communications. Credential fields are write-only.
+  listCommunicationSettings: () =>
+    request<CommunicationSettingDto[]>('/api/v1/tenant-control/communications'),
+  createCommunicationSetting: (payload: CommunicationSettingWritePayload) =>
+    request<CommunicationSettingDto>('/api/v1/tenant-control/communications', undefined, { method: 'POST', body: JSON.stringify(payload) }),
+  updateCommunicationSetting: (id: string, payload: CommunicationSettingWritePayload) =>
+    request<CommunicationSettingDto>(`/api/v1/tenant-control/communications/${id}`, undefined, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteCommunicationSetting: (id: string) =>
+    request<{ success: boolean; id: string }>(`/api/v1/tenant-control/communications/${id}`, undefined, { method: 'DELETE' }),
+  testCommunicationSetting: (id: string, recipient: string) =>
+    request<{ ok: boolean; message: string }>(`/api/v1/tenant-control/communications/${id}/test`, undefined, { method: 'POST', body: JSON.stringify({ recipient }) }),
+  getSuperAdminCommunicationSettings: (params?: { channel?: string; provider?: string; scope?: string; tenant_id?: string }) =>
+    request<CommunicationSettingDto[]>(`/api/v1/superadmin/communications${backupQuery(params)}`),
+  createSuperAdminCommunicationSetting: (payload: CommunicationSettingWritePayload) =>
+    request<CommunicationSettingDto>('/api/v1/superadmin/communications', undefined, { method: 'POST', body: JSON.stringify(payload) }),
+  updateSuperAdminCommunicationSetting: (id: string, payload: CommunicationSettingWritePayload) =>
+    request<CommunicationSettingDto>(`/api/v1/superadmin/communications/${id}`, undefined, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteSuperAdminCommunicationSetting: (id: string) =>
+    request<{ success: boolean; id: string }>(`/api/v1/superadmin/communications/${id}`, undefined, { method: 'DELETE' }),
+  testSuperAdminCommunicationSetting: (id: string, recipient: string) =>
+    request<{ ok: boolean; message: string }>(`/api/v1/superadmin/communications/${id}/test`, undefined, { method: 'POST', body: JSON.stringify({ recipient }) }),
 
   // Data Backups & Archives (tenant scope: company is derived server-side from the session)
   listBackupDestinations: (params?: { page?: number; page_size?: number }) =>

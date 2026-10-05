@@ -483,6 +483,62 @@ class BackupRunLog(Base):
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+COMMUNICATION_CHANNELS = ("email", "sms")
+COMMUNICATION_PROVIDERS = ("smtp", "sendgrid", "twilio", "unifonic", "taqnyat")
+
+
+class CommunicationSetting(Base):
+    """Tenant override or platform default for transactional email/SMS delivery."""
+
+    __tablename__ = "communication_settings"
+    __table_args__ = (
+        CheckConstraint("channel IN ('email', 'sms')", name="ck_communication_settings_channel"),
+        CheckConstraint(
+            "provider IN ('smtp', 'sendgrid', 'twilio', 'unifonic', 'taqnyat')",
+            name="ck_communication_settings_provider",
+        ),
+        CheckConstraint(
+            "(channel = 'email' AND provider IN ('smtp', 'sendgrid')) OR "
+            "(channel = 'sms' AND provider IN ('twilio', 'unifonic', 'taqnyat'))",
+            name="ck_communication_settings_channel_provider",
+        ),
+        CheckConstraint(
+            "last_test_status IS NULL OR last_test_status IN ('success', 'failed')",
+            name="ck_communication_settings_test_status",
+        ),
+        Index(
+            "uq_communication_settings_active_tenant_channel",
+            "tenant_id", "channel", unique=True,
+            postgresql_where=text("is_active = true AND tenant_id IS NOT NULL"),
+            sqlite_where=text("is_active = 1 AND tenant_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_communication_settings_active_platform_channel",
+            "channel", unique=True,
+            postgresql_where=text("is_active = true AND tenant_id IS NULL"),
+            sqlite_where=text("is_active = 1 AND tenant_id IS NULL"),
+        ),
+        Index("ix_communication_settings_tenant_channel", "tenant_id", "channel"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True
+    )
+    channel: Mapped[str] = mapped_column(String(8), nullable=False)
+    provider: Mapped[str] = mapped_column(String(16), nullable=False)
+    sender_identity: Mapped[str] = mapped_column(String(255), nullable=False)
+    config: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict)
+    credentials_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    last_test_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_test_status: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    last_test_error: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 class ResPartner(TimestampMixin, Base):
     __tablename__ = "res_partners"
 

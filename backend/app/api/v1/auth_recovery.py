@@ -142,9 +142,27 @@ class RecoveryDeliveryProvider:
         raise NotImplementedError
 
 
-def get_delivery_provider(channel: RecoveryChannel) -> RecoveryDeliveryProvider:
-    """Resolve the configured provider for a channel (SMTP / SendGrid, Twilio / Vonage, WhatsApp Business)."""
-    raise NotImplementedError("No delivery provider configured (Phase A)")
+class ConfiguredRecoveryDeliveryProvider(RecoveryDeliveryProvider):
+    def __init__(self, channel: RecoveryChannel, tenant_id: uuid.UUID | None = None) -> None:
+        self.channel = channel
+        self.tenant_id = tenant_id
+
+    async def send(self, destination: str, secret: str, *, locale: str = "en", workspace_name: str = "") -> None:
+        from backend.app.services.communication_service import CommunicationError, send_message
+
+        if self.channel not in {RecoveryChannel.EMAIL, RecoveryChannel.SMS}:
+            raise CommunicationError("WhatsApp recovery delivery is not configured.")
+        content = f"Your OxenGL password recovery code is {secret}. It expires shortly."
+        await send_message(self.channel.value, destination, content, tenant_id=self.tenant_id)
+
+
+def get_delivery_provider(
+    channel: RecoveryChannel, tenant_id: uuid.UUID | None = None
+) -> RecoveryDeliveryProvider:
+    """Resolve the native tenant override or platform default for recovery delivery."""
+    if channel not in {RecoveryChannel.EMAIL, RecoveryChannel.SMS}:
+        raise ValueError("Unsupported recovery delivery channel.")
+    return ConfiguredRecoveryDeliveryProvider(channel, tenant_id)
 
 
 # =============================================================================================

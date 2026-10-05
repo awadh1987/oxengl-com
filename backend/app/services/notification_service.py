@@ -21,6 +21,10 @@ except ImportError:
 logger = logging.getLogger("oxengl.notification_service")
 
 
+def _mask_identifier(identifier: str) -> str:
+    return f"***{str(identifier)[-3:]}" if identifier else "***"
+
+
 class NotificationDeliveryError(RuntimeError):
     """A credential notification could not be delivered safely."""
 
@@ -55,26 +59,41 @@ async def dispatch_temporary_credentials(
     *,
     full_name: str,
     workspace_name: str,
+    tenant_id: Any = None,
 ) -> None:
-    """Deliver a temporary password; fail explicitly when no channel adapter is configured."""
+    """Deliver a temporary password through a registered or tenant-resolved adapter."""
+    from backend.app.services.communication_service import CommunicationError, send_message
+
     provider = _temporary_credential_delivery_providers.get(channel)
-    if provider is None:
-        raise NotificationDeliveryError(
-            f"No {channel.upper()} credential delivery provider is configured."
-        )
+    if provider is not None:
+        try:
+            delivered = await provider.send_credentials(
+                destination,
+                temporary_password,
+                full_name=full_name,
+                workspace_name=workspace_name,
+            )
+            if delivered is not True:
+                raise RuntimeError("Provider did not confirm delivery.")
+            return
+        except Exception:
+            raise NotificationDeliveryError(f"{channel.upper()} credential delivery failed.") from None
+
+    body = (
+        f"OxenGL account credentials for {full_name}: temporary password {temporary_password}. "
+        "Sign in and change this password immediately."
+    )
     try:
-        delivered = await provider.send_credentials(
-            destination,
-            temporary_password,
-            full_name=full_name,
-            workspace_name=workspace_name,
-        )
-        if delivered is not True:
-            raise RuntimeError("Provider did not confirm delivery.")
+        await send_message(channel, destination, body, tenant_id=tenant_id)
+    except CommunicationError as exc:
+        if str(exc).startswith("No active "):
+            raise NotificationDeliveryError(
+                f"No {channel.upper()} credential delivery provider is configured."
+            ) from None
+        raise NotificationDeliveryError(f"{channel.upper()} credential delivery failed.") from None
     except Exception:
-        # Provider exception text may contain message contents or credentials.
         raise NotificationDeliveryError(
-            f"{channel.upper()} credential delivery failed."
+            f"No {channel.upper()} credential delivery provider is configured or could be resolved."
         ) from None
 
 
@@ -112,7 +131,7 @@ class VerificationService:
         key = f"otp:{norm_id}"
         ttl = ttl_seconds or expire_seconds or int(cls.OTP_TTL.total_seconds())
         await cls._safe_call(redis_client.set, key, otp, ex=ttl)
-        logger.info(f"Generated secure OTP for identifier: {norm_id}")
+        logger.info("Generated secure OTP (recipient=%s)", _mask_identifier(norm_id))
         return otp
 
     @classmethod
@@ -136,7 +155,7 @@ class VerificationService:
         if attempts >= cls.MAX_OTP_ATTEMPTS:
             await cls._safe_call(redis_client.delete, key)
             await cls._safe_call(redis_client.delete, attempts_key)
-            logger.warning("OTP for identifier %s destroyed after %s failed attempts", norm_id, attempts)
+            logger.warning("OTP for recipient %s destroyed after %s failed attempts", _mask_identifier(norm_id), attempts)
         return False
 
     @classmethod
@@ -177,15 +196,16 @@ class VerificationService:
         await cls._safe_call(redis_client.delete, key)
 
     @staticmethod
-    async def dispatch_email_otp(email: str, otp: str, company_name: str) -> None:
-        """Asynchronous dispatcher for SendGrid / SMTP email delivery."""
-        # SECURITY (Addendum D): the OTP is never logged. No email provider is wired yet (see
-        # docs/architecture/password-reset-and-backup-strategy.md, Phase A).
-        logger.warning("[NOTIFICATION] email OTP requested for %s (company=%s) but no email provider is configured", email, company_name)
+    async def dispatch_email_otp(email: str, otp: str, company_name: str, tenant_id: Any = None) -> None:
+        """Send a one-time code through the tenant override or platform email default."""
+        from backend.app.services.communication_service import send_message
+
+        body = f"Your OxenGL verification code for {company_name} is {otp}. It expires in 5 minutes."
+        await send_message("email", email, body, tenant_id=tenant_id)
 
     @staticmethod
-    async def dispatch_sms_otp(phone: str, otp: str) -> None:
-        """Asynchronous dispatcher for Twilio / Vonage SMS delivery."""
-        # SECURITY (Addendum D): the OTP is never logged. No SMS provider is wired yet (Phase A).
-        masked = f"***{str(phone)[-3:]}" if phone else ""
-        logger.warning("[NOTIFICATION] SMS OTP requested for %s but no SMS provider is configured", masked)
+    async def dispatch_sms_otp(phone: str, otp: str, tenant_id: Any = None) -> None:
+        """Send a one-time code through the tenant override or platform SMS default."""
+        from backend.app.services.communication_service import send_message
+
+        await send_message("sms", phone, f"Your OxenGL verification code is {otp}. It expires in 5 minutes.", tenant_id=tenant_id)

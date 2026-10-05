@@ -52,8 +52,9 @@ To guarantee absolute data sovereignty, privacy compliance, and disaster recover
 
 ## 3. Implementation Roadmap
 ### Phase A: Self-Service & Admin Password Resets
-* Implement token generation and validation endpoints supporting dual-channel dispatch (SMTP email provider + Twilio/SMS gateway integration).
-* Build UI modals for self-service recovery and tenant-admin user credential management.
+* The live legacy OTP flow sends email and SMS only through an active tenant communication override or platform default. Reset codes remain out of API responses.
+* The separate recovery-v2 route scaffold remains unmounted; implementing its recovery state machine is still a separate task.
+* Tenant IAM invites, phone-based forced resets, and HR provisioning use the same tenant-aware delivery service.
 
 ### Phase B: Multi-Destination Backup Daemon
 * Develop a scheduled background worker (`celery` or `asyncio` cron task) for database schema dumps and file archive packaging (`tar.gz` with AES-256 encryption).
@@ -68,10 +69,21 @@ To guarantee absolute data sovereignty, privacy compliance, and disaster recover
 
 | Item | State |
 |---|---|
-| Phase A scaffold | [`backend/app/api/v1/auth_recovery.py`](../../backend/app/api/v1/auth_recovery.py). The three recovery tiers' routes, request/response contracts, `RecoveryDeliveryProvider` hook and authorisation guards. **Not mounted**; every endpoint returns `501`. |
+| Recovery-v2 scaffold | [`backend/app/api/v1/auth_recovery.py`](../../backend/app/api/v1/auth_recovery.py). The separate three-tier recovery routes remain unmounted and return `501`; their provider hook now delegates to the communications service. |
 | Phase B scaffold | [`backend/app/services/backup_service.py`](../../backend/app/services/backup_service.py). Scopes, policies, the `BackupDestination` interface with SFTP / rsync-SSH / WebDAV / S3-compatible / Google Drive / OneDrive connectors, a path-traversal guard, and worker entry points. Not scheduled. |
 | Live recovery endpoints | Legacy `/api/v1/auth/forgot-password` + `/reset-password` and `/api/auth/recover-password` + `/reset-password`. Hardened in incident report Addendum D. |
-| Self-service reset | **Unavailable until an email/SMS provider is configured.** Codes are never returned in API responses. Super Admin credential rotation still works. |
+| Live self-service reset | The legacy forgot-password OTP flow dispatches through configured communications. Delivery fails closed when neither a tenant override nor platform default is active; OTPs are never returned in API responses. |
+| Transactional communications | Migration `202610050002`; tenant and platform settings, write-only AES-256-GCM credentials, SMTP/SendGrid/Twilio/Unifonic/Taqnyat adapters, tenant-first resolution, and test/send audit events are implemented. |
+
+## 5. Transactional Communications Settings
+
+Outbound email and SMS are configured at `/api/v1/tenant-control/communications` (tenant Owner/Admin) and `/api/v1/superadmin/communications` (platform Super Admin). A tenant can configure only its own override; it cannot create a platform default. Super Admin can manage only platform-default rows, while tenant overrides are shown read-only in oversight views.
+
+Supported transports are SMTP and SendGrid for email, and Twilio, Unifonic, and Taqnyat for SMS. Delivery resolves an active tenant setting first, then an active platform default; missing configuration fails closed. SMTP connections use TLS (STARTTLS or SSL), bounded timeouts, and public-host validation for tenant-supplied hosts. A successful dispatch requires provider acceptance.
+
+Provider credentials are submitted write-only and encrypted with AES-256-GCM, using the existing backup master-key provider and a communications-specific AAD prefix bound to setting ID and tenant ID. API responses expose only `has_credential`; provider config is key-whitelisted. Test and delivery failures use generic sanitized errors; recipient addresses, message bodies, OTPs, and credentials are not stored in audit records or delivery logs.
+
+Apply Alembic revision `202610050002` after `202610050001`. Configure at least one platform default before expecting global signup/recovery notices to deliver; tenant overrides are optional. Provider connections are mocked in automated tests and have not been verified against live provider accounts.
 
 **Security baseline for Phases A–C** (from incident report Addendum D, `docs/incidents/2026-10-04-unauthenticated-master-platform-and-invoice-idor.md`):
 

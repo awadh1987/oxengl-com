@@ -62,6 +62,7 @@ def get_isolated_db_session(request: Request) -> Generator[Session, None, None]:
         path = request.url.path
         if path.startswith((
             "/api/v1/tenant/control",
+            "/api/v1/tenant-control",
             "/api/tenant/control",
             "/api/v1/superadmin",
             "/api/superadmin",

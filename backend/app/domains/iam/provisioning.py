@@ -19,6 +19,7 @@ plain-data audit context, and always opens its own short-lived session.
 from __future__ import annotations
 
 import dataclasses
+import asyncio
 import logging
 import secrets
 import string
@@ -188,7 +189,8 @@ def login_identifier_for(employee: Employee) -> Optional[str]:
 
 class CredentialNotifier(Protocol):
     def send_temporary_password(
-        self, *, channel: str, destination: str, display_name: str, temporary_password: str
+        self, *, channel: str, destination: str, display_name: str, temporary_password: str,
+        tenant_id: Optional[uuid.UUID] = None,
     ) -> bool:
         """Deliver the secret; return True only if actually dispatched. Must never log the secret."""
 
@@ -203,7 +205,8 @@ class StubCredentialNotifier:
     """
 
     def send_temporary_password(
-        self, *, channel: str, destination: str, display_name: str, temporary_password: str
+        self, *, channel: str, destination: str, display_name: str, temporary_password: str,
+        tenant_id: Optional[uuid.UUID] = None,
     ) -> bool:
         masked = f"***{destination[-3:]}" if destination else ""
         logger.warning(
@@ -213,7 +216,26 @@ class StubCredentialNotifier:
         return False
 
 
-_notifier: CredentialNotifier = StubCredentialNotifier()
+class CommunicationCredentialNotifier:
+    """Bridge HR provisioning to the tenant-aware communication delivery service."""
+
+    def send_temporary_password(
+        self, *, channel: str, destination: str, display_name: str, temporary_password: str,
+        tenant_id: uuid.UUID | None = None,
+    ) -> bool:
+        from backend.app.services.notification_service import dispatch_temporary_credentials
+
+        try:
+            asyncio.run(dispatch_temporary_credentials(
+                channel, destination, temporary_password,
+                full_name=display_name, workspace_name="Workspace", tenant_id=tenant_id,
+            ))
+            return True
+        except Exception:
+            return False
+
+
+_notifier: CredentialNotifier = CommunicationCredentialNotifier()
 
 
 def get_credential_notifier() -> CredentialNotifier:
@@ -421,6 +443,7 @@ def _deliver(
             destination=identifier,
             display_name=outcome.display_name or "",
             temporary_password=outcome.temporary_password or "",
+            tenant_id=tenant_id,
         )
         result = "SUCCESS" if delivered else "NOT_DELIVERED"
     except Exception as exc:

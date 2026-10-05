@@ -76,6 +76,10 @@ class TwoFactorVerifyRequest(BaseModel):
     tenant_slug: Optional[str] = Field(None, description="Tenant workspace slug identifier")
 
 
+def _masked_identifier(identifier: str) -> str:
+    return f"***{identifier[-3:]}" if identifier else "***"
+
+
 def ensure_password_resets_table(db: Session):
     """Ensure the public.password_resets table is available."""
     try:
@@ -95,7 +99,7 @@ def ensure_password_resets_table(db: Session):
         db.commit()
     except Exception as err:
         db.rollback()
-        logger.warning(f"Note on password_resets table verification: {err}")
+        logger.warning("Password reset table verification failed (%s)", type(err).__name__)
 
 
 # SECURITY (2026-10-04, incident Addendum D): the recovery-initiation response is IDENTICAL whether or not
@@ -251,10 +255,18 @@ async def request_password_reset(
         expire_seconds=900,
     )
 
-    # 4. Asynchronously dispatch verification notifications via Email and SMS
-    background_tasks.add_task(VerificationService.dispatch_email_otp, norm_email, otp, str(company_name))
+    # 4. Asynchronously dispatch through the resolved tenant (or platform default).
+    reset_tenant_id = None
+    if isinstance(tenant_row, dict) and tenant_row.get("id") not in (None, "master"):
+        try:
+            reset_tenant_id = uuid.UUID(str(tenant_row["id"]))
+        except (ValueError, TypeError):
+            reset_tenant_id = None
+    background_tasks.add_task(
+        VerificationService.dispatch_email_otp, norm_email, otp, str(company_name), reset_tenant_id
+    )
     if user_phone:
-        background_tasks.add_task(VerificationService.dispatch_sms_otp, user_phone, otp)
+        background_tasks.add_task(VerificationService.dispatch_sms_otp, user_phone, otp, reset_tenant_id)
 
     # 5. Maintain legacy cryptographic token for backward compatibility
     reset_token = secrets.token_urlsafe(32)
@@ -274,7 +286,7 @@ async def request_password_reset(
         db.commit()
     except Exception as err:
         db.rollback()
-        logger.error(f"Failed to record password reset token: {err}")
+        logger.error("Failed to record password reset token (%s)", type(err).__name__)
 
     recovery_link = f"https://{raw_slug}.oxengl.me/reset-password?email={norm_email}&otp={otp}" if raw_slug and raw_slug != "master" else f"https://oxengl.me/reset-password?email={norm_email}&otp={otp}"
 
@@ -290,7 +302,7 @@ async def request_password_reset(
             expires_at=expires_at.strftime("%Y-%m-%d %H:%M:%S UTC"),
         )
     except Exception as tmpl_err:
-        logger.warning(f"Could not render recovery email template: {tmpl_err}")
+        logger.warning("Could not render recovery email template (%s)", type(tmpl_err).__name__)
 
     return _generic_recovery_response()
 
@@ -460,9 +472,9 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
         db.commit()
     except Exception as err:
         db.rollback()
-        logger.error(f"Error purging reset token: {err}")
+        logger.error("Error purging reset token (%s)", type(err).__name__)
 
-    logger.info(f"[PASSWORD RESET] Password successfully updated for {norm_email} across {updated_count} record(s).")
+    logger.info("[PASSWORD RESET] Password updated for recipient %s across %s record(s).", _masked_identifier(norm_email), updated_count)
     return {
         "status": "SUCCESS",
         "message": "Password reset completed successfully. You may now log in with your new credentials.",
@@ -554,7 +566,7 @@ def setup_two_factor(payload: TwoFactorSetupRequest, request: Request, db: Sessi
 
     db.commit()
 
-    logger.info("[2FA SETUP] provisioned a new TOTP secret for %s (workspace=%s)", norm_email, raw_slug)  # never log the secret/URI
+    logger.info("[2FA SETUP] provisioned a new TOTP secret for %s (workspace=%s)", _masked_identifier(norm_email), raw_slug)
 
     return {
         "status": "SETUP_INITIATED",
@@ -711,7 +723,7 @@ def verify_two_factor(payload: TwoFactorVerifyRequest, request: Request, db: Ses
         db.rollback()
 
     db.commit()
-    logger.info(f"[2FA VERIFIED] User {norm_email} successfully validated 2FA code.")
+    logger.info("[2FA VERIFIED] User %s successfully validated 2FA code.", _masked_identifier(norm_email))
 
     # If verifying during login handshake, issue full access token
     if payload.two_factor_token and claims:

@@ -520,6 +520,9 @@ app.include_router(users_api.router)
 from backend.app.api.v1 import backup_destinations as backup_destinations_api
 app.include_router(backup_destinations_api.tenant_router)
 app.include_router(backup_destinations_api.superadmin_router)
+from backend.app.api.v1 import communications as communications_api
+app.include_router(communications_api.tenant_router)
+app.include_router(communications_api.superadmin_router)
 from backend.app.api.v1 import tenant_control, master_platform
 # tenant_control.router carries a router-level get_authenticated_user dependency;
 # public_router holds only the anonymous zero-slug domain-resolution endpoints.

@@ -9,6 +9,7 @@ import { navigateSuperAdmin, SuperAdminNavLink, SuperAdminNavTarget } from '../c
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 import { erpApi } from '../services/api';
 import { SuperAdminBackupMonitor } from '../components/platform/SuperAdminBackupMonitor';
+import { SuperAdminCommunicationsPanel } from '../components/platform/SuperAdminCommunicationsPanel';
 import { useApp } from '../context/AppContext';
 
 interface TenantItem {
@@ -557,6 +558,8 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
       <div className="w-full max-w-7xl mx-auto mt-6 pb-6">
         <SuperAdminBackupMonitor tenants={tenants.map((t) => ({ id: t.id, name: t.name }))} />
       </div>
+
+      <SuperAdminCommunicationsPanel />
 
       {/* Floating Bulk Action Bar */}
       <BulkActionBar
