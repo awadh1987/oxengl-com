@@ -72,71 +72,78 @@ export const QuickAddEntityModal: React.FC<QuickAddEntityModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (entityType === 'Customer') {
-      if (!customerName.trim()) {
-        showToast(isAr ? 'يرجى إدخال اسم العميل' : 'Please provide customer name', 'warning');
-        return;
+    try {
+      if (entityType === 'Customer') {
+        if (!customerName.trim()) {
+          showToast(isAr ? 'يرجى إدخال اسم العميل' : 'Please provide customer name', 'warning');
+          return;
+        }
+        const created = await addCustomer({
+          customerName,
+          customerNameEn: customerNameEn || customerName,
+          taxNumber: taxNumber || '300000000000003',
+          contactPerson: contactPerson || 'مسؤول المشتريات',
+          phone: phone || '+966 50 000 0000',
+          email: 'info@client.sa',
+          address: address || 'المملكة العربية السعودية',
+        });
+        onSuccess(created.customerName, created.id);
+      } else if (entityType === 'Crusher') {
+        if (!crusherName.trim()) {
+          showToast(isAr ? 'يرجى إدخال اسم مورد المواد' : 'Please provide material supplier name', 'warning');
+          return;
+        }
+        const created = await addCrusher({
+          crusherName,
+          crusherNameEn: crusherName,
+          location: crusherLocation || 'الرياض - مقالع المواد',
+          bankDetails: crusherBank || 'مصرف الراجحي',
+          phone: crusherPhone || '+966 50 000 0000',
+          openingBalance: 0,
+        });
+        onSuccess(created.crusherName, created.id);
+      } else if (entityType === 'Transporter') {
+        if (!transporterName.trim()) {
+          showToast(isAr ? 'يرجى إدخال اسم مزود الخدمة' : 'Please provide service supplier name', 'warning');
+          return;
+        }
+        const created = await addTransporter({
+          transporterName,
+          transporterNameEn: transporterName,
+          driverName: driverName || 'سائق معتمد',
+          phone: transporterPhone || '+966 50 000 0000',
+          truckDetails: 'مرسيدس أكتروس قلاب 32م³',
+          defaultTruckNo: truckNo || '1111-أ ب ج',
+          ratePerTon: Number(ratePerTon) || 18,
+        });
+        onSuccess(created.transporterName, created.id);
+      } else if (entityType === 'Material') {
+        if (!materialNameAr.trim()) {
+          showToast(isAr ? 'يرجى إدخال اسم المادة' : 'Please provide material name', 'warning');
+          return;
+        }
+        const created = addMaterial({
+          nameAr: materialNameAr,
+          nameEn: materialNameEn || materialNameAr,
+          category: materialCategory,
+          defaultSellingPrice: Number(defaultSellingPrice) || 45,
+          defaultPurchasePrice: Number(defaultPurchasePrice) || 26,
+          unit: materialUnit,
+        });
+        onSuccess(created.nameAr, created.id);
       }
-      const created = addCustomer({
-        customerName,
-        customerNameEn: customerNameEn || customerName,
-        taxNumber: taxNumber || '300000000000003',
-        contactPerson: contactPerson || 'مسؤول المشتريات',
-        phone: phone || '+966 50 000 0000',
-        email: 'info@client.sa',
-        address: address || 'المملكة العربية السعودية',
-      });
-      onSuccess(created.customerName, created.id);
-    } else if (entityType === 'Crusher') {
-      if (!crusherName.trim()) {
-        showToast(isAr ? 'يرجى إدخال اسم مورد المواد' : 'Please provide material supplier name', 'warning');
-        return;
-      }
-      const created = addCrusher({
-        crusherName,
-        crusherNameEn: crusherName,
-        location: crusherLocation || 'الرياض - مقالع المواد',
-        bankDetails: crusherBank || 'مصرف الراجحي',
-        phone: crusherPhone || '+966 50 000 0000',
-        openingBalance: 0,
-      });
-      onSuccess(created.crusherName, created.id);
-    } else if (entityType === 'Transporter') {
-      if (!transporterName.trim()) {
-        showToast(isAr ? 'يرجى إدخال اسم مزود الخدمة' : 'Please provide service supplier name', 'warning');
-        return;
-      }
-      const created = addTransporter({
-        transporterName,
-        transporterNameEn: transporterName,
-        driverName: driverName || 'سائق معتمد',
-        phone: transporterPhone || '+966 50 000 0000',
-        truckDetails: 'مرسيدس أكتروس قلاب 32م³',
-        defaultTruckNo: truckNo || '1111-أ ب ج',
-        ratePerTon: Number(ratePerTon) || 18,
-      });
-      onSuccess(created.transporterName, created.id);
-    } else if (entityType === 'Material') {
-      if (!materialNameAr.trim()) {
-        showToast(isAr ? 'يرجى إدخال اسم المادة' : 'Please provide material name', 'warning');
-        return;
-      }
-      const created = addMaterial({
-        nameAr: materialNameAr,
-        nameEn: materialNameEn || materialNameAr,
-        category: materialCategory,
-        defaultSellingPrice: Number(defaultSellingPrice) || 45,
-        defaultPurchasePrice: Number(defaultPurchasePrice) || 26,
-        unit: materialUnit,
-      });
-      onSuccess(created.nameAr, created.id);
-    }
 
-    showToast(isAr ? 'تمت الإضافة السريعة بنجاح' : 'Entity added successfully', 'success');
-    onClose();
+      showToast(isAr ? 'تمت الإضافة السريعة بنجاح' : 'Entity added successfully', 'success');
+      onClose();
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : (isAr ? 'تعذر إنشاء السجل' : 'Could not create entity'),
+        'error'
+      );
+    }
   };
 
   const getHeaderInfo = () => {

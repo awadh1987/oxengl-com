@@ -16,11 +16,12 @@ import { useApp } from '../context/AppContext';
 import { ApiSettlement, erpApi } from '../services/api';
 import { formatCurrency, formatTonnage } from '../utils/formatters';
 import { CreateVoucherModal } from '../components/CreateVoucherModal';
+import { EntityQuickAdd } from '../components/EntityQuickAdd';
 
 type Partner = { id: string; name: string; partner_type: string };
 
 export const TransporterPerformanceView: React.FC = () => {
-  const { currentCompany, language, accessibleOperations, transporters, themeMode } = useApp();
+  const { currentCompany, language, accessibleOperations, transporters, themeMode, refreshPartners } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
   const [serverSettlements, setServerSettlements] = useState<ApiSettlement[]>([]);
@@ -39,14 +40,20 @@ export const TransporterPerformanceView: React.FC = () => {
     if (!currentCompany) return;
     setIsRefreshing(true);
     try {
-      const [settlements, records] = await Promise.all([
+      const [settlements, records] = await Promise.allSettled([
         erpApi.getSettlements(currentCompany.id),
         erpApi.getPartners(currentCompany.id),
       ]);
-      setServerSettlements(settlements);
-      setPartners(records);
-    } catch (error) {
-      console.warn('Settlement ledger unavailable; displaying operational fallback:', error);
+      if (settlements.status === 'fulfilled') {
+        setServerSettlements(settlements.value);
+      } else {
+        console.warn('Settlement data unavailable; displaying operational fallback:', settlements.reason);
+      }
+      if (records.status === 'fulfilled') {
+        setPartners(records.value);
+      } else {
+        console.warn('Service supplier directory unavailable:', records.reason);
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -245,6 +252,12 @@ export const TransporterPerformanceView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <EntityQuickAdd
+            actions={[{ type: 'transporter', labelAr: 'إضافة مورد خدمة', labelEn: 'Add Service Supplier' }]}
+            onCreated={async () => {
+              await Promise.all([refreshPartners(), fetchData()]);
+            }}
+          />
           {/* Refresh Button */}
           <button
             id="refresh-transporters-btn"

@@ -23,6 +23,7 @@ import {
 import { formatCurrency, formatDate, formatTonnage } from '../utils/formatters';
 import { exportOperationsToExcel } from '../utils/excelExporter';
 import { DailyOperationsModal } from '../components/DailyOperationsModal';
+import { EntityQuickAdd } from '../components/EntityQuickAdd';
 import { ScaleTicketViewerModal } from '../components/ScaleTicketViewerModal';
 import { MultiAttachmentModal } from '../components/MultiAttachmentModal';
 import { ExportPrintModal } from '../components/ExportPrintModal';
@@ -36,6 +37,7 @@ export const OperationsLogView: React.FC = () => {
     accessibleOperations,
     deleteOperation,
     refreshOperations,
+    refreshPartners,
     language,
     currentUser,
     canEditOperations,
@@ -211,6 +213,19 @@ export const OperationsLogView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {canEditOperations && (
+            <EntityQuickAdd
+              actions={[{ type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' }]}
+              quickAddMenuLabel={{ ar: 'إضافة سريعة', en: 'Quick Add' }}
+              quickAddMenuActions={[
+                { type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' },
+                { type: 'crusher', labelAr: 'إضافة مورد مواد', labelEn: 'Add Material Supplier' },
+                { type: 'transporter', labelAr: 'إضافة مورد خدمة', labelEn: 'Add Service Supplier' },
+                { type: 'material', labelAr: 'إضافة صنف مادة', labelEn: 'Add New Material Item' },
+              ]}
+              onCreated={refreshPartners}
+            />
+          )}
           {/* Live Server Refresh Button */}
           <button
             id="refresh-operations-btn"

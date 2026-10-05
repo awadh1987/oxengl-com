@@ -4,11 +4,12 @@ import { useApp } from '../context/AppContext';
 import { ApiAccountMove, ApiSettlement, erpApi } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 import { CreateVoucherModal } from '../components/CreateVoucherModal';
+import { EntityQuickAdd } from '../components/EntityQuickAdd';
 
 type Partner = { id: string; name: string; partner_type: string; tax_number?: string | null };
 
 export const CrusherLedgerView: React.FC = () => {
-  const { currentCompany, language, crushers, accessibleOperations, themeMode } = useApp();
+  const { currentCompany, language, crushers, accessibleOperations, themeMode, refreshPartners } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -22,16 +23,26 @@ export const CrusherLedgerView: React.FC = () => {
     if (!currentCompany) return;
     setIsRefreshing(true);
     try {
-      const [records, ledgerMoves, ledgerSettlements] = await Promise.all([
+      const [records, ledgerMoves, ledgerSettlements] = await Promise.allSettled([
         erpApi.getPartners(currentCompany.id),
         erpApi.getAccountingMoves(currentCompany.id),
         erpApi.getSettlements(currentCompany.id),
       ]);
-      setPartners(records);
-      setMoves(ledgerMoves);
-      setSettlements(ledgerSettlements);
-    } catch (error) {
-      console.warn('Sourcing ledger API unavailable; using operational fallback:', error);
+      if (records.status === 'fulfilled') {
+        setPartners(records.value);
+      } else {
+        console.warn('Material supplier directory unavailable:', records.reason);
+      }
+      if (ledgerMoves.status === 'fulfilled') {
+        setMoves(ledgerMoves.value);
+      } else {
+        console.warn('Supplier accounting moves unavailable:', ledgerMoves.reason);
+      }
+      if (ledgerSettlements.status === 'fulfilled') {
+        setSettlements(ledgerSettlements.value);
+      } else {
+        console.warn('Supplier settlements unavailable:', ledgerSettlements.reason);
+      }
     } finally {
       setIsRefreshing(false);
     }
@@ -155,6 +166,15 @@ export const CrusherLedgerView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <EntityQuickAdd
+            actions={[
+              { type: 'crusher', labelAr: 'إضافة مورد مواد', labelEn: 'Add Material Supplier' },
+              { type: 'material', labelAr: 'إضافة صنف مادة', labelEn: 'Add New Material Item' },
+            ]}
+            onCreated={async () => {
+              await Promise.all([refreshPartners(), fetchLedgerData()]);
+            }}
+          />
           {/* Refresh Button */}
           <button
             id="refresh-crushers-btn"

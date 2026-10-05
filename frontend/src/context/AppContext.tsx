@@ -179,21 +179,21 @@ interface AppContextType {
   deleteCrusherPayment: (id: string) => void;
   softDeleteCrusherPayment: (id: string) => void;
   // Entity CRUD - Customers
-  addCustomer: (cust: Omit<Customer, 'id'>) => Customer;
+  addCustomer: (cust: Omit<Customer, 'id'>) => Promise<Customer>;
   updateCustomer: (id: string, cust: Partial<Customer>) => void;
   softDeleteCustomer: (id: string) => void;
   restoreCustomer: (id: string) => void;
   deleteCustomer: (id: string) => void;
   batchAddCustomers: (custs: Omit<Customer, 'id'>[], updateExisting?: boolean) => { addedCount: number; updatedCount: number };
   // Entity CRUD - Crushers
-  addCrusher: (crush: Omit<Crusher, 'id'>) => Crusher;
+  addCrusher: (crush: Omit<Crusher, 'id'>) => Promise<Crusher>;
   updateCrusher: (id: string, crush: Partial<Crusher>) => void;
   softDeleteCrusher: (id: string) => void;
   restoreCrusher: (id: string) => void;
   deleteCrusher: (id: string) => void;
   batchAddCrushers: (crushes: Omit<Crusher, 'id'>[], updateExisting?: boolean) => { addedCount: number; updatedCount: number };
   // Entity CRUD - Transporters
-  addTransporter: (trans: Omit<Transporter, 'id'>) => Transporter;
+  addTransporter: (trans: Omit<Transporter, 'id'>) => Promise<Transporter>;
   updateTransporter: (id: string, trans: Partial<Transporter>) => void;
   softDeleteTransporter: (id: string) => void;
   restoreTransporter: (id: string) => void;
@@ -2095,18 +2095,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Entity CRUD - Customers
-  const addCustomer = (custData: Omit<Customer, 'id'>): Customer => {
-    const id = `cust-${Date.now()}`;
-    const newCust: Customer = {
-      ...custData,
-      id,
-      is_deleted: false,
-    };
-    setCustomers((prev) => [newCust, ...prev]);
-
-    if (currentCompany) {
-      erpApi
-        .createPartner(currentCompany.id, {
+  const addCustomer = async (custData: Omit<Customer, 'id'>): Promise<Customer> => {
+    const partner = currentCompany && typeof navigator !== 'undefined' && navigator.onLine
+      ? await erpApi.createPartner(currentCompany.id, {
           name: custData.customerName,
           partner_type: 'customer',
           email: custData.email || null,
@@ -2114,11 +2105,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           tax_number: custData.taxNumber || null,
           commercial_registration: custData.crNumber || null,
         })
-        .then((created) => {
-          setCustomers((prev) => prev.map((c) => (c.id === id ? { ...c, id: created.id } : c)));
-        })
-        .catch((err) => console.warn('Customer backend sync warning:', err));
-    }
+      : null;
+    const id = partner?.id || `cust-${Date.now()}`;
+    const newCust: Customer = {
+      ...custData,
+      id,
+      is_deleted: false,
+    };
+    setCustomers((prev) => [newCust, ...prev]);
 
     logAuditAction({
       userId: currentUser.id,
@@ -2223,28 +2217,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Entity CRUD - Crushers
-  const addCrusher = (crushData: Omit<Crusher, 'id'>): Crusher => {
-    const id = `crush-${Date.now()}`;
+  const addCrusher = async (crushData: Omit<Crusher, 'id'>): Promise<Crusher> => {
+    const partner = currentCompany && typeof navigator !== 'undefined' && navigator.onLine
+      ? await erpApi.createPartner(currentCompany.id, {
+          name: crushData.crusherName,
+          partner_type: 'supplier',
+          phone: crushData.phone || null,
+          tax_number: crushData.taxNumber || null,
+        })
+      : null;
+    const id = partner?.id || `crush-${Date.now()}`;
     const newCrush: Crusher = {
       ...crushData,
       id,
       is_deleted: false,
     };
     setCrushers((prev) => [newCrush, ...prev]);
-
-    if (currentCompany) {
-      erpApi
-        .createPartner(currentCompany.id, {
-          name: crushData.crusherName,
-          partner_type: 'supplier',
-          phone: crushData.phone || null,
-          tax_number: crushData.taxNumber || null,
-        })
-        .then((created) => {
-          setCrushers((prev) => prev.map((c) => (c.id === id ? { ...c, id: created.id } : c)));
-        })
-        .catch((err) => console.warn('Crusher backend sync warning:', err));
-    }
 
     logAuditAction({
       userId: currentUser.id,
@@ -2340,27 +2328,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Entity CRUD - Transporters
-  const addTransporter = (transData: Omit<Transporter, 'id'>): Transporter => {
-    const id = `trans-${Date.now()}`;
+  const addTransporter = async (transData: Omit<Transporter, 'id'>): Promise<Transporter> => {
+    const partner = currentCompany && typeof navigator !== 'undefined' && navigator.onLine
+      ? await erpApi.createPartner(currentCompany.id, {
+          name: transData.transporterName,
+          partner_type: 'transporter',
+          phone: transData.phone || null,
+        })
+      : null;
+    const id = partner?.id || `trans-${Date.now()}`;
     const newTrans: Transporter = {
       ...transData,
       id,
       is_deleted: false,
     };
     setTransporters((prev) => [newTrans, ...prev]);
-
-    if (currentCompany) {
-      erpApi
-        .createPartner(currentCompany.id, {
-          name: transData.transporterName,
-          partner_type: 'transporter',
-          phone: transData.phone || null,
-        })
-        .then((created) => {
-          setTransporters((prev) => prev.map((t) => (t.id === id ? { ...t, id: created.id } : t)));
-        })
-        .catch((err) => console.warn('Transporter backend sync warning:', err));
-    }
 
     logAuditAction({
       userId: currentUser.id,

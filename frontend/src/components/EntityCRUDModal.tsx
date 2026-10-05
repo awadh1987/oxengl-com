@@ -33,6 +33,7 @@ interface EntityCRUDModalProps {
   onClose: () => void;
   entityType: CRUDModalType;
   initialData?: any | null; // If present, edit mode; otherwise create mode
+  onSaved?: () => void | Promise<void>;
 }
 
 export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
@@ -40,6 +41,7 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
   onClose,
   entityType,
   initialData,
+  onSaved,
 }) => {
   const {
     addCustomer,
@@ -184,34 +186,39 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
       return;
     }
 
-    if (entityType === 'customer') {
-      if (isEdit) {
-        updateCustomer(initialData.id, formData);
-      } else {
-        addCustomer(formData);
+    try {
+      if (entityType === 'customer') {
+        if (isEdit) {
+          updateCustomer(initialData.id, formData);
+        } else {
+          await addCustomer(formData);
+        }
+      } else if (entityType === 'crusher') {
+        if (isEdit) {
+          updateCrusher(initialData.id, formData);
+        } else {
+          await addCrusher(formData);
+        }
+      } else if (entityType === 'transporter') {
+        if (isEdit) {
+          updateTransporter(initialData.id, formData);
+        } else {
+          await addTransporter(formData);
+        }
+      } else if (entityType === 'material') {
+        if (isEdit) {
+          updateMaterial(initialData.id, formData);
+        } else {
+          addMaterial(formData);
+        }
       }
-    } else if (entityType === 'crusher') {
-      if (isEdit) {
-        updateCrusher(initialData.id, formData);
-      } else {
-        addCrusher(formData);
-      }
-    } else if (entityType === 'transporter') {
-      if (isEdit) {
-        updateTransporter(initialData.id, formData);
-      } else {
-        addTransporter(formData);
-      }
-    } else if (entityType === 'material') {
-      if (isEdit) {
-        updateMaterial(initialData.id, formData);
-      } else {
-        addMaterial(formData);
-      }
-    }
 
-    showToast(isAr ? 'تم حفظ بيانات السجل بنجاح' : 'Entity record saved successfully', 'success');
-    onClose();
+      await onSaved?.();
+      showToast(isAr ? 'تم حفظ بيانات السجل بنجاح' : 'Entity record saved successfully', 'success');
+      onClose();
+    } catch (err: any) {
+      showToast(err?.message || (isAr ? 'تعذر حفظ السجل' : 'Could not save entity record'), 'error');
+    }
   };
 
   const getHeader = () => {
