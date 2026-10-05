@@ -1166,6 +1166,15 @@ class PurchaseOrderCreate(BaseModel):
     tax_amount: Decimal = Field(default=Decimal("0"), ge=0)
     total_amount: Decimal = Field(default=Decimal("0"), ge=0)
     notes: str | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -1196,6 +1205,15 @@ class PurchaseOrderUpdate(BaseModel):
     tax_amount: Decimal | None = Field(default=None, ge=0)
     total_amount: Decimal | None = Field(default=None, ge=0)
     notes: str | None = None
+    custom_attributes: dict[str, Any] | None = None
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
 
 class PurchaseOrderRead(ORMReadModel):
@@ -1214,6 +1232,7 @@ class PurchaseOrderRead(ORMReadModel):
     notes: str | None = None
     created_at: datetime
     updated_at: datetime
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class GoodsReceiptCreate(BaseModel):
@@ -1862,6 +1881,15 @@ class StockItemCreate(BaseModel):
     reorder_point: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0"))
     maximum_stock: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0"))
     is_active: bool = True
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -1890,6 +1918,15 @@ class StockItemUpdate(BaseModel):
     reorder_point: Decimal | None = Field(default=None, ge=Decimal("0"))
     maximum_stock: Decimal | None = Field(default=None, ge=Decimal("0"))
     is_active: bool | None = None
+    custom_attributes: dict[str, Any] | None = None
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
 
 class StockItemRead(ORMReadModel):
@@ -1906,6 +1943,7 @@ class StockItemRead(ORMReadModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class StockLotCreate(BaseModel):
@@ -1918,6 +1956,15 @@ class StockLotCreate(BaseModel):
     received_date: datetime = Field(default_factory=lambda: datetime.now())
     expiration_date: datetime | None = None
     status: Literal["active", "depleted", "quarantined", "expired"] = "active"
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
     @model_validator(mode="after")
     def validate_lot_quantities(self) -> "StockLotCreate":
@@ -1951,6 +1998,15 @@ class StockLotUpdate(BaseModel):
     unit_cost: Decimal | None = Field(default=None, ge=Decimal("0"))
     expiration_date: datetime | None = None
     status: Literal["active", "depleted", "quarantined", "expired"] | None = None
+    custom_attributes: dict[str, Any] | None = None
+
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return value
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
 
 
 class StockLotRead(ORMReadModel):
@@ -1967,6 +2023,7 @@ class StockLotRead(ORMReadModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class StockMovementCreate(BaseModel):
@@ -2124,6 +2181,7 @@ class StockMovementProcessRequest(BaseModel):
     reference_id: str | None = Field(default=None, max_length=128)
     movement_number: str | None = Field(default=None, max_length=64)
     notes: str | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         json_schema_extra={

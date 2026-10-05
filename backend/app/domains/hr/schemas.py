@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from datetime import date
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 from uuid import UUID
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
@@ -100,6 +100,7 @@ class EmployeeCreate(BaseModel):
     )
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     name: Optional[str] = Field(default=None, validation_alias=AliasChoices("name", "full_name"))
     name_ar: Optional[str] = Field(default=None, validation_alias=AliasChoices("name_ar", "nameAr"))
     name_en: Optional[str] = Field(default=None, validation_alias=AliasChoices("name_en", "nameEn"))
@@ -164,6 +165,14 @@ class EmployeeCreate(BaseModel):
     drivers_license_type: Optional[DRIVER_LICENSE_TYPES] = None
     drivers_license_expiry_date: Optional[date] = None
 
+    @field_validator("custom_attributes", mode="before")
+    @classmethod
+    def _sanitize_custom_attributes(cls, value):
+        if value is None:
+            return {}
+        from backend.app.services.custom_fields import sanitize_attributes
+        return sanitize_attributes(value)
+
     @field_validator("identity_number", "iqamaOrNationalId", mode="before")
     @classmethod
     def validate_identity_number(cls, value: object) -> Optional[str]:
@@ -227,6 +236,7 @@ class EmployeeCreate(BaseModel):
 class EmployeeResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     id: UUID
     tenant_id: UUID
     employee_code: str

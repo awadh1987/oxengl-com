@@ -19,6 +19,7 @@ from sqlalchemy import (
     CheckConstraint,
     Index,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -128,6 +129,7 @@ class PurchaseRequisition(Base):
     status: Mapped[str] = mapped_column(String(32), default="DRAFT", nullable=False)  # DRAFT, SUBMITTED, APPROVED, REJECTED, CONVERTED_TO_PO
     currency: Mapped[str] = mapped_column(String(3), default="SAR", nullable=False)
     total_estimated_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), default=Decimal("0.0000"), nullable=False)
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now(), nullable=False)
 
     lines: Mapped[List["PurchaseRequisitionLine"]] = relationship("PurchaseRequisitionLine", back_populates="requisition", cascade="all, delete-orphan")

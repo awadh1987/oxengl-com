@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import {
   ShoppingCart,
   X,
@@ -54,6 +55,7 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
     return d.toISOString().split('T')[0];
   });
   const [notes, setNotes] = useState('');
+  const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +92,7 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
         deliveryDate,
         notes: notes.trim(),
         status: 'draft',
+        custom_attributes: customAttributes,
       };
 
       const response = await erpApi.createPurchaseOrder(payload);
@@ -327,6 +330,8 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
               />
             </div>
           </div>
+
+          <DynamicFieldRenderer entity="purchase_order" values={customAttributes} onChange={setCustomAttributes} isAr={isAr} />
 
           {/* Action Buttons */}
           </div>

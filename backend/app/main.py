@@ -2457,6 +2457,21 @@ async def bulk_import_finance_documents(
 	return importer(database, company_id, raw_rows)
 
 
+@app.post("/api/v1/procurement/purchase-orders/bulk-import", tags=["Procurement"])
+@app.post("/api/v1/inventory/items/bulk-import", tags=["Warehouse"])
+async def bulk_import_procurement_inventory(
+	request: Request,
+	company_id: uuid.UUID = Depends(get_active_company_id),
+	database: Session = Depends(get_db),
+):
+	"""Excel/CSV/JSON import of purchase orders or stock items; unknown columns land in custom_attributes."""
+	from backend.app.services.erp_document_import import import_purchase_orders, import_stock_items, read_import_rows
+
+	rows = await read_import_rows(request)
+	importer = import_purchase_orders if "/procurement/" in request.url.path else import_stock_items
+	return importer(database, company_id, rows)
+
+
 @app.get("/api/accounting/accounts", response_model=list[AccountAccountRead], tags=["Accounting"])
 @app.get("/api/v1/accounting/accounts", response_model=list[AccountAccountRead], tags=["Accounting"])
 def list_accounts(company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
@@ -3505,6 +3520,9 @@ def update_purchase_order(po_id: uuid.UUID, payload: PurchaseOrderUpdate, compan
 	if order is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Purchase order was not found")
 	for field, value in payload.model_dump(exclude_unset=True).items():
+		if field == "custom_attributes":
+			order.custom_attributes = {**(order.custom_attributes or {}), **(value or {})}
+			continue
 		setattr(order, field, value)
 	try:
 		database.commit()
@@ -4969,6 +4987,23 @@ def create_stock_item(payload: StockItemCreate, company_id: uuid.UUID = Depends(
 	return stock_item
 
 
+@app.put("/api/warehouse/stock-items/{item_id}", response_model=StockItemRead, tags=["Warehouse"])
+def update_stock_item(item_id: uuid.UUID, payload: StockItemUpdate, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
+	stock_item = database.scalar(
+		select(models.StockItem).where(models.StockItem.id == item_id, models.StockItem.company_id == company_id)
+	)
+	if stock_item is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Stock item was not found")
+	for field, value in payload.model_dump(exclude_unset=True).items():
+		if field == "custom_attributes":
+			stock_item.custom_attributes = {**(stock_item.custom_attributes or {}), **(value or {})}
+			continue
+		setattr(stock_item, field, value)
+	database.commit()
+	database.refresh(stock_item)
+	return stock_item
+
+
 @app.get("/api/warehouse/stock-items/{item_id}", response_model=StockItemRead, tags=["Warehouse"])
 def get_stock_item(item_id: uuid.UUID, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
 	stock_item = database.scalar(
@@ -5085,6 +5120,7 @@ def process_stock_movement(
 			received_date=received_dt,
 			expiration_date=payload.expiration_date,
 			status="active",
+			custom_attributes=sanitize_attributes(payload.custom_attributes),
 		)
 		database.add(lot)
 		database.flush()

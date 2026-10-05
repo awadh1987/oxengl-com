@@ -17,6 +17,7 @@ from sqlalchemy import select, func, or_
 from backend.database import get_db
 from backend import models as core_models
 from backend.app.services.sequence_service import SequenceService
+from backend.app.services.custom_fields import sanitize_attributes
 from backend.app.domains.procurement.models import (
     ApprovalRule,
     WorkflowInstance,
@@ -99,6 +100,7 @@ class PurchaseRequisitionCreate(BaseModel):
     currency: str = "SAR"
     justification: Optional[str] = None
     lines: List[dict]
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class StepDecisionRequest(BaseModel):
@@ -295,6 +297,7 @@ def create_purchase_requisition(
         currency=payload.currency,
         total_estimated_amount=total_est,
         status="SUBMITTED",
+        custom_attributes=sanitize_attributes(payload.custom_attributes),
     )
     db.add(pr)
     db.flush()

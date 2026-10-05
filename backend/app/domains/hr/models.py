@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Optional
 from sqlalchemy import (
     String, ForeignKey, DateTime, Boolean, Numeric, Date, Integer,
-    LargeBinary, CheckConstraint, Index, func,
+    LargeBinary, CheckConstraint, Index, func, text,
 )
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -81,6 +81,7 @@ class Employee(Base):
     operational_telecom_allowance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     food_other_allowance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     total_target_salary: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2))
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     overtime_eligible: Mapped[Optional[bool]] = mapped_column(Boolean)
     standard_working_hours: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))
     gosi_registration_number: Mapped[Optional[str]] = mapped_column(String(64))
@@ -197,6 +198,7 @@ class PayrollRun(Base):
     deductions: Mapped[float] = mapped_column(Numeric(12, 2), default=0.00, nullable=False)
     net_pay: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)  # Formula: Gross + Allowances - Deductions
     status: Mapped[str] = mapped_column(String(30), default="DRAFT", nullable=False)  # 'DRAFT', 'APPROVED', 'PAID'
+    custom_attributes: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
 
     @property
     def company_id(self) -> uuid.UUID:

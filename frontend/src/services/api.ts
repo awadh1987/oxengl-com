@@ -2246,6 +2246,16 @@ export const erpApi = {
     request<ApiInventoryMovement[]>('/api/inventory/movements', companyId),
   getInventoryMovement: (movementId: string, companyId?: string) =>
     request<ApiInventoryMovement>(`/api/inventory/movements/${movementId}`, companyId),
+  createStockItem: (payload: any, companyId?: string) =>
+    request<any>('/api/warehouse/stock-items', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  updateStockItem: (itemId: string, payload: any, companyId?: string) =>
+    request<any>(`/api/warehouse/stock-items/${itemId}`, companyId, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   createInventoryMovement: (payload: any, companyId?: string) =>
     request<ApiInventoryMovement>('/api/inventory/movements', companyId, {
       method: 'POST',

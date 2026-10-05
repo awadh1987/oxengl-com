@@ -26,6 +26,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { StockItemModal } from '../components/StockItemModal';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
@@ -65,6 +66,7 @@ export const InventoryView: React.FC = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [isStockItemModalOpen, setIsStockItemModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     warehouse_id: '',
     product_id: '',
@@ -325,6 +327,13 @@ export const InventoryView: React.FC = () => {
               <RefreshCw className={`h-full w-full ${loading ? 'animate-spin text-amber-400' : ''}`} />
             </HoverIcon>
             <span className="hidden sm:inline">{isAr ? 'تحديث' : 'Refresh'}</span>
+          </button>
+          <button
+            id="new-stock-item-btn"
+            onClick={() => setIsStockItemModalOpen(true)}
+            className="px-4 py-2 rounded-xl border border-slate-700 text-xs font-bold text-slate-200 hover:bg-slate-800"
+          >
+            {isAr ? 'صنف مخزون جديد' : 'New Stock Item'}
           </button>
           <button
             id="new-stock-adjustment-btn"
@@ -993,6 +1002,18 @@ export const InventoryView: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {isStockItemModalOpen && (
+        <StockItemModal
+          isAr={isAr}
+          products={products as any}
+          onClose={() => setIsStockItemModalOpen(false)}
+          onCreated={() => {
+            setNotification({ type: 'success', message: isAr ? 'تم إنشاء صنف المخزون' : 'Stock item created' });
+            setTimeout(() => setNotification(null), 6000);
+          }}
+        />
+      )}
 
       {/* New Stock Adjustment Modal */}
       {isModalOpen && (

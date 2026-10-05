@@ -1381,6 +1381,7 @@ class PurchaseOrder(TimestampMixin, Base):
     tax_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
     total_amount: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
     notes: Mapped[Optional[str]] = mapped_column(Text)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
     partner: Mapped[ResPartner] = relationship()
@@ -1711,6 +1712,7 @@ class StockItem(TimestampMixin, Base):
     reorder_point: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal("0.00"))
     maximum_stock: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False, default=Decimal("0.00"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
     product: Mapped[ProductProduct] = relationship()
@@ -1740,6 +1742,7 @@ class StockLot(TimestampMixin, Base):
     received_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     expiration_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="active")
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
     stock_item: Mapped[StockItem] = relationship(back_populates="lots")

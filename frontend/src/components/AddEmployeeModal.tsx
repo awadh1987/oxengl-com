@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import {
   AlertCircle,
   Briefcase,
@@ -258,6 +259,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const [activeStep, setActiveStep] = useState(0);
   const [form, setForm] = useState<EmployeeFormState>(initialForm);
   const [documents, setDocuments] = useState<SelectedDocument[]>([]);
+  const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -402,6 +404,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           .filter(Boolean),
         drivers_license_type: form.driversLicenseType || null,
         drivers_license_expiry_date: form.driversLicenseExpiryDate || null,
+        custom_attributes: customAttributes,
       };
 
       const response = await erpApi.createEmployee(payload, currentCompany?.id);
@@ -850,6 +853,11 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                     : activeStep === 3
                       ? renderPayrollTab()
                       : renderQualificationsTab()}
+            {(mode === 'QUICK' || activeStep === 4) && (
+              <div className="mt-4">
+                <DynamicFieldRenderer entity="employee" values={customAttributes} onChange={setCustomAttributes} isAr={isAr} />
+              </div>
+            )}
           </div>
 
           <footer className="erp-modal-footer flex items-center justify-between gap-3 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 sm:px-6">

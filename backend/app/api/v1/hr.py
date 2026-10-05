@@ -236,6 +236,41 @@ async def create_employee(
     return result
 
 
+@router.post("/employees/bulk-import")
+async def bulk_import_employees(
+    request: Request,
+    db: Session = Depends(get_db),
+    user: ABACUserContext = Depends(get_abac_user_context),
+):
+    """Excel/CSV/JSON employee import; unknown columns land in custom_attributes."""
+    from backend.app.services.erp_document_import import import_employees, read_import_rows
+
+    _require_hr_role(db, request, user, write=True)
+    rows = await read_import_rows(request)
+    seats_available = None
+    sub = None
+    try:
+        from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
+        sub = db.execute(select(TenantSubscription).where(TenantSubscription.tenant_id == user.tenant_id)).scalar_one_or_none()
+        if sub is not None:
+            max_seats = getattr(sub, "max_seats", None)
+            if max_seats is None:
+                plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == sub.plan_id)).scalar_one_or_none()
+                max_seats = plan.max_seats if plan else 5
+            seats_available = max(0, max_seats - (getattr(sub, "current_seats_used", 0) or 0))
+    except Exception:
+        seats_available = None
+    result = import_employees(db, user.tenant_id, rows, seats_available)
+    if seats_available is not None and sub is not None and hasattr(sub, "current_seats_used"):
+        sub.current_seats_used = (sub.current_seats_used or 0) + result["imported_count"]
+    append_hr_audit(
+        db, request, action="EMPLOYEE_BULK_IMPORT", outcome="SUCCESS" if not result["errors"] else "PARTIAL",
+        tenant_id=user.tenant_id, actor_id=user.user_id, actor_identifier=f"user:{user.user_id}",
+    )
+    db.commit()
+    return result
+
+
 @router.get("/employees")
 def list_employees(
     request: Request,
@@ -250,6 +285,7 @@ def list_employees(
         {
             "id": str(emp.id),
             "employee_id": str(emp.id),
+            "custom_attributes": emp.custom_attributes or {},
             "employee_code": emp.employee_code,
             "employeeNumber": emp.employee_code,
             "first_name": emp.first_name,
