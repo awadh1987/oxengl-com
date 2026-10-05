@@ -528,13 +528,14 @@ def get_tenant_users(
     if context.is_super_admin and actor.level >= LEVEL_PLATFORM:
         # A platform super admin may scope to an explicit target company.
         if context.company_id and str(context.company_id) != str(getattr(context.user, "company_id", "")):
-            query = query.filter(ResUser.company_id == context.company_id)
+            query = query.filter(ResUser.company_id == context.company_id).filter(ResUser.is_superuser.is_(False))
         else:
             query = query.filter(ResUser.company_id.in_(accessible_cids))
     else:
         # Organization-wide listing so invitees stay visible when switching workspace/branch views.
         scope = _organization_scope(db, actor.company_id)
-        query = query.filter(ResUser.company_id.in_(scope))
+        # Global super-admins never appear inside tenant matrices.
+        query = query.filter(ResUser.company_id.in_(scope), ResUser.is_superuser.is_(False))
 
     users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
     if not users and actor.user_id is not None:
