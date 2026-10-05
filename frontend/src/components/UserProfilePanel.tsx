@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { erpApi } from '../services/api';
+import { UserAvatar } from './UserAvatar';
 
 interface UserProfilePanelProps {
   onClose: () => void;
@@ -43,14 +44,6 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  const initials = (fullName || currentUser.username || 'U')
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase();
 
   useEffect(() => {
     let cancelled = false;
@@ -248,11 +241,12 @@ export const UserProfilePanel: React.FC<UserProfilePanelProps> = ({ onClose }) =
                 aria-label={isArabic ? 'تغيير الصورة الشخصية' : 'Change profile photo'}
                 className="group relative h-28 w-28 overflow-hidden rounded-full bg-gradient-to-br from-orange-500 to-rose-600 text-3xl font-black text-white shadow-lg shadow-orange-900/15 ring-4 ring-white transition focus:outline-none focus-visible:ring-orange-400 dark:ring-slate-900"
               >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span>{initials}</span>
-                )}
+                <UserAvatar
+                  user={{ fullName, username: currentUser.username, avatar_url: avatarUrl || undefined }}
+                  sizeClassName="h-full w-full text-3xl"
+                  shape="circle"
+                  className="bg-transparent shadow-none ring-0"
+                />
                 <span className="absolute inset-0 flex items-center justify-center bg-slate-950/55 text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                   {isUploadingAvatar ? <Loader2 className="h-6 w-6 animate-spin" /> : <Camera className="h-6 w-6" />}
                 </span>

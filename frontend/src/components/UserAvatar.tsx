@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UserRole } from '../types';
+import { fetchAuthenticatedImageBlob } from '../services/api';
 
 interface UserAvatarProps {
   user?: {
@@ -12,6 +13,7 @@ interface UserAvatarProps {
   } | null;
   className?: string;
   sizeClassName?: string;
+  shape?: 'circle' | 'rounded';
   altText?: string;
 }
 
@@ -19,10 +21,35 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   user,
   className = '',
   sizeClassName = 'h-9 w-9 text-xs',
+  shape = 'rounded',
   altText,
 }) => {
-  const [imageFailed, setImageFailed] = useState(false);
   const avatarUrl = user?.avatar_url || user?.avatar;
+  const [imageObjectUrl, setImageObjectUrl] = useState<string | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setImageObjectUrl(null);
+    setImageFailed(false);
+    if (!avatarUrl) return undefined;
+
+    fetchAuthenticatedImageBlob(avatarUrl)
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setImageObjectUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setImageFailed(true);
+      });
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [avatarUrl]);
 
   const initials = (() => {
     const rawName = user?.fullName || user?.username || 'US';
@@ -35,14 +62,14 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   const title = altText || `${user?.fullName || user?.username || 'User'} (${user?.role || 'Guest'})`;
 
-  if (avatarUrl && !imageFailed) {
+  if (imageObjectUrl && !imageFailed) {
     return (
       <div
-        className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl ring-1 ring-orange-500/30 ${sizeClassName} ${className}`}
+        className={`relative inline-flex shrink-0 items-center justify-center overflow-hidden ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'} ring-1 ring-orange-500/30 ${sizeClassName} ${className}`}
         title={title}
       >
         <img
-          src={avatarUrl}
+          src={imageObjectUrl}
           alt={title}
           className="h-full w-full object-cover"
           onError={() => setImageFailed(true)}
@@ -53,7 +80,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
 
   return (
     <div
-      className={`inline-flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-[#1A1A1A] to-[#F05627] font-bold text-white shadow-xs select-none ${sizeClassName} ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center ${shape === 'circle' ? 'rounded-full' : 'rounded-xl'} bg-gradient-to-tr from-[#1A1A1A] to-[#F05627] font-bold text-white shadow-xs select-none ${sizeClassName} ${className}`}
       title={title}
     >
       {initials}

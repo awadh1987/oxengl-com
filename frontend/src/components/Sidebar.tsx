@@ -36,7 +36,6 @@ import {
   ChevronUp,
   X,
 } from 'lucide-react';
-import { UserAvatar } from './UserAvatar';
 import { TenantAvatar } from './TenantAvatar';
 import { BrandMark, BrandWordmark } from '../views/landing/BrandWordmark';
 import { HoverIcon } from './common/HoverIcon';
@@ -1153,40 +1152,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
 
-            {/* User Profile */}
-            {!isCollapsed ? (
-              <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-2">
-                <div className="flex items-center gap-2">
-                  <UserAvatar
-                    user={currentUser}
-                    sizeClassName="h-7 w-7 text-[10px]"
-                    className="rounded-lg"
-                  />
-                  <div className="overflow-hidden">
-                    <p className="truncate text-xs font-bold text-white">
-                      {currentUser?.fullNameAr || currentUser?.fullName || 'User'}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      <span className="text-[10px] text-orange-300 font-semibold truncate">
-                        {currentUser?.role || 'Operator'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div
-                className="flex justify-center"
-                title={`${currentUser?.fullName || 'User'} (${currentUser?.role || 'Operator'})`}
-              >
-                <UserAvatar
-                  user={currentUser}
-                  sizeClassName="h-8 w-8 text-xs"
-                  className="rounded-xl"
-                />
-              </div>
-            )}
           </div>
         </div>
       </aside>

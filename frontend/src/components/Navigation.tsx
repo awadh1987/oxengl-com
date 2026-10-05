@@ -13,13 +13,11 @@ import {
   Users,
   Layers,
   ChevronRight,
-  LogOut,
   Building,
   Network,
   X,
   FileCheck2,
 } from 'lucide-react';
-import { UserAvatar } from './UserAvatar';
 import { HoverIcon } from './common/HoverIcon';
 
 export type NavigationTab =
@@ -50,7 +48,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   isOpenMobile = false,
   onCloseMobile,
 }) => {
-  const { currentUser, language, canAccessFinancials, kpis, setLanguage } = useApp();
+  const { currentUser, language, canAccessFinancials, kpis } = useApp();
   const isAr = language === 'ar';
 
   const userRole = currentUser?.role || 'Admin';
@@ -190,31 +188,6 @@ export const Navigation: React.FC<NavigationProps> = ({
               </button>
             )}
           </div>
-
-        {/* User Context Badge */}
-        <div className="mx-2 mb-4 rounded-xl bg-slate-900/80 p-3 border border-slate-800/80 flex items-center justify-between">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <UserAvatar
-              user={currentUser}
-              sizeClassName="h-8 w-8 text-xs"
-              className="rounded-lg"
-            />
-            <div className="overflow-hidden">
-              <p className="text-xs font-semibold text-white truncate">
-                {currentUser?.fullName || 'Administrator'}
-              </p>
-              <p className="text-[11px] text-slate-400 truncate">
-                {userRole.replace('_', ' ')}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] font-medium text-slate-300 hover:text-white"
-          >
-            {language === 'ar' ? 'EN' : 'عربي'}
-          </button>
-        </div>
 
         {/* Navigation List */}
         <nav className="space-y-1">

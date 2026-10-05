@@ -1249,6 +1249,36 @@ async function request<T>(path: string, companyId?: string, options?: RequestIni
   return response.json() as Promise<T>;
 }
 
+export async function fetchAuthenticatedImageBlob(path: string): Promise<Blob> {
+  if (!path.startsWith('/api/v1/users/avatars/')) {
+    throw new Error('Avatar URL is not an approved authenticated image path.');
+  }
+
+  const token = getAuthToken();
+  const activeTenantSlug = getTenantSlug();
+  const activeCompanyId = getActiveCompanyId();
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(activeTenantSlug ? { 'X-Tenant-Slug': activeTenantSlug } : {}),
+    ...(activeCompanyId ? { 'X-Company-ID': activeCompanyId, 'X-Tenant-ID': activeCompanyId } : {}),
+  };
+  const response = await fetch(`${apiBaseUrl}${path}`, {
+    method: 'GET',
+    headers,
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) scheduleDebouncedSessionClear();
+    throw new Error(response.status === 404
+      ? 'Avatar image is unavailable.'
+      : `Could not load avatar image (${response.status}).`);
+  }
+
+  cancelDebouncedSessionClear();
+  return response.blob();
+}
+
 async function findOrCreate<T extends { id: string }>(path: string, companyId: string, predicate: (record: T) => boolean, payload: object): Promise<T> {
   const records = await request<T[]>(path, companyId);
   return records.find(predicate) ?? request<T>(path, companyId, { method: 'POST', body: JSON.stringify(payload) });

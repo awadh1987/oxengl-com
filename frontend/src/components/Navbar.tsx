@@ -119,6 +119,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isOpsExpanded, setIsOpsExpanded] = useState<boolean>(true);
   const [isFinanceExpanded, setIsFinanceExpanded] = useState<boolean>(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const activeNavDomain = selectedDomainProp ?? internalDomain;
 
@@ -203,6 +204,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const notificationsRef = useOutsideClick<HTMLDivElement>(() => {
     if (showNotifications) setShowNotifications(false);
+  });
+
+  const userMenuRef = useOutsideClick<HTMLDivElement>(() => {
+    if (isUserMenuOpen) setIsUserMenuOpen(false);
   });
 
   const isAr = language === 'ar';
@@ -866,47 +871,119 @@ export const Navbar: React.FC<NavbarProps> = ({
           );
         })()}
 
-        {/* User Profile Avatar & Logout */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
+        {/* User profile and account actions */}
+        <div ref={userMenuRef} className="relative">
           <button
             type="button"
-            onClick={() => setIsProfileOpen(true)}
-            aria-haspopup="dialog"
-            className={`inline-flex h-7.5 items-center rounded-lg border px-2 text-[11px] font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
+            onClick={() => {
+              setIsUserMenuOpen((open) => !open);
+              setShowSettings(false);
+              setShowNotifications(false);
+            }}
+            aria-label={isAr ? 'قائمة الحساب' : 'Account menu'}
+            aria-haspopup="menu"
+            aria-expanded={isUserMenuOpen}
+            className={`inline-flex h-9 items-center gap-2 rounded-xl border px-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${
               isDark
-                ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
-                : 'border-slate-200 text-slate-700 hover:bg-slate-100'
+                ? 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
             }`}
           >
-            {isAr ? 'ملفي الشخصي' : 'My Profile'}
+            <UserAvatar user={currentUser} sizeClassName="h-7 w-7 text-[10px]" shape="circle" />
+            <span className="hidden max-w-28 truncate text-xs font-bold sm:inline">
+              {currentUser?.fullName || (isAr ? 'الحساب' : 'Account')}
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-          <button
-            type="button"
-            onClick={() => setIsProfileOpen(true)}
-            aria-label={isAr ? 'فتح الملف الشخصي' : 'Open user profile'}
-            aria-haspopup="dialog"
-            className="rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
-            title={isAr ? 'الملف الشخصي' : 'My profile'}
-          >
-            <UserAvatar user={currentUser} sizeClassName="h-7.5 w-7.5 text-xs" />
-          </button>
-          {onLogout && (
-            <button
-              onClick={() => {
-                void signOutAuth();
-                onLogout();
-              }}
-              className={`group flex h-7.5 w-7.5 items-center justify-center rounded-lg transition-all duration-300 ${
+          {isUserMenuOpen && (
+            <div
+              role="menu"
+              aria-label={isAr ? 'إجراءات الحساب' : 'Account actions'}
+              className={`absolute top-11 z-[60] w-72 rounded-2xl border p-2 shadow-2xl ${
+                isAr ? 'left-0' : 'right-0'
+              } ${
                 isDark
-                  ? 'text-slate-400 hover:bg-slate-800 hover:text-rose-400 hover:shadow-[0_0_12px_rgba(244,63,94,0.35)]'
-                  : 'text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700'
+                  ? 'border-slate-700 bg-slate-900 text-slate-100'
+                  : 'border-slate-200 bg-white text-slate-800'
               }`}
-              title={isAr ? 'تسجيل الخروج' : 'Logout'}
             >
-              <HoverIcon className="h-3.5 w-3.5">
-                <LogOut className="h-full w-full" />
-              </HoverIcon>
-            </button>
+              <div className={`mb-1 border-b px-3 py-2.5 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
+                <p className="truncate text-sm font-black">{currentUser?.fullName || currentUser?.username}</p>
+                <p className={`truncate text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {currentUser?.email}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsProfileOpen(true);
+                  setIsUserMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start text-xs font-bold transition ${
+                  isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+                }`}
+              >
+                <UserCheck className="h-4 w-4 text-orange-500" />
+                {isAr ? 'ملفي الشخصي' : 'My Profile'}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setShowSettings(true);
+                  setIsUserMenuOpen(false);
+                }}
+                className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start text-xs font-bold transition ${
+                  isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+                }`}
+              >
+                <Settings className="h-4 w-4 text-slate-500" />
+                {isAr ? 'إعدادات الحساب' : 'Account Settings'}
+              </button>
+              <div className={`my-1 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`} />
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  {isAr ? 'حالة مساحة العمل' : 'Workspace status'}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
+                  isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  {isOnline ? (isAr ? 'متصل' : 'Online') : (isAr ? 'غير متصل' : 'Offline')}
+                </span>
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => setThemeMode(isDark ? 'light' : 'dark')}
+                className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-xs font-bold transition ${
+                  isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-100'
+                }`}
+              >
+                <span className="flex items-center gap-2.5">
+                  {isDark ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4 text-indigo-500" />}
+                  {isAr ? 'المظهر' : 'Theme'}
+                </span>
+                <span className={`text-[10px] font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  {isDark ? (isAr ? 'داكن' : 'Dark') : (isAr ? 'فاتح' : 'Light')}
+                </span>
+              </button>
+              <div className={`my-1 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`} />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  void signOutAuth();
+                  onLogout?.();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-start text-xs font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              >
+                <LogOut className="h-4 w-4" />
+                {isAr ? 'تسجيل الخروج' : 'Sign Out / Logout'}
+              </button>
+            </div>
           )}
         </div>
       </div>
