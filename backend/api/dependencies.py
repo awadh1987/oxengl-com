@@ -688,7 +688,7 @@ def get_tenant_context(
         # 1. First, check if requested_uuid and user_cid actually resolve to the SAME tenant!
         # (e.g. MasterTenant vs ResCompany alias, or matching slug / domain)
         is_same_tenant = False
-        from backend.models import MasterTenant, ResCompany
+        from backend.models import MasterTenant
 
         req_comp = db.get(ResCompany, requested_uuid)
         if not req_comp:
