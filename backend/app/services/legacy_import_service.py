@@ -55,6 +55,13 @@ def round_quantity(val: Any, places: int = 4) -> Optional[Decimal]:
         return None
 
 
+from backend.app.services.custom_fields import (  # noqa: E402
+    register_discovered_fields,
+    sanitize_attributes,
+    slugify_key,
+)
+
+
 def normalize_header(header: Any) -> str:
     """Normalize Arabic and English column headers for fuzzy matching."""
     if not header:
@@ -334,19 +341,26 @@ class LegacyImportService:
         # Scan for header row (check first 10 rows)
         header_row_idx = None
         column_mapping: Dict[int, str] = {}  # col_idx -> canonical_key
+        extra_mapping: Dict[int, Tuple[str, str]] = {}  # col_idx -> (custom field key, original header)
 
         for r in range(1, min(15, target_sheet.max_row + 1)):
             matched_keys = 0
             temp_map: Dict[int, str] = {}
+            temp_extra: Dict[int, Tuple[str, str]] = {}
             for col in range(1, target_sheet.max_column + 1):
                 val = target_sheet.cell(row=r, column=col).value
                 canonical = match_canonical_column(val)
                 if canonical:
                     temp_map[col] = canonical
                     matched_keys += 1
+                elif val is not None and str(val).strip():
+                    custom_key = slugify_key(val)
+                    if custom_key:
+                        temp_extra[col] = (custom_key, str(val).strip())
             if matched_keys >= 2:
                 header_row_idx = r
                 column_mapping = temp_map
+                extra_mapping = temp_extra
                 break
 
         if header_row_idx is None:
@@ -365,11 +379,13 @@ class LegacyImportService:
         imported_ticket_ids: List[str] = []
 
         BATCH_SIZE = 50
+        discovered_fields: Dict[str, Tuple[str, Any]] = {}
 
         # Iterate rows
         for row_idx in range(header_row_idx + 1, target_sheet.max_row + 1):
             row_data: Dict[str, Any] = {}
             raw_cells: Dict[str, Any] = {}
+            extra_values: Dict[str, Any] = {}
             has_data = False
 
             for col_idx, canonical in column_mapping.items():
@@ -378,6 +394,15 @@ class LegacyImportService:
                     has_data = True
                 row_data[canonical] = cell_val
                 raw_cells[f"col_{col_idx}"] = str(cell_val) if cell_val is not None else ""
+
+            # Unrecognised columns are preserved as dynamic custom attributes rather than dropped.
+            for col_idx, (custom_key, header_text) in extra_mapping.items():
+                cell_val = target_sheet.cell(row=row_idx, column=col_idx).value
+                if cell_val is None or (isinstance(cell_val, str) and not cell_val.strip()):
+                    continue
+                has_data = True
+                extra_values[custom_key] = cell_val
+                discovered_fields.setdefault(custom_key, (header_text, cell_val))
 
             if not has_data:
                 continue
@@ -520,6 +545,11 @@ class LegacyImportService:
                     existing_ticket.operation_year = parsed_date.year
                     existing_ticket.notes = str(row_data.get("notes") or existing_ticket.notes or "")
                     existing_ticket.raw_legacy_data = raw_cells
+                    if extra_values:
+                        existing_ticket.custom_attributes = {
+                            **(existing_ticket.custom_attributes or {}),
+                            **sanitize_attributes(extra_values),
+                        }
                     target_ticket = existing_ticket
                     updated_count += 1
                 else:
@@ -556,6 +586,7 @@ class LegacyImportService:
                         operation_year=parsed_date.year,
                         notes=str(row_data.get("notes") or ""),
                         raw_legacy_data=raw_cells,
+                        custom_attributes=sanitize_attributes(extra_values),
                     )
                     self.db.add(new_ticket)
                     target_ticket = new_ticket
@@ -598,7 +629,15 @@ class LegacyImportService:
                 continue
 
         # Final commit for all processed batches
+        custom_fields_registered = 0
         try:
+            if discovered_fields:
+                custom_fields_registered = register_discovered_fields(
+                    self.db,
+                    self.company_id,
+                    "weighbridge_ticket",
+                    [(key, label, sample) for key, (label, sample) in discovered_fields.items()],
+                )
             self.db.commit()
         except Exception as commit_exc:
             self.db.rollback()
@@ -623,5 +662,7 @@ class LegacyImportService:
                 "materials": len(self._material_cache),
             },
             "imported_ticket_ids": imported_ticket_ids,
+            "custom_fields_registered": custom_fields_registered,
+            "custom_field_keys": sorted(discovered_fields),
             "errors": errors,
         }

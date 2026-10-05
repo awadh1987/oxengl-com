@@ -665,6 +665,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updated_at: weighedAt,
       attachments: operation.attachments || [],
       scale_ticket_attachment: operation.scale_ticket_attachment || '',
+      custom_attributes: operation.custom_attributes || {},
     };
   };
 
@@ -1566,6 +1567,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         operation_month: opData.operation_month,
         operation_year: opData.operation_year,
         notes: opData.notes,
+        custom_attributes: opData.custom_attributes || {},
       });
       const serverRecord: OperationRecord = {
         ...mapApiOperation(operation),
@@ -2112,6 +2114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           phone: custData.phone || null,
           tax_number: custData.taxNumber || null,
           commercial_registration: custData.crNumber || null,
+          custom_attributes: custData.custom_attributes || {},
         })
       : null;
     const id = partner?.id || `cust-${Date.now()}`;
@@ -2230,6 +2233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? await erpApi.createPartner(currentCompany.id, {
           name: crushData.crusherName,
           partner_type: 'supplier',
+          custom_attributes: crushData.custom_attributes || {},
           phone: crushData.phone || null,
           tax_number: crushData.taxNumber || null,
         })
@@ -2341,6 +2345,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ? await erpApi.createPartner(currentCompany.id, {
           name: transData.transporterName,
           partner_type: 'transporter',
+          custom_attributes: transData.custom_attributes || {},
           phone: transData.phone || null,
         })
       : null;

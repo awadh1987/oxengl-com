@@ -529,6 +529,9 @@ from backend.app.api.v1 import tenant_control, master_platform
 for _tc_prefix in ("/api/tenant/control", "/api/v1/tenant/control", "/tenant/control", "/api/v1/tenant", "/api/tenant"):
 	app.include_router(tenant_control.public_router, prefix=_tc_prefix)
 	app.include_router(tenant_control.router, prefix=_tc_prefix)
+from backend.app.api.v1 import form_schemas as form_schemas_api
+for _fs_prefix in ("/api/v1/tenant", "/api/tenant"):
+	app.include_router(form_schemas_api.router, prefix=_fs_prefix)
 app.include_router(master_platform.router, prefix="/api/master/platform")
 app.include_router(master_platform.router, prefix="/api/v1/master/platform")
 app.include_router(master_platform.admin_router, prefix="/api/admin")
@@ -1888,6 +1891,9 @@ def update_partner(partner_id: uuid.UUID, payload: ResPartnerUpdate, company_id:
 	if partner is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner was not found")
 	for field, value in payload.model_dump(exclude_unset=True).items():
+		if field == "custom_attributes":
+			partner.custom_attributes = {**(partner.custom_attributes or {}), **(value or {})}
+			continue
 		setattr(partner, field, value)
 	try:
 		database.commit()
@@ -1991,6 +1997,7 @@ def operation_response(ticket: models.WeighbridgeTicket) -> WeighbridgeOperation
 		operation_year=getattr(ticket, "operation_year", None),
 		notes=getattr(ticket, "notes", None),
 		raw_legacy_data=getattr(ticket, "raw_legacy_data", {}) or {},
+		custom_attributes=getattr(ticket, "custom_attributes", {}) or {},
 	)
 
 
@@ -2178,6 +2185,7 @@ def create_weighbridge_operation(payload: WeighbridgeOperationCreate, company_id
 				operation_month=payload.operation_month if payload.operation_month is not None else payload.operationMonth,
 				operation_year=payload.operation_year if payload.operation_year is not None else payload.operationYear,
 				notes=payload.notes,
+				custom_attributes=payload.custom_attributes or {},
 			)
 			database.add(ticket)
 		database.commit()

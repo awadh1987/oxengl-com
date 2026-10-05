@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { erpApi } from '../services/api';
+import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import { useIamRoles } from '../hooks/useIamRoles';
 import { PRIVILEGED_IAM_ROLES, iamRoleLabel } from '../constants/iamRoles';
 import {
@@ -730,6 +731,15 @@ export const EntityCRUDModal: React.FC<EntityCRUDModalProps> = ({
                 </div>
               </div>
             </>
+          )}
+
+          {entityType !== 'user' && (
+            <DynamicFieldRenderer
+              entity="partner"
+              values={formData.custom_attributes}
+              onChange={(next) => handleChange('custom_attributes', next)}
+              isAr={isAr}
+            />
           )}
 
           {/* USER FORM - Edit Access (role only; identity is owned by HR / the account holder) */}

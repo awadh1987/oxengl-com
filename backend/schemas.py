@@ -180,6 +180,7 @@ class ResPartnerCreate(BaseModel):
     branch_scope_ids: str | None = None
     warehouse_scope_ids: str | None = None
     access_control_list: str | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
 
 
 class ResPartnerUpdate(BaseModel):
@@ -192,6 +193,7 @@ class ResPartnerUpdate(BaseModel):
     branch_scope_ids: str | None = None
     warehouse_scope_ids: str | None = None
     access_control_list: str | None = None
+    custom_attributes: dict[str, Any] | None = None
 
 
 class ResPartnerRead(ResPartnerCreate, ORMReadModel):
@@ -286,6 +288,7 @@ class WeighbridgeOperationCreate(BaseModel):
     operation_year: int | None = None
     operationYear: int | None = None
     notes: str | None = None
+    custom_attributes: dict[str, Any] = Field(default_factory=dict)
     loading_date: datetime | str | None = None
     loadingDate: datetime | str | None = None
 
@@ -387,6 +390,7 @@ class WeighbridgeOperationRead(ORMReadModel):
     operation_year: int | None = None
     notes: str | None = None
     raw_legacy_data: dict[str, Any] | None = Field(default_factory=dict)
+    custom_attributes: dict[str, Any] | None = Field(default_factory=dict)
 
 
 class OperationAttachmentBase(BaseModel):

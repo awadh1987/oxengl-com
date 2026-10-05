@@ -96,6 +96,7 @@ export interface Customer {
   is_deleted?: boolean;
   deleted_at?: string;
   deleted_by?: string;
+  custom_attributes?: Record<string, any>;
 }
 
 export interface Crusher {
@@ -114,6 +115,7 @@ export interface Crusher {
   is_deleted?: boolean;
   deleted_at?: string;
   deleted_by?: string;
+  custom_attributes?: Record<string, any>;
 }
 
 export type CrusherEntity = Crusher;
@@ -134,6 +136,7 @@ export interface Transporter {
   is_deleted?: boolean;
   deleted_at?: string;
   deleted_by?: string;
+  custom_attributes?: Record<string, any>;
 }
 
 export type UOMType = 'MT طن' | 'kg' | 'truck' | 'CBM';
@@ -189,6 +192,7 @@ export interface OperationRecord {
   operation_month: number; // 1-12
   operation_year: number;
   notes?: string;
+  custom_attributes?: Record<string, any>;
   scale_ticket_attachment?: string;
   attachments?: DocumentAttachment[];
   version?: number;

@@ -52,6 +52,7 @@ export interface ApiOperation {
   operation_year?: number | null;
   notes?: string | null;
   raw_legacy_data?: Record<string, any>;
+  custom_attributes?: Record<string, any> | null;
 }
 
 export interface ApiCompany {
@@ -719,7 +720,20 @@ export interface ApiSettlement {
   state: 'draft' | 'approved' | 'paid';
 }
 
-export interface Partner { id: string; name: string; partner_type: string; email?: string | null; phone?: string | null; tax_number?: string | null; commercial_registration?: string | null; branch_scope_ids?: string | null; warehouse_scope_ids?: string | null; access_control_list?: string | null; }
+export interface Partner { id: string; name: string; partner_type: string; email?: string | null; phone?: string | null; tax_number?: string | null; commercial_registration?: string | null; branch_scope_ids?: string | null; warehouse_scope_ids?: string | null; access_control_list?: string | null; custom_attributes?: Record<string, any> | null; }
+export interface CustomFieldDefinition {
+  id: string;
+  entity: string;
+  field_key: string;
+  label: string;
+  label_ar?: string | null;
+  data_type: 'text' | 'number' | 'date' | 'boolean' | 'select';
+  options?: string[] | null;
+  is_visible: boolean;
+  is_required: boolean;
+  sort_order: number;
+  source: string;
+}
 export type PartnerPayload = Omit<Partner, 'id'>;
 interface Location { id: string; name: string; location_type: string; }
 interface Product {
@@ -1554,6 +1568,18 @@ export const erpApi = {
     body: JSON.stringify(payload),
   }),
   getPartners: (companyId: string) => request<Partner[]>('/api/partners', companyId),
+  // Dynamic form schemas (tenant custom field definitions)
+  getFormSchema: (entity: string, companyId?: string) =>
+    request<CustomFieldDefinition[]>(`/api/v1/tenant/form-schemas?entity=${encodeURIComponent(entity)}&visible_only=true`, companyId),
+  getAllFormSchemas: (companyId?: string) =>
+    request<CustomFieldDefinition[]>('/api/v1/tenant/form-schemas', companyId),
+  registerCustomField: (payload: Partial<CustomFieldDefinition> & { entity: string; field_key: string; label: string }, companyId?: string) =>
+    request<CustomFieldDefinition>('/api/v1/tenant/form-schemas', companyId, { method: 'POST', body: JSON.stringify(payload) }),
+  updateCustomField: (fieldId: string, payload: Partial<CustomFieldDefinition>, companyId?: string) =>
+    request<CustomFieldDefinition>(`/api/v1/tenant/form-schemas/${fieldId}`, companyId, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteCustomField: (fieldId: string, companyId?: string) =>
+    request<void>(`/api/v1/tenant/form-schemas/${fieldId}`, companyId, { method: 'DELETE' }),
+
   createPartner: (companyId: string, payload: PartnerPayload) => request<Partner>('/api/partners', companyId, { method: 'POST', body: JSON.stringify(payload) }),
   updatePartner: (companyId: string, partnerId: string, payload: Partial<PartnerPayload>) => request<Partner>(`/api/partners/${partnerId}`, companyId, { method: 'PATCH', body: JSON.stringify(payload) }),
   archivePartner: (companyId: string, partnerId: string) => request<void>(`/api/partners/${partnerId}`, companyId, { method: 'DELETE' }),
@@ -2015,6 +2041,7 @@ export const erpApi = {
     operation_month?: number;
     operation_year?: number;
     notes?: string;
+    custom_attributes?: Record<string, any>;
   }) {
     const partner = await findOrCreate<Partner>('/api/partners', input.companyId, (record) => record.name === input.transporterName, {
       name: input.transporterName, partner_type: 'service_supplier',
@@ -2059,6 +2086,7 @@ export const erpApi = {
           operation_month: input.operation_month,
           operation_year: input.operation_year,
           notes: input.notes,
+          custom_attributes: input.custom_attributes || {},
         }),
       });
     },

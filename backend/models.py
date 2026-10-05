@@ -41,6 +41,10 @@ class UserRole(str, Enum):
 
 
 
+# Portable JSON column: JSONB on PostgreSQL, plain JSON elsewhere (unit tests run on SQLite).
+_PortableJSON = JSON().with_variant(JSONB(), "postgresql")
+
+
 class TimestampMixin:
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
@@ -421,8 +425,26 @@ class PlatformAuditLog(Base):
 
 BACKUP_PROVIDER_TYPES = ("gdrive", "onedrive", "sftp")
 BACKUP_RUN_STATUSES = ("success", "failed", "running")
-# Portable JSON column: JSONB on PostgreSQL, plain JSON elsewhere (unit tests run on SQLite).
-_PortableJSON = JSON().with_variant(JSONB(), "postgresql")
+class CustomFieldDefinition(TimestampMixin, Base):
+    """Tenant-scoped definition of a dynamic field stored under an entity's ``custom_attributes``."""
+    __tablename__ = "custom_field_definitions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    entity: Mapped[str] = mapped_column(String(48), nullable=False)
+    field_key: Mapped[str] = mapped_column(String(96), nullable=False)
+    label: Mapped[str] = mapped_column(String(255), nullable=False)
+    label_ar: Mapped[Optional[str]] = mapped_column(String(255))
+    data_type: Mapped[str] = mapped_column(String(16), nullable=False, default="text")
+    options: Mapped[Optional[list]] = mapped_column(_PortableJSON, nullable=True)
+    is_visible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
+
+    __table_args__ = (
+        Index("uq_custom_field_company_entity_key", "company_id", "entity", "field_key", unique=True),
+    )
 
 
 class BackupDestination(Base):
@@ -556,6 +578,7 @@ class ResPartner(TimestampMixin, Base):
     branch_scope_ids: Mapped[Optional[str]] = mapped_column(Text)
     warehouse_scope_ids: Mapped[Optional[str]] = mapped_column(Text)
     access_control_list: Mapped[Optional[str]] = mapped_column(Text)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     pickings: Mapped[list[StockPicking]] = relationship(back_populates="partner")
@@ -729,6 +752,7 @@ class WeighbridgeTicket(TimestampMixin, Base):
     operation_year: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     raw_legacy_data: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     picking: Mapped[StockPicking] = relationship(back_populates="weighbridge_tickets")
 
@@ -2369,6 +2393,7 @@ class FleetTrip(TimestampMixin, Base):
     speed_kmh: Mapped[Optional[Decimal]] = mapped_column(Numeric(8, 2))
     last_gps_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     notes: Mapped[Optional[str]] = mapped_column(Text)
+    custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
     vehicle: Mapped[Optional[Vehicle]] = relationship()

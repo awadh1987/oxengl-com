@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import { useApp } from '../context/AppContext';
 import { OperationRecord, DocumentAttachment, UOMType, SUPPORTED_UOMS } from '../types';
 import {
@@ -81,6 +82,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
   const [crusherPurchaseCostInput, setCrusherPurchaseCostInput] = useState<number | ''>(1062.5);
   const [crusherPaymentInput, setCrusherPaymentInput] = useState<number | ''>(0);
   const [notes, setNotes] = useState('');
+  const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [attachments, setAttachments] = useState<DocumentAttachment[]>([]);
   const [scaleTicketAttachment, setScaleTicketAttachment] = useState('');
 
@@ -120,9 +122,11 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
       setCrusherPurchaseCostInput(initialData.purchases_cost);
       setCrusherPaymentInput(initialData.crusher_payment ?? 0);
       setNotes(initialData.notes || '');
+      setCustomAttributes(initialData.custom_attributes || {});
       setScaleTicketAttachment(initialData.scale_ticket_attachment || '');
       setAttachments(initialData.attachments || []);
     } else {
+      setCustomAttributes({});
       // Set sensible initial defaults
       if (customers.length > 0) setDestinationCustomer(customers[0].customerName);
       if (crushers.length > 0) setLoadingSource(crushers[0].crusherName);
@@ -268,6 +272,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
       operation_month: opMonth,
       operation_year: opYear,
       notes: notes,
+      custom_attributes: customAttributes,
       scale_ticket_attachment: scaleTicketAttachment,
       attachments: attachments,
     };
@@ -747,6 +752,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               </div>
             </div>
           </div>
+
+          <DynamicFieldRenderer entity="weighbridge_ticket" values={customAttributes} onChange={setCustomAttributes} isAr={isAr} />
 
           {/* Group 5: 15. ملاحظات (Notes) & Attachments */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
