@@ -371,6 +371,29 @@ def _tenant_scope(db: Session, actor: IamActor) -> Optional[List[uuid.UUID]]:
     return list(scope)
 
 
+def _organization_scope(db: Session, company_id: Optional[uuid.UUID]) -> List[uuid.UUID]:
+    """Every company in the caller's organization: climb to the root ancestor, then collect all descendants."""
+    if company_id is None:
+        return []
+    root = company_id
+    seen = {root}
+    while True:
+        parent = db.query(ResCompany.parent_id).filter(ResCompany.id == root).scalar()
+        if parent is None or parent in seen:
+            break
+        seen.add(parent)
+        root = parent
+    scope = {root}
+    queue = [root]
+    while queue:
+        current = queue.pop(0)
+        for (child_id,) in db.query(ResCompany.id).filter(ResCompany.parent_id == current).all():
+            if child_id not in scope:
+                scope.add(child_id)
+                queue.append(child_id)
+    return list(scope)
+
+
 def _load_target(
     db: Session, actor: IamActor, user_id: str, action: str, *, allow_self: bool = False
 ) -> ResUser:
@@ -509,7 +532,8 @@ def get_tenant_users(
         else:
             query = query.filter(ResUser.company_id.in_(accessible_cids))
     else:
-        scope = _tenant_scope(db, actor) or []
+        # Organization-wide listing so invitees stay visible when switching workspace/branch views.
+        scope = _organization_scope(db, actor.company_id)
         query = query.filter(ResUser.company_id.in_(scope))
 
     users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
