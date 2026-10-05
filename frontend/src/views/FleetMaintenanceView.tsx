@@ -26,6 +26,8 @@ import { erpApi } from '../services/api';
 import { FleetTracker } from '../components/FleetTracker';
 import { ActionsMenu } from '../components/ActionsMenu';
 import { VehicleVitals, MaintenanceWorkOrder } from '../types';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from '../components/BulkImportModal';
 
 type Vehicle = VehicleVitals;
 type MaintenanceOrder = MaintenanceWorkOrder;
@@ -59,6 +61,7 @@ interface InspectionLog {
 }
 
 export const FleetMaintenanceView: React.FC = () => {
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const { currentCompany, language, themeMode } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
@@ -331,6 +334,7 @@ export const FleetMaintenanceView: React.FC = () => {
               isArabic={isAr}
               isDark
               items={[
+                { id: 'bulk-import-btn', label: isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)', icon: BulkUploadIcon, onSelect: () => setIsBulkImportOpen(true) },
                 { id: 'export-fleet-json-btn', label: isAr ? 'لقطة JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
                 { id: 'export-fleet-excel-btn', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
                 { id: 'print-fleet-btn', label: isAr ? 'طباعة التقرير' : 'Export & Print', icon: Printer, onSelect: handlePrint },
@@ -940,6 +944,7 @@ export const FleetMaintenanceView: React.FC = () => {
           </form>
         </div>
       )}
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="operations" />
     </div>
   );
 };

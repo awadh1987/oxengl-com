@@ -512,6 +512,11 @@ def get_tenant_users(
         query = query.filter(ResUser.company_id.in_(scope))
 
     users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
+    if not users and actor.user_id is not None:
+        # Never render an empty matrix: seed the session owner's own record (already persisted) into the view.
+        owner = db.query(ResUser).filter(ResUser.id == actor.user_id, ResUser.deleted_at.is_(None)).first()
+        if owner is not None:
+            users = [owner]
     return [
         UserResponse(
             id=str(u.id),

@@ -39,8 +39,11 @@ import {
   ApiJournalEntry,
   ApiMultiWarehouseValuationReport,
 } from '../services/api';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from '../components/BulkImportModal';
 
 export const InventoryView: React.FC = () => {
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const { language, themeMode } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
@@ -321,6 +324,15 @@ export const InventoryView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+<button
+            type="button"
+            id="bulk-import-btn"
+            onClick={() => setIsBulkImportOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition cursor-pointer"
+          >
+            <BulkUploadIcon className="h-3.5 w-3.5" />
+            <span>{isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)'}</span>
+          </button>
           <button
             onClick={fetchData}
             disabled={loading}
@@ -1194,6 +1206,7 @@ export const InventoryView: React.FC = () => {
           </div>
         </div>
       )}
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="operations" />
     </div>
   );
 };

@@ -31,6 +31,8 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from '../components/BulkImportModal';
 
 export type FinancialReportType = 'trial-balance' | 'income-statement' | 'balance-sheet';
 
@@ -71,6 +73,7 @@ const KpiSkeletonCards: React.FC = () => (
 export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
   initialReport = 'trial-balance',
 }) => {
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const { language, currentCompany, tenantId, brandConfig, showToast } = useApp();
   const isAr = language === 'ar';
 
@@ -241,6 +244,15 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               <span>{isAr ? 'تحديث' : 'Refresh'}</span>
             </button>
 
+<button
+            type="button"
+            id="bulk-import-btn"
+            onClick={() => setIsBulkImportOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition cursor-pointer"
+          >
+            <BulkUploadIcon className="h-3.5 w-3.5" />
+            <span>{isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)'}</span>
+          </button>
             <button
               onClick={handleExportCSV}
               className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition cursor-pointer"
@@ -956,6 +968,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
           </div>
         </div>
       )}
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="operations" />
     </div>
   );
 };

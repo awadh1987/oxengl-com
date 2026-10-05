@@ -99,10 +99,33 @@ def create_access_token(
     return token, expires_at
 
 
+def _decode_with_known_secrets(token: str) -> Dict[str, Any]:
+    """Tenant-scoped and master tokens are signed with their own secrets; try each known one."""
+    secrets_to_try: List[str] = []
+    for candidate in (
+        JWT_SECRET,
+        os.getenv("JWT_SECRET_TENANT", ""),
+        os.getenv("JWT_SECRET_MASTER", ""),
+        os.getenv("JWT_SECRET_KEY", ""),
+    ):
+        if candidate and candidate not in secrets_to_try:
+            secrets_to_try.append(candidate)
+    last_error: Optional[Exception] = None
+    for secret in secrets_to_try:
+        try:
+            return jwt.decode(token, secret, algorithms=[JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            raise
+        except jwt.InvalidSignatureError as exc:
+            last_error = exc
+            continue
+    raise last_error or jwt.InvalidTokenError("no signing secret configured")
+
+
 def decode_access_token(token: str) -> Dict[str, Any]:
     """Decode and validate a JWT access token."""
     try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = _decode_with_known_secrets(token)
         if payload.get("token_type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

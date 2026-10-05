@@ -340,8 +340,11 @@ def decode_session_token(token: str) -> dict[str, object]:
 	except ValueError as error:
 		raise ValueError("Invalid token format") from error
 	signing_input = f"{header_part}.{payload_part}"
-	expected_signature = _base64url_encode(hmac.new(JWT_SECRET_KEY.encode(), signing_input.encode(), hashlib.sha256).digest())
-	if not compare_digest(signature_part, expected_signature):
+	known_secrets = [s for s in dict.fromkeys([JWT_SECRET_KEY, os.getenv("JWT_SECRET_TENANT", ""), os.getenv("JWT_SECRET_MASTER", "")]) if s]
+	if not any(
+		compare_digest(signature_part, _base64url_encode(hmac.new(secret.encode(), signing_input.encode(), hashlib.sha256).digest()))
+		for secret in known_secrets
+	):
 		raise ValueError("Invalid token signature")
 	payload = json.loads(_base64url_decode(payload_part))
 	if int(payload.get("exp", 0)) < int(time.time()):

@@ -19,9 +19,13 @@ import {
   ExecutionTaskItem,
   StrategicHazardItem
 } from './planningTypes';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from './BulkImportModal';
 
 export const PlanningDepartmentView: React.FC = () => {
-  const { t } = useTranslation();
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language?.startsWith('ar');
   const [charters, setCharters] = useState<ProjectCharterItem[]>([]);
   const [selectedCharterId, setSelectedCharterId] = useState<string>('');
   const [currentTasks, setCurrentTasks] = useState<ExecutionTaskItem[]>([]);
@@ -135,6 +139,15 @@ export const PlanningDepartmentView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-3">
+<button
+            type="button"
+            id="bulk-import-btn"
+            onClick={() => setIsBulkImportOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition cursor-pointer"
+          >
+            <BulkUploadIcon className="h-3.5 w-3.5" />
+            <span>{isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)'}</span>
+          </button>
           <button
             onClick={handleDataRefresh}
             className="p-2.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white rounded-xl border border-slate-800 transition-colors"
@@ -288,6 +301,7 @@ export const PlanningDepartmentView: React.FC = () => {
           handleDataRefresh();
         }}
       />
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="operations" />
     </div>
   );
 };

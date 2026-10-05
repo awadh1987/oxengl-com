@@ -6,10 +6,13 @@ import { formatCurrency } from '../utils/formatters';
 import { CreateVoucherModal } from '../components/CreateVoucherModal';
 import { EntityQuickAdd } from '../components/EntityQuickAdd';
 import { ActionsMenu } from '../components/ActionsMenu';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from '../components/BulkImportModal';
 
 type Partner = { id: string; name: string; partner_type: string; tax_number?: string | null };
 
 export const CrusherLedgerView: React.FC = () => {
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
   const { currentCompany, language, crushers, accessibleOperations, themeMode, refreshPartners } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
@@ -192,6 +195,7 @@ export const CrusherLedgerView: React.FC = () => {
             isArabic={isAr}
             isDark={isDark}
             items={[
+                { id: 'bulk-import-btn', label: isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)', icon: BulkUploadIcon, onSelect: () => setIsBulkImportOpen(true) },
               { id: 'export-crushers-json-btn', label: isAr ? 'لقطة JSON' : 'JSON Snapshot', icon: Download, onSelect: handleExportJSONSnapshot },
               { id: 'export-crushers-excel-btn', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
               { id: 'print-crushers-btn', label: isAr ? 'معاينة وطباعة' : 'Export & Print', icon: Printer, onSelect: handlePrint },
@@ -396,6 +400,7 @@ export const CrusherLedgerView: React.FC = () => {
           }}
         />
       )}
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="partners" />
     </div>
   );
 };
