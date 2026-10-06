@@ -27,7 +27,7 @@ for arg in "$@"; do
     esac
 done
 
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 echo "======================================================================"
 echo -e "\033[1m🚀 Starting OxenGL Enterprise Zero-Downtime Production Deployment\033[0m"
@@ -56,7 +56,7 @@ if [ ! -d "${DIST_DIR}" ] || [ ! -f "${DIST_DIR}/index.html" ]; then
     (cd "${PROJECT_DIR}/frontend" && npm run build)
 fi
 
-TARGET_WEB_DIR="/var/www/oxengl/dist"
+TARGET_WEB_DIR="${OXENGL_WEB_DIR:-/var/www/oxengl/dist}"
 mkdir -p "${TARGET_WEB_DIR}"
 cp -ru "${DIST_DIR}"/* "${TARGET_WEB_DIR}/" 2>/dev/null || cp -r "${DIST_DIR}"/* "${TARGET_WEB_DIR}/"
 TOTAL_ASSETS=$(find "${TARGET_WEB_DIR}" -type f | wc -l)
@@ -134,8 +134,8 @@ WS_CODE=$(curl -i -s -N \
     -H "Sec-WebSocket-Version: 13" \
     -H "Authorization: Bearer ${WS_TOKEN}" \
     -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    --insecure "https://127.0.0.1/api/v1/logistics/ws/fleet-stream?tenant_id=49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    --max-time 3 2>&1 | grep -i "101 Switching Protocols" || true)
+    --insecure "${GATEWAY_URL:-https://127.0.0.1}/api/v1/logistics/ws/fleet-stream?tenant_id=49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
+    --max-time 3 2>&1 | grep -a -i "101 Switching Protocols" || true)
 
 if [ -n "$WS_CODE" ]; then
     echo -e " ${SUCCESS} Live WebSocket handshake validated: HTTP/1.1 101 Switching Protocols"
@@ -145,14 +145,20 @@ else
 fi
 
 # 5. Post-Deployment Smoke Test
-echo -e "\n${INFO} [5/5] Executing post-deployment smoke test (/api/v1/ai/forecasting/inventory)..."
-SMOKE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --insecure \
-    -H "Authorization: Bearer ${WS_TOKEN}" \
-    -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    "https://localhost/api/v1/ai/forecasting/inventory")
+# Tenant AI routes require a tenant-scoped JWT (OXENGL_SMOKE_TOKEN); a master token has no company.
+GW="${GATEWAY_URL:-https://localhost}"
+if [ -n "${OXENGL_SMOKE_TOKEN:-}" ]; then
+    SMOKE_PATH="/api/v1/ai/forecasting/inventory"
+    SMOKE_AUTH=(-H "Authorization: Bearer ${OXENGL_SMOKE_TOKEN}")
+else
+    SMOKE_PATH="/api/v1/health"
+    SMOKE_AUTH=()
+fi
+echo -e "\n${INFO} [5/5] Executing post-deployment smoke test (${SMOKE_PATH})..."
+SMOKE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --insecure "${SMOKE_AUTH[@]}" "${GW}${SMOKE_PATH}")
 
 if [ "$SMOKE_STATUS" == "200" ]; then
-    echo -e " ${SUCCESS} Smoke test PASSED: /api/v1/ai/forecasting/inventory responded with HTTP 200 OK"
+    echo -e " ${SUCCESS} Smoke test PASSED: ${SMOKE_PATH} responded with HTTP 200 OK"
 else
     echo -e " ${ERROR} Smoke test returned HTTP status: ${SMOKE_STATUS}"
     exit 1
