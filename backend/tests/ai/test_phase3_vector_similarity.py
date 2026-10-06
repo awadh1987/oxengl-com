@@ -1,5 +1,6 @@
 import uuid
 import time
+import math
 import pytest
 from starlette.testclient import TestClient
 
@@ -7,16 +8,24 @@ from backend.app.main import app
 from backend.database import SessionLocal
 from backend.models import ResCompany
 from backend.app.domains.ai.models import AiKnowledgeChunk
-from backend.app.api.v1.ai import generate_openai_embedding
+from backend.app.services.openai_embedding import OpenAIEmbeddingService
+from backend.app.api.v1 import ai as ai_api
+from backend.tests.ai.conftest import create_tenant_user_token, delete_user
 
 client = TestClient(app)
 
 
+def _test_embedding(text: str) -> list[float]:
+    values = OpenAIEmbeddingService()._generate_deterministic_mock_vector(text)
+    magnitude = math.sqrt(sum(value * value for value in values))
+    return [value / magnitude for value in values]
+
+
 def test_generate_openai_embedding_properties():
     """Validates 1536-dimensional unit norm property and deterministic generation."""
-    emb1 = generate_openai_embedding("Supply chain inventory buffer")
-    emb2 = generate_openai_embedding("Supply chain inventory buffer")
-    emb3 = generate_openai_embedding("Fleet logistics fuel consumption")
+    emb1 = _test_embedding("Supply chain inventory buffer")
+    emb2 = _test_embedding("Supply chain inventory buffer")
+    emb3 = _test_embedding("Fleet logistics fuel consumption")
 
     assert len(emb1) == 1536
     assert emb1 == emb2  # Deterministic
@@ -27,7 +36,7 @@ def test_generate_openai_embedding_properties():
     assert pytest.approx(norm_sq, rel=1e-3) == 1.0
 
 
-def test_vector_similarity_and_sla_benchmark():
+def test_vector_similarity_and_sla_benchmark(monkeypatch):
     """
     Validates:
     1. Schema ingestion of 1536-dimensional float vector embeddings.
@@ -37,6 +46,7 @@ def test_vector_similarity_and_sla_benchmark():
     db = SessionLocal()
     tenant_a = uuid.uuid4()
     tenant_b = uuid.uuid4()
+    user_id = None
 
     try:
         # Create company records to satisfy foreign keys
@@ -75,13 +85,13 @@ def test_vector_similarity_and_sla_benchmark():
             id=uuid.uuid4(),
             tenant_id=tenant_a,
             content="Standard operating procedure: Minimum sulfur reserve threshold is 1200 metric tons.",
-            embedding=generate_openai_embedding("Minimum sulfur reserve threshold is 1200 metric tons.")
+            embedding=_test_embedding("Minimum sulfur reserve threshold is 1200 metric tons.")
         )
         chunk_a2 = AiKnowledgeChunk(
             id=uuid.uuid4(),
             tenant_id=tenant_a,
             content="Warehouse North emergency dispatch protocols and automated replenishment workflows.",
-            embedding=generate_openai_embedding("Warehouse North emergency dispatch protocols.")
+            embedding=_test_embedding("Warehouse North emergency dispatch protocols.")
         )
 
         # Seed knowledge chunk for tenant B (must NOT be returned to tenant A)
@@ -89,7 +99,7 @@ def test_vector_similarity_and_sla_benchmark():
             id=uuid.uuid4(),
             tenant_id=tenant_b,
             content="Tenant B confidential financial forecasts and hedge positions.",
-            embedding=generate_openai_embedding("Minimum sulfur reserve threshold is 1200 metric tons.")
+            embedding=_test_embedding("Minimum sulfur reserve threshold is 1200 metric tons.")
         )
 
         db.add_all([chunk_a1, chunk_a2, chunk_b1])
@@ -97,7 +107,7 @@ def test_vector_similarity_and_sla_benchmark():
 
         # Benchmark vector lookup latency (SLA: < 15ms)
         query_text = "What is the sulfur reserve threshold?"
-        query_vector = generate_openai_embedding(query_text)
+        query_vector = _test_embedding(query_text)
 
         # Warm up query cache
         _ = (
@@ -128,9 +138,18 @@ def test_vector_similarity_and_sla_benchmark():
         assert "Tenant B confidential financial forecasts and hedge positions." not in returned_contents
 
         # Test through REST API endpoint with X-Tenant-ID header
-        response = client.post(
+        unauthenticated = client.post(
             "/api/v1/ai/copilot/query",
             headers={"X-Tenant-ID": str(tenant_a)},
+            json={"prompt": query_text, "top_k": 2},
+        )
+        assert unauthenticated.status_code == 401
+
+        user_id, auth_headers = create_tenant_user_token(tenant_a)
+        monkeypatch.setattr(ai_api, "_query_embedding", _test_embedding)
+        response = client.post(
+            "/api/v1/ai/copilot/query",
+            headers=auth_headers,
             json={"prompt": query_text, "top_k": 2}
         )
         assert response.status_code == 200
@@ -143,6 +162,8 @@ def test_vector_similarity_and_sla_benchmark():
     finally:
         # Cleanup test data
         try:
+            if user_id:
+                delete_user(user_id)
             db.query(AiKnowledgeChunk).filter(AiKnowledgeChunk.tenant_id.in_([tenant_a, tenant_b])).delete()
             db.query(ResCompany).filter(ResCompany.id.in_([tenant_a, tenant_b])).delete()
             db.commit()

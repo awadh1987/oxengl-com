@@ -11,7 +11,7 @@ import pytest
 from fastapi import status
 from sqlalchemy.orm import Session
 
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.models import ResCompany, ResUser
 from backend.two_tier_auth import hash_password, issue_two_tier_jwt
 
@@ -334,4 +334,3 @@ async def test_owner_cross_tenant_isolation(async_client, test_tenants_and_users
     idor_header = await async_client.get("/api/v1/users", headers={**headers, "X-Company-ID": str(tenant_b_id)})
     assert idor_header.status_code == status.HTTP_403_FORBIDDEN
     assert "Multi-tenant isolation violation" in idor_header.json().get("detail", "")
-

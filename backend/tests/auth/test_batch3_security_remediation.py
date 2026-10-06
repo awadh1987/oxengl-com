@@ -13,7 +13,7 @@ from fastapi import status
 from starlette.testclient import TestClient
 
 from backend.app.main import app, create_session_token
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend import models
 
 

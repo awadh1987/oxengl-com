@@ -4,7 +4,7 @@ import pytest
 from fastapi import status
 from sqlalchemy import text
 
-from backend.app.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.app.domains.planning.models import ResCompany
 from backend.app.domains.finance.models import AccountChart
 from backend.models import ResUser, AccountAccount, AccountJournal, FiscalYear, StockLocation

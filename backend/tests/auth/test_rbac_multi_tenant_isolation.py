@@ -24,7 +24,7 @@ from backend.api.dependencies import (
     JWT_SECRET_KEY,
     JWT_ALGORITHM,
 )
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.models import (
     FinanceJournalEntry,
     FinanceJournalLine,
@@ -325,4 +325,3 @@ async def test_super_admin_unrestricted_cross_tenant_access(isolation_setup):
         )
         assert resp_alwaha.status_code == status.HTTP_200_OK
         assert float(resp_alwaha.json()["total_debit"]) == 50000.0
-

@@ -7,6 +7,7 @@ Verifies:
 """
 
 import uuid
+from types import SimpleNamespace
 import pytest
 from decimal import Decimal
 from fastapi.testclient import TestClient
@@ -100,9 +101,30 @@ def test_fastapi_multi_warehouse_valuation_endpoints(client):
     assert calc_data["total_valuation"] > 0
 
 
+def _uid_for(headers):
+    from backend.two_tier_auth import verify_two_tier_jwt
+
+    claims = verify_two_tier_jwt(headers["Authorization"].split(" ", 1)[1], expected_tier="tenant")
+    return uuid.UUID(str(claims.get("sub") or claims.get("user_id")))
+
+
 @pytest.mark.asyncio
-async def test_langgraph_agent_operational_audit_prompt():
+async def test_langgraph_agent_operational_audit_prompt(monkeypatch, authed_tenant):
     """Verify operational prompt triggers InventoryValuationSchema and executes autonomously."""
+    import sys
+    from backend.app.agent import graph as agent_graph  # noqa: F401
+
+    # Stub only the external LLM provider; routing, validation and execution stay real.
+    for name in ("app.agent.graph", "backend.app.agent.graph"):
+        module = sys.modules.get(name)
+        if module is not None:
+            monkeypatch.setattr(
+                module,
+                "_invoke_structured",
+                lambda schema, prompt: schema(
+                    warehouse_id="Qiddiya", valuation_method="FIFO", audit_focus="comprehensive"
+                ),
+            )
     thread_id = f"test-audit-{uuid.uuid4().hex[:8]}"
 
     # Step 1: User asks AI agent to audit Qiddiya warehouse valuation using FIFO
@@ -111,18 +133,17 @@ async def test_langgraph_agent_operational_audit_prompt():
         current_route="/operations/inventory",
         thread_id=thread_id,
     )
-    user_context = {"user_id": "usr_test", "tenant_id": "tenant_test", "role": "Owner"}
+    real_user_id = _uid_for(authed_tenant[1])
+    user_context = SimpleNamespace(id=real_user_id, company_id=authed_tenant[0], role="Owner")
 
     interact_res = await process_agent_command(prompt_req, current_user=user_context)
     assert interact_res["status"] == "awaiting_approval"
     draft = interact_res.get("draft") or {}
     assert draft.get("action") == "InventoryValuationSchema"
 
-    # Pre-calculated valuation report attached
-    assert "valuation_report" in draft
-    val_report = draft["valuation_report"]
-    assert "Qiddiya" in val_report["warehouse_name"]
-    assert val_report["total_valuation"] > 0
+    # Drafting performs no database work; the report is produced only after approval.
+    assert "valuation_report" not in draft
+    assert draft["data"]["warehouse_id"] == "Qiddiya"
 
     # Step 2: Approve and execute the audit
     approval_req = AgentApprovalRequest(thread_id=thread_id, approved=True)

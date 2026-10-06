@@ -93,14 +93,13 @@ async def fleet_telemetry_stream_endpoint(websocket: WebSocket):
                 return
             authenticated_tenant = token_tenant
         else:
-            authenticated_tenant = query_tenant or x_tenant_id
-    else:
-        # If no token provided, require consistent tenant context or reject
-        if not (query_tenant or x_tenant_id):
-            logger.warning("Unauthenticated WebSocket handshake rejected: missing token and tenant context")
+            logger.warning("WebSocket rejected: token carries no tenant scope")
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-        authenticated_tenant = query_tenant or x_tenant_id
+    else:
+        logger.warning("Unauthenticated WebSocket handshake rejected: authentication token is required")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
 
     # 3. Accept handshake only after authentication and tenant scoping succeed
     await websocket.accept()

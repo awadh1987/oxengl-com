@@ -61,9 +61,14 @@ async def test_project_30day_inventory_value_simulation():
     assert res["confidence_metric"] == 0.88
 
 
-def test_forecasting_inventory_endpoint():
+def test_forecasting_inventory_requires_authentication():
+    assert client.get("/api/v1/ai/forecasting/inventory").status_code == 401
+
+
+def test_forecasting_inventory_endpoint(authed_tenant):
     """Validates HTTP GET /api/v1/ai/forecasting/inventory route response."""
-    response = client.get("/api/v1/ai/forecasting/inventory")
+    _, headers = authed_tenant
+    response = client.get("/api/v1/ai/forecasting/inventory", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert "status" in data

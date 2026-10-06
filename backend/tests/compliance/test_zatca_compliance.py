@@ -33,7 +33,7 @@ from backend.zatca_adapter import (
 )
 
 
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 
 
 @pytest.fixture

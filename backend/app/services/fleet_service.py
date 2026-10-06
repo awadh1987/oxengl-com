@@ -496,31 +496,36 @@ async def live_fleet_telemetry_stream(
                     claims = verify_two_tier_jwt(token, expected_tier="master")
                 except Exception:
                     pass
-        if claims is None:
-            try:
-                import base64
-                parts = token.split(".")
-                if len(parts) == 3:
-                    padded = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
-                    claims = json.loads(base64.urlsafe_b64decode(padded).decode("utf-8"))
-            except Exception:
-                pass
 
-    if claims:
-        token_tenant = str(claims.get("tenant_id") or claims.get("company_id") or "").strip().lower()
-        token_slug = str(claims.get("tenant_slug") or claims.get("domain_slug") or "").strip().lower()
-        valid_identifiers = {id_val for id_val in (token_tenant, token_slug) if id_val}
+    # A verified token is mandatory; a tenant identifier alone never authenticates a handshake.
+    if claims is None:
+        logger.warning("Fleet WebSocket rejected: missing or invalid authentication token")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
 
-        if query_tenant and valid_identifiers and query_tenant.strip().lower() not in valid_identifiers:
-            logger.warning(f"Cross-tenant WebSocket rejection: query '{query_tenant}' not in {valid_identifiers}")
+    token_tenant = str(claims.get("tenant_id") or claims.get("company_id") or "").strip().lower()
+    token_slug = str(claims.get("tenant_slug") or claims.get("domain_slug") or "").strip().lower()
+    valid_identifiers = {id_val for id_val in (token_tenant, token_slug) if id_val}
+    is_master = claims.get("tier") == "master"
+
+    if query_tenant and x_tenant_id and query_tenant.strip().lower() != x_tenant_id.strip().lower():
+        logger.warning("Cross-tenant WebSocket rejection: header and query tenant differ")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+    if not is_master:
+        if not valid_identifiers:
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
             return
-        if x_tenant_id and valid_identifiers and x_tenant_id.strip().lower() not in valid_identifiers:
-            logger.warning(f"Cross-tenant WebSocket rejection: header '{x_tenant_id}' not in {valid_identifiers}")
-            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-            return
+        for requested in (query_tenant, x_tenant_id):
+            if requested and requested.strip().lower() not in valid_identifiers:
+                logger.warning("Cross-tenant WebSocket rejection: requested tenant not in token scope")
+                await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+                return
 
-    active_tenant_id = query_tenant or x_tenant_id or (claims.get("tenant_id") if claims else None) or tenant_id or "tenant_001"
+    active_tenant_id = query_tenant or x_tenant_id or claims.get("tenant_id") or claims.get("company_id")
+    if not active_tenant_id:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
     await websocket.accept()
 
     # Initial handshake acknowledgement

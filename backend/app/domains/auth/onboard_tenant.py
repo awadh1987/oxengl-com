@@ -10,6 +10,7 @@ from passlib.context import CryptContext
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from backend.app.database import SessionLocal
+from backend.database import PlatformSessionLocal
 from backend.app.domains.planning.models import ResCompany
 from backend.app.domains.finance.models import AccountChart
 from backend.models import ResUser, AccountAccount, AccountJournal, FiscalYear, StockLocation
@@ -457,6 +458,13 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
 
         # 2. Allocate core enterprise company registry entry
         company_uuid = uuid.uuid4()
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+                "set_config('app.current_company_id', :company_id, true)"
+            ),
+            {"tenant_id": str(company_uuid), "company_id": str(company_uuid)},
+        )
         primary_color, secondary_color = generate_balanced_brand_palette(slug_cleaned)
         new_company = ResCompany(
             id=company_uuid,
@@ -792,8 +800,13 @@ async def initiate_tenant_registration(req: RegisterInitRequest, background_task
             detail="Administrative email is required."
         )
 
-    # Pre-validation check against database
-    db = SessionLocal()
+    # Global availability checks require the platform role because RLS hides other tenants.
+    if PlatformSessionLocal is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Platform database access is not configured.",
+        )
+    db = PlatformSessionLocal()
     try:
         existing_tenant = db.query(ResCompany).filter(
             (ResCompany.domain_slug == slug_cleaned) | (ResCompany.slug == slug_cleaned)
@@ -910,4 +923,3 @@ async def register_new_enterprise_tenant(payload: TenantRegistrationPayload):
         return execute_tenant_provisioning(db, payload.model_dump())
     finally:
         db.close()
-

@@ -14,7 +14,7 @@ from starlette.testclient import TestClient
 
 from backend.app.main import app, create_session_token
 from backend.app.domains.auth.onboard_tenant import TenantRegistrationPayload
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend import models
 
 

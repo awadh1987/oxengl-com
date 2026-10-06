@@ -4,7 +4,7 @@ from fastapi import status
 from sqlalchemy import text
 from passlib.context import CryptContext
 
-from backend.app.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.app.services.notification_service import VerificationService
 
 pwd_context = CryptContext(
