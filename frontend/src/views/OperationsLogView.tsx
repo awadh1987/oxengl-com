@@ -215,19 +215,6 @@ export const OperationsLogView: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {canEditOperations && (
-            <EntityQuickAdd
-              actions={[{ type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' }]}
-              quickAddMenuLabel={{ ar: 'إضافة سريعة', en: 'Quick Add' }}
-              quickAddMenuActions={[
-                { type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' },
-                { type: 'crusher', labelAr: 'إضافة مورد مواد', labelEn: 'Add Material Supplier' },
-                { type: 'transporter', labelAr: 'إضافة مورد خدمة', labelEn: 'Add Service Supplier' },
-                { type: 'material', labelAr: 'إضافة صنف مادة', labelEn: 'Add New Material Item' },
-              ]}
-              onCreated={refreshPartners}
-            />
-          )}
           {/* Live Server Refresh Button */}
           <button
             id="refresh-operations-btn"
@@ -242,6 +229,50 @@ export const OperationsLogView: React.FC = () => {
             <span>{isAr ? (isRefreshing ? 'جارِ التحديث...' : 'تحديث السجل') : (isRefreshing ? 'Refreshing...' : 'Refresh')}</span>
           </button>
 
+          {canEditOperations && (
+            <>
+              <button
+                id="new-operation-btn"
+                onClick={() => {
+                  setEditingOperation(null);
+                  setIsNewModalOpen(true);
+                }}
+                className="group flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:opacity-95 transition-opacity"
+              >
+                <HoverIcon className="h-4 w-4">
+                  <Plus className="h-full w-full" />
+                </HoverIcon>
+                <span>{isAr ? 'تسجيل رحلة جديدة' : 'Add Trip'}</span>
+              </button>
+
+              <button
+                id="quick-add-operation-list-btn"
+                onClick={() => setIsBulkImportOpen(true)}
+                className="group flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-bold text-emerald-300 shadow-xs hover:bg-emerald-500/20 transition-colors"
+                title={isAr ? 'إضافة قائمة عمليات من ملف CSV أو Excel' : 'Quickly add an operations list from CSV or Excel'}
+              >
+                <HoverIcon className="h-4 w-4">
+                  <Upload className="h-full w-full text-emerald-400" />
+                </HoverIcon>
+                <span>{isAr ? 'إضافة قائمة سريعة' : 'Quick Add List'}</span>
+              </button>
+            </>
+          )}
+
+          {canEditOperations && (
+            <EntityQuickAdd
+              actions={[{ type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' }]}
+              quickAddMenuLabel={{ ar: 'إضافة سريعة', en: 'Quick Add' }}
+              quickAddMenuActions={[
+                { type: 'customer', labelAr: 'إضافة عميل جديد', labelEn: 'Add New Customer' },
+                { type: 'crusher', labelAr: 'إضافة مورد مواد', labelEn: 'Add Material Supplier' },
+                { type: 'transporter', labelAr: 'إضافة مورد خدمة', labelEn: 'Add Service Supplier' },
+                { type: 'material', labelAr: 'إضافة صنف مادة', labelEn: 'Add New Material Item' },
+              ]}
+              onCreated={refreshPartners}
+            />
+          )}
+
           <ActionsMenu
             isArabic={isAr}
             isDark
@@ -253,22 +284,6 @@ export const OperationsLogView: React.FC = () => {
               { id: 'operations-export-excel-action', label: isAr ? 'تصدير Excel' : 'Export Excel', icon: FileSpreadsheet, onSelect: handleExportExcel },
             ]}
           />
-
-          {canEditOperations && (
-            <button
-              id="new-operation-btn"
-              onClick={() => {
-                setEditingOperation(null);
-                setIsNewModalOpen(true);
-              }}
-              className="group flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-4 py-2 text-xs font-black text-white shadow-md shadow-orange-500/20 hover:opacity-95 transition-opacity"
-            >
-              <HoverIcon className="h-4 w-4">
-                <Plus className="h-full w-full" />
-              </HoverIcon>
-              <span>{isAr ? 'تسجيل رحلة جديدة' : 'Add New Trip'}</span>
-            </button>
-          )}
         </div>
       </div>
 
