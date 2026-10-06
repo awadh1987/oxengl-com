@@ -81,6 +81,7 @@ export const Route: React.FC<RouteProps> = ({ element }) => <>{element}</>;
 // Exact Bi-directional Route to Tab Mappings
 export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   // Operations Ribbon
+  '/admin': 'admin-hub',
   '/operations/daily': 'operations',
   '/operations/fleet-map': 'fleet-map',
   '/operations/fleet-maintenance': 'maintenance',
@@ -180,12 +181,13 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   approvals: '/settings/approvals',
   inventory: '/operations/inventory',
   mfa: '/login',
-  'admin-hub': '/operations/daily',
+  'admin-hub': '/admin',
 };
 
 export const getTabFromPath = (path: string): ActiveTab => {
   const urlWithoutQuery = path.split('?')[0].split('#')[0];
   const cleanPath = urlWithoutQuery.replace(/\/$/, '');
+  if (cleanPath === '/admin' || cleanPath === '/admin/cockpit') return 'admin-hub';
   if (ROUTE_TAB_MAP[cleanPath]) return ROUTE_TAB_MAP[cleanPath];
   if (ROUTE_TAB_MAP[path]) return ROUTE_TAB_MAP[path];
 
@@ -387,6 +389,14 @@ function AppContent() {
     }
   }, [isDriverMode, activeTab]);
 
+  // Platform-owner sessions are confined to /admin unless explicitly inspecting a tenant workspace
+  useEffect(() => {
+    const isPlatformOwner = authTier === 'master' || currentUser?.role === 'Super_Admin';
+    if (isLoggedIn && isPlatformOwner && !inspectingWorkspace && !getSubdomain() && !currentPath.startsWith('/admin')) {
+      navigate('/admin', { replace: true });
+    }
+  }, [isLoggedIn, authTier, currentUser, inspectingWorkspace, currentPath]);
+
   // Derive default document type based on current active tab
   const defaultDocTypeForTab: ExportDocType = React.useMemo(() => {
     switch (activeTab) {
@@ -488,10 +498,7 @@ function AppContent() {
                   onLogout={leaveWorkspace}
                   onInspectTenantWorkspace={() => {
                     setInspectingWorkspace(true);
-                    setActiveTab('hub');
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/';
-                    }
+                    navigateToTab('hub');
                   }}
                 />
               </ProtectedRoute>
@@ -776,25 +783,8 @@ function AppContent() {
 
 
   if ((authTier === 'master' || currentUser.role === 'Super_Admin') && !inspectingWorkspace && !activeSubdomain) {
-    return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <ProtectedRoute
-          tier="master"
-          isLoggedIn={isLoggedIn}
-          onRequireLogin={leaveWorkspace}
-          onNavigateHome={() => setIsLoggedIn(false)}
-        >
-          <SuperAdminCockpitView
-            onOpenTenantOnboarding={() => {
-              logoutUser();
-              setIsLoggedIn(false);
-            }}
-            onLogout={leaveWorkspace}
-            onInspectTenantWorkspace={() => { setInspectingWorkspace(true); setActiveTab('hub'); }}
-          />
-        </ProtectedRoute>
-      </Suspense>
-    );
+    // The redirect effect moves platform owners to /admin; never render the console at a tenant URL
+    return <ViewLoadingFallback />;
   }
 
   // View-level RBAC role mappings
@@ -838,9 +828,9 @@ function AppContent() {
     switch (activeTab) {
       case 'admin-hub':
       case 'hub':
-        return <TenantLandingHubView onNavigateToTab={setActiveTab} />;
+        return <TenantLandingHubView onNavigateToTab={(tab) => navigateToTab(tab)} />;
       case 'dashboard':
-        return <DashboardView onNavigateToTab={(tab) => setActiveTab(tab)} />;
+        return <DashboardView onNavigateToTab={(tab) => navigateToTab(tab)} />;
       case 'customs':
         return <CustomsClearanceView />;
       case 'approvals':
@@ -854,7 +844,7 @@ function AppContent() {
       case 'hr':
         return <HRMSView />;
       case 'mfa':
-        return <MfaVerificationView onCancel={() => setActiveTab('dashboard')} />;
+        return <MfaVerificationView onCancel={() => navigateToTab('dashboard')} />;
       case 'planning':
         return <PlanningDepartmentView />;
       case 'operations':
@@ -895,19 +885,31 @@ function AppContent() {
         return <WorkflowAutomationView />;
       case 'design-studio':
         return <DesignSystemStudioView />;
-      case 'tenant-settings':
-        return (
-          <TenantSettingsPanel
-            tenantId={tenantId || (brandConfig as any)?.tenantId || localStorage.getItem('oxengl_tenant_id') || 'dcb40cee-b20a-4bdf-a79b-b284371f04fa'}
-            tenantSlug={(brandConfig as any)?.slug || localStorage.getItem('oxengl_tenant_slug') || 'myon'}
-          />
-        );
+      case 'tenant-settings': {
+        const resolvedTenantId = tenantId || (brandConfig as any)?.tenantId || null;
+        const resolvedTenantSlug = effectiveTenantSlug || (brandConfig as any)?.slug || null;
+        if (!resolvedTenantId || !resolvedTenantSlug) {
+          return (
+            <div id="tenant-not-found" className="flex min-h-[50vh] w-full flex-col items-center justify-center p-8 text-center">
+              <h2 className="text-xl font-black text-neutral-900 dark:text-white">
+                {isAr ? 'المستأجر غير موجود' : 'Tenant Not Found'}
+              </h2>
+              <p className="mt-2 max-w-md text-xs text-neutral-600 dark:text-neutral-400">
+                {isAr
+                  ? 'تعذر تحديد مساحة عمل المستأجر من عنوان URL. يرجى فتح الصفحة من نطاق المستأجر الصحيح.'
+                  : 'The tenant workspace could not be resolved from the URL. Please open this page from the correct tenant domain.'}
+              </p>
+            </div>
+          );
+        }
+        return <TenantSettingsPanel tenantId={resolvedTenantId} tenantSlug={resolvedTenantSlug} />;
+      }
       case 'organization-profile':
         return <OrganizationProfile />;
       case 'corporate-vault':
         return <CorporateVault />;
       default:
-        return <DashboardView onNavigateToTab={(tab) => setActiveTab(tab)} />;
+        return <DashboardView onNavigateToTab={(tab) => navigateToTab(tab)} />;
     }
   };
 
@@ -956,7 +958,7 @@ function AppContent() {
               allowedRoles={viewRoleRequirements[activeTab]}
               isLoggedIn={isLoggedIn}
               onRequireLogin={leaveWorkspace}
-              onNavigateHome={() => setActiveTab('dashboard')}
+              onNavigateHome={() => navigateToTab('dashboard')}
             >
               <Suspense fallback={<ViewLoadingFallback />}>
                 {renderActiveViewContent()}
@@ -982,7 +984,7 @@ function AppContent() {
         isOpenExternal={isAIChatOpen}
         onCloseExternal={() => setIsAIChatOpen(false)}
         onNavigateToTab={(tab) => {
-          setActiveTab(tab);
+          navigateToTab(tab);
           setIsAIChatOpen(false);
         }}
       />

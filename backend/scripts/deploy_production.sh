@@ -128,14 +128,15 @@ if [ -z "${WS_TOKEN}" ]; then
     exit 1
 fi
 WS_CODE=$(curl -i -s -N \
-    -H "Upgrade: websocket" \
-    -H "Connection: Upgrade" \
-    -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-    -H "Sec-WebSocket-Version: 13" \
-    -H "Authorization: Bearer ${WS_TOKEN}" \
-    -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    --insecure "${GATEWAY_URL:-https://127.0.0.1}/api/v1/logistics/ws/fleet-stream?tenant_id=49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    --max-time 3 2>&1 | grep -a -i "101 Switching Protocols" || true)
+  -H "Upgrade: websocket" \
+  -H "Connection: Upgrade" \
+  -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+  -H "Sec-WebSocket-Version: 13" \
+  -H "Authorization: Bearer ${WS_TOKEN}" \
+  -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
+  -H "Origin: http://127.0.0.1:8000" \
+  --insecure "${GATEWAY_URL:-https://127.0.0.1}/api/v1/logistics/ws/fleet-stream" \
+  --max-time 3 2>&1 | grep -a -i "101 Switching Protocols" || true)
 
 if [ -n "$WS_CODE" ]; then
     echo -e " ${SUCCESS} Live WebSocket handshake validated: HTTP/1.1 101 Switching Protocols"
