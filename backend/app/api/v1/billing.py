@@ -22,7 +22,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import get_db, get_platform_db
 from backend.models import MasterTenant, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (
@@ -72,6 +72,18 @@ billing_summary_router = APIRouter(
 # Public, unauthenticated pricing catalog (landing page, tenant billing, Super Admin console).
 pricing_router = APIRouter(tags=["Pricing Catalog"])
 stripe_webhook_router = APIRouter(tags=["Platform Billing Webhooks"])
+
+
+def get_billing_summary_db(
+    request: Request,
+    current_user: Any = Depends(get_authenticated_user),
+    tenant_db: Session = Depends(get_db),
+):
+    if is_super_admin_authorized(current_user, request):
+        request.state.platform_db_authorized = True
+        yield from get_platform_db(request)
+    else:
+        yield tenant_db
 
 
 # ==============================================================================
@@ -355,7 +367,7 @@ def list_superadmin_invoices(
     tenant_id: Optional[uuid.UUID] = Query(None, alias="tenant_id"),
     limit: int = Query(100, le=500),
     offset: int = Query(0, ge=0),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     SuperAdmin directory of all platform SaaS invoices across all tenants,
@@ -387,7 +399,7 @@ def list_superadmin_invoices(
 def verify_and_settle_invoice_endpoint(
     invoice_id: uuid.UUID,
     payload: SuperadminInvoiceVerifyRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     SuperAdmin one-click verification of corporate bank receipts and PO wire transfers:
@@ -413,7 +425,7 @@ def verify_and_settle_invoice_endpoint(
 def update_tenant_limits_endpoint(
     tenant_id: uuid.UUID,
     payload: SuperadminCustomLimitsRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     Allows SuperAdmin to set custom contractual limits or feature overrides for a tenant.
@@ -431,7 +443,7 @@ def update_tenant_limits_endpoint(
 
 
 @superadmin_billing_router.get("/plans")
-def list_superadmin_subscription_plans(db: Session = Depends(get_db)):
+def list_superadmin_subscription_plans(db: Session = Depends(get_platform_db)):
     """Super Admin pricing console: all plans (including inactive) with live subscriber counts."""
     counts = _plan_subscriber_counts(db)
     return [
@@ -445,7 +457,7 @@ def update_superadmin_subscription_plan(
     plan_id: uuid.UUID,
     payload: SubscriptionPlanUpdateRequest,
     request: Request,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
     current_user: Any = Depends(require_super_admin),
 ):
     """
@@ -534,7 +546,7 @@ def _audit_billing_summary_access(
 def get_superadmin_billing_summary(
     request: Request,
     current_user: Any = Depends(get_authenticated_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_billing_summary_db),
 ):
     """Return platform billing totals to Super Admins and own-workspace totals to tenant Owners/CEOs."""
     raw_company_id = getattr(current_user, "company_id", None)

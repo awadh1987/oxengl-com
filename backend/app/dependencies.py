@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -150,12 +150,7 @@ async def get_current_user(
     sub = payload.get("sub") or payload.get("user_id")
     email = payload.get("email") or payload.get("identity") or (str(sub) if (sub and "@" in str(sub)) else None)
     token_role = payload.get("role")
-    token_tenant_id = (
-        payload.get("tenant_id")
-        or payload.get("company_id")
-        or request.headers.get("x-tenant-id")
-        or request.headers.get("x-company-id")
-    )
+    token_tenant_id = payload.get("tenant_id") or payload.get("company_id")
 
     user: Optional[User] = None
 
@@ -198,10 +193,35 @@ async def get_current_user(
             detail="User account has been deactivated.",
         )
 
+    if token_tenant_id:
+        try:
+            claimed_company_id = uuid.UUID(str(token_tenant_id))
+        except (ValueError, TypeError) as error:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session company claim is invalid.",
+            ) from error
+        if user.company_id != claimed_company_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Session company does not match the authenticated user's membership.",
+            )
+
     # Attach contextual metadata to request state
     request.state.current_user = user
     request.state.tenant_id = str(user.company_id)
     request.state.role = user.role
+    request.state.is_platform_admin = False
+    db.execute(
+        text(
+            "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+            "set_config('app.current_company_id', :company_id, true)"
+        ),
+        {
+            "tenant_id": str(user.company_id or ""),
+            "company_id": str(user.company_id or ""),
+        },
+    )
 
     return user
 
@@ -390,4 +410,3 @@ def get_active_company_id(
     request.state.tenant_id = str(cid)
 
     return cid
-

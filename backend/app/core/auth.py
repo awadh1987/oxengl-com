@@ -117,6 +117,7 @@ def require_super_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied: Master Platform Security requires Super_Admin role",
         )
+    request.state.platform_db_authorized = True
     return current_user
 
 

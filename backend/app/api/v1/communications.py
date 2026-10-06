@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from backend.app.domains.hr.audit import append_audit_from_context, build_audit_context
 from backend.app.services import communication_service as svc
 from backend.app.database import get_db
+from backend.database import get_platform_db
 from backend.models import CommunicationSetting, ResCompany, TenantAuditLog
 
 try:
@@ -132,6 +133,7 @@ def _super_admin(request: Request, user: Any = Depends(current_user_dep), db: Se
         _audit(db, request, user, action="COMMUNICATION_SUPERADMIN_DENIED", outcome="DENIED", tenant_id=tenant_id)
         db.commit()
         raise HTTPException(status_code=403, detail="Platform Super Admin role is required.")
+    request.state.platform_db_authorized = True
     return user
 
 
@@ -283,7 +285,7 @@ def list_all_settings(
     scope: str | None = Query(None, pattern="^(platform|tenant)$"),
     tenant_id: uuid.UUID | None = Query(None),
     user: Any = Depends(_super_admin),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     query = select(CommunicationSetting)
     if channel:
@@ -307,18 +309,18 @@ def list_all_settings(
 
 
 @superadmin_router.post("", response_model=SettingOut, status_code=status.HTTP_201_CREATED)
-def create_platform_setting(payload: SettingCreate, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_db)):
+def create_platform_setting(payload: SettingCreate, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
     return _create(db, request, user, None, payload)
 
 
 @superadmin_router.put("/{setting_id}", response_model=SettingOut)
-def update_platform_setting(setting_id: str, payload: SettingUpdate, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_db)):
+def update_platform_setting(setting_id: str, payload: SettingUpdate, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
     row = _setting_or_404(db, request, user, setting_id, None)
     return _update(db, request, user, None, row, payload)
 
 
 @superadmin_router.delete("/{setting_id}")
-def delete_platform_setting(setting_id: str, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_db)):
+def delete_platform_setting(setting_id: str, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
     row = _setting_or_404(db, request, user, setting_id, None)
     deleted_id = svc.delete_setting(db, row)
     _audit(db, request, user, action="COMMUNICATION_SETTING_DELETED", outcome="SUCCESS", tenant_id=None, setting_id=deleted_id)
@@ -328,6 +330,6 @@ def delete_platform_setting(setting_id: str, request: Request, user: Any = Depen
 
 @superadmin_router.post("/{setting_id}/test", response_model=TestResult)
 @limiter.limit("5/minute")
-async def test_platform_setting(setting_id: str, payload: TestRequest, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_db)):
+async def test_platform_setting(setting_id: str, payload: TestRequest, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
     row = _setting_or_404(db, request, user, setting_id, None)
     return await _test(db, request, user, None, row, payload.recipient)

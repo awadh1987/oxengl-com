@@ -45,6 +45,18 @@ engine = create_engine(
     max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
 )
 
+PLATFORM_DATABASE_URL = os.getenv("PLATFORM_DATABASE_URL")
+platform_engine = (
+    create_engine(
+        PLATFORM_DATABASE_URL,
+        pool_pre_ping=True,
+        pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+        max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")),
+    )
+    if PLATFORM_DATABASE_URL
+    else None
+)
+
 class _AwaitableNone:
     def __await__(self):
         async def _noop():
@@ -99,6 +111,11 @@ class AsyncCompatibleSession(Session):
 
 
 SessionLocal = sessionmaker(bind=engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False)
+PlatformSessionLocal = (
+    sessionmaker(bind=platform_engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False)
+    if platform_engine is not None
+    else None
+)
 
 
 from starlette.requests import Request
@@ -163,6 +180,48 @@ def get_db(request: Request = None):
         except Exception:
             pass
 
+    # Do not let caller-selected headers or role labels survive context resolution.
+    tenant_id = None
+    is_master = False
+    if request is not None:
+        authenticated_user = getattr(request.state, "current_user", None)
+        raw_token = request.cookies.get("access_token") or request.cookies.get("oxengl_session")
+        authorization = request.headers.get("Authorization") or request.headers.get("authorization")
+        if not raw_token and authorization and authorization.startswith("Bearer "):
+            raw_token = authorization.split(" ", 1)[1].strip()
+
+        claims = None
+        if raw_token:
+            from fastapi import HTTPException
+            from backend.two_tier_auth import verify_two_tier_jwt
+
+            try:
+                claims = verify_two_tier_jwt(raw_token, expected_tier="master")
+            except HTTPException:
+                try:
+                    claims = verify_two_tier_jwt(raw_token, expected_tier="tenant")
+                except HTTPException:
+                    from backend.app.dependencies import decode_jwt_token
+
+                    try:
+                        claims = decode_jwt_token(raw_token)
+                    except HTTPException:
+                        claims = None
+
+        if authenticated_user is not None:
+            tenant_id = getattr(authenticated_user, "company_id", None)
+            is_master = bool(getattr(request.state, "is_platform_admin", False))
+        elif claims:
+            tenant_id = claims.get("tenant_id") or claims.get("company_id")
+        elif request.url.path.startswith(("/api/v1/auth", "/api/v1/iam", "/api/v1/tenant/auth")):
+            tenant_id = (
+                request.headers.get("X-Tenant-ID")
+                or request.headers.get("X-Company-ID")
+            )
+        else:
+            tenant_id = None
+            is_master = False
+
     # Resolve company_uuid
     if tenant_id:
         try:
@@ -204,28 +263,50 @@ def get_db(request: Request = None):
     else:
         db = SessionLocal()
 
-    # Apply tenant RLS session variables
+    # Apply transaction-local context after discarding all caller-selected scope.
     try:
-        if tenant_id:
-            try:
-                db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
-                db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})
-            except Exception:
-                pass
-        if is_master:
-            try:
-                db.execute(text("SET LOCAL app.is_master_admin = 'true'"))
-            except Exception:
-                pass
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+                "set_config('app.current_company_id', :company_id, true)"
+            ),
+            {
+                "tenant_id": str(tenant_id or ""),
+                "company_id": str(tenant_id or ""),
+            },
+        )
         yield db
     finally:
-        if tenant_id or is_master:
+        if tenant_id:
             try:
                 db.execute(text("RESET app.current_tenant_id;"))
                 db.execute(text("RESET app.current_company_id;"))
-                db.execute(text("RESET app.is_master_admin;"))
             except Exception:
                 pass
+        db.close()
+
+
+def get_platform_db(request: Request):
+    """Yield a global-scope session only after the platform authorization guard succeeds."""
+    from fastapi import HTTPException, status
+
+    if not getattr(request.state, "platform_db_authorized", False):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform database access is not authorized")
+    if PlatformSessionLocal is None:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Platform database access is not configured")
+
+    db = PlatformSessionLocal()
+    try:
+        role = db.execute(
+            text(
+                "SELECT current_user, role.rolsuper, role.rolbypassrls "
+                "FROM pg_roles AS role WHERE role.rolname = current_user"
+            )
+        ).one()
+        if role != ("oxengl_platform", False, True):
+            raise RuntimeError("Platform database URL did not connect as the dedicated non-superuser platform role")
+        yield db
+    finally:
         db.close()
 
 
@@ -242,14 +323,11 @@ def tenant_rls_scope(db, tenant_id: str, is_master: bool = False):
         if tenant_id:
             db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
             db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})
-        if is_master:
-            db.execute(text("SET LOCAL app.is_master_admin = 'true'"))
         yield db
     finally:
         try:
             db.execute(text("RESET app.current_tenant_id;"))
             db.execute(text("RESET app.current_company_id;"))
-            db.execute(text("RESET app.is_master_admin;"))
         except Exception:
             pass
 
@@ -467,4 +545,3 @@ class TenantConnectionManager:
 
 
 tenant_connection_manager = TenantConnectionManager(engine)
-

@@ -602,6 +602,11 @@ def get_db(request: Request = None) -> Generator[Session, None, None]:
 	yield from _core_get_db(request)
 
 
+def get_platform_db(request: Request) -> Generator[Session, None, None]:
+	from backend.database import get_platform_db as _core_get_platform_db
+	yield from _core_get_platform_db(request)
+
+
 
 def resolve_client_ip(request: Request) -> str | None:
 	"""Resolve the client address only through configured, trusted proxy hops."""
@@ -707,8 +712,12 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 	email = str(claims.get("identity") or claims.get("sub") or "").lower().strip()
 	if not email:
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session is missing an authenticated subject")
-	tenant_slug = claims.get("tenant_slug") or claims.get("domain_slug") or request.headers.get("x-tenant-slug")
-	tenant_id = claims.get("tenant_id") or claims.get("company_id") or request.headers.get("x-tenant-id") or request.headers.get("x-company-id")
+	master_tier = claims.get("tier") == "master"
+	tenant_slug = claims.get("tenant_slug") or claims.get("domain_slug")
+	tenant_id = claims.get("tenant_id") or claims.get("company_id")
+	if master_tier:
+		tenant_slug = tenant_slug or request.headers.get("x-tenant-slug")
+		tenant_id = tenant_id or request.headers.get("x-tenant-id") or request.headers.get("x-company-id")
 	target_company = None
 	if tenant_id:
 		try:
@@ -748,7 +757,7 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 	# Token claims (role / tier / scopes / is_superuser) are never trusted to elevate a user: the tenant
 	# login token carries is_superuser=true for every tenant Admin/Owner, which previously turned all
 	# tenant admins into platform super admins on the master-platform API.
-	is_master_or_super = bool(getattr(user, "is_superuser", False)) or str(user.role or "").strip().upper().replace(" ", "_").replace("-", "_") in {"SUPER_ADMIN", "SUPERADMIN"}
+	is_master_or_super = master_tier and is_super_admin_authorized(user, request)
 	try:
 		request.state.claims = claims
 		request.state.token_claims = claims
@@ -756,13 +765,7 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 		pass
 
 	claim_company_id = claims.get("company_id")
-	user_role_norm = str(getattr(user, "role", "") or "").upper().replace(" ", "_")
-	is_exec_role = (
-		getattr(user, "is_superuser", False)
-		or is_master_or_super
-		or user_role_norm in ["SUPER_ADMIN", "OWNER", "ADMIN", "CEO", "EXECUTIVE"]
-		or is_super_admin_authorized(user, request)
-	)
+	is_exec_role = is_master_or_super
 	if claim_company_id and not is_exec_role:
 		try:
 			claim_uuid = uuid.UUID(str(claim_company_id))
@@ -773,11 +776,24 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 			raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Session company does not match authenticated user membership")
 
 	# Dynamic Context Injection into request.state
-	active_user_cid = getattr(request.state, "company_id", None) or (target_company.id if (target_company and is_exec_role) else None) or user.company_id
+	active_user_cid = (target_company.id if (target_company and is_exec_role) else user.company_id)
 	if active_user_cid:
 		request.state.company_id = active_user_cid
 		request.state.tenant_company_id = active_user_cid
 		request.state.tenant_id = str(active_user_cid)
+	request.state.current_user = user
+	request.state.is_platform_admin = is_master_or_super
+	request.state.platform_db_authorized = is_master_or_super
+	database.execute(
+		text(
+			"SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+			"set_config('app.current_company_id', :company_id, true)"
+		),
+		{
+			"tenant_id": str(active_user_cid or ""),
+			"company_id": str(active_user_cid or ""),
+		},
+	)
 
 	return user
 get_current_active_user = get_authenticated_user
@@ -921,24 +937,30 @@ def require_compliance_admin(
 def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> bool:
 	"""
 	Verifies Super Admin authority from the authenticated server-side user record.
-	Request token claims are deliberately not an authority source.
+	A server-side platform-user flag is accepted only on a signed master-tier session.
 	"""
 	if user is None:
 		return False
 
+	claims = getattr(request.state, "claims", {}) if request is not None else {}
+	master_tier = isinstance(claims, dict) and claims.get("tier") == "master"
+
 	# 1. Server-side user authority flags and role.
-	if getattr(user, "is_superuser", False) is True or getattr(user, "is_super_admin", False) is True:
+	if master_tier and (
+		getattr(user, "is_superuser", False) is True
+		or getattr(user, "is_super_admin", False) is True
+	):
 		return True
 
 	raw_role = str(getattr(user, "role", "") or "").strip()
 	normalized_role = raw_role.upper().replace(" ", "_").replace("-", "_")
-	if normalized_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
+	if master_tier and normalized_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
 		return True
 
 	# 2. Server-side ACL and role mappings.
 	acl = str(getattr(user, "access_control_list", "") or "").upper()
 	role_ids = str(getattr(user, "role_ids", "") or "").upper()
-	if "SUPER_ADMIN" in acl or "SUPER_ADMIN" in role_ids:
+	if master_tier and ("SUPER_ADMIN" in acl or "SUPER_ADMIN" in role_ids):
 		return True
 
 	# 3. Development/provisioning compatibility is opt-in and cannot be enabled
@@ -948,7 +970,7 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
 		current_env in ("development", "dev", "test", "testing", "staging", "provisioning")
 		and os.getenv("OXENGL_DEV_MODE", "false").lower() in ("true", "1", "yes")
 	)
-	if dev_env:
+	if dev_env and master_tier:
 		is_master_subject = (
 			str(getattr(user, "email", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
 			or getattr(user, "company_id", None) is None
@@ -991,6 +1013,7 @@ def require_super_admin(
 			status_code=status.HTTP_403_FORBIDDEN,
 			detail="Access denied: Master Platform Security requires Super_Admin role",
 		)
+	request.state.platform_db_authorized = True
 	record_platform_audit(
 		database,
 		actor_email=current_user.email,
@@ -5304,7 +5327,7 @@ def rotate_superadmin_password(
 	payload: PasswordRotateRequest,
 	request: Request,
 	current_user: models.ResUser = Depends(require_super_admin),
-	database: Session = Depends(get_db),
+	database: Session = Depends(get_platform_db),
 ):
 	"""Rotate Super_Admin password and regenerate 5 new server recovery codes."""
 	admin_user = database.scalar(select(models.ResUser).where(models.ResUser.id == current_user.id))
@@ -5365,7 +5388,7 @@ def rotate_superadmin_password(
 def list_platform_security_audit_logs(
 	limit: int = 100,
 	current_user: models.ResUser = Depends(require_super_admin),
-	database: Session = Depends(get_db),
+	database: Session = Depends(get_platform_db),
 ):
 	"""Query immutable server-side platform audit logs strictly protected by Super_Admin role."""
 	return database.scalars(

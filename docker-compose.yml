@@ -92,9 +92,12 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: "postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD:?DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
+      DATABASE_URL: "postgresql+psycopg2://${APP_DB_USER:?APP_DB_USER must be set in .env}:${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
+      PLATFORM_DATABASE_URL: "postgresql+psycopg2://${PLATFORM_DB_USER:?PLATFORM_DB_USER must be set in .env}:${PLATFORM_DB_PASSWORD:?PLATFORM_DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
       REDIS_URL: "redis://redis_cache:6379/0"
       POSTGRES_HOST: postgres_db
+      DB_USER: ${APP_DB_USER:?APP_DB_USER must be set in .env}
+      DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       SYNC_WEBHOOK_SECRETS_JSON: ${SYNC_WEBHOOK_SECRETS_JSON:-}
       PYTHONPATH: "/app"

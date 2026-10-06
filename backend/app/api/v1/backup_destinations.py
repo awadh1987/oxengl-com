@@ -30,7 +30,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.domains.hr.audit import append_audit_from_context, build_audit_context
 from backend.app.services import backup_destination_service as svc
-from backend.database import SessionLocal, get_db
+from backend.database import SessionLocal, get_db, get_platform_db
 from backend.models import BackupDestination, TenantAuditLog
 
 tenant_router = APIRouter(prefix="/api/v1/tenant-control/backups", tags=["Tenant Backups"])
@@ -225,6 +225,7 @@ def super_admin_dep(
         )
         db.commit()
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Super_Admin role required.")
+    request.state.platform_db_authorized = True
     return user
 
 
@@ -413,7 +414,7 @@ def admin_list_destinations(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     items, total = svc.list_destinations(
         db, tenant_id=None, all_scopes=True, tenant_filter=tenant_id, scope=scope, page=page, page_size=page_size
@@ -436,7 +437,7 @@ def admin_list_logs(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     try:
         items, total = svc.list_run_logs(
@@ -459,7 +460,7 @@ def admin_create_platform_destination(
     payload: PlatformDestinationCreate,
     request: Request,
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Platform-wide destination (tenant_id NULL): receives the PLATFORM archive only."""
     try:
@@ -494,7 +495,7 @@ def admin_update_platform_destination(
     payload: PlatformDestinationUpdate,
     request: Request,
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     row = _load_scoped_or_404(db, request, user, destination_id, None)
     try:
@@ -522,7 +523,7 @@ def admin_delete_platform_destination(
     destination_id: str,
     request: Request,
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     row = _load_scoped_or_404(db, request, user, destination_id, None)
     deleted_id = row.id
@@ -541,7 +542,7 @@ def admin_test_platform_destination(
     destination_id: str,
     request: Request,
     user: Any = Depends(super_admin_dep),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     row = _load_scoped_or_404(db, request, user, destination_id, None)
     ok, message = svc.check_destination_connection(row, _provider())

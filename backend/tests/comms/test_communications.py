@@ -122,6 +122,7 @@ def make_client(factory, user, monkeypatch, *, super_admin=False):
             db.close()
 
     app.dependency_overrides[get_db] = db_dep
+    app.dependency_overrides[api.get_platform_db] = db_dep
     app.dependency_overrides[api.current_user_dep] = lambda: user
     return TestClient(app, client=("203.0.113.44", 50000))
 

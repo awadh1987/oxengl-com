@@ -150,11 +150,11 @@ DROP POLICY IF EXISTS rls_tenant_domains_isolation ON tenant_domains;
 CREATE POLICY rls_tenant_users_isolation ON tenant_users
     FOR ALL
     USING (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     )
     WITH CHECK (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     );
 
@@ -162,11 +162,11 @@ CREATE POLICY rls_tenant_users_isolation ON tenant_users
 CREATE POLICY rls_tenant_settings_isolation ON tenant_settings
     FOR ALL
     USING (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     )
     WITH CHECK (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     );
 
@@ -174,11 +174,11 @@ CREATE POLICY rls_tenant_settings_isolation ON tenant_settings
 CREATE POLICY rls_tenant_feature_flags_isolation ON tenant_feature_flags
     FOR ALL
     USING (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     )
     WITH CHECK (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     );
 
@@ -186,11 +186,11 @@ CREATE POLICY rls_tenant_feature_flags_isolation ON tenant_feature_flags
 CREATE POLICY rls_tenant_domains_isolation ON tenant_domains
     FOR ALL
     USING (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     )
     WITH CHECK (
-        current_setting('app.is_master_admin', true) = 'true'
+        current_user = 'oxengl_platform'
         OR tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid
     );
 
@@ -344,7 +344,7 @@ BEGIN
         END IF;
 
         policy_predicate := format(
-            '(current_setting(''app.is_master_admin'', true) = ''true'' OR (%s))',
+            '(current_user = ''oxengl_platform'' OR (%s))',
             scope_predicate
         );
 
@@ -417,14 +417,14 @@ BEGIN
                 '(%s))',
                 child_scope.parent_table, child_scope.table_name, child_scope.child_column,
                 format(
-                    '(current_setting(''app.is_master_admin'', true) = ''true'' OR parent_row.%I::text = NULLIF(current_setting(''app.current_tenant_id'', true), ''''))',
+                    '(current_user = ''oxengl_platform'' OR parent_row.%I::text = NULLIF(current_setting(''app.current_tenant_id'', true), ''''))',
                     child_scope.parent_scope_column
                 )
             );
         END IF;
 
         policy_predicate := format(
-            '(current_setting(''app.is_master_admin'', true) = ''true'' OR (%s))',
+            '(current_user = ''oxengl_platform'' OR (%s))',
             scope_predicate
         );
 
@@ -461,11 +461,7 @@ RETURNS VOID AS $$
 BEGIN
     -- Using is_local = true ensures settings are transaction-local and automatically reset on commit/rollback
     PERFORM set_config('app.current_tenant_id', p_tenant_id::text, true);
-    IF p_is_master THEN
-        PERFORM set_config('app.is_master_admin', 'true', true);
-    ELSE
-        PERFORM set_config('app.is_master_admin', 'false', true);
-    END IF;
+    PERFORM set_config('app.is_master_admin', 'false', true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -477,6 +473,9 @@ BEGIN
     PERFORM set_config('app.is_master_admin', 'false', true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+REVOKE ALL ON FUNCTION set_tenant_context(UUID, BOOLEAN) FROM PUBLIC;
+REVOKE ALL ON FUNCTION clear_tenant_context() FROM PUBLIC;
 
 -- ==============================================================================
 -- 9. Seed Default Master Tenants & Custom Domains

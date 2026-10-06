@@ -1,8 +1,31 @@
 # OxenGL Codebase Diagnostic Audit
 
 **Review date:** 2026-10-06  
-**Mode:** Read-only static inspection. No code, configuration, or dependency files were changed; no dependencies were installed and no Git commands were run.  
-**Coverage:** FastAPI entry points and APIs, LangGraph agent, SQLAlchemy/Alembic and RLS assets, React frontend wiring/authentication, migration worker, Docker/Compose/Nginx configurations, and the supplied technical scan. Findings below are limited to issues supported by repository evidence; they are not a substitute for dynamic integration, penetration, or database tests.
+**Mode:** Baseline static inspection plus live post-remediation container and PostgreSQL verification. Approved code/configuration changes were applied during remediation; no dependencies were installed.
+**Coverage:** FastAPI entry points and APIs, LangGraph agent, SQLAlchemy/Alembic and RLS assets, React frontend wiring/authentication, migration worker, Docker/Compose/Nginx configurations, and the live `erp_db` schema. Findings are limited to repository and test evidence; they are not a substitute for a full penetration test or independent ISO certification.
+
+## Post-remediation live verification
+
+- All five OxenGL containers (PostgreSQL, Redis, backend, frontend, and Nginx) report healthy. Backend `http://127.0.0.1:8000/api/v1/health` and proxied `http://127.0.0.1:8080/api/v1/health` returned HTTP 200 after backend recreation. Nginx briefly returned 502 while Podman DNS was updating the replaced backend; subsequent checks succeeded.
+- `erp_db` has 128 public tables. Live catalog verification found RLS enabled on 128/128, forced on 128/128, and at least one policy on 128/128 (140 policy rows total).
+- The backend now connects as `oxengl_app`, which is `NOSUPERUSER` and `NOBYPASSRLS`. A representative `res_users` query with no tenant context returned zero rows. A prior transactional test with two tenant contexts confirmed that one tenant could not read the other tenant's users or company row.
+- A synthetic request carrying caller-controlled `X-Tenant-ID` and `X-Role: SUPER_ADMIN` did not set tenant or master context in the shared session helper after the latest backend rebuild.
+- The initial live check found that the app role could set `app.is_master_admin` and bypass policies. This was corrected by removing that GUC from the policy predicates and using the separate `oxengl_platform` login for platform-wide operations. It is `NOSUPERUSER BYPASSRLS NOINHERIT`; the application role cannot `SET ROLE` to it. Global DB sessions are provided only after the server-side platform authorization guard sets `request.state.platform_db_authorized`.
+- Post-fix read-only checks found zero policies referencing `app.is_master_admin`; an app-role query remained empty after setting that GUC to `true`; an app-role cross-tenant company lookup returned no other-tenant row; and an unauthorised request was denied by the platform DB dependency. The platform connection reports the dedicated role and can read the global scope. These are focused DB/dependency checks, not end-to-end signed-session tests.
+- The app DB password and the `JWT_SECRET` used by the active deployment were rotated after verbose Compose output exposed their values. Existing sessions signed with the old `JWT_SECRET` are invalid and users may need to sign in again. The deployment `.env` remains mode-restricted.
+- Authenticated tenant and platform-super-admin endpoint smoke tests were not run because no test credentials were supplied. The host-side TLS probe on port 4433 had previously reset and was not re-tested; HTTP health is verified, TLS health is not.
+
+### Final rebuilt-deployment verification
+
+- Mirrored the final billing dependency change into the active Compose build context, rebuilt and recreated only the backend, and confirmed all five OxenGL service containers reported healthy afterward.
+- After that rebuild, direct backend and Nginx-proxied health checks both returned HTTP 200. Unauthenticated `GET /api/v1/superadmin/tenants` and `GET /api/master/platform/tenants` both returned HTTP 401.
+- Re-queried the live catalog: 128 public tables total; 128 RLS-enabled, 128 RLS-forced, and 128 with policies. No live policy references `app.is_master_admin`.
+- The rebuilt backend connected as `oxengl_app`; setting the old master GUC still exposed zero `res_users`, and attempting `SET ROLE oxengl_platform` was denied. The platform role remains `NOSUPERUSER BYPASSRLS`; the app role remains `NOSUPERUSER NOBYPASSRLS`.
+- Previously passing focused suites remain 65 backup/communications tests and 5 billing tenant-scope tests. A separate 13-test live-database authorization run stopped during fixture setup because its unscoped seed inserts were rejected by RLS; these are test-environment/setup errors and do not count as endpoint test coverage. Do not rerun those fixtures against the production database.
+
+### Current disposition
+
+The earlier severity sections record the **pre-remediation baseline**. The four approved remediation phases have since changed the agent/API/auth, migration, MFA, deployment, and RLS code; static syntax/configuration checks and the live RLS/container checks above passed. C4's 128-table coverage is present and enforced for the ordinary app role; the GUC bypass from C5 has been replaced with a distinct, role-bound platform connection. Unauthenticated rejection is verified, but successful authenticated endpoint authorization, schema/data migration rehearsal, and full cross-tenant endpoint tests remain unverified. Findings about the SaaS-specific manifest and remaining frontend/runtime cleanup remain applicable unless separately revalidated.
 
 ## [CRITICAL]
 
@@ -170,4 +193,4 @@
 7. **Harden session and runtime configuration:** Standardize on HttpOnly cookie sessions, remove browser-readable JWT persistence, retire Firebase identity/persistence paths, require all secrets at deployment, make migrations fail closed, restrict service ports, and align Python versions.
 8. **Improve reliability and cleanup:** Replace synchronous work in async routes or move it to bounded worker execution; route or remove dead screens; add CI checks for route registration, tenant isolation, model/migration drift, migration recovery, and container startup under the chosen runtime configuration.
 
-**Implementation gate:** No remediation has been applied. Proceed with code changes only after explicit approval.
+**Current gate:** The live table-policy and role checks pass for the active deployment. Do not claim full ISO compliance until signed-session tests exercise the protected platform routes, tenant read/write denial across representative business tables, TLS health is verified, and the remaining baseline findings are revalidated or closed.

@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
-from backend.database import get_db
+from backend.database import get_db, get_platform_db
 from backend.models import MasterTenant, ResCompany, ResUser, Tenant, TenantAuditLog, TenantUser
 from backend.app.utils.crypto_vault import decrypt_bytes_aes256, encrypt_bytes_aes256
 from backend.app.domains.auth.onboard_tenant import generate_balanced_brand_palette
@@ -113,7 +113,7 @@ class TenantDeploymentRegistrationPayload(BaseModel):
 @router.post("/register-tenant", status_code=status.HTTP_201_CREATED)
 def deploy_register_new_tenant(
     payload: TenantDeploymentRegistrationPayload,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     SuperAdmin Tenant Deployment Registration Pipeline.
@@ -403,7 +403,7 @@ def list_superadmin_tenants(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Fetch tenant tracking grids across isolated workspaces."""
     query = select(ResCompany)
@@ -440,7 +440,7 @@ def list_superadmin_tenants(
 def update_tenant_status(
     tenant_id: str,
     payload: TenantStatusUpdate,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Toggle activation flags, branding themes, and status modes."""
     try:
@@ -500,8 +500,8 @@ class TenantOverrideSchema(BaseModel):
 def update_tenant_overrides(
     tenant_slug: str,
     override_data: TenantOverrideSchema,
-    db: Session = Depends(get_db),
     admin: Any = Depends(get_current_super_admin),
+    db: Session = Depends(get_platform_db),
 ):
     """
     Super-Admin endpoint allowing modification of a tenant's feature overrides
@@ -576,7 +576,7 @@ def update_tenant_overrides(
 def trigger_test_alert(
     tenant_id: str,
     payload: TriggerAlertRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Force Email/WhatsApp notice dispatch test alert."""
     try:
@@ -793,7 +793,7 @@ def backup_tenant_financial_infrastructure(db: Session, tenant_id: str, company:
 @router.delete("/tenants/{tenant_id}/purge")
 def purge_tenant(
     tenant_id: str,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Apply native Gzip compaction (compresslevel=9), encrypt with AES-256-GCM into .enc.tar.gz, then clear tables."""
     try:
@@ -879,7 +879,7 @@ def purge_tenant(
 @router.post("/tenants/restore-upload")
 async def restore_tenant_upload(
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     AES-256 Symmetric Encryption Restoration Engine:
@@ -1137,7 +1137,7 @@ def get_superadmin_logs(
     limit: int = 100,
     action_type: Optional[str] = None,
     tenant_id: Optional[str] = None,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Retrieve unified database tracking logs."""
     query = select(TenantAuditLog)
@@ -1167,7 +1167,7 @@ def get_superadmin_logs(
 # 7. GET /api/v1/superadmin/logs/export-csv
 @router.get("/logs/export-csv")
 def export_superadmin_logs_csv(
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """Stream log metrics down into raw CSV downloads."""
     rows = db.execute(select(TenantAuditLog).order_by(desc(TenantAuditLog.created_at))).scalars().all()
@@ -1188,7 +1188,7 @@ def export_superadmin_logs_csv(
 
 # 8. GET /api/v1/superadmin/cloud-telemetry
 @router.get("/cloud-telemetry")
-def get_cloud_telemetry(db: Session = Depends(get_db)):
+def get_cloud_telemetry(db: Session = Depends(get_platform_db)):
     """Interrogate remote object bucket (volume, limits, key status) and infrastructure vitals."""
     disk_total, disk_used, disk_free = shutil.disk_usage("/")
     disk_percent = round((disk_used / disk_total) * 100, 2)
@@ -1312,7 +1312,7 @@ def get_cloud_telemetry(db: Session = Depends(get_db)):
 
 # 9. GET /api/v1/superadmin/analytics/velocity
 @router.get("/analytics/velocity")
-def get_analytics_velocity(db: Session = Depends(get_db)):
+def get_analytics_velocity(db: Session = Depends(get_platform_db)):
     """Query 7-day transaction velocity (counts of journal entries per tenant and rolling trends)."""
     now = datetime.utcnow()
     window_start = now - timedelta(days=7)

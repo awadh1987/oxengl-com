@@ -118,6 +118,7 @@ def client_for(factory, monkeypatch):
                 db.close()
 
         app.dependency_overrides[get_db] = _db
+        app.dependency_overrides[api.get_platform_db] = _db
         app.dependency_overrides[api.current_user_dep] = lambda: user
         return TestClient(app, client=(CLIENT_IP, 50000))
 

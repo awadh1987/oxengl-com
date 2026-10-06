@@ -17,7 +17,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import get_db, get_platform_db
 from backend.app.core.auth import require_super_admin
 from backend.models import (
     MasterTenant,
@@ -89,7 +89,7 @@ class ToggleFeatureFlagRequest(BaseModel):
 # ==============================================================================
 
 @router.get("/tenants", status_code=status.HTTP_200_OK)
-def list_tenants(db: Session = Depends(get_db)):
+def list_tenants(db: Session = Depends(get_platform_db)):
     """
     Lists all provisioned tenants from PostgreSQL.
     Joins MasterTenant and ResCompany with user metrics.
@@ -135,7 +135,7 @@ def list_tenants(db: Session = Depends(get_db)):
 
 
 @router.post("/tenants", status_code=status.HTTP_201_CREATED)
-def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_db)):
+def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_platform_db)):
     """
     Provisions a new multi-tenant workspace directly in PostgreSQL.
     Inserts into both master_tenants and res_companies.
@@ -233,7 +233,7 @@ def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_
 def delete_tenant_with_safety_guard(
     tenant_id: str,
     payload: DeleteTenantRequest,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_platform_db),
 ):
     """
     Multi-Step Type-to-Confirm Destructive Action Guard.
@@ -297,7 +297,7 @@ def delete_tenant_with_safety_guard(
 
 
 @router.get("/search", status_code=status.HTTP_200_OK)
-def global_search(q: Optional[str] = Query(None), db: Session = Depends(get_db)):
+def global_search(q: Optional[str] = Query(None), db: Session = Depends(get_platform_db)):
     """
     Cmd+K Global Search Engine across PostgreSQL tenants, users, and audit logs.
     """
@@ -375,7 +375,7 @@ def global_search(q: Optional[str] = Query(None), db: Session = Depends(get_db))
 
 
 @router.get("/health", status_code=status.HTTP_200_OK)
-def get_system_health(db: Session = Depends(get_db)):
+def get_system_health(db: Session = Depends(get_platform_db)):
     """
     Live System Health & Telemetry for DevOps Status Banner.
     Pings PostgreSQL directly via 'SELECT 1'.
@@ -471,7 +471,7 @@ def _save_feature_flag(db: Session, flag_key: str, target_state: bool) -> Platfo
 
 @router.get("/feature-flags", status_code=status.HTTP_200_OK)
 @admin_router.get("/feature-flags", status_code=status.HTTP_200_OK)
-def get_feature_flags(db: Session = Depends(get_db)):
+def get_feature_flags(db: Session = Depends(get_platform_db)):
     """Returns the platform-wide feature flags loaded from PostgreSQL."""
     flags = _sync_feature_flags_from_db(db)
     return {"success": True, "flags": flags}
@@ -483,7 +483,7 @@ def get_feature_flags(db: Session = Depends(get_db)):
 @admin_router.patch("/feature-flags", status_code=status.HTTP_200_OK)
 @admin_router.post("/feature-flags/toggle", status_code=status.HTTP_200_OK)
 @admin_router.post("/feature-flags", status_code=status.HTTP_200_OK)
-def toggle_or_patch_feature_flag(payload: ToggleFeatureFlagRequest, db: Session = Depends(get_db)):
+def toggle_or_patch_feature_flag(payload: ToggleFeatureFlagRequest, db: Session = Depends(get_platform_db)):
     """Updates a global feature flag in PostgreSQL."""
     flag_key = payload.flag_key or payload.key
     target_state = payload.enabled if payload.enabled is not None else payload.is_enabled
@@ -527,5 +527,4 @@ from backend.app.core.auth import (  # noqa: E402
     verify_super_admin,
     is_super_admin_authorized,
 )
-
 
