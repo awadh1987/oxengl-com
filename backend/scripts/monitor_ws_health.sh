@@ -66,6 +66,10 @@ fi
 # ==============================================================================
 # 2. AI Copilot Router SLA Latency Probe (< 15.00ms SLA)
 # ==============================================================================
+# Tenant-tier JWT required: master tokens carry no company context and get 401.
+if [[ -z "${OXENGL_SMOKE_TOKEN:-}" ]]; then
+    echo "[$TIMESTAMP] ⚠️ AI Copilot probe skipped: OXENGL_SMOKE_TOKEN (tenant-tier JWT) is not set." >> "$LOG_FILE"
+else
 AI_START_NS=$(date +%s%N)
 AI_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 \
   -X POST http://127.0.0.1:8000/api/v1/ai/copilot/query \
@@ -95,4 +99,5 @@ if [[ "$EXCEEDS_SLA" -eq 1 || "$AI_HTTP_CODE" != "200" ]]; then
   Violation Delta : +$(awk -v lat="$AI_ELAPSED_MS" 'BEGIN {printf "%.2f", lat - 15.00}')ms over SLA threshold
 --------------------------------------------------------------------------------
 EOF
+fi
 fi
