@@ -122,9 +122,17 @@ fi
 
 # Verify High-Frequency WebSocket Stream Endpoint
 echo -e " ${INFO} Probing high-frequency WebSocket stream endpoint (/api/v1/logistics/ws/fleet-stream)..."
+WS_TOKEN="${OXENGL_WS_TOKEN:-$(python3 "${PROJECT_DIR}/backend/scripts/ws_auth_token.py")}"
+if [ -z "${WS_TOKEN}" ]; then
+    echo -e " ${ERROR} Unable to obtain a WebSocket auth token."
+    exit 1
+fi
 WS_CODE=$(curl -i -s -N \
     -H "Upgrade: websocket" \
     -H "Connection: Upgrade" \
+    -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+    -H "Sec-WebSocket-Version: 13" \
+    -H "Authorization: Bearer ${WS_TOKEN}" \
     -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
     --insecure "https://127.0.0.1/api/v1/logistics/ws/fleet-stream?tenant_id=49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
     --max-time 3 2>&1 | grep -i "101 Switching Protocols" || true)
@@ -132,14 +140,15 @@ WS_CODE=$(curl -i -s -N \
 if [ -n "$WS_CODE" ]; then
     echo -e " ${SUCCESS} Live WebSocket handshake validated: HTTP/1.1 101 Switching Protocols"
 else
-    echo -e " ${WARN} WebSocket returned alternate initial handshake response, endpoint registered."
+    echo -e " ${ERROR} Authenticated WebSocket handshake failed (expected 101 Switching Protocols)."
+    exit 1
 fi
 
 # 5. Post-Deployment Smoke Test
 echo -e "\n${INFO} [5/5] Executing post-deployment smoke test (/api/v1/ai/forecasting/inventory)..."
 SMOKE_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --insecure \
+    -H "Authorization: Bearer ${WS_TOKEN}" \
     -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
-    -H "X-Role: ADMIN" \
     "https://localhost/api/v1/ai/forecasting/inventory")
 
 if [ "$SMOKE_STATUS" == "200" ]; then

@@ -1,10 +1,18 @@
 # File: scripts/stress_test_divergent_radar.py
 import asyncio
+import os
 import json
 import random
+import sys
+from pathlib import Path
+
 import websockets
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from ws_auth_token import get_ws_token
+
 TARGET_WS_URL = "ws://127.0.0.1:8000/api/v1/logistics/ws/fleet-stream"
+TENANT_ID = os.getenv("OXENGL_TENANT_ID", "49edafb3-1b7e-40a7-8802-180af5c1e7d6")
 
 # Coordinates centered near Riyadh workspace area
 RIYADH_LAT = 24.7136
@@ -14,7 +22,10 @@ async def simulate_truck_stream(truck_id: str, is_deviating: bool):
     """
     Simulates a persistent truck telemetry thread transmitting real-time coordinates.
     """
-    async with websockets.connect(TARGET_WS_URL) as ws:
+    async with websockets.connect(
+        f"{TARGET_WS_URL}?tenant_id={TENANT_ID}",
+        additional_headers={"Authorization": f"Bearer {get_ws_token()}"},
+    ) as ws:
         current_lat = RIYADH_LAT + random.uniform(-0.02, 0.02)
         current_lon = RIYADH_LON + random.uniform(-0.02, 0.02)
         

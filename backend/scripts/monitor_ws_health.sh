@@ -14,6 +14,7 @@ echo "[$TIMESTAMP] Running automated WebSocket health & AI Copilot SLA scan..." 
 # ==============================================================================
 # 1. High-Frequency RFC-6455 WebSocket Handshake Probe
 # ==============================================================================
+WS_TOKEN="${OXENGL_WS_TOKEN:-$(python3 "$WORKSPACE_DIR/backend/scripts/ws_auth_token.py" 2>/dev/null)}"
 WS_START_NS=$(date +%s%N)
 WS_OUT=$(curl -s -N --max-time 1 \
   -H "Upgrade: websocket" \
@@ -21,6 +22,7 @@ WS_OUT=$(curl -s -N --max-time 1 \
   -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
   -H "Sec-WebSocket-Version: 13" \
   -H "Origin: http://127.0.0.1:8000" \
+  -H "Authorization: Bearer ${WS_TOKEN}" \
   -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
   -o /dev/null -w "%{http_code}:%{time_starttransfer}" \
   --insecure "https://127.0.0.1/api/v1/logistics/ws/fleet-stream?tenant_id=49edafb3-1b7e-40a7-8802-180af5c1e7d6" 2>/dev/null)
@@ -68,6 +70,7 @@ AI_START_NS=$(date +%s%N)
 AI_HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 \
   -X POST http://127.0.0.1:8000/api/v1/ai/copilot/query \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${WS_TOKEN}" \
   -H "X-Tenant-ID: 49edafb3-1b7e-40a7-8802-180af5c1e7d6" \
   -d '{"prompt": "Diagnostic health SLA latency benchmark probe", "top_k": 2}' 2>/dev/null)
 AI_END_NS=$(date +%s%N)

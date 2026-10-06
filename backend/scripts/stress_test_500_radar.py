@@ -9,6 +9,7 @@ from datetime import datetime
 # Ensure the root paths are accurately tracked by the execution runtime
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import websockets
+from ws_auth_token import get_ws_token
 
 async def simulate_single_truck_stream(truck_id: str, tenant_id: str):
     """
@@ -24,7 +25,7 @@ async def simulate_single_truck_stream(truck_id: str, tenant_id: str):
     lng = base_lng + random.uniform(-0.05, 0.05)
     
     try:
-        async with websockets.connect(uri) as websocket:
+        async with websockets.connect(uri, additional_headers={"Authorization": f"Bearer {get_ws_token()}"}) as websocket:
             # Blast consecutive telemetry intervals to verify the 60 FPS canvas updates
             for tick in range(10):
                 # Apply minor drifting vectors to simulate vehicle movement speed velocity
