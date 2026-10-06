@@ -5,10 +5,8 @@
 # ==============================================================================
 
 import os
-import json
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Optional, TypedDict
 
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
@@ -16,7 +14,6 @@ from langgraph.checkpoint.memory import MemorySaver
 
 try:
     from app.agent.schemas import (
-        ProcurementItemSchema,
         ProcurementPOSchema,
         PurchaseOrderSchema,
         FleetDispatchSchema,
@@ -31,7 +28,6 @@ try:
     )
 except (ImportError, ModuleNotFoundError):
     from backend.app.agent.schemas import (
-        ProcurementItemSchema,
         ProcurementPOSchema,
         PurchaseOrderSchema,
         FleetDispatchSchema,
@@ -59,10 +55,14 @@ class ERPGraphState(TypedDict):
     current_ui_route: str
     active_tenant_id: str
     user_role: str
+    requester_user_id: Optional[str]
     intent_category: Optional[str]        # 'procurement', 'fleet', 'payroll', 'governance', 'general'
     department: Optional[str]             # 'PROCUREMENT_S2P', 'FLEET_OPS', 'HR_PAYROLL', 'GOV_COMPLIANCE', 'FIN_CONTROLLER'
     draft_payload: Optional[dict]         # Departmental validated payload dictionary
     validation_status: Optional[str]      # 'VALIDATED', 'AWAITING_APPROVAL', 'ERROR'
+    approval_status: Optional[str]        # 'pending', 'approved', or 'rejected'
+    approved_by: Optional[str]
+    approved_at: Optional[str]
     execution_status: str                 # 'classified', 'drafted', 'awaiting_approval', 'committed', 'rejected'
     messages: list
     message: Optional[str]                # Audit narrative or status summary
@@ -172,14 +172,40 @@ def route_intent_edge(state: ERPGraphState) -> str:
 # ==============================================================================
 
 def _get_llm():
+    api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY must be configured before the AI agent can run.")
+
     return ChatOpenAI(
         model=os.getenv("AGENT_MODEL", "openai/gpt-4o-mini"),
-        openai_api_key=os.getenv("OPENROUTER_API_KEY", "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"),
+        openai_api_key=api_key,
         openai_api_base="https://openrouter.ai/api/v1",
         temperature=0,
         request_timeout=2,
         max_retries=0,
     )
+
+
+def _invoke_structured(schema: Any, prompt: str) -> Any:
+    """Invoke the configured model and enforce the requested Pydantic schema."""
+    result = _get_llm().with_structured_output(schema).invoke(prompt)
+    if isinstance(result, schema):
+        return result
+    return schema.model_validate(result)
+
+
+def _draft_failure(node_name: str, error: Exception) -> dict:
+    """Return a terminal, non-approval-ready state when drafting fails."""
+    error_type = type(error).__name__
+    print(f"[{node_name} Node] Draft rejected after provider/validation failure ({error_type}).")
+    return {
+        "draft_payload": None,
+        "validation_status": "ERROR",
+        "approval_status": None,
+        "execution_status": "rejected",
+        "message": "Draft unavailable: the provider response could not be validated. No action is ready for approval.",
+        "error_message": f"Draft generation or validation failed ({error_type}).",
+    }
 
 
 # ==============================================================================
@@ -192,72 +218,35 @@ def procurement_node(state: ERPGraphState) -> dict:
     Validates purchase orders against ProcurementPOSchema, calculating line item totals.
     """
     prompt = state.get("user_prompt", "")
-    print(f"[Procurement Node] Formulating S2P payload for: {prompt}")
+    print("[Procurement Node] Formulating S2P payload.")
 
-    # Check for P2P three-way matching query
-    if re.search(r"\b(3.way|three.way|p2p|match.*po|match.*invoice|vendor.*match)\b", prompt, re.I):
-        po_match = re.search(r"(PO-[A-Za-z0-9-]+)", prompt, re.I)
-        po_ref = po_match.group(1) if po_match else "ALL"
-        p2p_schema = P2PMatchSchema(
-            po_reference=po_ref,
-            price_tolerance_pct=2.0,
-            qty_tolerance_pct=0.0,
-        )
-        draft_dict = {
-            "action": "P2PMatchSchema",
-            "data": p2p_schema.model_dump(),
-        }
-        try:
-            from backend.app.domains.procurement.p2p import execute_p2p_match
-            report = execute_p2p_match(po_reference=po_ref)
-            draft_dict["p2p_report"] = report
-            narrative = report.get("audit_narrative")
-        except Exception:
-            narrative = f"P2P matching configured for PO {po_ref}."
-
-        return {
-            "draft_payload": draft_dict,
-            "validation_status": "VALIDATED",
-            "execution_status": "awaiting_approval",
-            "message": narrative,
-        }
-
-    # Standard Purchase Order Extraction
     try:
-        llm = _get_llm().with_structured_output(ProcurementPOSchema)
-        po = llm.invoke(f"Extract purchase order details into ProcurementPOSchema.\nPrompt: {prompt}")
-    except Exception as e:
-        print(f"[Procurement Node] Fallback heuristic triggered: {e}")
-        vendor_match = re.search(r"(?:vendor|supplier|from)\s+([A-Za-z0-9\s-]+?)(?:\s+for|\s+at|\s+to|\s+items|\s*$)", prompt, re.I)
-        vendor = vendor_match.group(1).strip() if vendor_match else "National Industrial Supplies"
-        # Extract positive numeric values not attached to hyphenated tokens
-        clean_prompt = re.sub(r"\b[A-Za-z]+-[A-Za-z0-9-]+\b", "", prompt)
-        numbers = re.findall(r"\b\d+(?:\.\d+)?\b", clean_prompt)
-        qty = float(numbers[0]) if numbers else 10.0
-        cost = float(numbers[1]) if len(numbers) > 1 else 250.0
-
-        sku_match = re.search(r"\b([A-Z0-9]{3,4}-[A-Z0-9-]+)\b", prompt)
-        sku = sku_match.group(1) if sku_match else "AGG-CON-20MM"
-
-        po = ProcurementPOSchema(
-            requisition_id="REQ-2026-0042",
-            vendor_id=vendor,
-            items=[
-                ProcurementItemSchema(sku=sku, quantity=qty, estimated_unit_cost=cost)
-            ],
-            delivery_location="WH-MAIN-CENTRAL",
-            currency="SAR",
+        if re.search(r"\b(3.way|three.way|p2p|match.*po|match.*invoice|vendor.*match)\b", prompt, re.I):
+            schema = P2PMatchSchema
+            action = "P2PMatchSchema"
+        else:
+            schema = ProcurementPOSchema
+            action = "ProcurementPOSchema"
+        po = _invoke_structured(
+            schema,
+            f"Extract the requested procurement operation as a validated {action}.\nPrompt: {prompt}",
         )
+    except Exception as e:
+        return _draft_failure("Procurement", e)
 
+    data = po.model_dump()
+    if action == "ProcurementPOSchema":
+        data["total_estimated_cost"] = po.total_estimated_cost
     return {
         "draft_payload": {
-            "action": "ProcurementPOSchema",
-            "data": po.model_dump(),
-            "total_estimated_cost": po.total_estimated_cost,
+            "action": action,
+            "data": data,
         },
         "validation_status": "VALIDATED",
+        "approval_status": None,
         "execution_status": "awaiting_approval",
-        "message": f"Procurement PO formulated for vendor {po.vendor_id} (Total: {po.total_estimated_cost:,.2f} {po.currency}).",
+        "error_message": None,
+        "message": f"Validated {action} draft created; no database operation has been performed.",
     }
 
 
@@ -267,40 +256,15 @@ def fleet_node(state: ERPGraphState) -> dict:
     Validates vehicle dispatches against FleetDispatchSchema (payload, GPS deviation, route audit).
     """
     prompt = state.get("user_prompt", "")
-    print(f"[Fleet Node] Formulating fleet dispatch payload for: {prompt}")
+    print("[Fleet Node] Formulating fleet dispatch payload.")
 
     try:
-        llm = _get_llm().with_structured_output(FleetDispatchSchema)
-        dispatch = llm.invoke(f"Extract fleet dispatch details into FleetDispatchSchema.\nPrompt: {prompt}")
-    except Exception as e:
-        print(f"[Fleet Node] Fallback heuristic triggered: {e}")
-        truck_match = re.search(r"(?:truck|unit|vehicle)\s*([A-Za-z0-9-]+)", prompt, re.I)
-        truck_id = truck_match.group(1) if truck_match else "TRK-3190"
-
-        driver_match = re.search(r"(?:driver)\s*([A-Za-z0-9-]+)", prompt, re.I)
-        driver_id = driver_match.group(1) if driver_match else "DRV-8821"
-
-        route_match = re.search(r"(?:route|to|destination)\s*([A-Za-z0-9\s-]+?)(?:\s+with|\s+at|\s*$)", prompt, re.I)
-        route_code = route_match.group(1).strip() if route_match else "RT-RUH-JED-01"
-
-        # Look specifically for weight in tons, else clean numeric values
-        weight_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:tons?|t\b)", prompt, re.I)
-        if weight_match:
-            weight = float(weight_match.group(1))
-        else:
-            clean_prompt = re.sub(r"\b[A-Za-z]+-[A-Za-z0-9-]+\b", "", prompt)
-            numbers = re.findall(r"\b\d+(?:\.\d+)?\b", clean_prompt)
-            weight = float(numbers[0]) if numbers else 28.5
-
-        dispatch = FleetDispatchSchema(
-            vehicle_id=truck_id,
-            driver_id=driver_id,
-            route_code=route_code,
-            scheduled_departure=datetime.now(timezone.utc).isoformat(),
-            load_weight_tons=weight,
-            gps_deviation_km=0.0,
-            route_audit_status="PASSED",
+        dispatch = _invoke_structured(
+            FleetDispatchSchema,
+            f"Extract fleet dispatch details into FleetDispatchSchema.\nPrompt: {prompt}",
         )
+    except Exception as e:
+        return _draft_failure("Fleet", e)
 
     return {
         "draft_payload": {
@@ -308,8 +272,10 @@ def fleet_node(state: ERPGraphState) -> dict:
             "data": dispatch.model_dump(),
         },
         "validation_status": "VALIDATED",
+        "approval_status": None,
         "execution_status": "awaiting_approval",
-        "message": f"Fleet dispatch mission drafted for Vehicle {dispatch.vehicle_id} on route {dispatch.route_code} (Audit: {dispatch.route_audit_status}).",
+        "error_message": None,
+        "message": "Validated fleet dispatch draft created; no database operation has been performed.",
     }
 
 
@@ -319,63 +285,35 @@ def payroll_node(state: ERPGraphState) -> dict:
     Validates personnel salary allocations against PayrollVoucherSchema (allowances, deductions, HR adjustments).
     """
     prompt = state.get("user_prompt", "")
-    print(f"[Payroll Node] Formulating payroll voucher for: {prompt}")
-
-    # Check for leave request
-    if re.search(r"\b(leave|vacation|absence|time off)\b", prompt, re.I):
-        emp_match = re.search(r"(?:emp|employee)\s*([A-Za-z0-9-]+)", prompt, re.I)
-        emp_id = emp_match.group(1) if emp_match else "EMP-1001"
-        numbers = re.findall(r"[-+]?(?:\d+)", prompt)
-        days = int(numbers[0]) if numbers else 3
-        leave = EmployeeLeaveSchema(
-            employee_id=emp_id,
-            leave_type="Annual",
-            days_requested=days,
-        )
-        return {
-            "draft_payload": {
-                "action": "EmployeeLeaveSchema",
-                "data": leave.model_dump(),
-            },
-            "validation_status": "VALIDATED",
-            "execution_status": "awaiting_approval",
-            "message": f"Employee leave request for {leave.employee_id} ({leave.days_requested} days {leave.leave_type}).",
-        }
+    print("[Payroll Node] Formulating payroll voucher.")
 
     try:
-        llm = _get_llm().with_structured_output(PayrollVoucherSchema)
-        payroll = llm.invoke(f"Extract payroll voucher details into PayrollVoucherSchema.\nPrompt: {prompt}")
-    except Exception as e:
-        print(f"[Payroll Node] Fallback heuristic triggered: {e}")
-        emp_match = re.search(r"\b(?:employee|staff|emp)\b\s*([A-Za-z0-9-]+)", prompt, re.I)
-        emp_id = emp_match.group(1) if emp_match else "EMP-0149"
-        clean_prompt = re.sub(r"\b[A-Za-z]+-[A-Za-z0-9-]+\b", "", prompt)
-        salary_match = re.search(r"(?:salary|wage|amount|sar)\s*(?:of|is|:)?\s*(\d+(?:\.\d+)?)", prompt, re.I)
-        if salary_match:
-            salary = float(salary_match.group(1))
+        if re.search(r"\b(leave|vacation|absence|time off)\b", prompt, re.I):
+            schema = EmployeeLeaveSchema
+            action = "EmployeeLeaveSchema"
         else:
-            numbers = re.findall(r"\b\d+(?:\.\d+)?\b", clean_prompt)
-            salary = float(numbers[0]) if numbers else 15000.0
-
-        payroll = PayrollVoucherSchema(
-            employee_id=emp_id,
-            base_salary=salary,
-            allowances=round(salary * 0.20, 2),
-            deductions=round(salary * 0.0975, 2),  # 9.75% standard Saudi GOSI
-            hr_adjustments=0.0,
-            pay_period=datetime.now(timezone.utc).strftime("%Y-%m"),
-            currency="SAR",
+            schema = PayrollVoucherSchema
+            action = "PayrollVoucherSchema"
+        payroll = _invoke_structured(
+            schema,
+            f"Extract the requested payroll operation as a validated {action}.\nPrompt: {prompt}",
         )
+    except Exception as e:
+        return _draft_failure("Payroll", e)
 
+    data = payroll.model_dump()
+    if action == "PayrollVoucherSchema":
+        data["net_salary"] = payroll.net_salary
     return {
         "draft_payload": {
-            "action": "PayrollVoucherSchema",
-            "data": payroll.model_dump(),
-            "net_salary": payroll.net_salary,
+            "action": action,
+            "data": data,
         },
         "validation_status": "VALIDATED",
+        "approval_status": None,
         "execution_status": "awaiting_approval",
-        "message": f"Payroll voucher drafted for {payroll.employee_id} (Net: {payroll.net_salary:,.2f} {payroll.currency}).",
+        "error_message": None,
+        "message": f"Validated {action} draft created; no database operation has been performed.",
     }
 
 
@@ -385,49 +323,15 @@ def governance_node(state: ERPGraphState) -> dict:
     Validates infraction logging and regulatory audits against GovernanceComplianceSchema.
     """
     prompt = state.get("user_prompt", "")
-    print(f"[Governance Node] Formulating compliance review for: {prompt}")
+    print("[Governance Node] Formulating compliance review.")
 
     try:
-        llm = _get_llm().with_structured_output(GovernanceComplianceSchema)
-        gov = llm.invoke(f"Extract governance compliance review into GovernanceComplianceSchema.\nPrompt: {prompt}")
-    except Exception as e:
-        print(f"[Governance Node] Fallback heuristic triggered: {e}")
-        # Detect target entity
-        entity_id = "ENT-AUDIT-01"
-        entity_type = "vehicle"
-        infraction = "COMPLIANCE-FLAG-01"
-        severity = "MEDIUM"
-
-        if "speed" in prompt.lower():
-            entity_type = "driver"
-            infraction = "SPEED-GOVERNOR-EXCEEDED"
-            severity = "HIGH"
-        elif "driver" in prompt.lower():
-            entity_type = "driver"
-            infraction = "DRIVER-HOURS-VIOLATION"
-        elif "zatca" in prompt.lower() or "tax" in prompt.lower():
-            entity_type = "transaction"
-            infraction = "ZATCA-E104-CLEARANCE-DELAY"
-            severity = "HIGH"
-        elif "overweight" in prompt.lower() or "axle" in prompt.lower():
-            entity_type = "vehicle"
-            infraction = "OVERWEIGHT-AXLE-01"
-            severity = "HIGH"
-
-        id_match = re.search(r"\b([A-Za-z0-9]+-[A-Za-z0-9-]+)\b", prompt)
-        if id_match:
-            entity_id = id_match.group(1)
-
-        gov = GovernanceComplianceSchema(
-            target_entity_type=entity_type,
-            entity_id=entity_id,
-            infraction_code=infraction,
-            severity_level=severity,
-            audit_flag="FLAGGED",
-            policy_violation_review=f"Autonomous review triggered by prompt: {prompt}",
-            security_clearance_verified=False,
-            audit_notes=prompt or "Pre-dispatch compliance gate inspection",
+        gov = _invoke_structured(
+            GovernanceComplianceSchema,
+            f"Extract governance compliance review into GovernanceComplianceSchema.\nPrompt: {prompt}",
         )
+    except Exception as e:
+        return _draft_failure("Governance", e)
 
     return {
         "draft_payload": {
@@ -435,8 +339,10 @@ def governance_node(state: ERPGraphState) -> dict:
             "data": gov.model_dump(),
         },
         "validation_status": "VALIDATED",
+        "approval_status": None,
         "execution_status": "awaiting_approval",
-        "message": f"Governance compliance flag logged for {gov.target_entity_type} {gov.entity_id} [{gov.infraction_code}] (Severity: {gov.severity_level}).",
+        "error_message": None,
+        "message": "Validated governance review draft created; no database operation has been performed.",
     }
 
 
@@ -447,97 +353,62 @@ def general_node(state: ERPGraphState) -> dict:
     """
     prompt = state.get("user_prompt", "")
     route = state.get("current_ui_route", "")
-    print(f"[General Node] Formulating general ledger/inventory payload for: {prompt}")
-
-    numbers = re.findall(r"[-+]?(?:\d*\.\d+|\d+)", prompt)
-    num = float(numbers[0]) if numbers else 0.0
+    print("[General Node] Formulating general ledger/inventory payload.")
 
     if re.search(r"\b(valuation|costing|fifo|wac|inventory valuation|audit.*warehouse|audit.*inventory)\b", prompt, re.I):
-        wh = "Qiddiya" if "qiddiya" in prompt.lower() else "ALL"
-        method = "FIFO"
-        if "wac" in prompt.lower() or "weighted" in prompt.lower():
-            method = "WEIGHTED_AVERAGE"
-        elif "standard" in prompt.lower():
-            method = "STANDARD"
-
-        payload = InventoryValuationSchema(
-            warehouse_id=wh,
-            valuation_method=method,
-            include_breakdown=True,
-        )
-        action_name = "InventoryValuationSchema"
-        draft_dict = {
-            "action": action_name,
-            "data": payload.model_dump(),
-        }
-        try:
-            from backend.database import SessionLocal
-            from backend.app.domains.inventory.valuation import InventoryValuationCalculator
-            with SessionLocal() as db:
-                val_result = InventoryValuationCalculator.calculate_valuation(
-                    db=db,
-                    warehouse_ref=wh,
-                    valuation_method=method,
-                )
-                draft_dict["valuation_report"] = val_result.model_dump()
-        except Exception as e:
-            print(f"[General Node] Pre-calculated valuation note: {e}")
-
-        return {
-            "draft_payload": draft_dict,
-            "validation_status": "VALIDATED",
-            "execution_status": "awaiting_approval",
-            "message": f"Inventory valuation formulated for warehouse '{wh}' using {method}.",
-        }
+        schema = InventoryValuationSchema
     elif re.search(r"\b(transfer|stock transfer|move stock)\b", prompt, re.I) or "inventory" in route:
-        payload = InventoryTransferSchema(
-            item_code="RAW-MAT-01",
-            quantity=num if num > 0 else 50.0,
-            source_warehouse="Main Warehouse",
-            target_warehouse="Production Facility",
-        )
-        action_name = "InventoryTransferSchema"
+        schema = InventoryTransferSchema
     elif re.search(r"\b(invoice|zatca|client invoice|bill client)\b", prompt, re.I) or "sales" in route:
-        payload = CustomerInvoiceSchema(
-            customer_name="Al-Bayan Commercial Group",
-            service_rendered=prompt,
-            net_amount=num if num > 0 else 5000.0,
-            tax_rate=15.0,
-            zatca_phase=2,
-        )
-        action_name = "CustomerInvoiceSchema"
+        schema = CustomerInvoiceSchema
     else:
-        payload = JournalVoucherSchema(
-            description=prompt or "General Journal Transaction",
-            amount=num if num > 0 else 1000.0,
-            currency="SAR",
-            expense_category="Fleet Fuel" if "fuel" in prompt.lower() else "Operational Expense",
-        )
-        action_name = "JournalVoucherSchema"
+        schema = JournalVoucherSchema
 
+    action_name = schema.__name__
+    try:
+        payload = _invoke_structured(
+            schema,
+            f"Extract the requested controller operation as a validated {action_name}.\nPrompt: {prompt}",
+        )
+    except Exception as e:
+        return _draft_failure("General", e)
     return {
         "draft_payload": {
             "action": action_name,
             "data": payload.model_dump(),
         },
         "validation_status": "VALIDATED",
+        "approval_status": None,
         "execution_status": "awaiting_approval",
-        "message": f"General controller transaction drafted ({action_name}).",
+        "error_message": None,
+        "message": f"Validated {action_name} draft created; no database operation has been performed.",
     }
 
 
 # ==============================================================================
-# 6. Execution Node (Commits to PostgreSQL upon Human Approval)
+# 6. Execution Node (Emits a Validated Command Draft)
 # ==============================================================================
 
 def execute_action(state: ERPGraphState) -> dict:
     """
-    Final execution node invoked after human-in-the-loop managerial approval.
+    Marks the validated command as ready for API-side execution.
+    Database writes are performed only by the authenticated API transaction.
     """
-    print(f"[Agent Execution] Committing payload for department [{state.get('department')}]: {json.dumps(state.get('draft_payload', {}))}")
+    draft_payload = state.get("draft_payload")
+    if state.get("validation_status") != "VALIDATED" or not isinstance(draft_payload, dict):
+        return {
+            "draft_payload": None,
+            "validation_status": "ERROR",
+            "approval_status": None,
+            "execution_status": "rejected",
+            "message": "Execution blocked because the graph has no validated command draft.",
+            "error_message": "Execution blocked because the graph has no validated command draft.",
+        }
+
     return {
-        "execution_status": "committed",
-        "message": "Transaction successfully committed to PostgreSQL database.",
+        "execution_status": "awaiting_approval",
+        "approval_status": state.get("approval_status") or "pending",
+        "message": "Validated command draft is ready for authenticated API-side execution.",
     }
 
 

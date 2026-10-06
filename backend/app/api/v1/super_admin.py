@@ -25,7 +25,53 @@ from backend.models import MasterTenant, ResCompany, ResUser, Tenant, TenantAudi
 from backend.app.utils.crypto_vault import decrypt_bytes_aes256, encrypt_bytes_aes256
 from backend.app.domains.auth.onboard_tenant import generate_balanced_brand_palette
 
-router = APIRouter(prefix="/api/v1/superadmin", tags=["Super Admin"])
+
+def get_current_super_admin(
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Any:
+    """Authenticate with the platform session and enforce the native super-admin guard."""
+    try:
+        # main imports this router before declaring its auth helpers, so resolve the
+        # native dependency lazily (at request time) to avoid a circular import.
+        from backend.app.main import (
+            get_authenticated_user,
+            get_request_id,
+            record_platform_audit,
+            require_super_admin,
+            resolve_client_ip,
+        )
+
+        try:
+            user = get_authenticated_user(request, db)
+        except HTTPException:
+            record_platform_audit(
+                db,
+                actor_email="UNAUTHENTICATED",
+                action="SUPER_ADMIN_AUTH_FAILED",
+                endpoint=request.url.path,
+                ip_address=resolve_client_ip(request),
+                company_id=None,
+                outcome="DENIED",
+                request_id=get_request_id(request),
+                user_agent=request.headers.get("user-agent"),
+            )
+            raise
+        return require_super_admin(request, db, user)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required for this platform operation.",
+        ) from exc
+
+
+router = APIRouter(
+    prefix="/api/v1/superadmin",
+    tags=["Super Admin"],
+    dependencies=[Depends(get_current_super_admin)],
+)
 
 BACKUP_DIR = os.getenv("OXENGL_BACKUP_DIR", "/var/crypto/oxengl/backups")
 try:
@@ -444,29 +490,6 @@ class TenantOverrideSchema(BaseModel):
 
     class Config:
         extra = "allow"
-
-
-def get_current_super_admin(
-    request: Request,
-    db: Session = Depends(get_db),
-) -> Any:
-    """Verifies that the caller has super admin privileges if authorization is present."""
-    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
-    if auth_header:
-        try:
-            from backend.app.main import get_authenticated_user, is_super_admin_authorized
-            user = get_authenticated_user(request, db)
-            if not is_super_admin_authorized(user, request):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Access denied: Master Platform Security requires Super_Admin role",
-                )
-            return user
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
-    return None
 
 
 # PATCH /api/v1/superadmin/tenants/{tenant_slug}/overrides

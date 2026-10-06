@@ -9,9 +9,9 @@ import json
 import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, Optional, TypedDict
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -27,6 +27,40 @@ try:
     from app.agent.graph import oxengl_agent
 except (ImportError, ModuleNotFoundError):
     from backend.app.agent.graph import oxengl_agent
+
+try:
+    from backend.api.dependencies import get_current_user
+except (ImportError, ModuleNotFoundError):
+    from api.dependencies import get_current_user
+
+try:
+    from app.agent.schemas import (
+        CustomerInvoiceSchema,
+        EmployeeLeaveSchema,
+        FleetDispatchSchema,
+        GovernanceComplianceSchema,
+        InventoryTransferSchema,
+        InventoryValuationSchema,
+        JournalVoucherSchema,
+        P2PMatchSchema,
+        PayrollVoucherSchema,
+        ProcurementPOSchema,
+        PurchaseOrderSchema,
+    )
+except (ImportError, ModuleNotFoundError):
+    from backend.app.agent.schemas import (
+        CustomerInvoiceSchema,
+        EmployeeLeaveSchema,
+        FleetDispatchSchema,
+        GovernanceComplianceSchema,
+        InventoryTransferSchema,
+        InventoryValuationSchema,
+        JournalVoucherSchema,
+        P2PMatchSchema,
+        PayrollVoucherSchema,
+        ProcurementPOSchema,
+        PurchaseOrderSchema,
+    )
 
 router = APIRouter(prefix="/api/v1/agent", tags=["AI Agent"])
 
@@ -69,17 +103,18 @@ MANAGERIAL_ROLES = {
     "supervisor",
 }
 
+class AgentIdentity(TypedDict):
+    user_id: uuid.UUID
+    tenant_id: uuid.UUID
+    role: str
+
 
 def _verify_managerial_clearance(role: Optional[str]) -> bool:
     """Verifies that the actor possesses managerial authority to sign off on ERP actions."""
     if not role:
         return False
-    return role.lower().strip() in MANAGERIAL_ROLES
-
-
-async def get_current_user_context() -> dict:
-    """Context resolver providing tenant ID, user ID, and role."""
-    return {"user_id": "usr_123", "tenant_id": "tenant_abc", "role": "Owner"}
+    normalized_role = role.lower().strip().replace(" ", "").replace("_", "")
+    return normalized_role in {allowed.replace("_", "") for allowed in MANAGERIAL_ROLES}
 
 
 def _safe_uuid(val: Any) -> Optional[uuid.UUID]:
@@ -92,26 +127,76 @@ def _safe_uuid(val: Any) -> Optional[uuid.UUID]:
         return None
 
 
-def _get_active_company_id(db: Session, tenant_id: Any) -> uuid.UUID:
-    """Resolves an existing company ID or falls back to the primary registered tenant company."""
-    cid = _safe_uuid(tenant_id)
-    if cid:
-        exists = db.execute(text("SELECT id FROM res_companies WHERE id = :cid"), {"cid": cid}).scalar()
-        if exists:
-            return cid
-    primary = db.execute(text("SELECT id FROM res_companies LIMIT 1")).scalar()
-    return primary or uuid.uuid4()
+def _authenticated_context(current_user: Any) -> AgentIdentity:
+    """Use only the verified database user's assigned company and identity."""
+    user_id = _safe_uuid(getattr(current_user, "id", None))
+    company_id = _safe_uuid(getattr(current_user, "company_id", None))
+    if user_id is None or company_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authenticated user has no assigned company membership.",
+        )
+    return {
+        "user_id": user_id,
+        "tenant_id": company_id,
+        "role": str(getattr(current_user, "role", "") or ""),
+    }
 
 
-def _resolve_user_id(db: Session, user_val: Any) -> Optional[uuid.UUID]:
-    """Resolves a valid user ID from res_users or falls back to first available user or None."""
-    uid = _safe_uuid(user_val)
-    if uid:
-        exists = db.execute(text("SELECT id FROM res_users WHERE id = :uid"), {"uid": uid}).scalar()
-        if exists:
-            return uid
-    first_u = db.execute(text("SELECT id FROM res_users LIMIT 1")).scalar()
-    return first_u
+def _thread_config(thread_id: str, identity: AgentIdentity) -> dict[str, dict[str, str]]:
+    """Namespace graph state by verified company to prevent cross-tenant thread access."""
+    scoped_thread_id = f"{identity['tenant_id']}:{thread_id}"
+    return {"configurable": {"thread_id": scoped_thread_id}}
+
+
+def _validate_draft(action_name: Any, data: Any) -> dict[str, Any]:
+    schemas = {
+        "ProcurementPOSchema": ProcurementPOSchema,
+        "PurchaseOrderSchema": PurchaseOrderSchema,
+        "FleetDispatchSchema": FleetDispatchSchema,
+        "PayrollVoucherSchema": PayrollVoucherSchema,
+        "EmployeeLeaveSchema": EmployeeLeaveSchema,
+        "GovernanceComplianceSchema": GovernanceComplianceSchema,
+        "JournalVoucherSchema": JournalVoucherSchema,
+        "create_journal_voucher": JournalVoucherSchema,
+        "CustomerInvoiceSchema": CustomerInvoiceSchema,
+        "InventoryTransferSchema": InventoryTransferSchema,
+        "InventoryValuationSchema": InventoryValuationSchema,
+        "P2PMatchSchema": P2PMatchSchema,
+    }
+    schema = schemas.get(action_name)
+    if schema is None or not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="The pending command has an unsupported action or payload.")
+    try:
+        return schema.model_validate(data).model_dump()
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail="The pending command draft failed schema validation.") from exc
+
+
+class _DeferredCommitSession:
+    """Keep legacy domain-service commits inside the route's outer transaction."""
+
+    def __init__(self, session: Session, savepoint: Any):
+        self._session = session
+        self._savepoint = savepoint
+
+    def commit(self) -> None:
+        self._session.flush()
+
+    def rollback(self) -> None:
+        if self._savepoint.is_active:
+            self._savepoint.rollback()
+        else:
+            self._session.rollback()
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._session, name)
+
+
+def _verify_thread_owner(state_values: dict, identity: AgentIdentity) -> None:
+    owner_id = state_values.get("requester_user_id")
+    if owner_id != str(identity["user_id"]) and not _verify_managerial_clearance(identity["role"]):
+        raise HTTPException(status_code=404, detail="No active state found for this thread.")
 
 
 # ------------------------------------------------------------------------------
@@ -121,21 +206,31 @@ def _resolve_user_id(db: Session, user_val: Any) -> Optional[uuid.UUID]:
 @router.post("/interact")
 async def process_agent_command(
     request: AgentPromptRequest, 
-    current_user: dict = Depends(get_current_user_context)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Submits a conversational operational command to the Multi-Engine State Graph.
     Executes intent classification, departmental schema formulation, and pauses
     at the Human-in-the-Loop breakpoint (awaiting managerial approval).
     """
-    config = {"configurable": {"thread_id": request.thread_id}}
+    identity = _authenticated_context(current_user)
+    config = _thread_config(request.thread_id, identity)
+    prior_state = oxengl_agent.get_state(config)
+    if (
+        prior_state
+        and prior_state.values
+        and prior_state.values.get("requester_user_id") != str(identity["user_id"])
+    ):
+        raise HTTPException(status_code=409, detail="This thread ID is already in use.")
     
     # State payload injected into LangGraph
     initial_state = {
         "user_prompt": request.prompt,
         "current_ui_route": request.current_route,
-        "active_tenant_id": current_user.get("tenant_id", "default_tenant"),
-        "user_role": current_user.get("role", "Owner"),
+        "active_tenant_id": str(identity["tenant_id"]),
+        "user_role": identity["role"],
+        "requester_user_id": str(identity["user_id"]),
+        "approval_status": "pending",
         "messages": [],
     }
     
@@ -158,9 +253,14 @@ async def process_agent_command(
                 "execution_status": result.get("execution_status"),
                 "department": result.get("department"),
                 "intent_category": result.get("intent_category"),
-                "tenant_id": current_user.get("tenant_id"),
+                "tenant_id": str(identity["tenant_id"]),
+                "requester_user_id": str(identity["user_id"]),
             }
-            await redis_client.set(f"oxengl:agent:thread:{request.thread_id}", json.dumps(cache_val), ex=3600)
+            await redis_client.set(
+                f"oxengl:agent:thread:{config['configurable']['thread_id']}",
+                json.dumps(cache_val),
+                ex=3600,
+            )
     except Exception as re:
         print(f"[Agent] Redis caching notice: {re}")
     
@@ -179,15 +279,17 @@ async def process_agent_command(
 @router.get("/threads/{thread_id}/state")
 async def get_thread_state(
     thread_id: str,
-    current_user: dict = Depends(get_current_user_context)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Retrieves the pending execution state and draft payload for a given conversation thread.
     """
-    config = {"configurable": {"thread_id": thread_id}}
+    identity = _authenticated_context(current_user)
+    config = _thread_config(thread_id, identity)
     current_state = oxengl_agent.get_state(config)
     payload = None
     if current_state and current_state.values:
+        _verify_thread_owner(current_state.values, identity)
         payload = current_state.values.get("draft_payload")
 
     if not payload:
@@ -196,12 +298,15 @@ async def get_thread_state(
                 from backend.app.core.redis import redis_client
             except (ImportError, ModuleNotFoundError):
                 from app.core.redis import redis_client
-            raw_cache = await redis_client.get(f"oxengl:agent:thread:{thread_id}")
+            raw_cache = await redis_client.get(
+                f"oxengl:agent:thread:{config['configurable']['thread_id']}"
+            )
             if raw_cache:
                 cached_json = json.loads(raw_cache)
+                _verify_thread_owner(cached_json, identity)
                 payload = cached_json.get("draft_payload") or cached_json
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[Agent] Redis state lookup failed: {exc}")
 
     if not payload:
         raise HTTPException(status_code=404, detail=f"No active state found for thread '{thread_id}'.")
@@ -209,6 +314,8 @@ async def get_thread_state(
     return {
         "thread_id": thread_id,
         "state": payload,
+        "execution_status": current_state.values.get("execution_status") if current_state and current_state.values else None,
+        "approval_status": current_state.values.get("approval_status") if current_state and current_state.values else None,
         "next": list(current_state.next) if current_state and current_state.next else [],
     }
 
@@ -216,22 +323,35 @@ async def get_thread_state(
 @router.post("/reject")
 async def reject_agent_command(
     request: AgentRejectionRequest,
-    current_user: dict = Depends(get_current_user_context),
-    db: Session = Depends(get_db)
+    current_user: Any = Depends(get_current_user),
 ):
     """
     Explicitly rejects a pending action at the Human-in-the-Loop review gate.
     Logs rejection audit entry and cleans up Redis cache.
     """
-    # Clean up Redis cache
+    identity = _authenticated_context(current_user)
+    config = _thread_config(request.thread_id, identity)
+    current_state = oxengl_agent.get_state(config)
+    if not current_state or not current_state.values:
+        raise HTTPException(status_code=404, detail="No active state found for this thread.")
+    _verify_thread_owner(current_state.values, identity)
+    if current_state.values.get("execution_status") != "awaiting_approval":
+        raise HTTPException(status_code=409, detail="This thread has no pending draft to reject.")
+    oxengl_agent.update_state(
+        config,
+        {"approval_status": "rejected", "execution_status": "rejected"},
+    )
+
     try:
         try:
             from backend.app.core.redis import redis_client
         except (ImportError, ModuleNotFoundError):
             from app.core.redis import redis_client
-        await redis_client.delete(f"oxengl:agent:thread:{request.thread_id}")
-    except Exception:
-        pass
+        await redis_client.delete(
+            f"oxengl:agent:thread:{config['configurable']['thread_id']}"
+        )
+    except Exception as exc:
+        print(f"[Agent] Redis cache cleanup failed for rejected thread: {exc}")
 
     return {
         "status": "rejected",
@@ -243,7 +363,7 @@ async def reject_agent_command(
 @router.post("/execute")
 async def approve_and_execute(
     request: AgentApprovalRequest,
-    current_user: dict = Depends(get_current_user_context),
+    current_user: Any = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -256,7 +376,8 @@ async def approve_and_execute(
     # --------------------------------------------------------------------------
     # 1. Managerial Clearance Gate
     # --------------------------------------------------------------------------
-    user_role = current_user.get("role", "")
+    identity = _authenticated_context(current_user)
+    user_role = identity["role"]
     if not _verify_managerial_clearance(user_role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -266,55 +387,110 @@ async def approve_and_execute(
     # --------------------------------------------------------------------------
     # 2. Rejection Handling
     # --------------------------------------------------------------------------
+    config = _thread_config(request.thread_id, identity)
+    scoped_cache_key = f"oxengl:agent:thread:{config['configurable']['thread_id']}"
     if not request.approved:
+        current_state = oxengl_agent.get_state(config)
+        if not current_state or not current_state.values:
+            raise HTTPException(status_code=404, detail="No active state found for this thread.")
+        _verify_thread_owner(current_state.values, identity)
+        if current_state.values.get("execution_status") != "awaiting_approval":
+            raise HTTPException(status_code=409, detail="This thread has no pending draft to reject.")
+        oxengl_agent.update_state(
+            config,
+            {"approval_status": "rejected", "execution_status": "rejected"},
+        )
         try:
             try:
                 from backend.app.core.redis import redis_client
             except (ImportError, ModuleNotFoundError):
                 from app.core.redis import redis_client
-            await redis_client.delete(f"oxengl:agent:thread:{request.thread_id}")
-        except Exception:
-            pass
+            await redis_client.delete(scoped_cache_key)
+        except Exception as exc:
+            print(f"[Agent] Redis cache cleanup failed for rejected thread: {exc}")
         return {"status": "cancelled", "message": "Execution rejected at managerial gate."}
 
     # --------------------------------------------------------------------------
-    # 3. State & Payload Retrieval (Worker Memory -> Redis Fallback)
+    # 3. Verify and approve the persisted, validated graph draft.
+    # A cache-only draft is never executable.
     # --------------------------------------------------------------------------
-    config = {"configurable": {"thread_id": request.thread_id}}
     current_state = oxengl_agent.get_state(config)
-    payload = None
-    if current_state and current_state.next and "execute" in current_state.next:
-        payload = current_state.values.get("draft_payload")
-    
-    if not payload:
-        try:
-            try:
-                from backend.app.core.redis import redis_client
-            except (ImportError, ModuleNotFoundError):
-                from app.core.redis import redis_client
-            raw_cache = await redis_client.get(f"oxengl:agent:thread:{request.thread_id}")
-            if raw_cache:
-                cached_json = json.loads(raw_cache)
-                payload = cached_json.get("draft_payload") or cached_json
-        except Exception as re:
-            print(f"[Agent] Redis thread lookup notice: {re}")
-
-    if not payload:
+    if (
+        not current_state
+        or not current_state.values
+        or not current_state.next
+        or "execute" not in current_state.next
+    ):
         raise HTTPException(status_code=400, detail="No pending execution found for this thread.")
-    
-    action_name = payload.get("action", "unknown")
-    data = payload.get("data", {})
-    tenant_id = current_user.get("tenant_id", "default_tenant")
-    company_id = _get_active_company_id(db, tenant_id)
-    user_uuid = _resolve_user_id(db, current_user.get("user_id"))
-    tenant_uuid = _safe_uuid(tenant_id) or company_id
-    
-    print(f"[Dispatcher] Routing '{action_name}' for company {company_id} by user {current_user.get('user_id')} ({user_role})")
+
+    graph_values = current_state.values
+    if graph_values.get("active_tenant_id") != str(identity["tenant_id"]):
+        raise HTTPException(status_code=404, detail="No active state found for this thread.")
+    if (
+        graph_values.get("execution_status") != "awaiting_approval"
+        or graph_values.get("validation_status") != "VALIDATED"
+        or not isinstance(graph_values.get("draft_payload"), dict)
+        or graph_values.get("approval_status") not in (None, "pending", "approved")
+    ):
+        raise HTTPException(status_code=409, detail="The graph state does not contain a validated pending draft.")
+
+    payload = graph_values["draft_payload"]
+    action_name = payload.get("action")
+    data = _validate_draft(action_name, payload.get("data"))
+    payload = {**payload, "data": data}
+
+    oxengl_agent.update_state(
+        config,
+        {
+            "approval_status": "approved",
+            "approved_by": str(identity["user_id"]),
+            "approved_at": datetime.now(timezone.utc).isoformat(),
+            "execution_status": "executing",
+        },
+    )
+    approved_state = oxengl_agent.get_state(config)
+    if (
+        not approved_state
+        or not approved_state.values
+        or approved_state.values.get("approval_status") != "approved"
+        or approved_state.values.get("approved_by") != str(identity["user_id"])
+        or approved_state.values.get("execution_status") != "executing"
+    ):
+        oxengl_agent.update_state(
+            config,
+            {
+                "approval_status": "pending",
+                "approved_by": None,
+                "approved_at": None,
+                "execution_status": "awaiting_approval",
+            },
+        )
+        raise HTTPException(status_code=409, detail="Graph state could not record managerial approval.")
+
+    company_id = identity["tenant_id"]
+    tenant_uuid = company_id
+    user_uuid = identity["user_id"]
+
+    print(f"[Dispatcher] Routing '{action_name}' for company {company_id} by user {user_uuid} ({user_role})")
     
     committed_id = None
     committed_ref = None
 
     try:
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+                "set_config('app.current_company_id', :company_id, true)"
+            ),
+            {"tenant_id": str(tenant_uuid), "company_id": str(company_id)},
+        )
+        company_exists = db.execute(
+            text("SELECT 1 FROM res_companies WHERE id = :company_id"),
+            {"company_id": company_id},
+        ).scalar()
+        if not company_exists:
+            raise HTTPException(status_code=403, detail="Authenticated company membership is no longer valid.")
+
         # ======================================================================
         # Departmental CRUD Action Handlers
         # ======================================================================
@@ -391,7 +567,6 @@ async def approve_and_execute(
                             "line_tot": line_tot,
                         })
             
-            db.commit()
             committed_id = str(po_id)
             committed_ref = po_num
 
@@ -424,7 +599,6 @@ async def approve_and_execute(
                 "weight": weight,
                 "notes": notes_str,
             })
-            db.commit()
             committed_id = str(trip_id)
             committed_ref = trip_num
 
@@ -435,15 +609,15 @@ async def approve_and_execute(
             print(f"-> [HR & Payroll Module] Executing Payroll Voucher Insert: {data}")
             emp_ref = str(data.get("employee_id", "EMP-0149"))
             emp_row = db.execute(
-                text("SELECT id, tenant_id FROM employees WHERE id::text = :emp_ref OR employee_code = :emp_ref OR first_name ILIKE :emp_like LIMIT 1"),
-                {"emp_ref": emp_ref, "emp_like": f"%{emp_ref}%"}
+                text("SELECT id, tenant_id FROM employees WHERE tenant_id = :tenant_id AND (id::text = :emp_ref OR employee_code = :emp_ref OR first_name ILIKE :emp_like) LIMIT 1"),
+                {"tenant_id": tenant_uuid, "emp_ref": emp_ref, "emp_like": f"%{emp_ref}%"}
             ).fetchone()
             
             if not emp_row:
-                emp_row = db.execute(text("SELECT id, tenant_id FROM employees LIMIT 1")).fetchone()
+                raise ValueError("Employee was not found in the authenticated company.")
             
-            emp_uuid = emp_row[0] if emp_row else uuid.uuid4()
-            emp_tenant = emp_row[1] if emp_row else tenant_uuid
+            emp_uuid = emp_row[0]
+            emp_tenant = emp_row[1]
             
             base_sal = Decimal(str(data.get("base_salary", 15000.0)))
             allowances = Decimal(str(data.get("allowances", 0.0)))
@@ -467,7 +641,6 @@ async def approve_and_execute(
                 "deductions": deductions,
                 "net": net,
             })
-            db.commit()
             committed_id = str(payroll_id)
             committed_ref = f"PAY-{period}-{emp_ref}"
 
@@ -475,12 +648,12 @@ async def approve_and_execute(
             print(f"-> [HR & Payroll Module] Executing Leave Request Insert: {data}")
             emp_ref = str(data.get("employee_id", ""))
             emp_row = db.execute(
-                text("SELECT id, tenant_id FROM employees WHERE id::text = :emp_ref OR employee_code = :emp_ref OR first_name ILIKE :emp_like LIMIT 1"),
-                {"emp_ref": emp_ref, "emp_like": f"%{emp_ref}%"}
+                text("SELECT id, tenant_id FROM employees WHERE tenant_id = :tenant_id AND (id::text = :emp_ref OR employee_code = :emp_ref OR first_name ILIKE :emp_like) LIMIT 1"),
+                {"tenant_id": tenant_uuid, "emp_ref": emp_ref, "emp_like": f"%{emp_ref}%"}
             ).fetchone()
             
             if not emp_row:
-                emp_row = db.execute(text("SELECT id, tenant_id FROM employees LIMIT 1")).fetchone()
+                raise ValueError("Employee was not found in the authenticated company.")
             
             if emp_row:
                 emp_uuid, emp_tenant = emp_row
@@ -498,7 +671,6 @@ async def approve_and_execute(
                     "days": days,
                     "device_id": f"LEAVE_APPROVED:{leave_type}"
                 })
-                db.commit()
                 committed_id = str(leave_id)
                 committed_ref = f"LEAVE-{emp_ref}-{days}D"
 
@@ -546,10 +718,9 @@ async def approve_and_execute(
                 "id": f"AUD-{uuid.uuid4().hex[:8].upper()}",
                 "tenant_id": tenant_uuid,
                 "action_type": f"GOVERNANCE_INFRACTION_{severity}",
-                "actor": f"{current_user.get('user_id')} ({user_role})",
+                "actor": f"{user_uuid} ({user_role})",
                 "details": f"Logged {infraction} for {entity_type} {entity_id}. Managerial sign-off by {user_role}.",
             })
-            db.commit()
             committed_id = str(gov_id)
             committed_ref = f"GOV-{infraction}"
 
@@ -579,14 +750,17 @@ async def approve_and_execute(
                 VALUES (:id, :co_id, :entry_id, '1010-CASH', :desc, 0.00, :amt)
             """), {"id": uuid.uuid4(), "co_id": company_id, "entry_id": entry_id, "desc": f"Credit: {desc}", "amt": amount})
             
-            db.commit()
             committed_id = str(entry_id)
             committed_ref = entry_num
 
         elif action_name == "InventoryTransferSchema":
             print(f"-> [Inventory Module] Executing Stock Transfer Insert: {data}")
-            wh_row = db.execute(text("SELECT id FROM warehouses LIMIT 1")).scalar()
-            wh_id = wh_row or uuid.uuid4()
+            wh_id = db.execute(
+                text("SELECT id FROM warehouses WHERE company_id = :company_id LIMIT 1"),
+                {"company_id": company_id},
+            ).scalar()
+            if wh_id is None:
+                raise ValueError("No warehouse is configured for the authenticated company.")
             qty = Decimal(str(data.get("quantity", 1.0)))
             unit_cost = Decimal("10.00")
             item_code = data.get("item_code", "GEN-SKU")
@@ -609,7 +783,6 @@ async def approve_and_execute(
                 "reason": f"Autonomous Stock Transfer for {item_code}",
                 "reference": f"{src_wh} -> {dst_wh}"
             })
-            db.commit()
             committed_id = str(mov_id)
             committed_ref = mov_num
 
@@ -622,7 +795,19 @@ async def approve_and_execute(
                     from backend.app.crud.sales import create_invoice
                 except (ImportError, ModuleNotFoundError):
                     from app.crud.sales import create_invoice
-            inv_result = create_invoice(db, data, company_id=company_id)
+            savepoint = db.begin_nested()
+            try:
+                inv_result = create_invoice(
+                    _DeferredCommitSession(db, savepoint),
+                    data,
+                    company_id=company_id,
+                )
+                if savepoint.is_active:
+                    savepoint.commit()
+            except Exception:
+                if savepoint.is_active:
+                    savepoint.rollback()
+                raise
             committed_id = inv_result.get("invoice_id")
             committed_ref = inv_result.get("invoice_number")
 
@@ -631,12 +816,20 @@ async def approve_and_execute(
             from backend.app.domains.inventory.valuation import calculate_inventory_valuation
             wh_ref = data.get("warehouse_id", "ALL")
             method = data.get("valuation_method", "FIFO")
-            valuation_result = calculate_inventory_valuation(
-                warehouse_id=wh_ref,
-                valuation_method=method,
-                company_id=company_id,
-                db=db,
-            )
+            savepoint = db.begin_nested()
+            try:
+                valuation_result = calculate_inventory_valuation(
+                    warehouse_id=wh_ref,
+                    valuation_method=method,
+                    company_id=company_id,
+                    db=_DeferredCommitSession(db, savepoint),
+                )
+                if savepoint.is_active:
+                    savepoint.commit()
+            except Exception:
+                if savepoint.is_active:
+                    savepoint.rollback()
+                raise
             committed_ref = f"VAL-{wh_ref}-{method}"
 
         elif action_name == "P2PMatchSchema":
@@ -654,53 +847,76 @@ async def approve_and_execute(
         else:
             raise ValueError(f"Unrecognized AI action schema: {action_name}")
 
+        # Some existing domain services commit internally; re-establish the
+        # verified tenant context before recording the dispatch audit trail.
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
+                "set_config('app.current_company_id', :company_id, true)"
+            ),
+            {"tenant_id": str(tenant_uuid), "company_id": str(company_id)},
+        )
+
         # ----------------------------------------------------------------------
         # Immutable Governance Trail for Every Approved Execution
         # ----------------------------------------------------------------------
-        try:
-            gov_audit_id = uuid.uuid4()
-            audit_hash = hashlib.sha256(f"{action_name}:{committed_ref}:{request.thread_id}".encode()).hexdigest()[:32]
-            db.execute(text("""
-                INSERT INTO ai_governance_logs (
-                    id, company_id, user_id, agent_name, prompt_hash, prompt_tokens,
-                    completion_tokens, total_tokens, confidence_score, safety_validation_status,
-                    risk_level, action_type, proposal_payload, hitl_required, hitl_approved,
-                    hitl_approved_by, hitl_approved_at, execution_status, executed_at,
-                    created_at, updated_at
-                ) VALUES (
-                    :id, :company_id, :user_id, 'OxenGL-HITL-Dispatcher', :prompt_hash, 100,
-                    50, 150, 0.99, 'PASSED', 'LOW', :action_type,
-                    :payload, TRUE, TRUE, :approver_id, NOW(), 'EXECUTED', NOW(), NOW(), NOW()
-                )
-            """), {
-                "id": gov_audit_id,
-                "company_id": company_id,
-                "user_id": user_uuid,
-                "prompt_hash": audit_hash,
-                "action_type": action_name,
-                "payload": json.dumps(data),
-                "approver_id": user_uuid,
-            })
-            db.commit()
-        except Exception as audit_err:
-            print(f"[Agent Governance Audit Warning]: {audit_err}")
+        gov_audit_id = uuid.uuid4()
+        audit_hash = hashlib.sha256(f"{action_name}:{committed_ref}:{request.thread_id}".encode()).hexdigest()[:32]
+        db.execute(text("""
+            INSERT INTO ai_governance_logs (
+                id, company_id, user_id, agent_name, prompt_hash, prompt_tokens,
+                completion_tokens, total_tokens, confidence_score, safety_validation_status,
+                risk_level, action_type, proposal_payload, hitl_required, hitl_approved,
+                hitl_approved_by, hitl_approved_at, execution_status, executed_at,
+                created_at, updated_at
+            ) VALUES (
+                :id, :company_id, :user_id, 'OxenGL-HITL-Dispatcher', :prompt_hash, 100,
+                50, 150, 0.99, 'PASSED', 'LOW', :action_type,
+                :payload, TRUE, TRUE, :approver_id, NOW(), 'EXECUTED', NOW(), NOW(), NOW()
+            )
+        """), {
+            "id": gov_audit_id,
+            "company_id": company_id,
+            "user_id": user_uuid,
+            "prompt_hash": audit_hash,
+            "action_type": action_name,
+            "payload": json.dumps(data),
+            "approver_id": user_uuid,
+        })
+        db.commit()
 
     except HTTPException:
         db.rollback()
+        oxengl_agent.update_state(
+            config,
+            {"execution_status": "awaiting_approval", "approval_status": "approved"},
+        )
         raise
     except Exception as e:
         import traceback
         db.rollback()
+        oxengl_agent.update_state(
+            config,
+            {"execution_status": "awaiting_approval", "approval_status": "approved"},
+        )
         tb_str = traceback.format_exc()
         print(f"[Agent Execution Error]:\n{tb_str}")
         raise HTTPException(status_code=500, detail=f"Database execution failed: {str(e)}")
 
-    # Resume the graph to clear the execution node if state exists in this worker
-    if current_state and current_state.next:
-        try:
-            oxengl_agent.invoke(None, config=config)
-        except Exception:
-            pass
+    try:
+        oxengl_agent.update_state(
+            config,
+            {
+                "execution_status": "committed",
+                "message": "Database transaction committed after managerial approval.",
+            },
+        )
+    except Exception as state_err:
+        print(f"[Agent] Database committed but graph completion update failed: {state_err}")
+        raise HTTPException(
+            status_code=500,
+            detail="Database execution committed, but graph completion could not be recorded. Do not retry this command; reconcile its committed reference.",
+        ) from state_err
 
     # Clean up Redis cache for this thread
     try:
@@ -708,9 +924,9 @@ async def approve_and_execute(
             from backend.app.core.redis import redis_client
         except (ImportError, ModuleNotFoundError):
             from app.core.redis import redis_client
-        await redis_client.delete(f"oxengl:agent:thread:{request.thread_id}")
-    except Exception:
-        pass
+        await redis_client.delete(scoped_cache_key)
+    except Exception as exc:
+        print(f"[Agent] Redis cache cleanup failed after committed execution: {exc}")
 
     response_data = {
         "status": "committed",
@@ -718,7 +934,7 @@ async def approve_and_execute(
         "message": f"Action '{action_name}' successfully approved and committed to database.",
         "committed_id": committed_id,
         "committed_ref": committed_ref,
-        "reviewed_by": current_user.get("user_id"),
+        "reviewed_by": str(user_uuid),
         "reviewer_role": user_role,
         "executed_payload": payload,
     }

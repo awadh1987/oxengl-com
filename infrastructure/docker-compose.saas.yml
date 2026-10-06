@@ -37,8 +37,8 @@ services:
 
   app:
     build:
-      context: .
-      dockerfile: Dockerfile.saas
+      context: ..
+      dockerfile: infrastructure/Dockerfile.saas
     container_name: oxengl-saas-app
     restart: unless-stopped
     depends_on:
@@ -53,6 +53,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       BACKEND_PORT: 8000
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set}
+      JWT_SECRET_MASTER: ${JWT_SECRET_MASTER:?JWT_SECRET_MASTER must be set}
+      JWT_SECRET_TENANT: ${JWT_SECRET_TENANT:?JWT_SECRET_TENANT must be set}
+      DATA_RESIDENCY_KEY: ${DATA_RESIDENCY_KEY:?DATA_RESIDENCY_KEY must be set}
     ports:
       - "3000:3000"
       - "8000:8000"

@@ -3,6 +3,7 @@ import { ShieldCheck, ArrowLeft, KeyRound, AlertCircle, RefreshCw } from 'lucide
 
 interface MfaVerificationViewProps {
   challengeToken?: string | null;
+  tenantSlug?: string;
   email?: string;
   onSuccess?: (tokens: { accessToken: string; refreshToken: string }) => void;
   onCancel?: () => void;
@@ -10,6 +11,7 @@ interface MfaVerificationViewProps {
 
 export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
   challengeToken,
+  tenantSlug,
   email,
   onSuccess,
   onCancel,
@@ -77,12 +79,26 @@ export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/v1/iam/auth/verify-mfa', {
+      const twoFactorToken =
+        challengeToken ||
+        localStorage.getItem('oxengl_2fa_pending_token') ||
+        localStorage.getItem('oxengl_challenge_token');
+      if (!twoFactorToken) {
+        throw new Error('Your verification session has expired. Please sign in again.');
+      }
+
+      const activeTenantSlug =
+        tenantSlug ||
+        localStorage.getItem('oxengl_tenant_slug') ||
+        localStorage.getItem('tenant_slug') ||
+        'myon';
+      const response = await fetch('/api/v1/auth/2fa/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          challenge_token: challengeToken || localStorage.getItem('oxengl_challenge_token'),
-          totp_code: code,
+          two_factor_token: twoFactorToken,
+          code,
+          tenant_slug: activeTenantSlug,
         }),
       });
 
@@ -92,11 +108,24 @@ export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
       }
 
       const data = await response.json();
+      if (!data.access_token) {
+        throw new Error('Two-factor verification did not establish an authenticated session.');
+      }
+      const authTokens = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || '',
+      };
+      localStorage.removeItem('oxengl_2fa_pending_token');
+      localStorage.removeItem('oxengl_challenge_token');
       if (onSuccess) {
-        onSuccess(data);
+        onSuccess(authTokens);
       } else {
-        localStorage.setItem('oxengl_access_token', data.access_token);
-        localStorage.setItem('oxengl_refresh_token', data.refresh_token);
+        localStorage.setItem('oxengl_access_token', authTokens.accessToken);
+        if (authTokens.refreshToken) {
+          localStorage.setItem('oxengl_refresh_token', authTokens.refreshToken);
+        } else {
+          localStorage.removeItem('oxengl_refresh_token');
+        }
         window.location.href = '/dashboard';
       }
     } catch (err: any) {

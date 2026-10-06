@@ -604,17 +604,25 @@ def get_db(request: Request = None) -> Generator[Session, None, None]:
 
 
 def resolve_client_ip(request: Request) -> str | None:
-	"""Nginx terminates TLS, so the originating address arrives via X-Forwarded-For."""
-	forwarded = request.headers.get("x-forwarded-for")
-	if forwarded:
-		return forwarded.split(",")[0].strip()[:45]
-	return request.client.host[:45] if request.client else None
+	"""Resolve the client address only through configured, trusted proxy hops."""
+	try:
+		from backend.app.domains.hr.audit import resolve_hr_client_ip
+	except ImportError:
+		try:
+			from app.domains.hr.audit import resolve_hr_client_ip
+		except ImportError:
+			return request.client.host[:45] if request.client else None
+	try:
+		return resolve_hr_client_ip(request)
+	except Exception:
+		# On resolver failure, prefer the direct peer over an untrusted forwarded header.
+		return request.client.host[:45] if request.client else None
 
 
-def record_platform_audit(database: Session, *, actor_email: str, action: str, endpoint: str, ip_address: str | None, company_id: uuid.UUID | None, outcome: str | None = None, request_id: str | None = None, user_agent: str | None = None) -> None:
+def record_platform_audit(database: Session, *, actor_email: str, action: str, endpoint: str, ip_address: str | None, company_id: uuid.UUID | None, outcome: str | None = None, request_id: str | None = None, user_agent: str | None = None, actor_id: uuid.UUID | None = None, tenant_id: uuid.UUID | None = None) -> None:
 	"""Break-glass access must leave a permanent trace, but auditing must never block the recovery path."""
 	try:
-		database.add(models.PlatformAuditLog(actor_email=actor_email, action=action, outcome=outcome or ("FAILED" if action.endswith("FAILED") else "SUCCESS"), endpoint_accessed=endpoint, request_id=request_id or str(uuid.uuid4()), user_agent=(user_agent or "unknown")[:512], ip_address=ip_address, company_id=company_id))
+		database.add(models.PlatformAuditLog(actor_email=actor_email, action=action, outcome=outcome or ("FAILED" if action.endswith("FAILED") else "SUCCESS"), endpoint_accessed=endpoint, request_id=request_id or str(uuid.uuid4()), user_agent=(user_agent or "unknown")[:512], ip_address=ip_address, company_id=company_id, actor_id=actor_id, tenant_id=tenant_id))
 		database.commit()
 	except Exception as error:  # noqa: BLE001
 		database.rollback()
@@ -912,75 +920,45 @@ def require_compliance_admin(
 
 def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> bool:
 	"""
-	Verifies whether the current user or session is authorized as Super Admin.
-	Accepts:
-	1. Direct is_superuser == True or is_super_admin == True
-	2. User role matches Super_Admin (case-insensitive, normalized e.g., 'Super_Admin', 'super_admin', 'SUPER_ADMIN')
-	3. Token claims or token scopes include 'Super_Admin' or 'super_admin'
-	4. Authenticated master admin sessions (tier == 'master' or master operator)
-	5. Permitted authenticated master admin / admin sessions during development or provisioning.
+	Verifies Super Admin authority from the authenticated server-side user record.
+	Request token claims are deliberately not an authority source.
 	"""
 	if user is None:
 		return False
 
-	# 1. is_superuser / is_super_admin boolean flag
+	# 1. Server-side user authority flags and role.
 	if getattr(user, "is_superuser", False) is True or getattr(user, "is_super_admin", False) is True:
 		return True
 
-	# 2. User role normalized
 	raw_role = str(getattr(user, "role", "") or "").strip()
 	normalized_role = raw_role.upper().replace(" ", "_").replace("-", "_")
 	if normalized_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
 		return True
 
-	# 3. Token claims & scopes on request.state or passed
-	token_claims: dict[str, Any] = {}
-	if request and hasattr(request, "state"):
-		token_claims = getattr(request.state, "token_claims", None) or getattr(request.state, "claims", None) or {}
-
-	claim_role = str(token_claims.get("role", "") or "").upper().replace(" ", "_").replace("-", "_")
-	if claim_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
-		return True
-
-	if str(token_claims.get("tier", "") or "").lower() == "master":
-		return True
-
-	# Check scopes claim (e.g. scopes=["Super_Admin"] or scope="Super_Admin read write")
-	raw_scopes = token_claims.get("scopes") or token_claims.get("scope") or []
-	if isinstance(raw_scopes, str):
-		scopes_list = [s.strip().upper().replace(" ", "_").replace("-", "_") for s in raw_scopes.replace(",", " ").split()]
-	elif isinstance(raw_scopes, (list, set, tuple)):
-		scopes_list = [str(s).strip().upper().replace(" ", "_").replace("-", "_") for s in raw_scopes]
-	else:
-		scopes_list = []
-
-	if any(s in {"SUPER_ADMIN", "SUPERADMIN", "MASTER", "ALL"} for s in scopes_list):
-		return True
-
-	# 4. Check user ACL and role_ids
+	# 2. Server-side ACL and role mappings.
 	acl = str(getattr(user, "access_control_list", "") or "").upper()
 	role_ids = str(getattr(user, "role_ids", "") or "").upper()
 	if "SUPER_ADMIN" in acl or "SUPER_ADMIN" in role_ids:
 		return True
 
-	# 5. Development / Provisioning Environment for Master Admin Sessions
+	# 3. Development/provisioning compatibility is opt-in and cannot be enabled
+	# merely by omitting ENVIRONMENT or setting a production deployment flag.
+	current_env = os.getenv("ENVIRONMENT", os.getenv("NODE_ENV", "production")).lower()
 	dev_env = (
-		os.getenv("ENVIRONMENT", "development").lower() in ("development", "dev", "test", "staging", "provisioning")
-		or os.getenv("OXENGL_DEV_MODE", "true").lower() in ("true", "1", "yes")
+		current_env in ("development", "dev", "test", "testing", "staging", "provisioning")
+		and os.getenv("OXENGL_DEV_MODE", "false").lower() in ("true", "1", "yes")
 	)
 	if dev_env:
 		is_master_subject = (
 			str(getattr(user, "email", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-			or str(token_claims.get("sub", "")).lower() in {"admin@oxengl.me", "admin@oxengl.com", "master@oxengl.com", "superadmin@oxengl.com", "devadmin@oxengl.com"}
-			or str(token_claims.get("tier", "")).lower() == "master"
 			or getattr(user, "company_id", None) is None
 		)
-		if is_master_subject and (normalized_role in {"ADMIN", "CEO", "EXECUTIVE", "OPERATOR"} or claim_role in {"ADMIN", "CEO", "EXECUTIVE"}):
+		if is_master_subject and normalized_role in {"ADMIN", "CEO", "EXECUTIVE", "OPERATOR"}:
 			return True
 
 	if request:
-		# Provisioning bypass via X-Master-Admin-Key. Honoured ONLY when MASTER_PLATFORM_KEY is
-		# explicitly configured: there is deliberately no hard-coded fallback key.
+		# An explicitly configured platform provisioning key remains an auditable
+		# break-glass path; it is never inferred from token claims.
 		expected_key = (os.getenv("MASTER_PLATFORM_KEY") or "").strip()
 		prov_header = request.headers.get("X-Master-Admin-Key") or request.headers.get("x-master-admin-key")
 		if expected_key and prov_header and hmac.compare_digest(prov_header.encode("utf-8"), expected_key.encode("utf-8")):
@@ -1006,11 +984,26 @@ def require_super_admin(
 			outcome="DENIED",
 			request_id=get_request_id(request),
 			user_agent=request.headers.get("user-agent"),
+			actor_id=getattr(current_user, "id", None),
+			tenant_id=getattr(current_user, "company_id", None),
 		)
 		raise HTTPException(
 			status_code=status.HTTP_403_FORBIDDEN,
 			detail="Access denied: Master Platform Security requires Super_Admin role",
 		)
+	record_platform_audit(
+		database,
+		actor_email=current_user.email,
+		action="SUPER_ADMIN_ACCESS",
+		endpoint=request.url.path,
+		ip_address=resolve_client_ip(request),
+		company_id=getattr(current_user, "company_id", None),
+		outcome="ALLOWED",
+		request_id=get_request_id(request),
+		user_agent=request.headers.get("user-agent"),
+		actor_id=getattr(current_user, "id", None),
+		tenant_id=getattr(current_user, "company_id", None),
+	)
 	return current_user
 
 

@@ -9,15 +9,19 @@ Provides:
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import json
 import logging
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, time as datetime_time, timezone
+from decimal import Decimal
 from typing import Any, Dict, Optional, Tuple, Union
 from urllib.parse import quote_plus
 
-from sqlalchemy import Engine, create_engine, select, text
+from sqlalchemy import Engine, create_engine, delete, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
@@ -35,6 +39,88 @@ logger = logging.getLogger("oxengl.migration")
 # In-memory fast cache for live status polling across worker threads
 MIGRATION_TASKS: Dict[str, Dict[str, Any]] = {}
 _tasks_lock = threading.Lock()
+
+
+def _normalize_checksum_value(value: Any) -> Any:
+    """Convert database values to a stable, type-aware JSON-compatible form."""
+    if value is None or isinstance(value, (bool, int, str)):
+        return value
+    if isinstance(value, float):
+        if value != value:
+            return {"__float__": "nan"}
+        if value == float("inf"):
+            return {"__float__": "inf"}
+        if value == float("-inf"):
+            return {"__float__": "-inf"}
+        return value
+    if isinstance(value, Decimal):
+        return {"__decimal__": str(value)}
+    if isinstance(value, uuid.UUID):
+        return {"__uuid__": str(value)}
+    if isinstance(value, datetime):
+        if value.tzinfo is not None and value.utcoffset() is not None:
+            value = value.astimezone(timezone.utc)
+        return {"__datetime__": value.isoformat()}
+    if isinstance(value, (date, datetime_time)):
+        return {"__datetime__": value.isoformat()}
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return {"__bytes__": base64.b64encode(bytes(value)).decode("ascii")}
+    if isinstance(value, dict):
+        return {
+            str(key): _normalize_checksum_value(item)
+            for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+        }
+    if isinstance(value, (list, tuple)):
+        return [_normalize_checksum_value(item) for item in value]
+    return {"__type__": type(value).__qualname__, "value": str(value)}
+
+
+def _checksum_rows(rows: list[Any], column_names: list[str]) -> str:
+    """Hash an unordered set of complete table rows using deterministic encoding."""
+    encoded_rows = []
+    for row in rows:
+        mapping = row._mapping if hasattr(row, "_mapping") else row
+        payload = [_normalize_checksum_value(mapping[name]) for name in column_names]
+        encoded_rows.append(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        )
+
+    checksum = hashlib.sha256()
+    for encoded in sorted(encoded_rows):
+        checksum.update(len(encoded).to_bytes(8, byteorder="big"))
+        checksum.update(encoded)
+    return checksum.hexdigest()
+
+
+def _tenant_table_query(table: Any, company_id: uuid.UUID):
+    """Build the tenant-scoped source/target query for a migratable table."""
+    has_company = "company_id" in table.columns
+    has_tenant = "tenant_id" in table.columns
+    if table.name == "res_companies":
+        return select(table).where(table.c.id == company_id)
+    if has_company and has_tenant:
+        return select(table).where(
+            (table.c.company_id == company_id) | (table.c.tenant_id == company_id)
+        )
+    if has_company:
+        return select(table).where(table.c.company_id == company_id)
+    if has_tenant:
+        return select(table).where(table.c.tenant_id == company_id)
+    return None
+
+
+def _cleanup_copied_target_rows(
+    target_engine: Engine, copied_rows: list[tuple[Any, list[dict[str, Any]]]]
+) -> None:
+    """Compensate a failed cutover by deleting only rows inserted by this migration."""
+    with target_engine.begin() as cleanup_conn:
+        for table, keys in reversed(copied_rows):
+            for row_keys in reversed(keys):
+                cleanup_conn.execute(
+                    delete(table).where(
+                        *(column == row_keys[column.name] for column in table.primary_key.columns)
+                    )
+                )
 
 
 def build_connection_url(
@@ -178,12 +264,16 @@ def get_migration_status_data(
     company_id: uuid.UUID, migration_id: Optional[uuid.UUID] = None, db: Optional[Session] = None
 ) -> Optional[Dict[str, Any]]:
     """Retrieves the status of an ongoing or completed migration from in-memory cache or DB."""
+    if company_id is None:
+        raise ValueError("company_id is required to query migration status.")
+
     # Check memory cache first
     if migration_id:
         key = str(migration_id)
         with _tasks_lock:
-            if key in MIGRATION_TASKS:
-                return dict(MIGRATION_TASKS[key])
+            cached = MIGRATION_TASKS.get(key)
+            if cached and str(cached.get("company_id", "")).lower() == str(company_id).lower():
+                return dict(cached)
 
     # Check DB
     close_db = False
@@ -194,7 +284,10 @@ def get_migration_status_data(
     try:
         query = select(TenantDatabaseMigration)
         if migration_id:
-            query = query.where(TenantDatabaseMigration.id == migration_id)
+            query = query.where(
+                TenantDatabaseMigration.id == migration_id,
+                TenantDatabaseMigration.company_id == company_id,
+            )
         else:
             query = query.where(TenantDatabaseMigration.company_id == company_id).order_by(
                 TenantDatabaseMigration.created_at.desc()
@@ -263,15 +356,28 @@ def run_migration_worker(
 
     db = SessionLocal()
     target_engine: Optional[Engine] = None
+    target_engine_registered = False
+    target_data_committed = False
+    copied_rows: list[tuple[Any, list[dict[str, Any]]]] = []
+    cutover_attempted = False
+    previous_config: Optional[dict[str, Any]] = None
+    migration_succeeded = False
+    total_records_transferred = 0
     try:
         # 1. Update DB migration record
-        db_mig = db.scalar(select(TenantDatabaseMigration).where(TenantDatabaseMigration.id == migration_id))
-        if db_mig:
-            db_mig.status = "IN_PROGRESS"
-            db_mig.progress_pct = 10
-            db_mig.current_step = "Validating external target database connectivity via TLS/SSL..."
-            db_mig.started_at = started_at
-            db.commit()
+        db_mig = db.scalar(
+            select(TenantDatabaseMigration).where(
+                TenantDatabaseMigration.id == migration_id,
+                TenantDatabaseMigration.company_id == company_id,
+            )
+        )
+        if not db_mig:
+            raise RuntimeError("Migration record was not found for this tenant.")
+        db_mig.status = "IN_PROGRESS"
+        db_mig.progress_pct = 10
+        db_mig.current_step = "Validating external target database connectivity via TLS/SSL..."
+        db_mig.started_at = started_at
+        db.commit()
 
         # Build target connection URL
         target_url = build_connection_url(
@@ -313,8 +419,11 @@ def run_migration_worker(
                 ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS ltree;"))
                 ext_conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
                 ext_conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto;"))
+                # Extension DDL is committed separately from tenant table/data work.
                 ext_conn.commit()
-        Base.metadata.create_all(bind=target_engine)
+        # Keep table-provisioning DDL atomic where the target dialect supports it.
+        with target_engine.begin() as ddl_conn:
+            Base.metadata.create_all(bind=ddl_conn)
 
         update_task_state(
             migration_id,
@@ -327,57 +436,70 @@ def run_migration_worker(
             db.commit()
 
         # 4. Extract and Transfer Tenant Data
-        total_records_transferred = 0
         tables = Base.metadata.sorted_tables
         table_count = len(tables)
 
-        with target_engine.connect() as target_conn:
+        # All copied rows share one target transaction; no partial tenant copy is
+        # committed unless every eligible table passes its count/checksum check.
+        with target_engine.begin() as target_conn:
             for idx, table in enumerate(tables):
-                has_company = "company_id" in table.columns
-                has_tenant = "tenant_id" in table.columns
-                is_company_table = table.name == "res_companies"
-
-                if not (has_company or has_tenant or is_company_table):
+                tenant_query = _tenant_table_query(table, company_id)
+                if tenant_query is None:
                     continue
 
-                # Query rows for this tenant
-                query = select(table)
-                if is_company_table:
-                    query = query.where(table.c.id == company_id)
-                elif has_company and has_tenant:
-                    query = query.where((table.c.company_id == company_id) | (table.c.tenant_id == company_id))
-                elif has_company:
-                    query = query.where(table.c.company_id == company_id)
-                elif has_tenant:
-                    query = query.where(table.c.tenant_id == company_id)
-
-                result = db.execute(query)
-                rows = result.fetchall()
-                if not rows:
-                    continue
-
-                # Insert into target table
+                source_rows = db.execute(tenant_query).fetchall()
                 columns = [c.name for c in table.columns]
-                row_dicts = [dict(zip(columns, row)) for row in rows]
+                source_checksum = _checksum_rows(source_rows, columns)
+                row_dicts = [dict(row._mapping) for row in source_rows]
 
-                for row_data in row_dicts:
-                    try:
-                        target_conn.execute(table.insert().values(**row_data))
-                    except Exception as ins_err:
-                        # Row might already exist if re-running or seeded
-                        logger.debug("Insert skipped or failed for table %s: %s", table.name, ins_err)
+                if row_dicts:
+                    primary_key_columns = list(table.primary_key.columns)
+                    if not primary_key_columns:
+                        raise RuntimeError(
+                            f"Cannot safely migrate table {table.name}: no primary key is defined."
+                        )
+                    # Insert errors are deliberately not swallowed: the transaction
+                    # rolls back all copied tables on any failure.
+                    target_conn.execute(table.insert(), row_dicts)
+                    copied_rows.append(
+                        (
+                            table,
+                            [
+                                {column.name: row[column.name] for column in primary_key_columns}
+                                for row in row_dicts
+                            ],
+                        )
+                    )
 
-                target_conn.commit()
-                total_records_transferred += len(rows)
+                target_rows = target_conn.execute(tenant_query).fetchall()
+                target_count = len(target_rows)
+                target_checksum = _checksum_rows(target_rows, columns)
+                if len(source_rows) != target_count or source_checksum != target_checksum:
+                    raise RuntimeError(
+                        f"Integrity verification failed for table {table.name}: "
+                        f"source rows={len(source_rows)}, target rows={target_count}."
+                    )
+
+                total_records_transferred += len(source_rows)
 
                 # Update progress proportionally between 40% and 85%
                 current_pct = 40 + int((idx + 1) / max(table_count, 1) * 45)
                 update_task_state(
                     migration_id,
                     progress_pct=current_pct,
-                    current_step=f"Transferring {table.name} ({len(rows)} records)... Total transferred: {total_records_transferred}",
+                    current_step=f"Verified {table.name} ({len(source_rows)} records)... Total transferred: {total_records_transferred}",
                     records_transferred=total_records_transferred,
                 )
+
+            comp_exists = target_conn.scalar(
+                select(ResCompany.id).where(ResCompany.id == company_id)
+            )
+            if not comp_exists:
+                raise RuntimeError(
+                    "Integrity verification failed: Tenant company record not found in target database."
+                )
+
+        target_data_committed = True
 
         # 5. Verify Integrity
         update_task_state(
@@ -391,14 +513,6 @@ def run_migration_worker(
             db_mig.current_step = f"Data transfer complete ({total_records_transferred} records). Verifying target integrity..."
             db_mig.records_transferred = total_records_transferred
             db.commit()
-
-        # Quick verification: ensure company row exists in target
-        with target_engine.connect() as test_conn:
-            comp_exists = test_conn.scalar(
-                select(ResCompany.id).where(ResCompany.id == company_id)
-            )
-            if not comp_exists:
-                raise RuntimeError("Integrity verification failed: Tenant company record not found in target database.")
 
         # 6. Cutover: Update Master TenantDatabaseConfig and Evict Cache
         update_task_state(
@@ -415,6 +529,15 @@ def run_migration_worker(
         existing_config = db.scalar(
             select(TenantDatabaseConfig).where(TenantDatabaseConfig.company_id == company_id)
         )
+        if existing_config:
+            previous_config = {
+                "id": existing_config.id,
+                "database_name": existing_config.database_name,
+                "encrypted_connection_url": existing_config.encrypted_connection_url,
+                "residency_region": existing_config.residency_region,
+                "isolation_level": existing_config.isolation_level,
+                "is_active": existing_config.is_active,
+            }
         if existing_config:
             existing_config.database_name = meta["database_name"] or target_db
             existing_config.encrypted_connection_url = encrypted_url
@@ -433,11 +556,31 @@ def run_migration_worker(
             )
             db.add(new_config)
 
+        # Persist the connection mapping before publishing the in-memory route.
+        cutover_attempted = True
+        db.commit()
+
         # Evict and register dedicated engine in runtime connection manager
         tenant_connection_manager.reset_cache(company_id)
         tenant_connection_manager.register_tenant_engine(company_id, target_engine)
+        target_engine_registered = True
 
         completed_at = datetime.now(timezone.utc)
+        db_mig = db.scalar(
+            select(TenantDatabaseMigration).where(
+                TenantDatabaseMigration.id == migration_id,
+                TenantDatabaseMigration.company_id == company_id,
+            )
+        )
+        if not db_mig:
+            raise RuntimeError("Migration record was not found while finalizing this tenant's cutover.")
+        db_mig.status = "COMPLETED"
+        db_mig.progress_pct = 100
+        db_mig.current_step = "Migration complete. Dynamic routing is now active on private external PostgreSQL instance."
+        db_mig.records_transferred = total_records_transferred
+        db_mig.completed_at = completed_at
+        db.commit()
+
         update_task_state(
             migration_id,
             status="COMPLETED",
@@ -446,40 +589,120 @@ def run_migration_worker(
             records_transferred=total_records_transferred,
             completed_at=completed_at,
         )
-
-        if db_mig:
-            db_mig.status = "COMPLETED"
-            db_mig.progress_pct = 100
-            db_mig.current_step = "Migration complete. Dynamic routing is now active on private external PostgreSQL instance."
-            db_mig.records_transferred = total_records_transferred
-            db_mig.completed_at = completed_at
-            db.commit()
+        migration_succeeded = True
 
         logger.info("Successfully finished database migration for tenant %s [Migration ID: %s]", company_id, migration_id)
 
     except Exception as exc:
-        logger.exception("Database migration failed for tenant %s: %s", company_id, exc)
-        err_str = str(exc)
+        # Avoid logging exception text that can contain connection credentials.
+        logger.error(
+            "Database migration failed for tenant %s [Migration ID: %s] (%s)",
+            company_id,
+            migration_id,
+            type(exc).__name__,
+        )
+        err_str = f"Migration failed ({type(exc).__name__})."
         step_msg = f"Migration failed: {err_str}"[:250]
+
+        cleanup_succeeded = True
+        cutover_restored = not cutover_attempted
+        if cutover_attempted:
+            try:
+                db.rollback()
+                config_to_restore = db.scalar(
+                    select(TenantDatabaseConfig).where(
+                        TenantDatabaseConfig.company_id == company_id
+                    )
+                )
+                if previous_config is None:
+                    if config_to_restore:
+                        db.delete(config_to_restore)
+                elif config_to_restore:
+                    for name, value in previous_config.items():
+                        setattr(config_to_restore, name, value)
+                db.commit()
+                cutover_restored = True
+            except Exception as restore_exc:
+                db.rollback()
+                cutover_restored = False
+                logger.error(
+                    "Failed to restore tenant database mapping after migration failure "
+                    "for tenant %s [Migration ID: %s] (%s)",
+                    company_id,
+                    migration_id,
+                    type(restore_exc).__name__,
+                )
+            try:
+                tenant_connection_manager.reset_cache(company_id)
+                target_engine_registered = False
+            except Exception as cache_exc:
+                logger.error(
+                    "Failed to reset tenant routing after migration failure for tenant %s "
+                    "[Migration ID: %s] (%s)",
+                    company_id,
+                    migration_id,
+                    type(cache_exc).__name__,
+                )
+
+        if target_data_committed and copied_rows and target_engine is not None and cutover_restored:
+            try:
+                _cleanup_copied_target_rows(target_engine, copied_rows)
+            except Exception as cleanup_exc:
+                cleanup_succeeded = False
+                logger.error(
+                    "Failed to clean copied rows after migration failure for tenant %s "
+                    "[Migration ID: %s] (%s)",
+                    company_id,
+                    migration_id,
+                    type(cleanup_exc).__name__,
+                )
+        elif target_data_committed and not cutover_restored:
+            # Keep the verified target copy intact if the master mapping could
+            # not be restored; deleting it could leave a live route data-empty.
+            cleanup_succeeded = False
+
         update_task_state(
             migration_id,
             status="FAILED",
             error_message=err_str,
             current_step=step_msg,
+            records_transferred=(
+                total_records_transferred
+                if target_data_committed and not cleanup_succeeded
+                else 0
+            ),
             completed_at=datetime.now(timezone.utc),
         )
         try:
             db.rollback()
-            db_mig_rec = db.scalar(select(TenantDatabaseMigration).where(TenantDatabaseMigration.id == migration_id))
+            db_mig_rec = db.scalar(
+                select(TenantDatabaseMigration).where(
+                    TenantDatabaseMigration.id == migration_id,
+                    TenantDatabaseMigration.company_id == company_id,
+                )
+            )
             if db_mig_rec:
                 db_mig_rec.status = "FAILED"
                 db_mig_rec.error_message = err_str
                 db_mig_rec.current_step = step_msg
+                db_mig_rec.records_transferred = (
+                    total_records_transferred
+                    if target_data_committed and not cleanup_succeeded
+                    else 0
+                )
                 db_mig_rec.completed_at = datetime.now(timezone.utc)
                 db.commit()
         except Exception as commit_err:
-            logger.error("Failed to persist migration FAILED state to database: %s", commit_err)
+            logger.error(
+                "Failed to persist migration FAILED state for tenant %s "
+                "[Migration ID: %s] (%s)",
+                company_id,
+                migration_id,
+                type(commit_err).__name__,
+            )
     finally:
+        if target_engine is not None and not migration_succeeded and not target_engine_registered:
+            target_engine.dispose()
         db.close()
 
 

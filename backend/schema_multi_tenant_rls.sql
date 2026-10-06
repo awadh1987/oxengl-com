@@ -195,6 +195,265 @@ CREATE POLICY rls_tenant_domains_isolation ON tenant_domains
     );
 
 -- ==============================================================================
+-- 7a. Tenant-owned ORM tables
+-- ==============================================================================
+-- Apply these policies after the application/Alembic schema has created its tables.
+-- Missing tables are skipped so this bootstrap script remains usable on a fresh
+-- database; rerun it after schema migrations to cover tables created afterwards.
+-- Directly scoped tables use their tenant_id/company_id column. res_companies is
+-- scoped by its own id. Tables without a direct key inherit scope through their
+-- parent foreign key below.
+DO $tenant_rls$
+DECLARE
+    table_scope RECORD;
+    child_scope RECORD;
+    scope_predicate TEXT;
+    policy_predicate TEXT;
+    table_oid REGCLASS;
+    has_tenant_id BOOLEAN;
+    has_company_id BOOLEAN;
+BEGIN
+    FOR table_scope IN
+        SELECT * FROM (VALUES
+            ('res_companies', 'id'),
+            ('tenant_audit_logs', 'tenant_id'),
+            ('platform_audit_logs', 'both'),
+            ('custom_field_definitions', 'company_id'),
+            ('backup_destinations', 'tenant_id'),
+            ('backup_run_logs', 'tenant_id'),
+            ('communication_settings', 'tenant_id'),
+            ('res_users', 'company_id'),
+            ('res_partners', 'company_id'),
+            ('stock_locations', 'company_id'),
+            ('product_products', 'company_id'),
+            ('stock_pickings', 'company_id'),
+            ('stock_moves', 'company_id'),
+            ('stock_quants', 'company_id'),
+            ('weighbridge_tickets', 'company_id'),
+            ('operation_attachments', 'company_id'),
+            ('tenant_documents', 'company_id'),
+            ('transporter_ledger', 'company_id'),
+            ('account_accounts', 'company_id'),
+            ('account_journals', 'company_id'),
+            ('fiscal_years', 'company_id'),
+            ('cost_centers', 'company_id'),
+            ('purchasing_organizations', 'company_id'),
+            ('account_moves', 'company_id'),
+            ('account_move_lines', 'company_id'),
+            ('customer_invoices', 'company_id'),
+            ('supplier_settlements', 'company_id'),
+            ('vehicles', 'both'),
+            ('maintenance_work_orders', 'company_id'),
+            ('part_requirements', 'company_id'),
+            ('fuel_transactions', 'company_id'),
+            ('seasonal_crop_cycles', 'company_id'),
+            ('harvest_batches', 'company_id'),
+            ('farm_gate_weighments', 'company_id'),
+            ('purchase_orders', 'company_id'),
+            ('goods_receipts', 'company_id'),
+            ('supplier_invoices', 'company_id'),
+            ('tax_profiles', 'company_id'),
+            ('tax_rules', 'company_id'),
+            ('zatca_logs', 'company_id'),
+            ('security_events', 'company_id'),
+            ('device_registrations', 'company_id'),
+            ('sync_queue_events', 'company_id'),
+            ('warehouses', 'company_id'),
+            ('warehouse_zones', 'company_id'),
+            ('stock_items', 'company_id'),
+            ('stock_lots', 'company_id'),
+            ('stock_movements', 'company_id'),
+            ('yard_gate_appointments', 'company_id'),
+            ('tenant_database_configs', 'company_id'),
+            ('tenant_database_migrations', 'company_id'),
+            ('tenant_sso_configs', 'company_id'),
+            ('reporting_ledger_summaries', 'company_id'),
+            ('fleet_utilization_facts', 'company_id'),
+            ('ai_model_configs', 'company_id'),
+            ('ai_governance_logs', 'company_id'),
+            ('fleet_trips', 'company_id'),
+            ('delivery_proofs', 'company_id'),
+            ('trip_inspection_logs', 'company_id'),
+            ('organizations', 'company_id'),
+            ('tenant_databases', 'tenant_id'),
+            ('saas_invoices', 'tenant_id'),
+            ('system_sequences', 'tenant_id'),
+            ('tenant_branding', 'tenant_id'),
+            ('approval_rules', 'tenant_id'),
+            ('workflow_instances', 'tenant_id'),
+            ('vendors', 'tenant_id'),
+            ('supplier_contracts', 'tenant_id'),
+            ('purchase_requisitions', 'tenant_id'),
+            ('vendor_bills', 'both'),
+            ('procurement_tenders', 'company_id'),
+            ('vendor_portal_users', 'company_id'),
+            ('project_charters', 'tenant_id'),
+            ('execution_tasks', 'tenant_id'),
+            ('strategic_hazards', 'tenant_id'),
+            ('electronic_ledger_blocks', 'tenant_id'),
+            ('customs_manifests', 'tenant_id'),
+            ('ai_knowledge_documents', 'tenant_id'),
+            ('ai_knowledge_chunks', 'tenant_id'),
+            ('materials', 'both'),
+            ('stock_balances', 'tenant_id'),
+            ('landed_cost_allocations', 'tenant_id'),
+            ('inventory_movements', 'both'),
+            ('employees', 'tenant_id'),
+            ('employee_documents', 'tenant_id'),
+            ('attendance_logs', 'tenant_id'),
+            ('payroll_allowances', 'tenant_id'),
+            ('payroll_runs', 'tenant_id'),
+            ('hrms_attendance_logs', 'tenant_id'),
+            ('user_sessions', 'tenant_id'),
+            ('drivers', 'tenant_id'),
+            ('gps_events', 'tenant_id'),
+            ('waybills', 'tenant_id'),
+            ('tenant_subscriptions', 'tenant_id'),
+            ('accounts', 'both'),
+            ('finance_journal_entries', 'both'),
+            ('finance_journal_lines', 'tenant_id'),
+            ('journal_entries', 'both')
+        ) AS scoped_tables(table_name, scope_kind)
+    LOOP
+        table_oid := to_regclass(format('public.%I', table_scope.table_name));
+        IF table_oid IS NULL THEN
+            CONTINUE;
+        END IF;
+
+        SELECT EXISTS (
+                   SELECT 1 FROM pg_attribute
+                   WHERE attrelid = table_oid AND attname = 'tenant_id' AND NOT attisdropped
+               ),
+               EXISTS (
+                   SELECT 1 FROM pg_attribute
+                   WHERE attrelid = table_oid AND attname = 'company_id' AND NOT attisdropped
+               )
+        INTO has_tenant_id, has_company_id;
+
+        IF table_scope.scope_kind = 'id' THEN
+            scope_predicate := 'id::text = NULLIF(current_setting(''app.current_tenant_id'', true), '''')';
+        ELSIF table_scope.scope_kind = 'both' AND has_tenant_id AND has_company_id THEN
+            scope_predicate := 'tenant_id::text = NULLIF(current_setting(''app.current_tenant_id'', true), '''') '
+                'AND (company_id IS NULL OR company_id::text = NULLIF(current_setting(''app.current_tenant_id'', true), ''''))';
+        ELSIF table_scope.scope_kind = 'tenant_id' AND has_tenant_id THEN
+            scope_predicate := 'tenant_id::text = NULLIF(current_setting(''app.current_tenant_id'', true), '''')';
+        ELSIF table_scope.scope_kind = 'company_id' AND has_company_id THEN
+            scope_predicate := 'company_id::text = NULLIF(current_setting(''app.current_tenant_id'', true), '''')';
+        ELSE
+            RAISE EXCEPTION 'RLS scope column mismatch for public.%', table_scope.table_name;
+        END IF;
+
+        policy_predicate := format(
+            '(current_setting(''app.is_master_admin'', true) = ''true'' OR (%s))',
+            scope_predicate
+        );
+
+        EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', table_oid);
+        EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', table_oid);
+
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || table_scope.table_name || '_select', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || table_scope.table_name || '_insert', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || table_scope.table_name || '_update', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || table_scope.table_name || '_delete', table_oid);
+
+        EXECUTE format('CREATE POLICY %I ON %s FOR SELECT USING (%s)',
+                       'rls_' || table_scope.table_name || '_select', table_oid, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR INSERT WITH CHECK (%s)',
+                       'rls_' || table_scope.table_name || '_insert', table_oid, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR UPDATE USING (%s) WITH CHECK (%s)',
+                       'rls_' || table_scope.table_name || '_update', table_oid,
+                       policy_predicate, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR DELETE USING (%s)',
+                       'rls_' || table_scope.table_name || '_delete', table_oid, policy_predicate);
+    END LOOP;
+
+    -- Child records without tenant columns inherit the tenant boundary from a
+    -- directly scoped parent. The parent tables above also have FORCE RLS.
+    FOR child_scope IN
+        SELECT * FROM (VALUES
+            ('journal_lines', 'entry_id', 'journal_entries', 'tenant_id'),
+            ('purchase_requisition_lines', 'requisition_id', 'purchase_requisitions', 'tenant_id'),
+            ('purchase_order_lines', 'purchase_order_id', 'purchase_orders', 'company_id'),
+            ('goods_receipt_batch_logs', 'goods_receipt_id', 'goods_receipts', 'company_id'),
+            ('workflow_steps', 'instance_id', 'workflow_instances', 'tenant_id'),
+            ('tender_rfq_lines', 'tender_id', 'procurement_tenders', 'company_id'),
+            ('procurement_bids', 'tender_id', 'procurement_tenders', 'company_id'),
+            ('procurement_bid_lines', 'bid_id', 'procurement_bids', 'inherited'),
+            ('landed_cost_items', 'allocation_id', 'landed_cost_allocations', 'tenant_id'),
+            ('refresh_tokens', 'session_id', 'user_sessions', 'tenant_id'),
+            ('security_tokens', 'user_id', 'res_users', 'company_id'),
+            ('invoices', 'journal_entry_id', 'finance_journal_entries', 'tenant_id')
+        ) AS child_tables(table_name, child_column, parent_table, parent_scope_column)
+    LOOP
+        table_oid := to_regclass(format('public.%I', child_scope.table_name));
+        IF table_oid IS NULL
+           OR to_regclass(format('public.%I', child_scope.parent_table)) IS NULL THEN
+            CONTINUE;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_attribute
+            WHERE attrelid = table_oid
+              AND attname = child_scope.child_column
+              AND NOT attisdropped
+        ) THEN
+            RAISE EXCEPTION 'RLS child key mismatch for public.%.%',
+                child_scope.table_name, child_scope.child_column;
+        END IF;
+
+        IF child_scope.parent_scope_column = 'inherited' THEN
+            scope_predicate := format(
+                'EXISTS (SELECT 1 FROM public.%I parent_row WHERE parent_row.id = %I.%I)',
+                child_scope.parent_table, child_scope.table_name, child_scope.child_column
+            );
+        ELSE
+            scope_predicate := format(
+                'EXISTS (SELECT 1 FROM public.%I parent_row WHERE parent_row.id = %I.%I AND '
+                '(%s))',
+                child_scope.parent_table, child_scope.table_name, child_scope.child_column,
+                format(
+                    '(current_setting(''app.is_master_admin'', true) = ''true'' OR parent_row.%I::text = NULLIF(current_setting(''app.current_tenant_id'', true), ''''))',
+                    child_scope.parent_scope_column
+                )
+            );
+        END IF;
+
+        policy_predicate := format(
+            '(current_setting(''app.is_master_admin'', true) = ''true'' OR (%s))',
+            scope_predicate
+        );
+
+        EXECUTE format('ALTER TABLE %s ENABLE ROW LEVEL SECURITY', table_oid);
+        EXECUTE format('ALTER TABLE %s FORCE ROW LEVEL SECURITY', table_oid);
+
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || child_scope.table_name || '_select', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || child_scope.table_name || '_insert', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || child_scope.table_name || '_update', table_oid);
+        EXECUTE format('DROP POLICY IF EXISTS %I ON %s',
+                       'rls_' || child_scope.table_name || '_delete', table_oid);
+
+        EXECUTE format('CREATE POLICY %I ON %s FOR SELECT USING (%s)',
+                       'rls_' || child_scope.table_name || '_select', table_oid, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR INSERT WITH CHECK (%s)',
+                       'rls_' || child_scope.table_name || '_insert', table_oid, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR UPDATE USING (%s) WITH CHECK (%s)',
+                       'rls_' || child_scope.table_name || '_update', table_oid,
+                       policy_predicate, policy_predicate);
+        EXECUTE format('CREATE POLICY %I ON %s FOR DELETE USING (%s)',
+                       'rls_' || child_scope.table_name || '_delete', table_oid, policy_predicate);
+    END LOOP;
+END;
+$tenant_rls$;
+
+-- ==============================================================================
 -- 8. Connection Pool Scoping Helper Functions (Safeguard 2)
 -- ==============================================================================
 CREATE OR REPLACE FUNCTION set_tenant_context(p_tenant_id UUID, p_is_master BOOLEAN DEFAULT FALSE)
@@ -239,4 +498,3 @@ VALUES
     ('317f6c7c-7842-4db1-a464-ea9d5f924e22', 'fleet.meayon.com', 'oxengl_verify_3b2a88e', TRUE, 'active'),
     ('8a3e9c12-5b6d-4f7e-9123-0c4b6e8f1a23', 'portal.riyadh-aggregates.sa', 'oxengl_verify_1e4d99c', FALSE, 'validating_dns')
 ON CONFLICT (domain_name) DO NOTHING;
-
