@@ -7,8 +7,8 @@ This document establishes the official technical specification for implementing 
 ## 1. Architectural Overview
 
 OxenGL implements a hierarchical fallback mail delivery pipeline:
-1. **Tier 1 (Tenant Override):** If an active, verified tenant-specific SMTP configuration exists, outbound operational emails (invoices, purchase orders, client alerts) are dispatched using the tenant's dedicated mail server.
-2. **Tier 2 (Global Superadmin Fallback):** If no tenant override is active or if the tenant SMTP fails authentication, the system automatically falls back to the global platform-wide SMTP configuration managed by the Superadmin. System-critical alerts (password resets, subscription expiration warnings, security notifications) always evaluate through the global pool or explicit priority channels.
+1. **Tier 1 (Tenant Override):** If an active tenant-specific email provider exists, outbound operational emails (invoices, purchase orders, client alerts) are dispatched using that tenant's provider.
+2. **Tier 2 (Global Superadmin Fallback):** If no tenant override is active or tenant delivery fails, the system automatically falls back to the active platform-wide email provider managed by the Superadmin. Platform-only delivery for a system-critical alert must be requested explicitly; it is not inferred from message content.
 
 ```
                   [ Outbound Email Request ]
@@ -31,108 +31,84 @@ OxenGL implements a hierarchical fallback mail delivery pipeline:
 
 ## 2. Database Schema & Storage Specifications
 
-### Tier 1: Tenant-Specific Configurations
-Stored in a secure, RLS-protected table within `erp_db`.
+Both tiers use `communication_settings` in `erp_db`; configuration is not split between
+a tenant-only table and environment variables.
 
-* **Table Name:** `tenant_email_configs`
-* **Columns:**
-  * `id` (UUID, Primary Key)
-  * `tenant_id` (UUID, Foreign Key referencing `tenants.id`, indexed, RLS enforced)
-  * `is_active` (Boolean, default `false`)
-  * `smtp_host` (String, e.g., `smtp.mailgun.org`)
-  * `smtp_port` (Integer, e.g., `587`)
-  * `smtp_user` (String)
-  * `encrypted_password` (Text, encrypted via Fernet / AES-256)
-  * `from_email` (String, validated domain match)
-  * `from_name` (String)
-  * `use_tls` (Boolean, default `true`)
-  * `use_ssl` (Boolean, default `false`)
-  * `created_at` (Timestamp with timezone)
-  * `updated_at` (Timestamp with timezone)
-
-### Tier 2: Global System Configuration
-Stored in the global system settings table (`system_configs`) or environment variables.
-
-* **Variables / Fields:**
-  * `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (Encrypted at rest)
-  * `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`
+* **Tenant override:** `tenant_id` references `res_companies.id`. An active email row is
+  the tenant's override. Its `config` JSON contains provider-specific non-secret values
+  (for SMTP: `host`, `port`, `security`, and optional `username`); the sender is stored
+  in `sender_identity`.
+* **Platform fallback:** `tenant_id IS NULL` identifies a platform-wide setting. The
+  partial unique indexes allow at most one active setting for each channel at each
+  scope. The Superadmin manages this row from the existing Communications panel.
+* **Credentials:** Provider credentials are stored in `credentials_encrypted`; API
+  responses expose only `has_credential`. SMTP and other email providers share the
+  same model, so the platform fallback may be SMTP or SendGrid.
+* **Metadata:** `channel`, `provider`, `is_active`, timestamps, `created_by`, and
+  connectivity-test status are also stored on the row.
 
 ---
 
 ## 3. Security & Encryption Standards
 
-* **Credential Encryption:** All SMTP passwords must be encrypted using application-level AES-256 encryption (`cryptography.fernet`) before persisting to the database. Decryption occurs strictly in-memory at runtime during dispatch.
-* **Row-Level Security (RLS):** The `tenant_email_configs` table must enforce strict RLS policies ensuring tenants can only read/write their own email configurations.
-* **Domain Validation:** Tenant `from_email` domains should ideally pass SPF/DKIM verification checks where enterprise compliance requires it.
+* **Credential Encryption:** Credentials are encrypted before persistence with the
+  communication credential cipher. Decryption occurs in-memory only for delivery.
+* **Row-Level Security (RLS):** `communication_settings` is registered as a
+  `tenant_id`-scoped table in both RLS setup scripts. Policies are enabled and forced:
+  ordinary tenant sessions can access only rows matching
+  `app.current_tenant_id`; the dedicated `oxengl_platform` database role bypasses RLS
+  for authorized platform operations. Dispatcher queries must still filter by the
+  exact tenant id or `tenant_id IS NULL`.
+* **API isolation:** Tenant setting routes derive scope from the authenticated user's
+  `company_id`; clients cannot choose another tenant id. Superadmin configuration
+  routes require platform authorization, use the platform database session, and only
+  modify platform-scoped rows.
+* **Domain Validation:** Tenant sender domains should ideally pass SPF/DKIM checks
+  where enterprise compliance requires it.
 
 ---
 
 ## 4. Backend Dispatch Logic & Fallback Mechanism
 
-Implement the dynamic email dispatcher service in `backend/app/services/email_service.py`:
+The dispatcher resolves an active tenant email setting first, then the active
+platform email setting. If tenant delivery is rejected or fails (including SMTP
+authentication failure), it attempts the platform setting. If the platform attempt
+also fails, dispatch returns an explicit safe delivery error; provider secrets and
+raw provider exception details are not returned or logged. If there is no tenant
+override, the platform setting is used directly.
 
-```python
-from sqlalchemy.orm import Session
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema
-from backend.app.core.security import decrypt_value
-from backend.app.models.tenant_email import TenantEmailConfig
-from backend.app.core.config import settings
+Background delivery uses the dedicated `PlatformSessionLocal` connection so it can
+read both the tenant-scoped row and the `tenant_id IS NULL` fallback despite RLS.
+Queries remain explicitly scoped. If platform DB access is not configured, delivery
+fails explicitly rather than silently returning a success-shaped result.
 
-async def get_mail_config(tenant_id: str, db: Session) -> ConnectionConfig:
-    if tenant_id:
-        tenant_config = db.query(TenantEmailConfig).filter_by(tenant_id=tenant_id, is_active=True).first()
-        if tenant_config:
-            try:
-                decrypted_pass = decrypt_value(tenant_config.encrypted_password)
-                return ConnectionConfig(
-                    MAIL_USERNAME=tenant_config.smtp_user,
-                    MAIL_PASSWORD=decrypted_pass,
-                    MAIL_FROM=tenant_config.from_email,
-                    MAIL_PORT=tenant_config.smtp_port,
-                    MAIL_SERVER=tenant_config.smtp_host,
-                    MAIL_FROM_NAME=tenant_config.from_name,
-                    MAIL_TLS=tenant_config.use_tls,
-                    MAIL_SSL=tenant_config.use_ssl,
-                    USE_CREDENTIALS=True,
-                    VALIDATE_CERTS=True
-                )
-            except Exception as e:
-                # Log decryption/connection failure and fall back to global
-                logger.error(f"Tenant SMTP configuration failed for {tenant_id}: {e}")
-
-    # Fallback to Superadmin Global SMTP
-    return ConnectionConfig(
-        MAIL_USERNAME=settings.SMTP_USER,
-        MAIL_PASSWORD=settings.SMTP_PASSWORD,
-        MAIL_FROM=settings.SMTP_FROM_EMAIL,
-        MAIL_PORT=settings.SMTP_PORT,
-        MAIL_SERVER=settings.SMTP_HOST,
-        MAIL_FROM_NAME=settings.SMTP_FROM_NAME,
-        MAIL_TLS=settings.SMTP_TLS,
-        MAIL_SSL=settings.SMTP_SSL,
-        USE_CREDENTIALS=True,
-        VALIDATE_CERTS=True
-    )
-```
+The implementation is `backend/app/services/communication_service.py`; email OTPs,
+recovery messages, and other notification flows use its `send_message` dispatcher.
+SMS resolution remains on its existing channel path.
 
 ---
 
 ## 5. API Endpoint Specifications
 
-### Superadmin Endpoints (`/api/v1/superadmin/settings/smtp`)
-* `GET /`: Retrieve current global SMTP settings (passwords masked).
-* `PUT /`: Update global system SMTP parameters and test connection.
-* `POST /test`: Trigger a test email dispatch using global settings.
+The implemented endpoints use the shared Communications API:
 
-### Tenant Endpoints (`/api/v1/tenant/settings/smtp`)
-* `GET /`: Retrieve tenant's custom SMTP configuration status (password masked).
-* `POST /`: Create or update custom tenant SMTP settings (encrypts password on save).
-* `POST /test`: Send a test email using the tenant's custom configuration.
-* `DELETE /`: Disable custom SMTP override and revert entirely to global fallback.
+* **Tenant:** `/api/v1/tenant-control/communications` supports list, create, update,
+  delete, and `/{setting_id}/test`; scope comes from the authenticated tenant.
+* **Superadmin:** `/api/v1/superadmin/communications` supports list, create, update,
+  delete, and `/{setting_id}/test`. Platform defaults have a null `tenant_id`;
+  tenant rows are visible for oversight but cannot be modified through platform
+  setting mutations.
+* Both APIs mask credentials, accept write-only credential updates, validate
+  provider configuration, and audit administrative/configuration actions.
 
 ---
 
 ## 6. Frontend UI Considerations
 
-* **Superadmin Panel:** A dedicated Settings tab containing input fields for Host, Port, Username, Password (with eye toggle), From Email, and a **"Test Global SMTP Connection"** action button.
-* **Tenant Panel:** A Workspace Integration / Mail Settings card allowing tenant administrators to toggle "Use Custom SMTP Server", fill in their corporate mail gateway parameters, test connectivity, and view connection status indicators (Active / Error / Fallback).
+* **Superadmin Panel:** The existing Superadmin Communications panel manages platform
+  defaults and inspects tenant overrides. Select the platform scope to configure,
+  activate, edit, and test global email delivery. Tenant rows are read-only there.
+* **Tenant Panel:** The tenant Communications module manages the workspace's email
+  and SMS settings, including SMTP host, port, username, write-only password,
+  activation, and test delivery. Deleting or deactivating the tenant email override
+  returns delivery to the platform fallback.

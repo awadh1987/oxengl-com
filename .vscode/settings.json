@@ -20,5 +20,6 @@
     "python.terminal.activateEnvironment": true,
     "chat.editing.autoAcceptDelay": 3,
     "files.autoSave": "afterDelay",
-    "editor.gotoLocation.alternativeReferenceCommand": "editor.action.referenceSearch.trigger"
+    "editor.gotoLocation.alternativeReferenceCommand": "editor.action.referenceSearch.trigger",
+    "chat.permissions.default": "autoApprove"
 }

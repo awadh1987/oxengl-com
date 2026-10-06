@@ -297,10 +297,65 @@ async def send_message(
 ) -> None:
     owned_db = db is None
     if db is None:
-        from backend.database import SessionLocal
-        db = SessionLocal()
+        from backend.database import PlatformSessionLocal
+
+        if PlatformSessionLocal is None:
+            raise CommunicationError("Platform communication database access is not configured.")
+        db = PlatformSessionLocal()
     try:
-        setting = resolve_setting(db, tenant_id, channel)
+        if tenant_id is not None and not isinstance(tenant_id, uuid.UUID):
+            try:
+                tenant_id = uuid.UUID(str(tenant_id))
+            except (ValueError, TypeError, AttributeError):
+                raise CommunicationError("Tenant communication scope is invalid.") from None
+
+        if channel == "email" and tenant_id is not None:
+            tenant_setting = db.scalar(
+                select(CommunicationSetting).where(
+                    CommunicationSetting.tenant_id == tenant_id,
+                    CommunicationSetting.channel == "email",
+                    CommunicationSetting.is_active.is_(True),
+                )
+            )
+            if tenant_setting is not None:
+                try:
+                    await deliver(tenant_setting, destination, body)
+                    return
+                except CommunicationError:
+                    platform_setting = db.scalar(
+                        select(CommunicationSetting).where(
+                            CommunicationSetting.tenant_id.is_(None),
+                            CommunicationSetting.channel == "email",
+                            CommunicationSetting.is_active.is_(True),
+                        )
+                    )
+                    if platform_setting is None:
+                        raise
+                    logger.warning(
+                        "Tenant email delivery failed; attempting platform fallback "
+                        "(tenant_id=%s tenant_setting_id=%s provider=%s)",
+                        tenant_id,
+                        tenant_setting.id,
+                        tenant_setting.provider,
+                    )
+                    try:
+                        await deliver(platform_setting, destination, body)
+                        return
+                    except CommunicationError:
+                        logger.error(
+                            "Tenant and platform email delivery both failed "
+                            "(tenant_id=%s tenant_setting_id=%s platform_setting_id=%s)",
+                            tenant_id,
+                            tenant_setting.id,
+                            platform_setting.id,
+                        )
+                        raise CommunicationError(
+                            "Email delivery failed through both tenant and platform providers."
+                        ) from None
+            else:
+                setting = resolve_setting(db, tenant_id, channel)
+        else:
+            setting = resolve_setting(db, tenant_id, channel)
         await deliver(setting, destination, body)
     finally:
         if owned_db:

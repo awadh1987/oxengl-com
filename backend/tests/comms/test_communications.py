@@ -139,6 +139,49 @@ def test_provider_resolution_prefers_tenant_then_platform_and_fails_closed(facto
             svc.resolve_setting(db, tenants["A"], "sms")
 
 
+def test_email_dispatch_falls_back_to_platform_when_tenant_delivery_fails(factory, tenants, monkeypatch):
+    platform_id = add_setting(factory, provider="sendgrid")
+    tenant_id = add_setting(
+        factory, tenant_id=tenants["A"], provider="smtp",
+        sender="mail@tenant.example",
+        config={"host": "mail.example", "port": 587, "security": "starttls"},
+        credentials={"password": "tenant-password"},
+    )
+    attempted = []
+
+    async def deliver(setting, destination, body):
+        attempted.append((setting.id, destination, body))
+        if setting.id == tenant_id:
+            raise svc.CommunicationError("Tenant provider did not accept the message.")
+
+    monkeypatch.setattr(svc, "deliver", deliver)
+    with factory() as db:
+        asyncio.run(svc.send_message(
+            "email", "recipient@example.test", "notification",
+            tenant_id=tenants["A"], db=db,
+        ))
+
+    assert [call[0] for call in attempted] == [tenant_id, platform_id]
+    assert all(call[1:] == ("recipient@example.test", "notification") for call in attempted)
+
+
+def test_email_dispatch_uses_platform_setting_when_tenant_has_no_override(factory, tenants, monkeypatch):
+    platform_id = add_setting(factory, provider="sendgrid")
+    attempted = []
+
+    async def deliver(setting, destination, body):
+        attempted.append(setting.id)
+
+    monkeypatch.setattr(svc, "deliver", deliver)
+    with factory() as db:
+        asyncio.run(svc.send_message(
+            "email", "recipient@example.test", "notification",
+            tenant_id=tenants["A"], db=db,
+        ))
+
+    assert attempted == [platform_id]
+
+
 def test_tenant_routes_isolate_rows_and_never_expose_credentials(factory, tenants, monkeypatch, caplog):
     tenant_a, tenant_b = tenants["A"], tenants["B"]
     secret = "SG.secret-MUST-NOT-LEAK"
