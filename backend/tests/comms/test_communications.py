@@ -230,15 +230,22 @@ def test_tenant_create_ignores_tenant_id_and_encrypts_write_only_credential(fact
 
 def test_superadmin_cannot_modify_tenant_setting_and_sees_all_read_only(factory, tenants, monkeypatch):
     tenant_row_id = add_setting(factory, tenant_id=tenants["A"], provider="sendgrid")
+    platform_row_id = add_setting(factory, provider="sendgrid")
     admin = types.SimpleNamespace(id=uuid.uuid4(), email="root@example.test", role="Super_Admin", company_id=None)
     client = make_client(factory, admin, monkeypatch, super_admin=True)
     response = client.get("/api/v1/superadmin/communications")
     assert response.status_code == 200 and any(item["id"] == str(tenant_row_id) for item in response.json())
     denied = client.delete(f"/api/v1/superadmin/communications/{tenant_row_id}")
     assert denied.status_code == 404
+    deleted = client.delete(f"/api/v1/superadmin/communications/{platform_row_id}")
+    assert deleted.status_code == 200
     with factory() as db:
         assert db.get(models.CommunicationSetting, tenant_row_id) is not None
-        assert any(row.action == "COMMUNICATION_SETTING_ACCESS_DENIED" for row in db.scalars(select(models.PlatformAuditLog)).all())
+        assert db.get(models.CommunicationSetting, platform_row_id) is None
+        assert any(
+            row.action == "COMMUNICATION_SETTING_ACCESS_DENIED" and row.outcome == "DENIED"
+            for row in db.scalars(select(models.PlatformAuditLog)).all()
+        )
 
 
 def test_smtp_adapter_calls_tls_login_and_send(monkeypatch):

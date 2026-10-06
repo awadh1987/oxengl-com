@@ -321,7 +321,18 @@ def update_platform_setting(setting_id: str, payload: SettingUpdate, request: Re
 
 @superadmin_router.delete("/{setting_id}")
 def delete_platform_setting(setting_id: str, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
-    row = _setting_or_404(db, request, user, setting_id, None)
+    parsed_id = _uuid(setting_id)
+    row = db.get(CommunicationSetting, parsed_id) if parsed_id is not None else None
+    if row is None or row.tenant_id is not None:
+        _audit(
+            db, request, user,
+            action="COMMUNICATION_SETTING_ACCESS_DENIED",
+            outcome="DENIED",
+            tenant_id=None,
+            setting_id=parsed_id,
+        )
+        db.commit()
+        raise HTTPException(status_code=404, detail="Communication setting not found.")
     deleted_id = svc.delete_setting(db, row)
     _audit(db, request, user, action="COMMUNICATION_SETTING_DELETED", outcome="SUCCESS", tenant_id=None, setting_id=deleted_id)
     db.commit()
