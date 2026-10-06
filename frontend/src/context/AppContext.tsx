@@ -1399,7 +1399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const isCOO = userRole === 'COO';
   const isExecutive = isAdmin || isCOO;
   const canAccessFinancials = isAdmin || isCOO || userRole === 'Accountant';
-  const canEditOperations = isAdmin || isCOO || userRole === 'Accountant' || userRole === 'Data_Entry';
+  const canEditOperations = isAdmin || isCOO || userRole === 'Owner' || userRole === 'Accountant' || userRole === 'Data_Entry';
   const canApproveEdits = isAdmin || isCOO;
   const canApproveInvoices = isAdmin; // strictly CEO/Admin
   const canApproveVouchers = isAdmin; // strictly CEO/Admin for PV & RV
