@@ -194,6 +194,17 @@ def test_zero_slug_login_flow(client, setup_phase2_tenant):
     assert "workspace_slug is required" in neutral_res.json().get("detail", "")
 
 
+def _admin_headers(tenant_id):
+    from backend.database import SessionLocal
+    from backend.tests.auth_helpers import tenant_admin_headers
+
+    db = SessionLocal()
+    try:
+        return tenant_admin_headers(db, tenant_id)
+    finally:
+        db.close()
+
+
 def test_custom_domain_registration_and_invalidation(client, setup_phase2_tenant):
     """Verifies registering a new custom domain updates PostgreSQL and clears routing cache."""
     tenant_id = setup_phase2_tenant["tenant_id"]
@@ -203,6 +214,7 @@ def test_custom_domain_registration_and_invalidation(client, setup_phase2_tenant
     reg_res = client.post(
         f"/api/v1/tenant/control/domains?tenant_id={tenant_id}",
         json={"domain_name": new_domain},
+        headers=_admin_headers(tenant_id),
     )
     assert reg_res.status_code == 201
     assert reg_res.json()["domain"]["domain_name"] == new_domain
@@ -216,6 +228,7 @@ def test_custom_domain_registration_and_invalidation(client, setup_phase2_tenant
     # Verify removal
     del_res = client.delete(
         f"/api/v1/tenant/control/domains/{new_domain}?tenant_id={tenant_id}",
+        headers=_admin_headers(tenant_id),
     )
     assert del_res.status_code == 200
 

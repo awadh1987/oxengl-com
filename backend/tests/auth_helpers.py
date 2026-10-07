@@ -2,7 +2,7 @@
 import uuid
 
 from backend.app.main import create_session_token
-from backend.models import ResCompany, ResUser
+from backend.models import MasterTenant, ResCompany, ResUser
 
 _ADMIN_ROLES = ("Admin", "Owner")
 
@@ -14,6 +14,11 @@ def tenant_admin_headers(db, company_id, *, role: str = "Admin") -> dict:
     The caller's own tenant hints are included so scope checks see a matching tenant.
     """
     company_id = uuid.UUID(str(company_id))
+    if db.get(ResCompany, company_id) is None:
+        master = db.get(MasterTenant, company_id)
+        if master is not None:
+            db.add(ResCompany(id=company_id, name=master.name, slug=master.slug, is_active=True))
+            db.commit()
     user = (
         db.query(ResUser)
         .filter(ResUser.company_id == company_id, ResUser.is_active.is_(True), ResUser.role.in_(_ADMIN_ROLES))

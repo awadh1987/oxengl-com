@@ -10,6 +10,8 @@ Covers:
 7. Tenant Control Verification (/domains/{domain_id}/verify) and SSL telemetry
 8. Production Caddyfile Validation
 """
+from backend.tests.auth_helpers import tenant_admin_headers
+import shutil
 import uuid
 import subprocess
 import pytest
@@ -260,7 +262,7 @@ def test_tenant_control_verify_endpoint(client, db_session):
 
         resp = client.post(
             f"/api/v1/tenant/control/domains/{domain_name}/verify",
-            headers={"X-Tenant-ID": str(tenant_id)},
+            headers=tenant_admin_headers(db_session, tenant_id),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -277,6 +279,7 @@ def test_tenant_control_verify_endpoint(client, db_session):
         db_session.commit()
 
 
+@pytest.mark.skipif(shutil.which("caddy") is None, reason="caddy binary is not installed")
 def test_caddyfile_syntax_validation():
     """Validates that Caddyfile passes formal validation by the installed Caddy 2.x binary."""
     result = subprocess.run(

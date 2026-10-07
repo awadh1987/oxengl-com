@@ -211,6 +211,7 @@ def test_employee_response_preserves_legacy_aliases_and_computes_wps_total():
         food_other_allowance=Decimal("200"),
         hire_date=date(2026, 10, 4),
         is_active=True,
+        custom_attributes={},
     )
     response = EmployeeResponse.model_validate(employee)
 

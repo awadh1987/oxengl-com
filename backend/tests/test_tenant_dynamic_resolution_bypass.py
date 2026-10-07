@@ -168,7 +168,7 @@ def test_get_tenant_context_super_admin_bypass(db_session, sample_companies):
     assert request.state.company_id == comp_beta.id
 
 
-def test_null_company_id_auto_assignment_and_fallback(db_session, sample_companies):
+def test_null_company_id_user_is_rejected_not_auto_assigned(db_session, sample_companies):
     comp_alpha, comp_beta = sample_companies
 
     # User with NULL company_id
@@ -195,18 +195,17 @@ def test_null_company_id_auto_assignment_and_fallback(db_session, sample_compani
     request.url.path = "/api/v1/bills"
     request.method = "GET"
 
-    # User authenticates against comp_beta
-    resolved_cid = main_get_active_company_id(
-        request=request,
-        x_company_id=str(comp_beta.id),
-        database=db_session,
-        current_user=orphan_user,
-    )
-
-    assert resolved_cid == comp_beta.id
-    # Database record must now be persistently assigned to comp_beta!
+    # Unbound users must be rejected, never silently auto-assigned to a tenant.
+    with pytest.raises(HTTPException) as exc:
+        main_get_active_company_id(
+            request=request,
+            x_company_id=str(comp_beta.id),
+            database=db_session,
+            current_user=orphan_user,
+        )
+    assert exc.value.status_code == 403
     db_session.refresh(orphan_user)
-    assert orphan_user.company_id == comp_beta.id
+    assert orphan_user.company_id is None
 
 
 def test_standard_user_cross_tenant_access_blocked(db_session, sample_companies):

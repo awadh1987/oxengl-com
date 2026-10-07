@@ -20,7 +20,7 @@ for _key_name in (
     "DATA_RESIDENCY_KEY", "JWT_SECRET", "JWT_SECRET_MASTER", "JWT_SECRET_TENANT",
     "JWT_SECRET_KEY", "SECRET_KEY",
 ):
-    os.environ[_key_name] = secrets.token_hex(32)
+    os.environ.setdefault(_key_name, secrets.token_hex(32))
 
 from backend import models  # noqa: E402
 from backend.app.api.v1 import communications as api  # noqa: E402

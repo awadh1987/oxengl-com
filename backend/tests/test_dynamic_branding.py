@@ -22,18 +22,31 @@ import backend.models as models
 client = TestClient(app)
 
 
+_ORIGINAL_MASTER_STATE = {}
+
+
 def _make_master_user(role: str = "admin", is_active: bool = True):
+    """Master-plane tokens are only valid for the designated super admin identity, so reuse/seed that row."""
+    from backend.two_tier_auth import SUPER_ADMIN_EMAIL
+
     db = SessionLocal()
     try:
-        user = models.MasterUser(
-            id=uuid.uuid4(),
-            email=f"branding-test-{uuid.uuid4().hex[:8]}@oxengl.test",
-            full_name="Branding Test Operator",
-            password_hash="!unusable",
-            role=role,
-            is_active=is_active,
-        )
-        db.add(user)
+        user = db.query(models.MasterUser).filter(models.MasterUser.email == SUPER_ADMIN_EMAIL).first()
+        if user is None:
+            user = models.MasterUser(
+                id=uuid.uuid4(),
+                email=SUPER_ADMIN_EMAIL,
+                full_name="Branding Test Operator",
+                password_hash="!unusable",
+                role=role,
+                is_active=is_active,
+            )
+            db.add(user)
+            _ORIGINAL_MASTER_STATE[user.id] = None
+        else:
+            _ORIGINAL_MASTER_STATE.setdefault(user.id, (user.role, user.is_active))
+            user.role = role
+            user.is_active = is_active
         db.commit()
         db.refresh(user)
         token = issue_two_tier_jwt(tier="master", user_id=user.id, identity=user.email, role=role)
@@ -43,9 +56,16 @@ def _make_master_user(role: str = "admin", is_active: bool = True):
 
 
 def _delete_master_user(user_id):
+    """Remove the seeded row, or restore the pre-existing super admin's role and status."""
     db = SessionLocal()
     try:
-        db.query(models.MasterUser).filter(models.MasterUser.id == user_id).delete()
+        original = _ORIGINAL_MASTER_STATE.pop(user_id, None)
+        if original is None:
+            db.query(models.MasterUser).filter(models.MasterUser.id == user_id).delete()
+        else:
+            db.query(models.MasterUser).filter(models.MasterUser.id == user_id).update(
+                {"role": original[0], "is_active": original[1]}
+            )
         db.commit()
     finally:
         db.close()

@@ -310,7 +310,7 @@ def post_invoice_to_ledger(
     # Multi-tenant and company isolation check
     check_cid = customer_invoice.company_id if customer_invoice else getattr(invoice, "company_id", None)
     if check_cid:
-        context.check_access(target_company_id=check_cid)
+        context.check_access(None, target_company_id=check_cid)
 
     # 2. Check already posted
     if invoice and invoice.is_posted:
@@ -501,7 +501,7 @@ def get_invoice_details(
 
     cust_inv = db.query(CustomerInvoice).filter(CustomerInvoice.invoice_number == invoice.invoice_number).first()
     if cust_inv and cust_inv.company_id:
-        context.check_access(target_company_id=cust_inv.company_id)
+        context.check_access(None, target_company_id=cust_inv.company_id)
     elif getattr(invoice, "journal_entry_id", None):
         je = db.query(FinanceJournalEntry).filter(FinanceJournalEntry.id == invoice.journal_entry_id).first()
         if je and je.company_id:

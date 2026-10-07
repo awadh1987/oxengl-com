@@ -3,6 +3,7 @@
 Automated Integration and Architectural Verification Suite for Phase 1:
 Private External Database Hosting, Dynamic Connection Pooling, and In-App Migration.
 """
+from backend.tests.auth_helpers import tenant_admin_headers
 import uuid
 import pytest
 from sqlalchemy import create_engine, text
@@ -214,12 +215,7 @@ def test_tenant_control_api_database_endpoints():
         db.add_all([company, tenant])
         db.commit()
 
-        token = create_access_token(data={"sub": f"admin@{random_str}.com", "company_id": str(test_company_id), "role": "admin"})
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "x-tenant-id": str(test_company_id),
-            "x-company-id": str(test_company_id),
-        }
+        headers = tenant_admin_headers(db, test_company_id)
 
         # 1. GET /database/config
         resp = client.get("/api/v1/tenant/control/database/config", headers=headers)

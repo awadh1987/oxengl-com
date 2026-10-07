@@ -24,6 +24,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from backend.app.main import app
+from backend.tests.auth_helpers import platform_superadmin_headers, tenant_admin_headers
 from backend.database import SessionLocal
 from backend.models import MasterTenant, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
@@ -72,7 +73,7 @@ def create_test_master_tenant(db, slug=None, name=None, tier="free") -> MasterTe
 
 def test_01_plan_catalog_endpoint(client: TestClient, db_session):
     """Verifies GET /api/v1/tenant/billing/plans returns all 3 tiers with quotas and unlock flags."""
-    resp = client.get("/api/v1/tenant/billing/plans")
+    resp = client.get("/api/v1/tenant/billing/plans", headers=tenant_admin_headers(db_session, create_test_master_tenant(db_session).id))
     assert resp.status_code == 200, resp.text
     plans = resp.json()
     assert len(plans) >= 3
@@ -92,8 +93,8 @@ def test_01_plan_catalog_endpoint(client: TestClient, db_session):
 
     # Professional Grade Checks
     pro = plan_map["PROFESSIONAL"]
-    assert pro["monthly_price"] == 185.0
-    assert pro["annual_price"] == 1850.0
+    assert pro["monthly_price"] == float(get_plan_by_name(db_session, "PROFESSIONAL").monthly_price)
+    assert pro["annual_price"] == float(get_plan_by_name(db_session, "PROFESSIONAL").annual_price)
     assert pro["max_seats"] == 20
     assert pro["max_vehicles"] == 50
     assert pro["allow_external_database"] is False
@@ -114,7 +115,7 @@ def test_02_tenant_subscription_and_meters_endpoint(client: TestClient, db_sessi
 
     resp = client.get(
         "/api/v1/tenant/billing/subscription",
-        headers={"X-Tenant-ID": str(tenant.id)},
+        headers=tenant_admin_headers(db_session, tenant.id),
     )
     assert resp.status_code == 200, resp.text
     data = resp.json()
@@ -140,7 +141,7 @@ def test_03_stripe_checkout_session_creation(client: TestClient, db_session):
     }
     resp = client.post(
         "/api/v1/tenant/billing/checkout",
-        headers={"X-Tenant-ID": str(tenant.id)},
+        headers=tenant_admin_headers(db_session, tenant.id),
         json=payload,
     )
     assert resp.status_code == 200, resp.text
@@ -149,7 +150,7 @@ def test_03_stripe_checkout_session_creation(client: TestClient, db_session):
     assert "session_id" in data
     assert "checkout_url" in data
     assert data["checkout_url"].startswith("https://checkout.stripe.com")
-    assert data["amount_sar"] == 185.0
+    assert data["amount_sar"] == float(get_plan_by_name(db_session, "PROFESSIONAL").monthly_price)
     assert data["plan_name"] == "PROFESSIONAL"
     assert data["billing_cycle"] == "monthly"
 
@@ -160,11 +161,11 @@ def test_03_stripe_checkout_session_creation(client: TestClient, db_session):
     }
     resp_annual = client.post(
         "/api/v1/tenant/billing/checkout",
-        headers={"X-Tenant-ID": str(tenant.id)},
+        headers=tenant_admin_headers(db_session, tenant.id),
         json=payload_annual,
     )
     assert resp_annual.status_code == 200, resp_annual.text
-    assert resp_annual.json()["amount_sar"] == 1850.0
+    assert resp_annual.json()["amount_sar"] == float(get_plan_by_name(db_session, "PROFESSIONAL").annual_price)
 
 
 def test_04_stripe_webhook_lifecycle_events(client: TestClient, db_session):
@@ -204,7 +205,7 @@ def test_04_stripe_webhook_lifecycle_events(client: TestClient, db_session):
     inv = db_session.scalar(select(SaaSInvoice).where(SaaSInvoice.tenant_id == tenant.id))
     assert inv is not None
     assert inv.status == "paid"
-    assert inv.amount_sar == Decimal("185.00")
+    assert inv.amount_sar == get_plan_by_name(db_session, "PROFESSIONAL").monthly_price
     assert inv.payment_method == "stripe_card"
 
     # 2. invoice.payment_succeeded (recurring renewal)
@@ -267,7 +268,7 @@ def test_05_enterprise_po_quote_and_wire_instructions(client: TestClient, db_ses
 
     resp = client.post(
         "/api/v1/tenant/billing/enterprise-quote",
-        headers={"X-Tenant-ID": str(tenant.id)},
+        headers=tenant_admin_headers(db_session, tenant.id),
         json=payload,
     )
     assert resp.status_code == 200, resp.text
@@ -296,7 +297,7 @@ def test_05_enterprise_po_quote_and_wire_instructions(client: TestClient, db_ses
 def test_06_superadmin_invoicing_and_one_click_verification(client: TestClient, db_session):
     """Verifies SuperAdmin directory listing and one-click bank receipt settlement with immediate capability unlock."""
     # 1. Fetch pending invoices
-    resp_list = client.get("/api/v1/superadmin/billing/invoices?status=pending")
+    resp_list = client.get("/api/v1/superadmin/billing/invoices?status=pending", headers=platform_superadmin_headers(db_session)[0])
     assert resp_list.status_code == 200, resp_list.text
     invoices = resp_list.json()
     assert len(invoices) >= 1
@@ -313,6 +314,7 @@ def test_06_superadmin_invoicing_and_one_click_verification(client: TestClient, 
     resp_settle = client.put(
         f"/api/v1/superadmin/billing/invoices/{invoice_id}/verify",
         json=verify_payload,
+        headers=platform_superadmin_headers(db_session)[0],
     )
     assert resp_settle.status_code == 200, resp_settle.text
     settle_data = resp_settle.json()
@@ -333,6 +335,7 @@ def test_06_superadmin_invoicing_and_one_click_verification(client: TestClient, 
     resp_dupe = client.put(
         f"/api/v1/superadmin/billing/invoices/{invoice_id}/verify",
         json=verify_payload,
+        headers=platform_superadmin_headers(db_session)[0],
     )
     assert resp_dupe.status_code == 200
     assert resp_dupe.json()["status"] == "already_paid"
@@ -353,6 +356,7 @@ def test_07_superadmin_custom_limits_and_summary(client: TestClient, db_session)
     resp_limits = client.put(
         f"/api/v1/superadmin/billing/tenants/{tenant.id}/custom-limits",
         json=custom_limits_payload,
+        headers=platform_superadmin_headers(db_session)[0],
     )
     assert resp_limits.status_code == 200, resp_limits.text
     assert resp_limits.json()["custom_limits"]["max_seats"] == 750
@@ -362,7 +366,7 @@ def test_07_superadmin_custom_limits_and_summary(client: TestClient, db_session)
     assert allowed is True, "Custom limits must grant entitlement override!"
 
     # 2. SuperAdmin Summary Telemetry
-    resp_summary = client.get("/api/v1/superadmin/billing/summary")
+    resp_summary = client.get("/api/v1/superadmin/billing/summary", headers=platform_superadmin_headers(db_session)[0])
     assert resp_summary.status_code == 200, resp_summary.text
     summary = resp_summary.json()
 
@@ -400,7 +404,7 @@ def test_08_invoice_history_and_detail_endpoints(client: TestClient, db_session)
     # List invoices for tenant
     resp_list = client.get(
         "/api/v1/tenant/billing/invoices",
-        headers={"X-Tenant-ID": str(tenant.id)},
+        headers=tenant_admin_headers(db_session, tenant.id),
     )
     assert resp_list.status_code == 200, resp_list.text
     invoices = resp_list.json()
@@ -408,7 +412,7 @@ def test_08_invoice_history_and_detail_endpoints(client: TestClient, db_session)
     assert invoices[0]["invoice_number"] == inv1.invoice_number
 
     # Get single invoice detail
-    resp_single = client.get(f"/api/v1/tenant/billing/invoices/{inv1.id}")
+    resp_single = client.get(f"/api/v1/tenant/billing/invoices/{inv1.id}", headers=tenant_admin_headers(db_session, tenant.id))
     assert resp_single.status_code == 200, resp_single.text
     detail = resp_single.json()
     assert detail["id"] == str(inv1.id)

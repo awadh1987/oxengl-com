@@ -15,6 +15,7 @@ Verifies:
 
 from __future__ import annotations
 
+import importlib.util
 import uuid
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
@@ -494,6 +495,15 @@ def test_read_only_user_cannot_mutate_documents(cv_test_env):
     assert "Write access forbidden" in res_del.text
 
 
+def _weasyprint_usable() -> bool:
+    try:
+        import weasyprint  # noqa: F401
+    except Exception:
+        return False
+    return True
+
+
+@pytest.mark.skipif(not _weasyprint_usable(), reason="WeasyPrint or its system libraries are unavailable")
 def test_corporate_cv_pdf_download_success(cv_test_env):
     """
     Step 3 Test: Verifies GET /api/v1/corporate/cv-download generates
@@ -517,6 +527,7 @@ def test_corporate_cv_pdf_download_success(cv_test_env):
     assert pdf_bytes.startswith(b"%PDF-"), "Streamed response does not start with %PDF- header"
 
 
+@pytest.mark.skipif(not _weasyprint_usable(), reason="WeasyPrint or its system libraries are unavailable")
 def test_corporate_cv_pdf_preview_inline(cv_test_env):
     """
     Step 3 Test: Verifies preview=true sets inline disposition header for browser viewing.
