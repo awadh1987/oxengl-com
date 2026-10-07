@@ -9,8 +9,6 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine, event, select
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -31,33 +29,49 @@ ALL_TITLES = [title for titles in JOB_TITLE_DIRECTORY.values() for title in titl
 MANDOOB_FULL = "HR Generalist / Government Relations Officer (Mandoob)"
 
 
-@compiles(JSONB, "sqlite")
-def _jsonb_sqlite(type_, compiler, **kw):  # test-only DDL shim
-    return "JSON"
-
-
-# --------------------------------------------------------------------------------------
-# Fixtures
-# --------------------------------------------------------------------------------------
-
 @pytest.fixture()
 def engine():
-    eng = create_engine(
-        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
-    )
-    with eng.begin() as conn:
-        # Minimal stand-in: the real table uses PostgreSQL-only defaults; only `id` is queried.
-        conn.exec_driver_sql("CREATE TABLE res_companies (id CHAR(32) PRIMARY KEY)")
-    models.Base.metadata.create_all(
-        eng,
-        tables=[
-            models.ResUser.__table__,
-            Employee.__table__,
-            models.PlatformAuditLog.__table__,
-        ],
-    )
-    yield eng
-    eng.dispose()
+    """PostgreSQL engine whose tables live in the connection's pg_temp schema.
+
+    pg_temp shadows the real tables for this single pinned connection and vanishes
+    when it closes, so the shared database is never modified.
+    """
+    from backend.database import DATABASE_URL
+
+    eng = create_engine(DATABASE_URL, poolclass=StaticPool)
+
+    @event.listens_for(eng, "connect")
+    def _use_pg_temp(dbapi_conn, _record):
+        cur = dbapi_conn.cursor()
+        cur.execute("SET search_path TO pg_temp, public")
+        cur.close()
+        dbapi_conn.commit()
+
+    try:
+        with eng.begin() as conn:
+            # Minimal stand-in: only `id` is queried from the tenant table.
+            conn.exec_driver_sql("CREATE TABLE pg_temp.res_companies (id UUID PRIMARY KEY)")
+        models.Base.metadata.create_all(
+            eng,
+            tables=[
+                models.ResUser.__table__,
+                Employee.__table__,
+                models.PlatformAuditLog.__table__,
+            ],
+            checkfirst=False,
+        )
+        with eng.begin() as conn:
+            # Tests seed synthetic tenant/user ids, so drop FKs among the scratch tables.
+            rows = conn.exec_driver_sql(
+                "SELECT c.conrelid::regclass::text, c.conname FROM pg_constraint c "
+                "JOIN pg_class t ON t.oid = c.conrelid "
+                "WHERE c.contype = 'f' AND t.relpersistence = 't'"
+            ).all()
+            for table, name in rows:
+                conn.exec_driver_sql(f'ALTER TABLE {table} DROP CONSTRAINT "{name}"')
+        yield eng
+    finally:
+        eng.dispose()
 
 
 @pytest.fixture()

@@ -88,7 +88,7 @@ def sample_branding_tenant():
         db.refresh(org)
 
         branding = models.TenantBranding(
-            tenant_id=org.id,
+            tenant_id=company.id,
             brand_name=company.name,
             logo_url=company.logo_url,
             favicon_url="https://cdn.oxengl.me/favicons/test-fav.ico",
@@ -184,7 +184,7 @@ def test_get_tenant_branding_via_header(sample_branding_tenant):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["tenant_id"] == tenant["org_id"]
+    assert data["tenant_id"] == tenant["company_id"]
     assert data["brand_name"] == tenant["brand_name"]
     assert data["primary_color"] == tenant["primary_color"]
     assert data["accent_color"] == tenant["accent_color"]
@@ -198,7 +198,7 @@ def test_get_tenant_branding_via_query_uuid(sample_branding_tenant):
     response = client.get(f"/api/v1/tenant/branding?tenant_id={cid_str}")
     assert response.status_code == 200
     data = response.json()
-    assert data["tenant_id"] == tenant["org_id"]
+    assert data["tenant_id"] == tenant["company_id"]
     assert data["brand_name"] == tenant["brand_name"]
 
 
