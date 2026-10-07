@@ -42,8 +42,7 @@ export const LandingFooter: React.FC = () => {
         <div className="footer-col">
           <h4>Control Plane</h4>
           <ul>
-            <li><a href="/admin">SuperAdmin Portal</a></li>
-            <li><a href="/login">Tenant Workspace Login</a></li>
+            <li><a href="/tenant/login">Tenant Workspace Login</a></li>
             <li><a href="#provision">Reserve Namespace</a></li>
             <li><a href="/health">Cluster Health Radar</a></li>
           </ul>

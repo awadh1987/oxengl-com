@@ -71,6 +71,21 @@ const ViewLoadingFallback = () => (
   </div>
 );
 
+export const TENANT_LOGIN_PATH = '/tenant/login';
+
+const isPublicPath = (path: string): boolean =>
+  path === '/' ||
+  path === TENANT_LOGIN_PATH ||
+  path === '/register' ||
+  path === '/forgot-password' ||
+  path === '/reset-password' ||
+  path === '/customs' ||
+  path === '/portal/vendor' ||
+  path === '/vendor-portal' ||
+  path === '/admin' ||
+  path.startsWith('/admin/') ||
+  path.startsWith('/shared/invoice/');
+
 export interface RouteProps {
   path: string;
   element: React.ReactNode;
@@ -180,7 +195,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
   dashboard: '/operations/daily',
   approvals: '/settings/approvals',
   inventory: '/operations/inventory',
-  mfa: '/login',
+  mfa: '/tenant/login',
   'admin-hub': '/admin',
 };
 
@@ -335,7 +350,7 @@ function AppContent() {
       setSelectedDomain('Operations & Logistics');
     }
 
-    const targetPath = TAB_ROUTE_MAP[tab] || '/operations/daily';
+    const targetPath = TAB_ROUTE_MAP[tab] || (isLoggedIn ? '/operations/daily' : TENANT_LOGIN_PATH);
     if (updateHistory && typeof window !== 'undefined' && window.location.pathname !== targetPath) {
       window.history.pushState({}, '', targetPath);
       setCurrentPath(targetPath);
@@ -389,14 +404,6 @@ function AppContent() {
     }
   }, [isDriverMode, activeTab]);
 
-  // Platform-owner sessions are confined to /admin unless explicitly inspecting a tenant workspace
-  useEffect(() => {
-    const isPlatformOwner = authTier === 'master' || currentUser?.role === 'Super_Admin';
-    if (isLoggedIn && isPlatformOwner && !inspectingWorkspace && !getSubdomain() && !currentPath.startsWith('/admin')) {
-      navigate('/admin', { replace: true });
-    }
-  }, [isLoggedIn, authTier, currentUser, inspectingWorkspace, currentPath]);
-
   // Derive default document type based on current active tab
   const defaultDocTypeForTab: ExportDocType = React.useMemo(() => {
     switch (activeTab) {
@@ -430,6 +437,19 @@ function AppContent() {
     }
     return null;
   });
+
+  // Strict redirect: unauthenticated visitors never see a protected tenant URL, and legacy /login is retired
+  const needsLoginRedirect =
+    !isResolvingDomain &&
+    !sharedInvoiceParams &&
+    (currentPath === '/login' || (!isLoggedIn && !isPublicPath(currentPath)));
+  useEffect(() => {
+    if (needsLoginRedirect) {
+      if (window.location.pathname !== TENANT_LOGIN_PATH) {
+        window.location.replace(TENANT_LOGIN_PATH);
+      }
+    }
+  }, [needsLoginRedirect]);
 
   const leaveWorkspace = () => {
     logoutUser();
@@ -476,151 +496,69 @@ function AppContent() {
     );
   }
 
-  if (currentPath === '/admin' || currentPath === '/admin/cockpit') {
-    if (isLoggedIn) {
+  // Platform Owner Console: /admin and its sub-paths are the only routes that may mount admin UI
+  if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
+    const adminPath = currentPath.replace(/\/+$/, '') || '/admin';
+    if (!isLoggedIn) {
       return (
         <Suspense fallback={<ViewLoadingFallback />}>
           <Route
             path="/admin"
             element={
-              <ProtectedRoute
-                tier="master"
-                isLoggedIn={isLoggedIn}
-                onRequireLogin={leaveWorkspace}
-                onNavigateHome={() => setIsLoggedIn(false)}
-              >
-                <SuperAdminCockpitView
-                  onOpenTenantOnboarding={() => {
-                    if (typeof window !== 'undefined') {
-                      window.location.href = '/admin/tenants';
-                    }
-                  }}
-                  onLogout={leaveWorkspace}
-                  onInspectTenantWorkspace={() => {
-                    setInspectingWorkspace(true);
-                    navigateToTab('hub');
-                  }}
-                />
-              </ProtectedRoute>
+              <SuperAdminLoginView
+                onLoginSuccess={() => {
+                  setIsLoggedIn(true);
+                  window.location.href = adminPath === '/admin/cockpit' ? '/admin' : adminPath;
+                }}
+              />
             }
           />
         </Suspense>
       );
     }
-    return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <Route
-          path="/admin"
-          element={
-            <SuperAdminLoginView
-              onLoginSuccess={() => {
-                setIsLoggedIn(true);
-                if (typeof window !== 'undefined') {
-                  window.location.href = '/admin';
-                }
-              }}
-            />
-          }
-        />
-      </Suspense>
-    );
-  }
 
-  if (currentPath === '/admin/tenants') {
-    if (!isLoggedIn) {
-      return (
-        <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/admin" element={<SuperAdminLoginView onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/admin/tenants';
-            }
-          }} />} />
-        </Suspense>
-      );
+    let adminElement: React.ReactNode = null;
+    switch (adminPath) {
+      case '/admin':
+      case '/admin/cockpit':
+        adminElement = (
+          <SuperAdminCockpitView
+            onOpenTenantOnboarding={() => navigate('/admin/tenants')}
+            onLogout={leaveWorkspace}
+            onInspectTenantWorkspace={() => {
+              setInspectingWorkspace(true);
+              navigateToTab('hub');
+            }}
+          />
+        );
+        break;
+      case '/admin/tenants':
+        adminElement = <SuperAdminTenantsView />;
+        break;
+      case '/admin/logs':
+        adminElement = <SuperAdminLogsView />;
+        break;
+      case '/admin/analytics':
+        adminElement = <SuperAdminAnalyticsView />;
+        break;
     }
-    return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <Route
-          path="/admin/tenants"
-          element={
-            <ProtectedRoute
-              tier="master"
-              allowedRoles={['Super_Admin']}
-              isLoggedIn={isLoggedIn}
-              onRequireLogin={leaveWorkspace}
-              onNavigateHome={() => setIsLoggedIn(false)}
-            >
-              <SuperAdminTenantsView />
-            </ProtectedRoute>
-          }
-        />
-      </Suspense>
-    );
-  }
 
-  if (currentPath === '/admin/logs') {
-    if (!isLoggedIn) {
-      return (
-        <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/admin" element={<SuperAdminLoginView onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/admin/logs';
-            }
-          }} />} />
-        </Suspense>
-      );
-    }
     return (
       <Suspense fallback={<ViewLoadingFallback />}>
-        <Route
-          path="/admin/logs"
-          element={
-            <ProtectedRoute
-              tier="master"
-              allowedRoles={['Super_Admin']}
-              isLoggedIn={isLoggedIn}
-              onRequireLogin={leaveWorkspace}
-              onNavigateHome={() => setIsLoggedIn(false)}
-            >
-              <SuperAdminLogsView />
-            </ProtectedRoute>
-          }
-        />
-      </Suspense>
-    );
-  }
-
-  if (currentPath === '/admin/analytics') {
-    if (!isLoggedIn) {
-      return (
-        <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/admin" element={<SuperAdminLoginView onLoginSuccess={() => {
-            setIsLoggedIn(true);
-            if (typeof window !== 'undefined') {
-              window.location.href = '/admin/analytics';
-            }
-          }} />} />
-        </Suspense>
-      );
-    }
-    return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <Route
-          path="/admin/analytics"
-          element={
-            <ProtectedRoute
-              tier="master"
-              allowedRoles={['Super_Admin']}
-              isLoggedIn={isLoggedIn}
-              onRequireLogin={leaveWorkspace}
-              onNavigateHome={() => setIsLoggedIn(false)}
-            >
-              <SuperAdminAnalyticsView />
-            </ProtectedRoute>
-          }
-        />
+        <ProtectedRoute
+          tier="master"
+          requireSuperAdmin
+          isLoggedIn={isLoggedIn}
+          onRequireLogin={leaveWorkspace}
+          onNavigateHome={() => navigate('/operations/daily')}
+        >
+          {adminElement ?? (
+            <div id="admin-route-not-found" className="flex min-h-[50vh] w-full flex-col items-center justify-center p-8 text-center">
+              <h2 className="text-xl font-black text-neutral-900 dark:text-white">404</h2>
+              <p className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">Unknown admin route.</p>
+            </div>
+          )}
+        </ProtectedRoute>
       </Suspense>
     );
   }
@@ -634,7 +572,7 @@ function AppContent() {
             <TenantRegistrationView
               onSuccess={() => {
                 if (typeof window !== 'undefined') {
-                  window.history.pushState({}, '', '/login');
+                  window.history.pushState({}, '', TENANT_LOGIN_PATH);
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }
               }}
@@ -675,7 +613,7 @@ function AppContent() {
             <ResetPasswordView
               onSuccessRedirect={() => {
                 if (typeof window !== 'undefined') {
-                  window.history.pushState({}, '', '/login');
+                  window.history.pushState({}, '', TENANT_LOGIN_PATH);
                   window.dispatchEvent(new PopStateEvent('popstate'));
                 }
               }}
@@ -722,7 +660,12 @@ function AppContent() {
     );
   }
 
-  if (currentPath === '/login' || (!isLoggedIn && effectiveTenantSlug && currentPath !== '/')) {
+  if (needsLoginRedirect) {
+    window.location.replace('/tenant/login');
+    return null;
+  }
+
+  if (currentPath === TENANT_LOGIN_PATH) {
     if (isLoggedIn) {
       if (typeof window !== 'undefined') {
         const storedSlug = localStorage.getItem('tenant_slug') || effectiveTenantSlug;
@@ -735,8 +678,7 @@ function AppContent() {
     } else {
       return (
         <Suspense fallback={<ViewLoadingFallback />}>
-          <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
-            setCurrentPath(to);
+          <Route path="/tenant/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
             navigate(to);
           }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
         </Suspense>
@@ -754,8 +696,7 @@ function AppContent() {
             element={
               <TenantLandingView
                 onSignIn={() => {
-                  setCurrentPath('/login');
-                  navigate('/login');
+                  navigate(TENANT_LOGIN_PATH);
                 }}
               />
             }
@@ -771,21 +712,10 @@ function AppContent() {
   }
 
   if (!isLoggedIn) {
-    return (
-      <Suspense fallback={<ViewLoadingFallback />}>
-        <Route path="/login" element={<TenantLoginView forcedSlug={effectiveTenantSlug || undefined} onNavigate={(to) => {
-          setCurrentPath(to);
-          navigate(to);
-        }} onLoginSuccess={handleWorkspaceLoginRedirect} />} />
-      </Suspense>
-    );
+    window.location.replace('/tenant/login');
+    return null;
   }
 
-
-  if ((authTier === 'master' || currentUser.role === 'Super_Admin') && !inspectingWorkspace && !activeSubdomain) {
-    // The redirect effect moves platform owners to /admin; never render the console at a tenant URL
-    return <ViewLoadingFallback />;
-  }
 
   // View-level RBAC role mappings
   const viewRoleRequirements: Record<ActiveTab, UserRole[] | undefined> = {
@@ -954,7 +884,7 @@ function AppContent() {
           </div>
           <div className="w-full max-w-7xl mx-auto">
             <ProtectedRoute
-              tier="tenant"
+              tier={authTier === 'master' || currentUser?.role === 'Super_Admin' ? undefined : 'tenant'}
               allowedRoles={viewRoleRequirements[activeTab]}
               isLoggedIn={isLoggedIn}
               onRequireLogin={leaveWorkspace}

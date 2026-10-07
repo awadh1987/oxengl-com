@@ -22,6 +22,7 @@ interface ProtectedRouteProps {
   onRequireLogin?: () => void;
   onNavigateHome?: () => void;
   tier?: 'master' | 'tenant';
+  requireSuperAdmin?: boolean;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
@@ -31,6 +32,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   onRequireLogin,
   onNavigateHome,
   tier,
+  requireSuperAdmin,
 }) => {
   const { currentUser, language, brandConfig, users, setCurrentUser, authTier, isAuthReady } = useApp();
   const isAr = language === 'ar';
@@ -56,11 +58,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   const handleRequireLogin = onRequireLogin || (() => {
     if (typeof window !== 'undefined') {
-      window.location.href = tier === 'master' ? '/admin' : '/login';
+      window.location.href = tier === 'master' ? '/admin' : '/tenant/login';
     }
   });
 
   // 1. Check Authentication Status
+  if ((!authenticated || !currentUser) && tier !== 'master') {
+    window.location.replace('/tenant/login');
+    return null;
+  }
   if (!authenticated || !currentUser) {
     return (
       <div
@@ -91,6 +97,36 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // 1.5. Two-Tier Plane Isolation Guard
   const effectiveTier = authTier || (currentUser?.role === 'Super_Admin' ? 'master' : 'tenant');
+
+  // Platform Owner Console guard: explicit Super_Admin role on the master plane is mandatory
+  if (requireSuperAdmin && !(currentUser.role === 'Super_Admin' && effectiveTier === 'master' && currentUser.status !== 'Suspended')) {
+    return (
+      <div
+        id="forbidden-403-view"
+        dir={isAr ? 'rtl' : 'ltr'}
+        className="flex min-h-[70vh] flex-col items-center justify-center p-6 text-center"
+      >
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/10 text-rose-500 ring-1 ring-rose-500/30">
+          <ShieldAlert className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-black text-neutral-900 dark:text-white">403 Forbidden</h2>
+        <p className="mt-2 max-w-md text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+          {isAr ? 'وحدة تحكم مالك المنصة متاحة لمسؤول المنصة الرئيسي فقط.' : 'The Platform Owner Console is restricted to the platform super administrator.'}
+        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          {onNavigateHome && (
+            <button onClick={onNavigateHome} className="inline-flex items-center gap-2 rounded-xl bg-neutral-900 px-5 py-2.5 text-xs font-bold text-white hover:bg-neutral-800 transition-all">
+              <span>{isAr ? 'العودة إلى مساحة العمل' : 'Return to Workspace'}</span>
+            </button>
+          )}
+          <button onClick={handleRequireLogin} className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 px-5 py-2.5 text-xs font-bold text-white transition-all">
+            <LogOut className="h-4 w-4" />
+            <span>{isAr ? 'تسجيل الدخول بحساب آخر' : 'Sign in as Super Admin'}</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (tier && effectiveTier && effectiveTier !== tier) {
     const isMasterViolation = tier === 'master' && effectiveTier === 'tenant';
     return (

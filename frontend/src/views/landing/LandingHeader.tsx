@@ -61,12 +61,9 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ onLoginClick }) =>
         </nav>
 
         <div className="nav-actions">
-          <a href="/admin" className="btn-secondary" style={{ padding: '6px 14px', fontSize: '12px' }}>
-            SuperAdmin Portal
-          </a>
           <button 
             type="button" 
-            onClick={onLoginClick || (() => { window.location.href = '/login'; })}
+            onClick={() => { window.location.href = '/tenant/login'; }}
             className="btn-primary" 
             style={{ padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}
           >
