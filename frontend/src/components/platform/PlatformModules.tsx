@@ -7,7 +7,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Company } from '../../types';
-import { erpApi, IsolationAudit, LicenseIssuePayload, SubscriptionPlanDto } from '../../services/api';
+import { authFetch, erpApi, IsolationAudit, LicenseIssuePayload, SubscriptionPlanDto } from '../../services/api';
 import { invalidatePricingPlans, usePricingPlans } from '../../hooks/usePricingPlans';
 import { annualSavingsPercent, formatSar, isUnlimited, normalizeTierCode } from '../../utils/pricing';
 import { SpotlightCard } from '../design-system/SpotlightCard';
@@ -1023,11 +1023,11 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
 
   useEffect(() => {
     erpApi.getIsolationAudit().then(setAudit).catch(() => setAudit(null));
-    fetch('/api/v1/superadmin/cloud-telemetry')
+    authFetch('/api/v1/superadmin/cloud-telemetry')
       .then((r) => (r.ok ? r.json() : null))
       .then(setCloudTelemetry)
       .catch(() => null);
-    fetch('/api/v1/superadmin/analytics/velocity')
+    authFetch('/api/v1/superadmin/analytics/velocity')
       .then((r) => (r.ok ? r.json() : null))
       .then(setVelocityData)
       .catch(() => null);
@@ -1039,8 +1039,8 @@ export const PanoramicCockpit: React.FC<{ onNavigate: (tab: 'tenants' | 'license
       await refreshCompanies();
       setAudit(await erpApi.getIsolationAudit());
       const [tRes, vRes] = await Promise.all([
-        fetch('/api/v1/superadmin/cloud-telemetry'),
-        fetch('/api/v1/superadmin/analytics/velocity'),
+        authFetch('/api/v1/superadmin/cloud-telemetry'),
+        authFetch('/api/v1/superadmin/analytics/velocity'),
       ]);
       if (tRes.ok) setCloudTelemetry(await tRes.json());
       if (vRes.ok) setVelocityData(await vRes.json());

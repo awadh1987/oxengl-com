@@ -7,7 +7,7 @@ import {
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { navigateSuperAdmin, SuperAdminNavLink, SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
-import { erpApi } from '../services/api';
+import { authFetch, erpApi } from '../services/api';
 import { SuperAdminBackupMonitor } from '../components/platform/SuperAdminBackupMonitor';
 import { SuperAdminCommunicationsPanel } from '../components/platform/SuperAdminCommunicationsPanel';
 import { useApp } from '../context/AppContext';
@@ -143,7 +143,7 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
   const fetchTenants = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/v1/superadmin/tenants?search=${encodeURIComponent(search)}`);
+      const res = await authFetch(`/api/v1/superadmin/tenants?search=${encodeURIComponent(search)}`);
       if (res.ok) {
         const data = await res.json();
         setTenants(data.items || []);
@@ -163,7 +163,7 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
     const nextActive = !tenant.is_active;
     const nextStatus = nextActive ? 'ACTIVE' : 'SUSPENDED';
     try {
-      const res = await fetch(`/api/v1/superadmin/tenants/${tenant.id}/status`, {
+      const res = await authFetch(`/api/v1/superadmin/tenants/${tenant.id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: nextActive, status: nextStatus }),
@@ -182,7 +182,7 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
     const tId = selectedTenant.id;
     setAlertStatus(prev => ({ ...prev, [tId]: 'sending' }));
     try {
-      const res = await fetch(`/api/v1/superadmin/tenants/${tId}/trigger-test-alert`, {
+      const res = await authFetch(`/api/v1/superadmin/tenants/${tId}/trigger-test-alert`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ channel: alertChannel, message: customAlertMsg }),
@@ -214,7 +214,7 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
       return;
     }
     try {
-      const res = await fetch(`/api/v1/superadmin/tenants/${tenant.id}/purge`, {
+      const res = await authFetch(`/api/v1/superadmin/tenants/${tenant.id}/purge`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -241,7 +241,7 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await fetch('/api/v1/superadmin/tenants/restore-upload', {
+      const res = await authFetch('/api/v1/superadmin/tenants/restore-upload', {
         method: 'POST',
         body: formData,
       });

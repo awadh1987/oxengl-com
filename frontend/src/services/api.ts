@@ -1267,6 +1267,14 @@ async function request<T>(path: string, companyId?: string, options?: RequestIni
   return response.json() as Promise<T>;
 }
 
+/** fetch() for platform-plane (super admin) endpoints: always attaches the session token and cookies, never tenant headers. */
+export function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const token = getAuthToken();
+  const headers = new Headers(init.headers);
+  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
+  return fetch(`${apiBaseUrl}${input}`, { ...init, headers, credentials: 'include' });
+}
+
 export async function fetchAuthenticatedImageBlob(path: string): Promise<Blob> {
   if (!path.startsWith('/api/v1/users/avatars/')) {
     throw new Error('Avatar URL is not an approved authenticated image path.');

@@ -1,3 +1,4 @@
+import { authFetch } from '../services/api';
 import React, { useState, useEffect } from 'react';
 import {
   FileText, Download, RefreshCw, AlertTriangle, ShieldCheck, HardDrive,
@@ -72,8 +73,8 @@ export const SuperAdminLogsView: React.FC<SuperAdminModuleNavProps> = ({ onNavig
         ? `/api/v1/superadmin/logs?action_type=${encodeURIComponent(actionFilter)}`
         : '/api/v1/superadmin/logs';
       const [logRes, telRes] = await Promise.all([
-        fetch(url),
-        fetch('/api/v1/superadmin/cloud-telemetry'),
+        authFetch(url),
+        authFetch('/api/v1/superadmin/cloud-telemetry'),
       ]);
 
       if (logRes.ok) {

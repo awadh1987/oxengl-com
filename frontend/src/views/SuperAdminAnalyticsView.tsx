@@ -1,3 +1,4 @@
+import { authFetch } from '../services/api';
 import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, Activity, BarChart3, Calendar, RefreshCw, ArrowUpRight,
@@ -98,7 +99,7 @@ export const SuperAdminAnalyticsView: React.FC<SuperAdminModuleNavProps> = ({ on
   const fetchVelocity = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/v1/superadmin/analytics/velocity');
+      const res = await authFetch('/api/v1/superadmin/analytics/velocity');
       if (res.ok) {
         const data = await res.json();
         setVelocityData(data);
