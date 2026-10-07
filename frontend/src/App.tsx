@@ -666,7 +666,7 @@ function AppContent() {
   }
 
   if (currentPath === TENANT_LOGIN_PATH) {
-    if (isLoggedIn) {
+    if (isLoggedIn && authTier !== 'master') {
       if (typeof window !== 'undefined') {
         const storedSlug = localStorage.getItem('tenant_slug') || effectiveTenantSlug;
         const customDom = isCustomDomain() ? getCustomDomain() : null;

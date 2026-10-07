@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Loader2, Save } from 'lucide-react';
+import { authFetch } from '../../services/api';
 import { fetchPublicSiteSettings, SITE_SETTING_KEYS, SiteSettings } from '../../hooks/useSiteSettings';
 
 const EMPTY: SiteSettings = {
@@ -34,9 +35,8 @@ export const LandingSettingsPanel: React.FC = () => {
     setSaving(true);
     setMessage(null);
     try {
-      const res = await fetch('/api/settings/admin', {
+      const res = await authFetch('/api/settings/admin', {
         method: 'PUT',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(SITE_SETTING_KEYS.map((key) => ({ key, value: form[key] }))),
       });
