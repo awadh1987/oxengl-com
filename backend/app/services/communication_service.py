@@ -59,6 +59,9 @@ class CommunicationCredentialCipher(backup_credentials.CredentialCipher):
 _cipher = CommunicationCredentialCipher()
 
 
+MASKED_CREDENTIAL_VALUES = frozenset({"********", "••••••••", "Stored credential; leave blank to keep unchanged"})
+
+
 def _clean_text(value: Any, field: str, maximum: int = 255) -> str:
     if not isinstance(value, str):
         raise ValueError(f"{field} must be text")
@@ -93,6 +96,8 @@ def validate_config(provider: str, raw_config: Mapping[str, Any] | None, *, tena
         security = str(config.get("security", "starttls")).strip().lower()
         if security not in {"starttls", "ssl"}:
             raise ValueError("SMTP security must be starttls or ssl")
+        if port == 465:
+            security = "ssl"
         clean.update(port=port, security=security)
         username = config.get("username")
         if username:
@@ -116,6 +121,7 @@ def validate_config(provider: str, raw_config: Mapping[str, Any] | None, *, tena
 def validate_setting(
     *, channel: str, provider: str, sender_identity: str, config: Mapping[str, Any] | None,
     credentials: Mapping[str, Any] | None, tenant_scoped: bool, existing_credentials: Mapping[str, str] | None = None,
+    require_credentials: bool = True,
 ) -> tuple[str, dict[str, Any], dict[str, str]]:
     if PROVIDER_CHANNELS.get(provider) != channel:
         raise ValueError("provider is not supported for this channel")
@@ -128,7 +134,12 @@ def validate_setting(
         raise ValueError("sender_identity is invalid")
     clean_config = validate_config(provider, config, tenant_scoped=tenant_scoped)
     values = {key: value for key, value in (existing_credentials or {}).items() if key in CREDENTIAL_FIELDS[provider]}
-    supplied = dict(credentials or {})
+    if credentials and not isinstance(credentials, Mapping):
+        raise ValueError("credentials must be an object")
+    supplied = {
+        key: raw for key, raw in dict(credentials or {}).items()
+        if not (raw is None or (isinstance(raw, str) and (not raw.strip() or raw.strip() in MASKED_CREDENTIAL_VALUES)))
+    }
     unknown = set(supplied) - CREDENTIAL_FIELDS[provider]
     if unknown:
         raise ValueError("unsupported credential fields: " + ", ".join(sorted(unknown)))
@@ -140,7 +151,7 @@ def validate_setting(
     if provider == "smtp" and not clean_config.get("username"):
         required = frozenset()
     missing = required - values.keys()
-    if missing:
+    if missing and require_credentials:
         raise ValueError("credential field required: " + ", ".join(sorted(missing)))
     return sender, clean_config, values
 
@@ -209,7 +220,7 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
     message.set_content(body)
     host, port = config["host"], int(config["port"])
     timeout = 10
-    if config["security"] == "ssl":
+    if port == 465 or config["security"] == "ssl":
         with smtplib.SMTP_SSL(host, port, timeout=timeout, context=ssl.create_default_context()) as client:
             if config.get("username"):
                 client.login(config["username"], credentials["password"])
@@ -388,19 +399,30 @@ def update_setting(db: Session, row: CommunicationSetting, changes: Mapping[str,
     channel = changes.get("channel", row.channel)
     provider = changes.get("provider", row.provider)
     raw_credentials = changes.get("credentials")
-    current_credentials = _cipher.decrypt(row.id, row.tenant_id, row.credentials_encrypted) if row.credentials_encrypted else {}
+    current_credentials: Mapping[str, str] = {}
+    decrypt_failed = False
+    if row.credentials_encrypted:
+        try:
+            current_credentials = _cipher.decrypt(row.id, row.tenant_id, row.credentials_encrypted)
+        except Exception:
+            logger.exception("Failed to decrypt stored communication credentials for setting %s", row.id)
+            decrypt_failed = True
     sender, config, clean_credentials = validate_setting(
         channel=channel, provider=provider,
         sender_identity=changes.get("sender_identity", row.sender_identity),
         config=changes.get("config", row.config or {}), credentials=raw_credentials,
         tenant_scoped=row.tenant_id is not None, existing_credentials=current_credentials,
+        require_credentials=not decrypt_failed,
     )
     row.channel = channel
     row.provider = provider
     row.sender_identity = sender
     row.config = config
     row.is_active = changes.get("is_active", row.is_active)
-    row.credentials_encrypted = _cipher.encrypt(row.id, row.tenant_id, clean_credentials) if clean_credentials else None
+    if clean_credentials:
+        row.credentials_encrypted = _cipher.encrypt(row.id, row.tenant_id, clean_credentials)
+    elif not decrypt_failed:
+        row.credentials_encrypted = None
     row.updated_at = datetime.now(timezone.utc)
     row.last_test_status = None
     row.last_test_at = None

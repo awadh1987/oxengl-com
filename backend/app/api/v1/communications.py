@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -23,6 +24,8 @@ try:
 except (ImportError, ValueError):
     from rate_limiter import limiter
 
+
+logger = logging.getLogger("oxengl.communications")
 
 tenant_router = APIRouter(prefix="/api/v1/tenant-control/communications", tags=["Tenant Communications"])
 superadmin_router = APIRouter(prefix="/api/v1/superadmin/communications", tags=["Super Admin Communications"])
@@ -192,22 +195,29 @@ def _create(
 
 
 def _update(db: Session, request: Request, user: Any, tenant_id: uuid.UUID | None, row: CommunicationSetting, payload: SettingUpdate) -> dict[str, Any]:
+    setting_id = row.id
     try:
         svc.update_setting(db, row, payload.model_dump(exclude_unset=True))
-        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATED", outcome="SUCCESS", tenant_id=tenant_id, setting_id=row.id)
+        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATED", outcome="SUCCESS", tenant_id=tenant_id, setting_id=setting_id)
         db.commit()
         db.refresh(row)
         return _setting_payload(row)
     except (ValueError, svc.CommunicationError) as exc:
         db.rollback()
-        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATE_DENIED", outcome="DENIED", tenant_id=tenant_id, setting_id=row.id)
+        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATE_DENIED", outcome="DENIED", tenant_id=tenant_id, setting_id=setting_id)
         db.commit()
         raise _safe_error(exc) from None
     except IntegrityError:
         db.rollback()
-        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATE_FAILED", outcome="FAILED", tenant_id=tenant_id, setting_id=row.id)
+        _audit(db, request, user, action="COMMUNICATION_SETTING_UPDATE_FAILED", outcome="FAILED", tenant_id=tenant_id, setting_id=setting_id)
         db.commit()
         raise HTTPException(status_code=409, detail="An active setting already exists for this channel.") from None
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("Unexpected error updating communication setting %s", setting_id)
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Unable to save communication settings. See server logs.") from None
 
 
 def _validate_test_recipient(row: CommunicationSetting, recipient: str) -> None:

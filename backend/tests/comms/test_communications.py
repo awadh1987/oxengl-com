@@ -228,6 +228,46 @@ def test_tenant_create_ignores_tenant_id_and_encrypts_write_only_credential(fact
         assert secret not in row.credentials_encrypted
 
 
+def test_update_with_blank_or_masked_credential_keeps_stored_secret(factory, tenants, monkeypatch):
+    tenant_id = tenants["A"]
+    client = make_client(factory, types.SimpleNamespace(id=uuid.uuid4(), email="admin@example.test", role="Admin", company_id=tenant_id), monkeypatch)
+    created = client.post("/api/v1/tenant-control/communications", json={
+        "channel": "email", "provider": "sendgrid",
+        "sender_identity": "OxenGL <sender@oxengl.example>", "config": {"region": "global"},
+        "credentials": {"api_key": "SG-KEEP-ME"},
+    }).json()
+    with factory() as db:
+        before = db.get(models.CommunicationSetting, uuid.UUID(created["id"])).credentials_encrypted
+    for creds in ({"api_key": ""}, {"api_key": "Stored credential; leave blank to keep unchanged"}, {}, None):
+        response = client.put(f"/api/v1/tenant-control/communications/{created['id']}", json={"is_active": True, "credentials": creds})
+        assert response.status_code == 200, response.text
+        assert response.json()["has_credential"] is True
+    with factory() as db:
+        row = db.get(models.CommunicationSetting, uuid.UUID(created["id"]))
+        assert svc._cipher.decrypt(row.id, row.tenant_id, row.credentials_encrypted) == {"api_key": "SG-KEEP-ME"}
+
+
+def test_update_succeeds_when_stored_credential_cannot_be_decrypted(factory, tenants, monkeypatch):
+    tenant_id = tenants["A"]
+    client = make_client(factory, types.SimpleNamespace(id=uuid.uuid4(), email="admin@example.test", role="Admin", company_id=tenant_id), monkeypatch)
+    created = client.post("/api/v1/tenant-control/communications", json={
+        "channel": "email", "provider": "sendgrid",
+        "sender_identity": "OxenGL <sender@oxengl.example>", "config": {"region": "global"},
+        "credentials": {"api_key": "SG-OLD"},
+    }).json()
+    with factory() as db:
+        db.get(models.CommunicationSetting, uuid.UUID(created["id"])).credentials_encrypted = "corrupt-blob"
+        db.commit()
+    response = client.put(f"/api/v1/tenant-control/communications/{created['id']}", json={"config": {"region": "eu"}, "credentials": {"api_key": ""}})
+    assert response.status_code == 200, response.text
+    assert response.json()["config"]["region"] == "eu"
+    response = client.put(f"/api/v1/tenant-control/communications/{created['id']}", json={"credentials": {"api_key": "SG-NEW"}})
+    assert response.status_code == 200, response.text
+    with factory() as db:
+        row = db.get(models.CommunicationSetting, uuid.UUID(created["id"]))
+        assert svc._cipher.decrypt(row.id, row.tenant_id, row.credentials_encrypted) == {"api_key": "SG-NEW"}
+
+
 def test_superadmin_cannot_modify_tenant_setting_and_sees_all_read_only(factory, tenants, monkeypatch):
     tenant_row_id = add_setting(factory, tenant_id=tenants["A"], provider="sendgrid")
     platform_row_id = add_setting(factory, provider="sendgrid")
