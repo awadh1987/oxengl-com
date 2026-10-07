@@ -29,6 +29,7 @@ from backend.models import (
     FinanceJournalEntry,
     FinanceJournalLine,
     ResCompany,
+    ResUser,
     Warehouse,
     InventoryMovement,
 )
@@ -49,6 +50,26 @@ def _generate_test_token(
         "company_id": company_id,
         "email": email,
     }
+    # Auth requires a registered res_users account; the token role overrides the stored one.
+    seeded_email = f"{user_id[:8]}-{email}"
+    nil = uuid.UUID(int=0)
+    db = SessionLocal()
+    try:
+        if db.get(ResUser, uuid.UUID(user_id)) is None:
+            db.add(ResUser(
+                id=uuid.UUID(user_id),
+                firebase_uid=f"native-{user_id}",
+                email=seeded_email,
+                full_name="RBAC Test User",
+                password_hash="x",
+                company_id=None if uuid.UUID(company_id) == nil else uuid.UUID(company_id),
+                role="Admin",
+                is_active=True,
+            ))
+            db.commit()
+    finally:
+        db.close()
+    payload["email"] = seeded_email
     return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
 

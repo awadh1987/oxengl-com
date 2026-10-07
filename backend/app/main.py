@@ -458,7 +458,7 @@ app.add_middleware(
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
 	],
-	allow_origin_regex=r"^https?://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)$|^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+(:\d+)?$",
+	allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)$",
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],

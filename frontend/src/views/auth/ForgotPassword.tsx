@@ -29,6 +29,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
     }
     return '';
   });
+  const [channel, setChannel] = useState<'auto' | 'email' | 'sms'>('auto');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +46,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
-      setError(isAr ? 'يرجى إدخال البريد الإلكتروني المسجل.' : 'Please enter your registered email address.');
+      setError(isAr ? 'يرجى إدخال البريد الإلكتروني المسجل.' : 'Please enter your registered email address or mobile number.');
       return;
     }
 
@@ -55,8 +56,9 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: cleanEmail,
+          identifier: cleanEmail,
           workspace_slug: workspaceSlug.trim() || 'master',
+          channel,
         }),
       });
 
@@ -146,7 +148,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
             <p className="mt-1 text-xs text-slate-400">
               {isAr
                 ? 'أدخل بريدك الإلكتروني المسجل لإرسال رمز تحقق OTP مكون من 6 أرقام'
-                : 'Enter your registered email to receive a 6-digit Redis verification OTP'}
+                : 'Enter your registered email or mobile number to receive a 6-digit Redis verification OTP'}
             </p>
           </div>
 
@@ -161,7 +163,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
                   <Mail className="h-4 w-4" />
                 </div>
                 <input
-                  type="email"
+                  type="text" inputMode="email" autoComplete="username"
                   required
                   autoFocus
                   value={email}
@@ -203,6 +205,21 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
             )}
 
             {/* Submit Button */}
+            <div>
+              <label htmlFor="otp-channel" className="mb-1 block text-xs font-semibold text-slate-300">
+                {isAr ? 'طريقة استلام الرمز' : 'Send code via'}
+              </label>
+              <select
+                id="otp-channel"
+                value={channel}
+                onChange={(e) => setChannel(e.target.value as 'auto' | 'email' | 'sms')}
+                className="w-full rounded-xl border border-slate-800 bg-slate-950/80 px-3 py-2.5 text-sm text-slate-100"
+              >
+                <option value="auto">{isAr ? 'تلقائي (البريد + الرسائل إن توفر الجوال)' : 'Automatic (email, plus SMS if a phone is on file)'}</option>
+                <option value="email">{isAr ? 'البريد الإلكتروني' : 'Email'}</option>
+                <option value="sms">{isAr ? 'رسالة نصية SMS (للرقم المسجل)' : 'SMS (to the phone on file)'}</option>
+              </select>
+            </div>
             <button
               type="submit"
               disabled={loading}

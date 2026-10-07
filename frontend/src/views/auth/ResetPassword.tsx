@@ -188,7 +188,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: cleanEmail,
+          identifier: cleanEmail,
           workspace_slug: workspaceSlug.trim() || 'master',
         }),
       });
@@ -264,7 +264,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
       if (showLegacyTokenMode) {
         payload.token = cleanToken;
       } else {
-        payload.email = cleanEmail;
+        payload.identifier = cleanEmail;
         payload.otp_code = cleanOtp;
         if (workspaceSlug) {
           payload.workspace_slug = workspaceSlug;
@@ -409,14 +409,14 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                   {/* Email Input */}
                   <div>
                     <label className="mb-1.5 block text-xs font-bold text-slate-300">
-                      {isAr ? 'البريد الإلكتروني للحساب' : 'Account Email'}
+                      {isAr ? 'البريد الإلكتروني أو رقم الجوال' : 'Account Email or Mobile Number'}
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 start-0 flex items-center ps-3.5 pointer-events-none text-slate-400">
                         <Mail className="h-4 w-4" />
                       </div>
                       <input
-                        type="email"
+                        type="text" inputMode="email" autoComplete="username"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}

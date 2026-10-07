@@ -1312,7 +1312,7 @@ async function findOrCreate<T extends { id: string }>(path: string, companyId: s
 
 /** External backup destinations. The API never returns credential material: only `has_credential`. */
 export type CommunicationChannel = 'email' | 'sms';
-export type CommunicationProvider = 'smtp' | 'sendgrid' | 'twilio' | 'unifonic' | 'taqnyat';
+export type CommunicationProvider = 'smtp' | 'sendgrid' | 'twilio' | 'unifonic' | 'taqnyat' | 'custom_http';
 
 export interface CommunicationSettingDto {
   id: string;
@@ -1331,6 +1331,11 @@ export interface CommunicationSettingDto {
   last_test_at?: string | null;
   last_test_status?: 'success' | 'failed' | null;
   last_test_error?: string | null;
+}
+
+export interface RecoveryOptionsDto {
+  email_enabled: boolean;
+  sms_enabled: boolean;
 }
 
 export interface CommunicationSettingWritePayload {
@@ -1698,6 +1703,13 @@ export const erpApi = {
     request<CommunicationSettingDto>(`/api/v1/superadmin/communications/${id}`, undefined, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteSuperAdminCommunicationSetting: (id: string) =>
     request<{ success: boolean; id: string }>(`/api/v1/superadmin/communications/${id}`, undefined, { method: 'DELETE' }),
+  getRecoveryOptions: (tenantId?: string) =>
+    request<RecoveryOptionsDto>(`/api/v1/superadmin/communications/recovery/options${tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''}`),
+  setRecoveryOptions: (payload: RecoveryOptionsDto, tenantId?: string) =>
+    request<RecoveryOptionsDto>(
+      `/api/v1/superadmin/communications/recovery/options${tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''}`,
+      undefined, { method: 'PUT', body: JSON.stringify(payload) },
+    ),
   testSuperAdminCommunicationSetting: (id: string, recipient: string) =>
     request<{ ok: boolean; message: string }>(`/api/v1/superadmin/communications/${id}/test`, undefined, { method: 'POST', body: JSON.stringify({ recipient }) }),
 

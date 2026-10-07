@@ -209,3 +209,105 @@ class VerificationService:
         from backend.app.services.communication_service import send_message
 
         await send_message("sms", phone, f"Your OxenGL verification code is {otp}. It expires in 5 minutes.", tenant_id=tenant_id)
+
+
+class NotificationService:
+    """Routes OTP messages to the tenant's (or platform's) email and/or SMS provider.
+
+    Delivery failures never propagate to the caller (the HTTP response must stay uniform to avoid
+    account enumeration); they are logged without the code and audited in ``platform_audit_logs``.
+    """
+
+    CHANNELS = ("auto", "email", "sms")
+
+    @staticmethod
+    def select_channels(requested: Optional[str], has_phone: bool) -> list[str]:
+        """auto = email plus SMS when a phone exists; sms falls back to email without a phone."""
+        choice = (requested or "auto").strip().lower()
+        if choice == "email":
+            return ["email"]
+        if choice == "sms":
+            return ["sms"] if has_phone else ["email"]
+        return ["email", "sms"] if has_phone else ["email"]
+
+    @staticmethod
+    def _audit(context: Any, action: str, outcome: str, tenant_id: Any) -> None:
+        if context is None:
+            return
+        try:
+            from backend.app.domains.hr.audit import append_audit_from_context
+            from backend.database import PlatformSessionLocal
+
+            if PlatformSessionLocal is None:
+                return
+            db = PlatformSessionLocal()
+            try:
+                append_audit_from_context(db, context, action=action, outcome=outcome, tenant_id=tenant_id)
+                db.commit()
+            except Exception:
+                db.rollback()
+                raise
+            finally:
+                db.close()
+        except Exception as exc:
+            logger.error("Could not write OTP delivery audit entry (%s)", type(exc).__name__)
+
+    @staticmethod
+    def _enabled_channels(tenant_id: Any) -> dict[str, bool]:
+        """Recovery-channel switches; fails open (everything enabled) if the settings cannot be read."""
+        import uuid as _uuid
+
+        try:
+            from backend.app.services import communication_service
+            from backend.database import PlatformSessionLocal
+        except Exception:
+            return {"email": True, "sms": True}
+        if PlatformSessionLocal is None:
+            return {"email": True, "sms": True}
+        try:
+            parsed = tenant_id if isinstance(tenant_id, _uuid.UUID) else (_uuid.UUID(str(tenant_id)) if tenant_id else None)
+        except ValueError:
+            parsed = None
+        db = PlatformSessionLocal()
+        try:
+            flags = communication_service.resolve_recovery_channels(db, parsed)
+            return {"email": flags["email_enabled"], "sms": flags["sms_enabled"]}
+        except Exception as exc:
+            logger.error("Could not read recovery channel settings (%s)", type(exc).__name__)
+            return {"email": True, "sms": True}
+        finally:
+            db.close()
+
+    @classmethod
+    async def send_password_reset_otp(
+        cls,
+        channels: list[str],
+        *,
+        email: str,
+        phone: Optional[str],
+        otp: str,
+        company_name: str,
+        tenant_id: Any = None,
+        audit_context: Any = None,
+    ) -> None:
+        enabled = cls._enabled_channels(tenant_id)
+        for channel in channels:
+            if not enabled.get(channel, True):
+                logger.warning("Password reset OTP channel %s disabled by recovery settings (tenant=%s)", channel, tenant_id)
+                cls._audit(audit_context, f"auth.password_reset.otp_{channel}", "skipped_disabled", tenant_id)
+                continue
+            try:
+                if channel == "sms":
+                    if not phone:
+                        raise NotificationDeliveryError("No phone number on file.")
+                    await VerificationService.dispatch_sms_otp(phone, otp, tenant_id)
+                else:
+                    await VerificationService.dispatch_email_otp(email, otp, company_name, tenant_id)
+            except Exception as exc:
+                logger.error(
+                    "Password reset OTP delivery failed (channel=%s tenant=%s reason=%s)",
+                    channel, tenant_id, str(exc)[:200] if isinstance(exc, (NotificationDeliveryError,)) or type(exc).__name__ == "CommunicationError" else type(exc).__name__,
+                )
+                cls._audit(audit_context, f"auth.password_reset.otp_{channel}", "failure", tenant_id)
+            else:
+                cls._audit(audit_context, f"auth.password_reset.otp_{channel}", "success", tenant_id)

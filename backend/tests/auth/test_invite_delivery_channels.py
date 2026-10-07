@@ -161,7 +161,9 @@ def test_force_reset_for_sms_account_uses_sms_provider_and_keeps_secret_private(
 
     monkeypatch.setattr(users, "dispatch_temporary_credentials", capture_delivery)
     response = asyncio.run(
-        users.force_password_reset(str(target.id), users.BackgroundTasks(), _actor(company_id), db)
+        users.force_password_reset(
+            str(target.id), users.BackgroundTasks(), payload=None, actor=_actor(company_id), db=db
+        )
     )
 
     assert sent["channel"] == "sms" and sent["destination"] == target.phone

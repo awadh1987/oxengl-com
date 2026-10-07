@@ -287,6 +287,48 @@ async def test_tenant_setting(setting_id: str, payload: TestRequest, request: Re
     return await _test(db, request, user, tenant_id, row, payload.recipient)
 
 
+class RecoveryOptions(BaseModel):
+    email_enabled: bool = True
+    sms_enabled: bool = True
+
+
+def _recovery_tenant(db: Session, raw: str | None) -> uuid.UUID | None:
+    if not raw:
+        return None
+    parsed = _uuid(raw)
+    if parsed is None or db.get(ResCompany, parsed) is None:
+        raise HTTPException(status_code=404, detail="Tenant not found.")
+    return parsed
+
+
+@superadmin_router.get("/recovery/options", response_model=RecoveryOptions)
+def get_recovery_options(tenant_id: str | None = Query(None), user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
+    return svc.resolve_recovery_channels(db, _recovery_tenant(db, tenant_id))
+
+
+@superadmin_router.put("/recovery/options", response_model=RecoveryOptions)
+def set_recovery_options(
+    payload: RecoveryOptions, request: Request, tenant_id: str | None = Query(None),
+    user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db),
+):
+    target = _recovery_tenant(db, tenant_id)
+    if not payload.email_enabled and not payload.sms_enabled:
+        _audit(db, request, user, action="RECOVERY_CHANNELS_UPDATE_DENIED", outcome="DENIED", tenant_id=target)
+        db.commit()
+        raise HTTPException(status_code=422, detail="At least one recovery channel must stay enabled.")
+    result = svc.upsert_recovery_channels(
+        db, target, email_enabled=payload.email_enabled, sms_enabled=payload.sms_enabled,
+        updated_by=_uuid(getattr(user, "id", None)),
+    )
+    _audit(
+        db, request, user,
+        action="RECOVERY_CHANNELS_UPDATED",
+        outcome="SUCCESS", tenant_id=target,
+    )
+    db.commit()
+    return result
+
+
 @superadmin_router.get("", response_model=list[SettingOut])
 def list_all_settings(
     request: Request,

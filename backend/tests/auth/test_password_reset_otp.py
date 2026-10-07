@@ -17,7 +17,7 @@ pwd_context = CryptContext(
 
 
 @pytest.mark.asyncio
-async def test_password_reset_otp_request_and_verify_pipeline(async_client):
+async def test_password_reset_otp_request_and_verify_pipeline(async_client, monkeypatch):
     """
     Validates Phase 6B Redis OTP Password Recovery Lifecycle:
     1. /forgot-password generates 6-digit OTP stored in Redis (5-min TTL).
@@ -42,6 +42,17 @@ async def test_password_reset_otp_request_and_verify_pipeline(async_client):
     finally:
         db.close()
 
+    # The API never returns the OTP (Addendum D); capture it where it is generated for delivery.
+    captured = {}
+    original = VerificationService.generate_and_store_otp.__func__
+
+    async def capture(cls, identifier, *args, **kwargs):
+        value = await original(cls, identifier, *args, **kwargs)
+        captured[identifier.strip().lower()] = value
+        return value
+
+    monkeypatch.setattr(VerificationService, "generate_and_store_otp", classmethod(capture))
+
     # 1. Dispatch OTP request
     req_payload = {
         "email": test_email,
@@ -51,9 +62,8 @@ async def test_password_reset_otp_request_and_verify_pipeline(async_client):
     assert init_res.status_code == status.HTTP_200_OK
     init_data = init_res.json()
     assert init_data.get("status") == "OTP_DISPATCHED"
-    assert init_data.get("otp_dispatched") is True
-    assert init_data.get("email") == test_email
-    otp_code = init_data.get("otp_code")
+    assert "otp_code" not in init_data and "token" not in init_data
+    otp_code = captured.get(f"reset:{test_email}")
     assert otp_code is not None
     assert len(otp_code) == 6
     assert otp_code.isdigit()
@@ -125,14 +135,20 @@ async def test_password_reset_legacy_token_fallback(async_client):
     finally:
         db.close()
 
-    # Request recovery
-    init_res = await async_client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": test_email, "workspace_slug": "master"},
-    )
-    assert init_res.status_code == status.HTTP_200_OK
-    token = init_res.json().get("token")
-    assert token is not None
+    # The API no longer returns tokens; seed a legacy token row directly.
+    token = uuid.uuid4().hex + uuid.uuid4().hex
+    db = SessionLocal()
+    try:
+        db.execute(
+            text("""
+                INSERT INTO public.password_resets (email, workspace_slug, token, expires_at)
+                VALUES (:e, 'master', :t, NOW() + INTERVAL '15 minutes')
+            """),
+            {"e": test_email, "t": token},
+        )
+        db.commit()
+    finally:
+        db.close()
 
     # Reset using token field
     verify_res = await async_client.post(

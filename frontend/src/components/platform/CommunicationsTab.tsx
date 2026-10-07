@@ -5,6 +5,7 @@ import {
   CommunicationProvider,
   CommunicationSettingDto,
   CommunicationSettingWritePayload,
+  RecoveryOptionsDto,
   erpApi,
 } from '../../services/api';
 
@@ -15,14 +16,14 @@ interface CommunicationsTabProps {
 
 const providerOptions: Record<CommunicationChannel, CommunicationProvider[]> = {
   email: ['smtp', 'sendgrid'],
-  sms: ['twilio', 'unifonic', 'taqnyat'],
+  sms: ['twilio', 'unifonic', 'taqnyat', 'custom_http'],
 };
 
 const providerLabels: Record<CommunicationProvider, string> = {
-  smtp: 'SMTP', sendgrid: 'SendGrid', twilio: 'Twilio', unifonic: 'Unifonic', taqnyat: 'Taqnyat',
+  smtp: 'SMTP', sendgrid: 'SendGrid', twilio: 'Twilio', unifonic: 'Unifonic', taqnyat: 'Taqnyat', custom_http: 'Custom HTTP',
 };
 
-const configFields: Record<CommunicationProvider, { key: string; label: string; type?: string; defaultValue?: string }[]> = {
+const configFields: Record<CommunicationProvider, { key: string; label: string; type?: string; defaultValue?: string; multiline?: boolean }[]> = {
   smtp: [
     { key: 'host', label: 'SMTP host' },
     { key: 'port', label: 'Port', defaultValue: '587' },
@@ -36,6 +37,11 @@ const configFields: Record<CommunicationProvider, { key: string; label: string; 
   ],
   unifonic: [{ key: 'region', label: 'Region', defaultValue: 'global' }],
   taqnyat: [{ key: 'region', label: 'Region', defaultValue: 'global' }],
+  custom_http: [
+    { key: 'url', label: 'Endpoint URL (https)' },
+    { key: 'method', label: 'HTTP method (POST / GET)', defaultValue: 'POST' },
+    { key: 'payload_template', label: 'JSON payload template — use {phone} and {message}', defaultValue: '{"to": "{phone}", "message": "{message}"}', multiline: true },
+  ],
 };
 
 const credentialFields: Record<CommunicationProvider, { key: string; label: string; required: boolean }[]> = {
@@ -44,6 +50,45 @@ const credentialFields: Record<CommunicationProvider, { key: string; label: stri
   twilio: [{ key: 'auth_token', label: 'Auth token', required: true }],
   unifonic: [{ key: 'app_sid', label: 'App SID', required: true }],
   taqnyat: [{ key: 'api_token', label: 'API token', required: true }],
+  custom_http: [{ key: 'headers', label: 'Headers as JSON, e.g. {"Authorization": "Bearer …"}', required: false }],
+};
+
+const RecoveryOptionsPanel: React.FC<{ tenantId?: string }> = ({ tenantId }) => {
+  const [options, setOptions] = useState<RecoveryOptionsDto>({ email_enabled: true, sms_enabled: true });
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const validTenant = !tenantId || /^[0-9a-fA-F-]{36}$/.test(tenantId);
+
+  useEffect(() => {
+    if (!validTenant) return;
+    setMessage('');
+    erpApi.getRecoveryOptions(tenantId || undefined).then(setOptions).catch((err) => setMessage(err instanceof Error ? err.message : 'Could not load recovery options.'));
+  }, [tenantId, validTenant]);
+
+  const save = async (next: RecoveryOptionsDto) => {
+    setBusy(true);
+    setMessage('');
+    try {
+      setOptions(await erpApi.setRecoveryOptions(next, tenantId || undefined));
+      setMessage('Recovery options saved.');
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : 'Could not save recovery options.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/50 p-4" data-testid="recovery-options">
+      <h3 className="text-sm font-semibold text-white">Password recovery channels {tenantId ? '(selected tenant)' : '(platform default)'}</h3>
+      <div className="flex flex-wrap gap-4 text-xs text-slate-300">
+        <label className="flex items-center gap-2"><input type="checkbox" disabled={busy || !validTenant} checked={options.email_enabled} onChange={(e) => void save({ ...options, email_enabled: e.target.checked })} /> Email recovery</label>
+        <label className="flex items-center gap-2"><input type="checkbox" disabled={busy || !validTenant} checked={options.sms_enabled} onChange={(e) => void save({ ...options, sms_enabled: e.target.checked })} /> SMS recovery</label>
+      </div>
+      <p className="text-[11px] text-slate-500">Use the Test action on any setting below to send a test message through its gateway.</p>
+      {message && <p role="status" className="text-xs text-slate-300">{message}</p>}
+    </div>
+  );
 };
 
 const inputClass = 'w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-indigo-500';
@@ -226,6 +271,8 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({ isAr = fal
         </div>
       )}
 
+      {superAdmin && <RecoveryOptionsPanel tenantId={tenantFilter.trim() || undefined} />}
+
       {formOpen ? (
         <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">
           <div className="flex items-center justify-between">
@@ -253,13 +300,21 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({ isAr = fal
               <input required value={senderIdentity} onChange={(event) => setSenderIdentity(event.target.value)} className={inputClass} maxLength={255} />
             </label>
             {configFields[provider].map((field) => (
-              <label key={field.key} className="space-y-1 text-xs text-slate-300">{field.label}
-                <input
-                  required={provider === 'smtp' && field.key === 'host' || provider === 'twilio' && field.key === 'account_sid'}
-                  type={field.type || 'text'} value={config[field.key] ?? field.defaultValue ?? ''}
-                  onChange={(event) => setConfig((previous) => ({ ...previous, [field.key]: event.target.value }))}
-                  className={inputClass} autoComplete="off"
-                />
+              <label key={field.key} className={`space-y-1 text-xs text-slate-300 ${field.multiline ? 'sm:col-span-2' : ''}`}>{field.label}
+                {field.multiline ? (
+                  <textarea
+                    rows={4} value={config[field.key] ?? field.defaultValue ?? ''}
+                    onChange={(event) => setConfig((previous) => ({ ...previous, [field.key]: event.target.value }))}
+                    className={`${inputClass} font-mono`} spellCheck={false}
+                  />
+                ) : (
+                  <input
+                    required={provider === 'smtp' && field.key === 'host' || provider === 'twilio' && field.key === 'account_sid' || provider === 'custom_http' && field.key === 'url'}
+                    type={field.type || 'text'} value={config[field.key] ?? field.defaultValue ?? ''}
+                    onChange={(event) => setConfig((previous) => ({ ...previous, [field.key]: event.target.value }))}
+                    className={inputClass} autoComplete="off"
+                  />
+                )}
               </label>
             ))}
             {credentialFields[provider].map((field) => (

@@ -512,6 +512,33 @@ COMMUNICATION_CHANNELS = ("email", "sms")
 COMMUNICATION_PROVIDERS = ("smtp", "sendgrid", "twilio", "unifonic", "taqnyat")
 
 
+class RecoveryChannelSetting(Base):
+    """Per-tenant (or platform default when tenant_id is NULL) switches for password-recovery channels."""
+
+    __tablename__ = "recovery_channel_settings"
+    __table_args__ = (
+        Index(
+            "uq_recovery_channel_settings_tenant", "tenant_id", unique=True,
+            postgresql_where=text("tenant_id IS NOT NULL"), sqlite_where=text("tenant_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_recovery_channel_settings_platform", text("(tenant_id IS NULL)"), unique=True,
+            postgresql_where=text("tenant_id IS NULL"), sqlite_where=text("tenant_id IS NULL"),
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    tenant_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=True
+    )
+    email_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    sms_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+
+
 class CommunicationSetting(Base):
     """Tenant override or platform default for transactional email/SMS delivery."""
 
@@ -519,12 +546,12 @@ class CommunicationSetting(Base):
     __table_args__ = (
         CheckConstraint("channel IN ('email', 'sms')", name="ck_communication_settings_channel"),
         CheckConstraint(
-            "provider IN ('smtp', 'sendgrid', 'twilio', 'unifonic', 'taqnyat')",
+            "provider IN ('smtp', 'sendgrid', 'twilio', 'unifonic', 'taqnyat', 'custom_http')",
             name="ck_communication_settings_provider",
         ),
         CheckConstraint(
             "(channel = 'email' AND provider IN ('smtp', 'sendgrid')) OR "
-            "(channel = 'sms' AND provider IN ('twilio', 'unifonic', 'taqnyat'))",
+            "(channel = 'sms' AND provider IN ('twilio', 'unifonic', 'taqnyat', 'custom_http'))",
             name="ck_communication_settings_channel_provider",
         ),
         CheckConstraint(

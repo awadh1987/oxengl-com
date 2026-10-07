@@ -12,7 +12,7 @@ import re
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 import pyotp
 from jinja2 import Environment, FileSystemLoader
@@ -26,9 +26,11 @@ from sqlalchemy.orm import Session
 from backend.database import get_db
 
 try:
-    from backend.app.services.notification_service import VerificationService
+    from backend.app.services.notification_service import NotificationService, VerificationService
 except ImportError:
-    from app.services.notification_service import VerificationService
+    from app.services.notification_service import NotificationService, VerificationService
+from backend.app.domains.hr.audit import build_audit_context
+from backend.app.services import account_lookup
 
 logger = logging.getLogger("oxengl.auth.recovery")
 
@@ -49,15 +51,24 @@ pwd_context = CryptContext(
 
 
 class ForgotPasswordRequest(BaseModel):
-    email: str = Field(..., description="Registered account email address")
+    email: Optional[str] = Field(None, description="Registered account email address (or mobile number)")
+    identifier: Optional[str] = Field(None, description="Account email address or mobile number")
     workspace_slug: Optional[str] = Field("master", description="Target tenant workspace identifier")
+    channel: Optional[Literal["auto", "email", "sms"]] = Field(
+        "auto", description="OTP delivery channel; sms falls back to email when no phone is on file"
+    )
+
+    @property
+    def resolved_identifier(self) -> str:
+        return (self.identifier or self.email or "").strip()
 
 
 class ResetPasswordConfirmRequest(BaseModel):
     token: Optional[str] = Field(None, description="Cryptographically signed reset token or 6-digit OTP")
     otp_code: Optional[str] = Field(None, description="6-digit Redis OTP verification code")
     code: Optional[str] = Field(None, description="Alias for 6-digit OTP verification code")
-    email: Optional[str] = Field(None, description="Registered account email address")
+    email: Optional[str] = Field(None, description="Registered account email address (or mobile number)")
+    identifier: Optional[str] = Field(None, description="Account email address or mobile number")
     workspace_slug: Optional[str] = Field(None, description="Target tenant workspace identifier")
     new_password: str = Field(..., min_length=8, description="New secret passphrase (min 8 chars)")
 
@@ -124,6 +135,7 @@ async def request_password_reset(
     payload: ForgotPasswordRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
+    request: Request = None,
 ):
     """
     Password Recovery Initiation Endpoint with Redis 6-Digit OTP.
@@ -133,7 +145,11 @@ async def request_password_reset(
     """
     ensure_password_resets_table(db)
 
-    norm_email = payload.email.strip().lower()
+    identifier = payload.resolved_identifier
+    if not identifier:
+        return _generic_recovery_response()
+    is_phone = account_lookup.looks_like_phone(identifier)
+    norm_email = "" if is_phone else identifier.lower()
     raw_slug = (payload.workspace_slug or "master").strip().lower()
 
     slug_variants = list(dict.fromkeys([
@@ -164,10 +180,13 @@ async def request_password_reset(
             # Addendum D: the old fallback also probed public.users (absent) and raised HTTP 500 for unknown
             # accounts - itself an enumeration oracle. Any lookup failure now yields the uniform response.
             try:
-                user_exists_anywhere = db.execute(
-                    text("SELECT id FROM public.tenant_users WHERE LOWER(email) = :e LIMIT 1"),
-                    {"e": norm_email},
-                ).first()
+                if is_phone:
+                    user_exists_anywhere = account_lookup.find_account_by_phone(db, [], identifier)
+                else:
+                    user_exists_anywhere = db.execute(
+                        text("SELECT id FROM public.tenant_users WHERE LOWER(email) = :e LIMIT 1"),
+                        {"e": norm_email},
+                    ).first()
             except Exception:
                 db.rollback()
                 user_exists_anywhere = None
@@ -188,7 +207,14 @@ async def request_password_reset(
 
     user_found = False
     user_phone = None
-    for schema_name in target_schemas:
+    if is_phone:
+        resolved_account = account_lookup.find_account_by_phone(db, target_schemas, identifier)
+        if not resolved_account:
+            return _generic_recovery_response()  # unknown or ambiguous number: no enumeration
+        norm_email = resolved_account["email"]
+        user_phone = resolved_account["phone"]
+        user_found = True
+    for schema_name in ([] if is_phone else target_schemas):
         try:
             tbl_exists = db.execute(text("SELECT to_regclass(:t)"), {"t": f'"{schema_name}".users'}).scalar()
             if tbl_exists:
@@ -241,6 +267,9 @@ async def request_password_reset(
     if not user_found:
         return _generic_recovery_response()  # no account enumeration
 
+    if not user_phone:
+        user_phone = account_lookup.find_phone_for_email(db, target_schemas, norm_email)
+
     # 3. Generate 6-Digit OTP via VerificationService stored in Redis (5-minute TTL)
     # Reset namespace ONLY: the bare "otp:{email}" key belongs to tenant registration (Addendum D).
     otp = await VerificationService.generate_and_store_otp(f"reset:{norm_email}")
@@ -254,6 +283,16 @@ async def request_password_reset(
         },
         expire_seconds=900,
     )
+    # Phone-keyed pointer so the confirm step can verify with a phone number regardless of the start channel.
+    phone_keys = {account_lookup.phone_digits(identifier)} if is_phone else set()
+    if user_phone:
+        phone_keys.add(account_lookup.phone_digits(user_phone))
+    for digits in filter(None, phone_keys):
+        await VerificationService.store_registration_payload(
+            f"reset:phone:{digits}",
+            {"email": norm_email, "workspace_slug": raw_slug},
+            expire_seconds=900,
+        )
 
     # 4. Asynchronously dispatch through the resolved tenant (or platform default).
     reset_tenant_id = None
@@ -263,10 +302,15 @@ async def request_password_reset(
         except (ValueError, TypeError):
             reset_tenant_id = None
     background_tasks.add_task(
-        VerificationService.dispatch_email_otp, norm_email, otp, str(company_name), reset_tenant_id
+        NotificationService.send_password_reset_otp,
+        NotificationService.select_channels(payload.channel, bool(user_phone)),
+        email=norm_email,
+        phone=user_phone,
+        otp=otp,
+        company_name=str(company_name),
+        tenant_id=reset_tenant_id,
+        audit_context=build_audit_context(request, actor_id=None, actor_identifier=norm_email) if request is not None else None,
     )
-    if user_phone:
-        background_tasks.add_task(VerificationService.dispatch_sms_otp, user_phone, otp, reset_tenant_id)
 
     # 5. Maintain legacy cryptographic token for backward compatibility
     reset_token = secrets.token_urlsafe(32)
@@ -323,8 +367,19 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
 
     raw_token = (payload.token or "").strip()
     raw_otp = (payload.otp_code or payload.code or "").strip()
-    norm_email = (payload.email or "").strip().lower()
+    raw_identifier = (payload.identifier or payload.email or "").strip()
+    norm_email = raw_identifier.lower()
     raw_slug = (payload.workspace_slug or "").strip().lower()
+    phone_pointer_key = None
+    if account_lookup.looks_like_phone(raw_identifier):
+        phone_pointer_key = f"reset:phone:{account_lookup.phone_digits(raw_identifier)}"
+        pointer = await VerificationService.get_registration_payload(phone_pointer_key)
+        norm_email = str((pointer or {}).get("email") or "").strip().lower()
+        if not norm_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code."
+            )
 
     # Determine candidate 6-digit OTP
     candidate_otp = None
@@ -352,6 +407,8 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
         if cached and not raw_slug:
             raw_slug = cached.get("workspace_slug", "")
         await VerificationService.delete_registration_payload(f"reset:{norm_email}")
+        if phone_pointer_key:
+            await VerificationService.delete_registration_payload(phone_pointer_key)
 
     # 2. If not validated via OTP, validate via legacy cryptographic token
     if not validated_via_otp:

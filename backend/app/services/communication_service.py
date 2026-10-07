@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import email.utils
+import json
 import logging
 import re
 import smtplib
@@ -18,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from backend.app.services import backup_destination_service as backup_credentials
 from backend.app.services.backup_service import redact_secrets
-from backend.models import CommunicationSetting
+from backend.models import CommunicationSetting, RecoveryChannelSetting
 
 logger = logging.getLogger("oxengl.communications")
 
@@ -28,6 +29,7 @@ PROVIDER_CHANNELS = {
     "twilio": "sms",
     "unifonic": "sms",
     "taqnyat": "sms",
+    "custom_http": "sms",
 }
 CONFIG_KEYS = {
     "smtp": frozenset({"host", "port", "security", "username"}),
@@ -35,6 +37,7 @@ CONFIG_KEYS = {
     "twilio": frozenset({"account_sid", "region"}),
     "unifonic": frozenset({"region"}),
     "taqnyat": frozenset({"region"}),
+    "custom_http": frozenset({"url", "method", "payload_template"}),
 }
 CREDENTIAL_FIELDS = {
     "smtp": frozenset({"password"}),
@@ -42,8 +45,12 @@ CREDENTIAL_FIELDS = {
     "twilio": frozenset({"auth_token"}),
     "unifonic": frozenset({"app_sid"}),
     "taqnyat": frozenset({"api_token"}),
+    "custom_http": frozenset({"headers"}),
 }
 MAX_CREDENTIAL_LEN = 8192
+MAX_PAYLOAD_TEMPLATE_LEN = 4096
+FORBIDDEN_HEADERS = frozenset({"host", "content-length", "transfer-encoding", "connection"})
+_HEADER_NAME_RE = re.compile(r"^[A-Za-z0-9-]{1,64}$")
 
 
 class CommunicationError(RuntimeError):
@@ -69,6 +76,70 @@ def _clean_text(value: Any, field: str, maximum: int = 255) -> str:
     if not clean or len(clean) > maximum or "\x00" in clean:
         raise ValueError(f"{field} is invalid")
     return clean
+
+
+def _validate_custom_http_config(config: Mapping[str, Any], *, tenant_scoped: bool) -> dict[str, Any]:
+    from urllib.parse import urlsplit
+
+    url = _clean_text(config.get("url"), "url", 2048)
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
+        raise ValueError("url must be an https URL without embedded credentials")
+    try:
+        backup_credentials.validate_destination_host(
+            parts.hostname.lower().rstrip("."), allow_internal=not tenant_scoped
+        )
+    except backup_credentials.DestinationValidationError as exc:
+        raise ValueError(str(exc)) from None
+    method = str(config.get("method", "POST")).strip().upper()
+    if method not in {"POST", "GET"}:
+        raise ValueError("method must be POST or GET")
+    template = config.get("payload_template")
+    if template is None or (isinstance(template, str) and not template.strip()):
+        template = '{"to": "{phone}", "message": "{message}"}'
+    template = _clean_text(template, "payload_template", MAX_PAYLOAD_TEMPLATE_LEN)
+    try:
+        parsed = json.loads(template)
+    except ValueError:
+        raise ValueError("payload_template must be valid JSON") from None
+    if not isinstance(parsed, dict):
+        raise ValueError("payload_template must be a JSON object")
+    if "{phone}" not in template or "{message}" not in template:
+        raise ValueError("payload_template must contain the {phone} and {message} placeholders")
+    return {"url": url, "method": method, "payload_template": template}
+
+
+def parse_custom_headers(raw: str | None) -> dict[str, str]:
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        raise ValueError("headers must be a JSON object") from None
+    if not isinstance(data, dict) or len(data) > 20:
+        raise ValueError("headers must be a JSON object with at most 20 entries")
+    clean: dict[str, str] = {}
+    for key, value in data.items():
+        if not isinstance(key, str) or not _HEADER_NAME_RE.fullmatch(key) or key.lower() in FORBIDDEN_HEADERS:
+            raise ValueError("header name is invalid")
+        if not isinstance(value, str) or len(value) > 2048 or re.search(r"[\r\n\x00]", value):
+            raise ValueError("header value is invalid")
+        clean[key] = value
+    return clean
+
+
+def render_payload_template(template: str, phone: str, message: str) -> dict[str, Any]:
+    """Substitute placeholders inside parsed JSON string values, so values can never break the JSON structure."""
+    def walk(node: Any) -> Any:
+        if isinstance(node, str):
+            return node.replace("{phone}", phone).replace("{message}", message)
+        if isinstance(node, list):
+            return [walk(item) for item in node]
+        if isinstance(node, dict):
+            return {key: walk(value) for key, value in node.items()}
+        return node
+
+    return walk(json.loads(template))
 
 
 def validate_config(provider: str, raw_config: Mapping[str, Any] | None, *, tenant_scoped: bool) -> dict[str, Any]:
@@ -110,6 +181,8 @@ def validate_config(provider: str, raw_config: Mapping[str, Any] | None, *, tena
         if not re.fullmatch(r"[a-z0-9-]{1,32}", region):
             raise ValueError("region is invalid")
         clean["region"] = region
+    elif provider == "custom_http":
+        clean.update(_validate_custom_http_config(config, tenant_scoped=tenant_scoped))
     elif provider in {"sendgrid", "unifonic", "taqnyat"}:
         region = str(config.get("region", "global")).strip().lower()
         if not re.fullmatch(r"[a-z0-9-]{1,32}", region):
@@ -150,6 +223,9 @@ def validate_setting(
     required = CREDENTIAL_FIELDS[provider]
     if provider == "smtp" and not clean_config.get("username"):
         required = frozenset()
+    if provider == "custom_http":
+        required = frozenset()
+        parse_custom_headers(values.get("headers"))
     missing = required - values.keys()
     if missing and require_credentials:
         raise ValueError("credential field required: " + ", ".join(sorted(missing)))
@@ -293,6 +369,17 @@ async def deliver(setting: CommunicationSetting, destination: str, body: str) ->
             result = response.json()
             if not isinstance(result, dict) or result.get("status") in {"failed", "error"}:
                 raise CommunicationError("SMS provider did not confirm the message.")
+            return
+        if setting.provider == "custom_http":
+            config = validate_config("custom_http", config, tenant_scoped=setting.tenant_id is not None)
+            payload = render_payload_template(config["payload_template"], destination, body)
+            headers = parse_custom_headers(credentials.get("headers"))
+            if config["method"] == "GET":
+                response = await _request("GET", config["url"], headers=headers, params=payload)
+            else:
+                response = await _request("POST", config["url"], headers=headers, json=payload)
+            if not 200 <= response.status_code < 300:
+                raise CommunicationError("SMS provider did not accept the message.")
             return
         raise CommunicationError("Unsupported communication provider.")
     except CommunicationError:
@@ -456,3 +543,30 @@ async def test_setting(db: Session, row: CommunicationSetting, recipient: str) -
         row.last_test_error = redact_secrets(str(exc), max_len=500)
         db.flush()
         return False, "Provider did not accept the test message."
+
+
+def resolve_recovery_channels(db: Session, tenant_id: uuid.UUID | None) -> dict[str, bool]:
+    """Effective recovery-channel switches: tenant row, else platform row, else everything enabled."""
+    rows: list[RecoveryChannelSetting] = []
+    if tenant_id is not None:
+        rows.extend(db.scalars(select(RecoveryChannelSetting).where(RecoveryChannelSetting.tenant_id == tenant_id)))
+    if not rows:
+        rows.extend(db.scalars(select(RecoveryChannelSetting).where(RecoveryChannelSetting.tenant_id.is_(None))))
+    if not rows:
+        return {"email_enabled": True, "sms_enabled": True}
+    return {"email_enabled": bool(rows[0].email_enabled), "sms_enabled": bool(rows[0].sms_enabled)}
+
+
+def upsert_recovery_channels(
+    db: Session, tenant_id: uuid.UUID | None, *, email_enabled: bool, sms_enabled: bool, updated_by: uuid.UUID | None
+) -> dict[str, bool]:
+    stmt = select(RecoveryChannelSetting).where(
+        RecoveryChannelSetting.tenant_id == tenant_id if tenant_id is not None else RecoveryChannelSetting.tenant_id.is_(None)
+    )
+    row = db.scalars(stmt).first()
+    if row is None:
+        row = RecoveryChannelSetting(id=uuid.uuid4(), tenant_id=tenant_id)
+        db.add(row)
+    row.email_enabled, row.sms_enabled, row.updated_by = email_enabled, sms_enabled, updated_by
+    db.flush()
+    return {"email_enabled": row.email_enabled, "sms_enabled": row.sms_enabled}
