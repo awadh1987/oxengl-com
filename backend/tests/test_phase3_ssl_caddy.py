@@ -11,6 +11,7 @@ Covers:
 8. Production Caddyfile Validation
 """
 from backend.tests.auth_helpers import tenant_admin_headers
+from pathlib import Path
 import shutil
 import uuid
 import subprocess
@@ -283,7 +284,7 @@ def test_tenant_control_verify_endpoint(client, db_session):
 def test_caddyfile_syntax_validation():
     """Validates that Caddyfile passes formal validation by the installed Caddy 2.x binary."""
     result = subprocess.run(
-        ["caddy", "validate", "--config", "Caddyfile"],
+        ["caddy", "validate", "--config", str(Path(__file__).resolve().parents[2] / "infrastructure" / "Caddyfile"), "--adapter", "caddyfile"],
         capture_output=True,
         text=True,
     )
