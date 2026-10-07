@@ -34,6 +34,7 @@ from backend.app.services.billing_service import (
 )
 from backend.app.core.middleware import invalidate_domain_cache
 from backend.api.dependencies import create_access_token
+from backend.tests.auth_helpers import tenant_admin_headers
 
 client = TestClient(app)
 
@@ -45,6 +46,7 @@ def ensure_default_plans():
     try:
         seed_default_subscription_plans(db)
     finally:
+        db.rollback()
         db.close()
 
 
@@ -82,10 +84,7 @@ def test_free_tier_cannot_register_custom_domain():
         # Establish linked Free subscription
         sub = get_or_create_tenant_subscription(db, tenant_id, plan_name="FREE")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         resp = client.post(
             "/api/v1/tenant/control/domains",
@@ -99,6 +98,7 @@ def test_free_tier_cannot_register_custom_domain():
         assert resp.headers.get("x-current-tier") == "FREE"
         assert "/api/v1/tenant/billing/checkout" in resp.headers.get("x-upgrade-url", "")
     finally:
+        db.rollback()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
         db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
@@ -138,10 +138,7 @@ def test_free_tier_cannot_trigger_database_migration_or_test():
 
         get_or_create_tenant_subscription(db, tenant_id, plan_name="FREE")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # 1. Test Connection
         test_payload = {
@@ -177,6 +174,7 @@ def test_free_tier_cannot_trigger_database_migration_or_test():
         assert resp_switch.status_code == 403
         assert "allow_external_database" in resp_switch.json()["detail"]
     finally:
+        db.rollback()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
         db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
@@ -216,10 +214,7 @@ def test_professional_tier_cannot_access_enterprise_features():
 
         get_or_create_tenant_subscription(db, tenant_id, plan_name="PROFESSIONAL")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # Attempt custom domain registration
         dom_resp = client.post(
@@ -239,6 +234,7 @@ def test_professional_tier_cannot_access_enterprise_features():
         assert db_resp.status_code == 403
         assert "locked for Grade 'PROFESSIONAL'" in db_resp.json()["detail"]
     finally:
+        db.rollback()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
         db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
@@ -287,10 +283,7 @@ def test_free_tier_seat_limit_enforcement():
 
         get_or_create_tenant_subscription(db, tenant_id, plan_name="FREE")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # Invite user 2 (seat 2 / max 2) -> Should succeed (201 Created)
         invite1_resp = client.post(
@@ -313,6 +306,7 @@ def test_free_tier_seat_limit_enforcement():
         assert "limit of 2 seat(s) on Grade 'FREE'" in data["detail"]
         assert invite2_resp.headers.get("x-quota-type") == "max_seats"
     finally:
+        db.rollback()
         db.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
@@ -368,10 +362,7 @@ def test_professional_tier_seat_limit_boundary():
         db.add_all(users)
         db.commit()
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # Attempt to invite 21st user
         invite_resp = client.post(
@@ -384,6 +375,7 @@ def test_professional_tier_seat_limit_boundary():
         assert "Seat quota exceeded" in data["detail"]
         assert "limit of 20 seat(s) on Grade 'PROFESSIONAL'" in data["detail"]
     finally:
+        db.rollback()
         db.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
@@ -424,10 +416,7 @@ def test_enterprise_tier_unlimited_seats_and_features():
 
         get_or_create_tenant_subscription(db, tenant_id, plan_name="ENTERPRISE")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # 1. Custom Domain registration succeeds
         dom_resp = client.post(
@@ -482,6 +471,7 @@ def test_enterprise_tier_unlimited_seats_and_features():
         assert invite_resp.status_code == 201
         assert invite_resp.json()["success"] is True
     finally:
+        db.rollback()
         invalidate_domain_cache(domain_name)
         db.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
@@ -524,10 +514,7 @@ def test_upgrade_unlocks_gated_features_immediately():
 
         sub = get_or_create_tenant_subscription(db, tenant_id, plan_name="FREE")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # Attempt 1: Blocked on Free
         resp_blocked = client.post(
@@ -569,6 +556,7 @@ def test_upgrade_unlocks_gated_features_immediately():
         assert resp_unlocked.status_code == 201
         assert resp_unlocked.json()["success"] is True
     finally:
+        db.rollback()
         invalidate_domain_cache(domain_name)
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
@@ -613,10 +601,7 @@ def test_custom_limits_contract_override_bypasses_tier_lock():
         sub.custom_limits = {"allow_external_database": True, "max_seats": 50}
         db.commit()
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # External database test-connection now passes entitlement check!
         resp = client.post(
@@ -637,6 +622,7 @@ def test_custom_limits_contract_override_bypasses_tier_lock():
         )
         assert dom_resp.status_code == 403
     finally:
+        db.rollback()
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()
         db.query(ResCompany).filter(ResCompany.id == tenant_id).delete()
@@ -670,7 +656,6 @@ def test_caddy_ask_ssl_gatekeeper_enforces_tier():
             subscription_tier="free",
             status="active",
         )
-        get_or_create_tenant_subscription(db, free_tenant_id, plan_name="FREE")
 
         # 2. Enterprise tenant with a custom domain value in DB
         ent_tenant = MasterTenant(
@@ -684,10 +669,11 @@ def test_caddy_ask_ssl_gatekeeper_enforces_tier():
             subscription_tier="enterprise",
             status="active",
         )
-        get_or_create_tenant_subscription(db, ent_tenant_id, plan_name="ENTERPRISE")
 
         db.add_all([free_tenant, ent_tenant])
         db.commit()
+        get_or_create_tenant_subscription(db, free_tenant_id, plan_name="FREE")
+        get_or_create_tenant_subscription(db, ent_tenant_id, plan_name="ENTERPRISE")
 
         invalidate_domain_cache(free_domain)
         invalidate_domain_cache(ent_domain)
@@ -702,6 +688,7 @@ def test_caddy_ask_ssl_gatekeeper_enforces_tier():
         assert ent_ask.status_code == 200
         assert "Authorized for domain" in ent_ask.text
     finally:
+        db.rollback()
         invalidate_domain_cache(free_domain)
         invalidate_domain_cache(ent_domain)
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id.in_([free_tenant_id, ent_tenant_id])).delete()
@@ -745,10 +732,7 @@ def test_features_override_bypasses_custom_domain_tier_lock():
 
         get_or_create_tenant_subscription(db, tenant_id, plan_name="PROFESSIONAL")
 
-        headers = {
-            "X-Tenant-ID": str(tenant_id),
-            "X-Company-ID": str(tenant_id),
-        }
+        headers = tenant_admin_headers(db, tenant_id)
 
         # Attempt: Professional tenant with features_override={"allow_custom_domain": True}
         # MUST bypass 403 and return 201 Created!
@@ -764,6 +748,7 @@ def test_features_override_bypasses_custom_domain_tier_lock():
         db.refresh(tenant)
         assert tenant.custom_domain == domain_name
     finally:
+        db.rollback()
         invalidate_domain_cache(domain_name)
         db.query(TenantSubscription).filter(TenantSubscription.tenant_id == tenant_id).delete()
         db.query(MasterTenant).filter(MasterTenant.id == tenant_id).delete()

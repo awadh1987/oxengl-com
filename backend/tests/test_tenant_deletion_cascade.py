@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.database import SessionLocal
 from backend import models
+from backend.tests.auth_helpers import platform_superadmin_headers
 from backend.app.domains.inventory.models import Material
 
 client = TestClient(app)
@@ -29,6 +30,8 @@ def test_tenant_deletion_cascade_cleans_child_records_and_returns_clean_json():
     db.commit()
 
     # 2. Add child records:
+    admin_headers, admin_user = platform_superadmin_headers(db)
+    admin_id = admin_user.id
     user = models.ResUser(email=f"del_{cid.hex[:6]}@oxen.sa", company_id=cid, full_name="Del User")
     partner = models.ResPartner(company_id=cid, name=f"Partner {cid.hex[:6]}")
     db.add_all([user, partner])
@@ -75,14 +78,14 @@ def test_tenant_deletion_cascade_cleans_child_records_and_returns_clean_json():
     db.close()
 
     # 3. Test wrong confirmation phrase returns 400 clean JSON:
-    res_wrong = client.request("DELETE", f"/api/master/platform/tenants/{cid}", json={"confirm_phrase": "WRONG-PHRASE"})
+    res_wrong = client.request("DELETE", f"/api/master/platform/tenants/{cid}", json={"confirm_phrase": "WRONG-PHRASE"}, headers=admin_headers)
     assert res_wrong.status_code == 400
     wrong_json = res_wrong.json()
     assert "detail" in wrong_json
     assert "Destructive safety check failed" in wrong_json["detail"]
 
     # 4. Test correct confirmation phrase:
-    res_correct = client.request("DELETE", f"/api/master/platform/tenants/{cid}", json={"confirm_phrase": f"CONFIRM-DELETE-{slug}"})
+    res_correct = client.request("DELETE", f"/api/master/platform/tenants/{cid}", json={"confirm_phrase": f"CONFIRM-DELETE-{slug}"}, headers=admin_headers)
     assert res_correct.status_code == 200
     correct_json = res_correct.json()
     assert correct_json.get("success") is True
@@ -100,4 +103,7 @@ def test_tenant_deletion_cascade_cleans_child_records_and_returns_clean_json():
         assert db.query(models.CustomerInvoice).filter(models.CustomerInvoice.company_id == cid).first() is None
         assert db.query(Material).filter(Material.company_id == cid).first() is None
     finally:
+        db.rollback()
+        db.query(models.ResUser).filter(models.ResUser.id == admin_id).delete()
+        db.commit()
         db.close()

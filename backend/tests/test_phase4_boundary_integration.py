@@ -45,6 +45,7 @@ from backend.app.services.migration_service import (
     revert_to_shared_database,
     get_migration_status_data,
 )
+from backend.tests.auth_helpers import tenant_admin_headers
 from backend.two_tier_auth import issue_two_tier_jwt, verify_two_tier_jwt
 
 
@@ -52,6 +53,7 @@ from backend.two_tier_auth import issue_two_tier_jwt, verify_two_tier_jwt
 def db_session():
     db = SessionLocal()
     yield db
+    db.rollback()
     db.close()
 
 
@@ -318,7 +320,7 @@ def test_zero_slug_session_persistence_and_anti_spoofing(client, db_session):
             "/api/v1/tenant/control/domains",
             headers={
                 "Host": custom_host,
-                "Authorization": f"Bearer {token}",
+                **tenant_admin_headers(db_session, tenant_id),
             },
         )
         assert resp.status_code == 200
@@ -328,7 +330,7 @@ def test_zero_slug_session_persistence_and_anti_spoofing(client, db_session):
         # 3. Session persistence: request succeeds without Host header if token is valid
         resp_direct = client.get(
             "/api/v1/tenant/control/domains",
-            headers={"Authorization": f"Bearer {token}"},
+            headers=tenant_admin_headers(db_session, tenant_id),
         )
         assert resp_direct.status_code == 200
         assert any(d.get("domain_name") == custom_host for d in resp_direct.json()["domains"])
@@ -338,16 +340,17 @@ def test_zero_slug_session_persistence_and_anti_spoofing(client, db_session):
         resp_spoofed = client.get(
             "/api/v1/tenant/control/domains",
             headers={
-                "Authorization": f"Bearer {token}",
+                **tenant_admin_headers(db_session, tenant_id),
                 "X-Tenant-ID": attacker_target_id,  # Malicious override attempt
             },
         )
-        # Token claims strictly anchor tenant; spoofed header does not switch tenant boundary
-        assert resp_spoofed.status_code == 200
-        assert any(d.get("domain_name") == custom_host for d in resp_spoofed.json()["domains"])
+        # Caller scope is anchored server-side; a foreign tenant header is rejected
+        assert resp_spoofed.status_code == 403
 
     finally:
         invalidate_domain_cache(custom_host)
+        db_session.rollback()
+        db_session.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db_session.delete(tenant)
         db_session.delete(company)
         db_session.commit()
@@ -429,6 +432,8 @@ def test_migration_failure_boundary_preserves_master_mapping(db_session):
 
     finally:
         db_session.delete(mig_record)
+        db_session.rollback()
+        db_session.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db_session.delete(tenant)
         db_session.delete(company)
         db_session.commit()
@@ -483,7 +488,7 @@ def test_live_database_revert_endpoint(client, db_session):
     try:
         resp = client.post(
             "/api/v1/tenant/control/database/switch-back",
-            headers={"X-Tenant-ID": str(tenant_id)},
+            headers=tenant_admin_headers(db_session, tenant_id),
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -500,6 +505,8 @@ def test_live_database_revert_endpoint(client, db_session):
     finally:
         tenant_connection_manager.reset_cache(tenant_id)
         db_session.delete(config)
+        db_session.rollback()
+        db_session.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db_session.delete(tenant)
         db_session.delete(company)
         db_session.commit()
@@ -603,7 +610,7 @@ def test_full_enterprise_end_to_end_integration(client, db_session):
         # Step 3: Domain DNS verification endpoint
         verify_resp = client.post(
             f"/api/v1/tenant/control/domains/{custom_domain}/verify",
-            headers={"X-Tenant-ID": str(tenant_id)},
+            headers=tenant_admin_headers(db_session, tenant_id),
         )
         assert verify_resp.status_code == 200
         verify_data = verify_resp.json()
@@ -631,7 +638,7 @@ def test_full_enterprise_end_to_end_integration(client, db_session):
             "/api/v1/tenant/control/settings",
             headers={
                 "Host": custom_domain,
-                "Authorization": f"Bearer {token}",
+                **tenant_admin_headers(db_session, tenant_id),
             },
         )
         assert settings_resp.status_code == 200
@@ -648,6 +655,8 @@ def test_full_enterprise_end_to_end_integration(client, db_session):
     finally:
         tenant_connection_manager.reset_cache(tenant_id)
         invalidate_domain_cache(custom_domain)
+        db_session.rollback()
+        db_session.query(ResUser).filter(ResUser.company_id == tenant_id).delete()
         db_session.delete(tenant)
         db_session.delete(company)
         db_session.commit()
