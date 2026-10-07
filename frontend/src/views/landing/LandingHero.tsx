@@ -1,15 +1,21 @@
 import React from 'react';
+import { renderHighlighted } from '../../utils/highlightText';
+import { SiteSettings } from '../../hooks/useSiteSettings';
 
 interface LandingHeroProps {
   onRestoreWindow: (winId: string) => void;
   openWindows: Record<string, boolean>;
   activeWindow: string;
+  settings: Partial<SiteSettings>;
+  loading: boolean;
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({
   onRestoreWindow,
   openWindows,
   activeWindow,
+  settings,
+  loading,
 }) => {
   return (
     <section className="hero-section">
@@ -19,12 +25,12 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
           <span>PRODUCTION-PROVEN SAUDI ARABIA ERP BACKBONE</span>
         </div>
         
-        <h1 className="hero-title">
-          Sovereign Multi-Tenant ERP Architecture for the <span className="highlight-text">Kingdom of Saudi Arabia</span>
+        <h1 className="hero-title" aria-busy={loading}>
+          {settings.landing_headline ? renderHighlighted(settings.landing_headline) : (loading ? '\u00A0' : '')}
         </h1>
         
-        <p className="hero-subtitle">
-          Sub-millisecond query isolation, cryptographic ZATCA Phase 2 compliance, and raw quarry logistics orchestration—engineered on bare-metal PostgreSQL 16 and FastAPI.
+        <p className="hero-subtitle" aria-busy={loading}>
+          {settings.landing_subheadline ?? (loading ? '\u00A0' : '')}
         </p>
 
         <div className="hero-cta-group">

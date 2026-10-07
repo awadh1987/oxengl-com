@@ -550,21 +550,13 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
           )}
 
           {/* Card Footer */}
-          <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div className="mt-6 pt-5 border-t border-slate-800/80 flex items-center justify-center text-xs text-slate-400">
             <button
               type="button"
               onClick={() => navigateTo('/register')}
               className="text-orange-400 hover:text-orange-300 font-semibold transition"
             >
               {isAr ? 'تسجيل منشأة جديدة' : 'Register Workspace'}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigateTo('/admin')}
-              className="text-slate-400 hover:text-white transition flex items-center gap-1 text-[11px]"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
-              <span>{isAr ? 'بوابة المشرف العام' : 'Super Admin'}</span>
             </button>
           </div>
         </div>

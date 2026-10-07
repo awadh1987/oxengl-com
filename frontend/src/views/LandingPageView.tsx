@@ -7,6 +7,7 @@ import { ProofMetrics } from './landing/ProofMetrics';
 import { WorkflowMatrix } from './landing/WorkflowMatrix';
 import { PricingSection } from './landing/PricingSection';
 import { ProvisioningTerminal } from './landing/ProvisioningTerminal';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 import { LandingFooter } from './landing/LandingFooter';
 
 export interface LandingPageViewProps {
@@ -14,6 +15,7 @@ export interface LandingPageViewProps {
 }
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess }) => {
+  const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
   const [openWindows, setOpenWindows] = useState<Record<string, boolean>>({
     'win-finance': true,
     'win-telemetry': true,
@@ -68,6 +70,8 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
 
       <main className="landing-main flex-1 w-full">
       <LandingHero
+        settings={siteSettings}
+        loading={siteSettingsLoading}
         onRestoreWindow={handleRestoreWindow}
         openWindows={openWindows}
         activeWindow={activeWindow}
@@ -89,7 +93,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
       <ProvisioningTerminal />
       </main>
 
-      <LandingFooter />
+      <LandingFooter settings={siteSettings} />
     </div>
   );
 };

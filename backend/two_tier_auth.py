@@ -65,6 +65,15 @@ JWT_SECRET_MASTER = require_secret("JWT_SECRET_MASTER")
 JWT_SECRET_TENANT = require_secret("JWT_SECRET_TENANT")
 if JWT_SECRET_MASTER == JWT_SECRET_TENANT:
     raise RuntimeError("CRITICAL SECURITY CONFIGURATION ERROR: JWT_SECRET_MASTER and JWT_SECRET_TENANT must differ.")
+# The one and only identity admitted to the platform (master) plane. Tenant admins/owners and any other
+# master_users rows are never eligible, regardless of their stored role.
+SUPER_ADMIN_EMAIL = (os.getenv("SUPER_ADMIN_EMAIL") or "superadmin@oxengl.com").strip().lower()
+
+
+def is_designated_super_admin(email: Optional[str]) -> bool:
+    return bool(email) and str(email).strip().lower() == SUPER_ADMIN_EMAIL
+
+
 JWT_EXPIRE_SECONDS = int(os.getenv("JWT_EXPIRE_SECONDS", "14400"))  # 4 hours
 OTP_EXPIRE_MINUTES = 10
 MAX_LOGIN_ATTEMPTS = 5
@@ -238,6 +247,8 @@ def verify_two_tier_jwt(token: str, expected_tier: Literal["master", "tenant"]) 
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Cross-plane token violation: Token issued for '{payload.get('tier')}' cannot access '{expected_tier}' tier.",
             )
+        if expected_tier == "master" and not is_designated_super_admin(payload.get("identity")):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform super administrator token required.")
         return payload
     except HTTPException:
         raise
@@ -428,20 +439,7 @@ def require_master_auth(request: Request, db: Session = Depends(get_db)) -> Mast
     claims = verify_two_tier_jwt(token, expected_tier="master")
     user_id = uuid.UUID(claims["sub"])
     user = db.scalar(select(MasterUser).where(MasterUser.id == user_id, MasterUser.is_active.is_(True)))
-    if not user:
-        res_u = db.scalar(select(ResUser).where(ResUser.id == user_id, ResUser.is_active.is_(True)))
-        if res_u and (res_u.is_superuser or str(res_u.role).upper() in ("SUPERADMIN", "SUPER_ADMIN", "ADMIN")):
-            user = MasterUser(
-                id=res_u.id,
-                email=res_u.email,
-                full_name=res_u.full_name or "Super Administrator",
-                password_hash=res_u.password_hash,
-                is_active=True,
-                role="super_admin",
-            )
-            db.add(user)
-            db.commit()
-            return user
+    if not user or not is_designated_super_admin(user.email):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Master operator account not found or inactive.")
     return user
 
@@ -522,66 +520,56 @@ router = APIRouter(prefix="/api/auth", tags=["Two-Tier Authentication"])
 @router.post("/master/login", response_model=AuthTokenResponse)
 @router.post("/master-login", response_model=AuthTokenResponse)
 def master_login(payload: MasterLoginRequest, request: Request, db: Session = Depends(get_db)):
-    """Authenticates Master Control Plane staff against MasterUser or platform root User."""
+    """Authenticates the single designated platform super admin; every other identity is rejected."""
     normalized_val, id_type = normalize_identifier(payload.identity)
 
-    # 1. Query MasterUser (master_users table)
+    def _audit(action: str, outcome: str, actor: Optional[uuid.UUID] = None) -> None:
+        from backend.app.domains.hr.audit import append_audit_from_context, build_audit_context
+
+        ctx = build_audit_context(request, actor_id=actor, actor_identifier=normalized_val)
+        append_audit_from_context(db, ctx, action=action, outcome=outcome, tenant_id=None)
+        db.commit()
+
     query = select(MasterUser).where(
         MasterUser.email == normalized_val if id_type == "email" else MasterUser.mobile_number == normalized_val
     )
     user = db.scalar(query)
 
-    # 2. Query ResUser / User (users table / res_users view)
+    # Reject non-designated identities before any password work (uniform 401, no account enumeration).
+    designated_identity = (
+        is_designated_super_admin(normalized_val) if id_type == "email" else bool(user and is_designated_super_admin(user.email))
+    )
+    if not designated_identity:
+        dummy_verify()
+        _audit("MASTER_LOGIN_FAILED", "FAILED")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account inactive.")
+
     res_user = None
     if id_type == "email":
         res_user = db.scalar(select(ResUser).where(func.lower(ResUser.email) == normalized_val.lower()))
 
-    # Verification status
     authenticated = False
     is_active_account = False
 
-    # Check MasterUser credentials
     if user is not None and verify_password(payload.password, user.password_hash):
         authenticated = True
         is_active_account = user.is_active
-        # Sync password to res_user if needed
         if res_user and res_user.password_hash != user.password_hash:
             res_user.password_hash = user.password_hash
             res_user.is_active = True
-
-    # Fallback to ResUser if MasterUser verification failed or record did not exist
-    elif res_user is not None:
-        is_super = (
-            getattr(res_user, "is_superuser", False) is True
-            or getattr(res_user, "is_super_admin", False) is True
-            or str(getattr(res_user, "role", "")).upper() in {
-                "SUPERADMIN", "SUPER_ADMIN", "SUPER_ADMINISTRATOR", "ADMIN", "OWNER"
-            }
-            or normalized_val.lower() in {
-                "admin@oxengl.me", "superadmin@oxengl.com", "admin@oxengl.com", "master@oxengl.com"
-            }
+    elif user is None and res_user is not None and verify_password(payload.password, res_user.password_hash):
+        authenticated = True
+        is_active_account = res_user.is_active
+        user = MasterUser(
+            id=res_user.id,
+            email=res_user.email,
+            full_name=res_user.full_name or "Super Administrator",
+            password_hash=res_user.password_hash,
+            is_active=True,
+            is_superuser=True,
+            role="super_admin",
         )
-        if is_super and verify_password(payload.password, res_user.password_hash):
-            authenticated = True
-            is_active_account = res_user.is_active
-            # Provision or update MasterUser
-            if user is None:
-                user = MasterUser(
-                    id=res_user.id,
-                    email=res_user.email,
-                    full_name=res_user.full_name or "Super Administrator",
-                    password_hash=res_user.password_hash,
-                    is_active=True,
-                    is_superuser=True,
-                    role="super_admin",
-                )
-                db.add(user)
-            else:
-                user.password_hash = res_user.password_hash
-                user.is_active = True
-                user.is_superuser = True
-                user.failed_login_attempts = 0
-                user.locked_until = None
+        db.add(user)
 
     if not authenticated:
         if user is not None:
@@ -591,9 +579,11 @@ def master_login(payload: MasterLoginRequest, request: Request, db: Session = De
             db.commit()
         else:
             dummy_verify()
+        _audit("MASTER_LOGIN_FAILED", "FAILED", user.id if user is not None else None)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials or account inactive.")
 
     if not is_active_account:
+        _audit("MASTER_LOGIN_FAILED", "FAILED", user.id)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Master account has been suspended.")
 
     # Successful login: reset counters, clear locks, and record last login
@@ -602,6 +592,7 @@ def master_login(payload: MasterLoginRequest, request: Request, db: Session = De
     user.is_active = True
     user.last_login_at = datetime.now(timezone.utc)
     db.commit()
+    _audit("MASTER_LOGIN_SUCCESS", "SUCCESS", user.id)
 
     token = issue_two_tier_jwt(
         tier="master",

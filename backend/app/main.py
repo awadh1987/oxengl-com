@@ -6431,6 +6431,8 @@ from backend.app.api.v1.branding import router as dynamic_branding_router
 # Include the branding router alongside active application resource domains
 app.include_router(logo_upload_router)
 app.include_router(dynamic_branding_router)
+from backend.app.api.v1.site_settings import router as site_settings_router
+app.include_router(site_settings_router)
 
 
 

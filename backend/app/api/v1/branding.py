@@ -27,7 +27,7 @@ from backend.schemas import (
     TenantBrandingUpdate,
 )
 from backend.app.core.middleware import resolve_tenant_from_host
-from backend.two_tier_auth import verify_two_tier_jwt
+from backend.two_tier_auth import is_designated_super_admin, verify_two_tier_jwt
 
 logger = logging.getLogger("oxengl.branding")
 
@@ -129,7 +129,7 @@ def _require_active_platform_admin(claims: Dict[str, Any], db: Session) -> Maste
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject.")
 
     user = db.scalar(select(MasterUser).where(MasterUser.id == user_id, MasterUser.is_active.is_(True)))
-    if not user or str(user.role or "").strip().lower() not in _PLATFORM_ADMIN_ROLES:
+    if not user or not is_designated_super_admin(user.email) or str(user.role or "").strip().lower() not in _PLATFORM_ADMIN_ROLES:
         logger.warning("Denied platform-admin action: sub=%s role=%s", claims.get("sub"), getattr(user, "role", None))
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform administrator privileges required.")
     return user

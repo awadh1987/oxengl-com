@@ -9,6 +9,7 @@ import { BrandWordmark } from './landing/BrandWordmark';
 import { useOutsideClick } from '../hooks/useOutsideClick';
 import { Company } from '../types';
 import { LicenseProvisionerView, PanoramicCockpit, PlatformSettingsView, PricingPlansView, SystemAuditView, TenantsRegistryView } from '../components/platform/PlatformModules';
+import { LandingSettingsPanel } from '../components/platform/LandingSettingsPanel';
 import { MasterControlPanel } from '../components/platform/MasterControlPanel';
 import { SuperAdminAnalyticsView } from './SuperAdminAnalyticsView';
 import { SuperAdminLogsView } from './SuperAdminLogsView';
@@ -83,7 +84,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
       case 'licenses': return <LicenseProvisionerView />;
       case 'pricing': return <PricingPlansView />;
       case 'health': return <SystemAuditView />;
-      case 'settings': return <PlatformSettingsView />;
+      case 'settings': return <div className="h-full overflow-y-auto"><LandingSettingsPanel /><PlatformSettingsView /></div>;
       default: return <PanoramicCockpit onNavigate={setActiveTab} />;
     }
   };

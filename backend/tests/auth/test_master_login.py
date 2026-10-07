@@ -4,32 +4,22 @@ from backend.two_tier_auth import verify_password, hash_password
 
 
 @pytest.mark.asyncio
-async def test_master_login_admin_email(async_client):
-    """Verifies that admin@oxengl.com can successfully authenticate without HTTP 500 crashes."""
+async def test_master_login_non_designated_email_rejected(async_client):
+    """Only superadmin@oxengl.com may use the master plane."""
     response = await async_client.post(
         "/api/auth/master/login",
         json={"identity": "admin@oxengl.com", "password": "OxenGL@2026Secure!"},
     )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert "access_token" in data
-    assert data["tier"] == "master"
-    assert data["role"] == "super_admin"
-    assert data["user"]["email"] == "admin@oxengl.com"
-    assert data["user"]["id"] == "00000000-0000-0000-0000-000000000000"
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio
-async def test_master_login_admin_phone(async_client):
-    """Verifies that the Master SuperAdmin can authenticate using their registered mobile number."""
+async def test_master_login_non_designated_phone_rejected(async_client):
     response = await async_client.post(
         "/api/auth/master/login",
         json={"identity": "+966500000002", "password": "OxenGL@2026Secure!"},
     )
-    assert response.status_code == status.HTTP_200_OK
-    data = response.json()
-    assert "access_token" in data
-    assert data["user"]["mobile"] == "+966500000002"
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 @pytest.mark.asyncio

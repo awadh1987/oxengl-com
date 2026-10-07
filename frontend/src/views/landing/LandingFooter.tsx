@@ -1,7 +1,12 @@
 import React from 'react';
 import { BrandWordmark } from './BrandWordmark';
+import { SiteSettings } from '../../hooks/useSiteSettings';
 
-export const LandingFooter: React.FC = () => {
+interface LandingFooterProps {
+  settings: Partial<SiteSettings>;
+}
+
+export const LandingFooter: React.FC<LandingFooterProps> = ({ settings }) => {
   return (
     <footer className="main-footer">
       <div className="footer-top">
@@ -46,6 +51,16 @@ export const LandingFooter: React.FC = () => {
             <li><a href="#provision">Reserve Namespace</a></li>
             <li><a href="/health">Cluster Health Radar</a></li>
           </ul>
+          {(settings.contact_email || settings.contact_phone || settings.contact_address) && (
+            <>
+              <h4 style={{ marginTop: '16px' }}>Contact</h4>
+              <ul>
+                {settings.contact_email && <li><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a></li>}
+                {settings.contact_phone && <li><a href={`tel:${settings.contact_phone.replace(/[^+\d]/g, '')}`}>{settings.contact_phone}</a></li>}
+                {settings.contact_address && <li>{settings.contact_address}</li>}
+              </ul>
+            </>
+          )}
         </div>
       </div>
 
