@@ -297,8 +297,11 @@ async def deliver(setting: CommunicationSetting, destination: str, body: str) ->
         raise CommunicationError("Unsupported communication provider.")
     except CommunicationError:
         raise
-    except Exception:
-        logger.warning("Communication provider request failed (channel=%s provider=%s)", setting.channel, setting.provider)
+    except Exception as exc:
+        logger.warning(
+            "Communication provider request failed (channel=%s provider=%s error=%s)",
+            setting.channel, setting.provider, type(exc).__name__,
+        )
         raise CommunicationError(f"{setting.channel.upper()} delivery failed; provider did not confirm acceptance.") from None
 
 
