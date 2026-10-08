@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import smtplib
+import socket
 import ssl
 import uuid
 from datetime import datetime, timezone
@@ -294,31 +295,129 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
     message["To"] = destination
     message["Subject"] = "OxenGL notification"
     message.set_content(body)
-    host, port = config["host"], int(config["port"])
+    host = config.get("host")
+    if not host:
+        raise CommunicationError("SMTP host is not configured.")
+    try:
+        port = int(config.get("port") or 25)
+    except (ValueError, TypeError):
+        raise CommunicationError("Invalid SMTP port configuration.")
+
+    security = (config.get("security") or "").strip().lower()
+    username = config.get("username")
+    password = credentials.get("password") if credentials else None
     timeout = 10
-    if port == 465 or config["security"] == "ssl":
-        with smtplib.SMTP_SSL(host, port, timeout=timeout, context=ssl.create_default_context()) as client:
-            if config.get("username"):
-                client.login(config["username"], credentials["password"])
+
+    logger.info(
+        "Initiating SMTP delivery to %s via %s:%s (security=%s, user=%s, tenant_id=%s)",
+        destination, host, port, security, username or "none", setting.tenant_id,
+    )
+
+    client = None
+    try:
+        if port == 465 or security == "ssl":
+            ctx = ssl.create_default_context()
+            client = smtplib.SMTP_SSL(host, port, timeout=timeout, context=ctx)
+            if username:
+                if not password:
+                    logger.error(
+                        "SMTP credentials missing password for user '%s' on %s:%s (tenant_id=%s). Credentials may need re-entry.",
+                        username, host, port, setting.tenant_id,
+                    )
+                    raise CommunicationError(f"SMTP authentication requires a password for user '{username}', but credentials were missing or could not be decrypted.")
+                client.login(username, password)
             refused = client.send_message(message)
-    else:
-        with smtplib.SMTP(host, port, timeout=timeout) as client:
+        else:
+            client = smtplib.SMTP(host, port, timeout=timeout)
             client.ehlo()
-            client.starttls(context=ssl.create_default_context())
-            client.ehlo()
-            if config.get("username"):
-                client.login(config["username"], credentials["password"])
+            if security == "starttls" or client.has_extn("starttls"):
+                ctx = ssl.create_default_context()
+                client.starttls(context=ctx)
+                client.ehlo()
+            if username:
+                if not password:
+                    logger.error(
+                        "SMTP credentials missing password for user '%s' on %s:%s (tenant_id=%s). Credentials may need re-entry.",
+                        username, host, port, setting.tenant_id,
+                    )
+                    raise CommunicationError(f"SMTP authentication requires a password for user '{username}', but credentials were missing or could not be decrypted.")
+                client.login(username, password)
             refused = client.send_message(message)
-    if refused:
-        raise CommunicationError("SMTP server did not accept the message.")
+
+        if refused:
+            logger.error(
+                "SMTP Recipient Refused by server %s:%s for recipient %s (tenant_id=%s): %s",
+                host, port, destination, setting.tenant_id, refused,
+            )
+            raise CommunicationError(f"SMTP server refused recipient '{destination}': {refused}")
+
+        logger.info(
+            "SMTP delivery successful to %s via %s:%s (tenant_id=%s)",
+            destination, host, port, setting.tenant_id,
+        )
+    except smtplib.SMTPAuthenticationError as auth_err:
+        code = getattr(auth_err, "smtp_code", None)
+        raw_msg = getattr(auth_err, "smtp_error", "")
+        err_text = raw_msg.decode(errors="replace") if isinstance(raw_msg, bytes) else str(raw_msg)
+        logger.error(
+            "SMTP Authentication Failure (code=%s user=%s host=%s:%s tenant_id=%s): %s",
+            code, username, host, port, setting.tenant_id, err_text,
+            exc_info=True,
+        )
+        raise CommunicationError(f"SMTP authentication failed (code {code}) for user '{username}' on '{host}:{port}': {err_text}") from auth_err
+    except (smtplib.SMTPConnectError, ConnectionRefusedError, socket.timeout, TimeoutError, OSError) as conn_err:
+        logger.error(
+            "SMTP Connection Failure to %s:%s (security=%s tenant_id=%s): %s",
+            host, port, security, setting.tenant_id, conn_err,
+            exc_info=True,
+        )
+        raise CommunicationError(f"SMTP connection to '{host}:{port}' failed: {conn_err}") from conn_err
+    except (ssl.SSLError, ssl.CertificateError) as ssl_err:
+        logger.error(
+            "SMTP TLS/SSL Handshake Failure on %s:%s (security=%s tenant_id=%s): %s",
+            host, port, security, setting.tenant_id, ssl_err,
+            exc_info=True,
+        )
+        raise CommunicationError(f"SMTP TLS/SSL handshake failed on '{host}:{port}': {ssl_err}") from ssl_err
+    except smtplib.SMTPRecipientsRefused as rec_err:
+        logger.error(
+            "SMTP Recipient Refused for %s on %s:%s (tenant_id=%s): %s",
+            destination, host, port, setting.tenant_id, rec_err,
+            exc_info=True,
+        )
+        raise CommunicationError(f"SMTP recipient '{destination}' was refused by {host}: {rec_err}") from rec_err
+    except smtplib.SMTPException as smtp_err:
+        logger.error(
+            "SMTP Protocol Failure on %s:%s (tenant_id=%s): %s",
+            host, port, setting.tenant_id, smtp_err,
+            exc_info=True,
+        )
+        raise CommunicationError(f"SMTP protocol error on '{host}:{port}': {smtp_err}") from smtp_err
+    finally:
+        if client is not None:
+            try:
+                client.quit()
+            except Exception:
+                pass
 
 
 async def deliver(setting: CommunicationSetting, destination: str, body: str) -> None:
     if not destination or len(destination) > 320 or "\x00" in destination:
         raise CommunicationError("Recipient is invalid.")
+    credentials: dict[str, str] = {}
+    if setting.credentials_encrypted:
+        try:
+            credentials = _cipher.decrypt(setting.id, setting.tenant_id, setting.credentials_encrypted)
+        except Exception as dec_err:
+            logger.error(
+                "Failed to decrypt communication credentials for setting %s (tenant_id=%s provider=%s): %s",
+                setting.id, setting.tenant_id, setting.provider, dec_err,
+                exc_info=True,
+            )
+            credentials = {}
+
+    config = setting.config or {}
     try:
-        credentials = _cipher.decrypt(setting.id, setting.tenant_id, setting.credentials_encrypted) if setting.credentials_encrypted else {}
-        config = setting.config or {}
         if setting.provider == "smtp":
             if setting.tenant_id is not None:
                 config = validate_config("smtp", config, tenant_scoped=True)
@@ -385,11 +484,12 @@ async def deliver(setting: CommunicationSetting, destination: str, body: str) ->
     except CommunicationError:
         raise
     except Exception as exc:
-        logger.warning(
-            "Communication provider request failed (channel=%s provider=%s error=%s)",
-            setting.channel, setting.provider, type(exc).__name__,
+        logger.error(
+            "Communication provider request failed (channel=%s provider=%s error=%s): %s",
+            setting.channel, setting.provider, type(exc).__name__, exc,
+            exc_info=True,
         )
-        raise CommunicationError(f"{setting.channel.upper()} delivery failed; provider did not confirm acceptance.") from None
+        raise CommunicationError(f"{setting.channel.upper()} delivery failed through provider '{setting.provider}': {exc}") from None
 
 
 async def send_message(
@@ -410,6 +510,23 @@ async def send_message(
             except (ValueError, TypeError, AttributeError):
                 raise CommunicationError("Tenant communication scope is invalid.") from None
 
+        # Automatic fallback: if tenant_id is None for email channel, resolve from user's registered company
+        if tenant_id is None and channel == "email" and destination:
+            try:
+                from backend.models import ResUser
+                from sqlalchemy import func
+                resolved_cid = db.scalar(
+                    select(ResUser.company_id).where(
+                        func.lower(ResUser.email) == destination.strip().lower(),
+                        ResUser.company_id.isnot(None),
+                    ).limit(1)
+                )
+                if resolved_cid:
+                    tenant_id = resolved_cid
+                    logger.info("send_message: Resolved tenant_id %s from recipient email %s", tenant_id, destination)
+            except Exception:
+                db.rollback()
+
         if channel == "email" and tenant_id is not None:
             tenant_setting = db.scalar(
                 select(CommunicationSetting).where(
@@ -422,7 +539,7 @@ async def send_message(
                 try:
                     await deliver(tenant_setting, destination, body)
                     return
-                except CommunicationError:
+                except CommunicationError as err:
                     platform_setting = db.scalar(
                         select(CommunicationSetting).where(
                             CommunicationSetting.tenant_id.is_(None),
@@ -431,13 +548,22 @@ async def send_message(
                         )
                     )
                     if platform_setting is None:
+                        logger.error(
+                            "Tenant email delivery failed and no platform setting exists (tenant_id=%s tenant_setting_id=%s provider=%s): %s",
+                            tenant_id,
+                            tenant_setting.id,
+                            tenant_setting.provider,
+                            err,
+                            exc_info=True,
+                        )
                         raise
                     logger.warning(
                         "Tenant email delivery failed; attempting platform fallback "
-                        "(tenant_id=%s tenant_setting_id=%s provider=%s)",
+                        "(tenant_id=%s tenant_setting_id=%s provider=%s error=%s)",
                         tenant_id,
                         tenant_setting.id,
                         tenant_setting.provider,
+                        err,
                     )
                     try:
                         await deliver(platform_setting, destination, body)
@@ -449,6 +575,7 @@ async def send_message(
                             tenant_id,
                             tenant_setting.id,
                             platform_setting.id,
+                            exc_info=True,
                         )
                         raise CommunicationError(
                             "Email delivery failed through both tenant and platform providers."

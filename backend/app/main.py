@@ -14,7 +14,7 @@ from os import getenv
 from typing import Any, Generator, Optional
 
 from backend.schemas import AccountMoveLineCreate
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile, WebSocket, WebSocketDisconnect, status
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from passlib.context import CryptContext
@@ -5551,6 +5551,39 @@ def update_tenant_user_role(
 	)
 
 	return target_user
+
+
+@app.post("/api/v1/tenant/users/{user_id}/reset-password", tags=["Tenant Security"])
+@app.post("/api/tenant/users/{user_id}/reset-password", tags=["Tenant Security"])
+async def reset_tenant_user_password(
+	user_id: uuid.UUID,
+	background_tasks: BackgroundTasks,
+	request: Request,
+	company_id: uuid.UUID = Depends(get_active_company_id),
+	current_user: models.ResUser = Depends(require_tenant_admin),
+	database: Session = Depends(get_db),
+):
+	"""Tenant-admin initiated password reset flow with strict tenant isolation."""
+	from backend.app.api.v1.users import force_password_reset, ForcePasswordResetRequest, IamActor
+	from backend.app.domains.hr.audit import build_audit_context
+
+	actor = IamActor(
+		id=current_user.id,
+		email=current_user.email,
+		role=current_user.role,
+		iam_role=current_user.iam_role,
+		is_superuser=bool(current_user.is_superuser),
+		company_id=company_id,
+		level=1,
+		audit=build_audit_context(request, actor_id=current_user.id, actor_identifier=current_user.email),
+	)
+	return await force_password_reset(
+		user_id=str(user_id),
+		background_tasks=background_tasks,
+		payload=ForcePasswordResetRequest(require_password_change=True),
+		actor=actor,
+		db=database,
+	)
 
 
 @app.post("/api/tenant/security/api-keys", response_model=TenantApiKeyCreateResponse, status_code=status.HTTP_201_CREATED, tags=["Tenant Security"])

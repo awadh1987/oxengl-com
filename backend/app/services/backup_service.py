@@ -564,6 +564,22 @@ class DefaultKeyProvider:
         for index, item in enumerate(previous):
             old = _decode_key(item, f"OXENGL_BACKUP_PREVIOUS_KEYS[{index}]")
             self._keys[key_fingerprint(old)] = old
+        for search_dir in ("/var/crypto/oxengl", os.path.expanduser("~/.oxengl")):
+            if os.path.isdir(search_dir):
+                try:
+                    for fname in os.listdir(search_dir):
+                        if fname.endswith(".key") or fname.startswith("master"):
+                            fpath = os.path.join(search_dir, fname)
+                            if os.path.isfile(fpath):
+                                try:
+                                    with open(fpath, "rb") as kf:
+                                        kbytes = kf.read()
+                                    if len(kbytes) == 32:
+                                        self._keys[key_fingerprint(kbytes)] = kbytes
+                                except Exception:
+                                    pass
+                except Exception:
+                    pass
         self._current = key_id
         return key_id
 

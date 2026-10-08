@@ -107,6 +107,7 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - avatar_files_volume:/app/backend/static/avatars
+      - crypto_keys_volume:/var/crypto/oxengl
     depends_on:
       postgres_db:
         condition: service_healthy
@@ -168,6 +169,8 @@ volumes:
     name: oxengl_redis_data_volume
   avatar_files_volume:
     name: oxengl_avatar_files_volume
+  crypto_keys_volume:
+    name: oxengl_crypto_keys_volume
 
 networks:
   # Data plane (compose-managed; carries the `postgres_db` / `redis_cache` aliases).

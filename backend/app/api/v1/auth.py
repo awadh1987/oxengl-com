@@ -12,7 +12,8 @@ import re
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Literal, Optional
+from typing import Literal, Optional, Union
+from urllib.parse import urlparse
 
 import pyotp
 from jinja2 import Environment, FileSystemLoader
@@ -31,6 +32,7 @@ except ImportError:
     from app.services.notification_service import NotificationService, VerificationService
 from backend.app.domains.hr.audit import build_audit_context
 from backend.app.services import account_lookup
+from backend.app.core.middleware import resolve_tenant_from_host
 
 logger = logging.getLogger("oxengl.auth.recovery")
 
@@ -54,6 +56,7 @@ class ForgotPasswordRequest(BaseModel):
     email: Optional[str] = Field(None, description="Registered account email address (or mobile number)")
     identifier: Optional[str] = Field(None, description="Account email address or mobile number")
     workspace_slug: Optional[str] = Field("master", description="Target tenant workspace identifier")
+    tenant_id: Optional[Union[uuid.UUID, str]] = Field(None, description="Direct tenant identifier override")
     channel: Optional[Literal["auto", "email", "sms"]] = Field(
         "auto", description="OTP delivery channel; sms falls back to email when no phone is on file"
     )
@@ -150,35 +153,93 @@ async def request_password_reset(
         return _generic_recovery_response()
     is_phone = account_lookup.looks_like_phone(identifier)
     norm_email = "" if is_phone else identifier.lower()
-    raw_slug = (payload.workspace_slug or "master").strip().lower()
 
-    slug_variants = list(dict.fromkeys([
-        raw_slug,
-        raw_slug.replace("-", "_"),
-        raw_slug.replace("_", "-"),
-    ]))
-
+    # 1. Resolve tenant context through explicit tenant_id, request headers, custom domain, or workspace slug
+    tenant_row = None
     company_name = "OxenGL Enterprise"
+    raw_slug = (payload.workspace_slug or "").strip().lower()
     if raw_slug in ("master", "platform", "system", "superadmin", "super-admin"):
-        tenant_row = {"id": "master", "slug": raw_slug, "name": "Platform Master Control Plane"}
-        company_name = "OxenGL Platform Master"
-    else:
-        # 1. Verify workspace/tenant partition existence
-        tenant_row = db.execute(
-            text("SELECT id, slug, name FROM public.master_tenants WHERE slug = ANY(:slugs) LIMIT 1"),
-            {"slugs": slug_variants},
-        ).mappings().first()
+        raw_slug = ""
 
-        if not tenant_row:
+    # Extract host / domain from request context (X-Tenant-Domain, X-Tenant-Slug, X-Forwarded-Host, Host, Origin, Referer)
+    request_host = ""
+    if request is not None and hasattr(request, "headers"):
+        request_host = (
+            request.headers.get("x-tenant-domain")
+            or request.headers.get("x-tenant-slug")
+            or request.headers.get("x-forwarded-host")
+            or request.headers.get("host")
+            or ""
+        ).split(":")[0].strip().lower()
+        if not request_host or request_host in ("localhost", "127.0.0.1", "oxengl.me", "oxengl.com", "api.oxengl.me"):
+            origin = request.headers.get("origin") or request.headers.get("referer") or ""
+            if origin:
+                request_host = (urlparse(origin).hostname or "").strip().lower()
+
+    # Priority A: Explicit payload tenant_id (e.g. from admin force reset)
+    if getattr(payload, "tenant_id", None):
+        try:
+            tid_uuid = uuid.UUID(str(payload.tenant_id))
             comp_row = db.execute(
-                text("SELECT id, domain_slug AS slug, name FROM public.res_companies WHERE domain_slug = ANY(:slugs) OR slug = ANY(:slugs) LIMIT 1"),
+                text("SELECT id, slug, domain_slug, name, custom_domain FROM public.res_companies WHERE id = :tid LIMIT 1"),
+                {"tid": tid_uuid},
+            ).mappings().first()
+            if comp_row:
+                tenant_row = comp_row
+                company_name = comp_row.get("name") or company_name
+                raw_slug = comp_row.get("slug") or comp_row.get("domain_slug") or raw_slug
+        except (ValueError, TypeError):
+            pass
+
+    # Priority B: Resolve via custom domain or slug from payload if specified
+    if not tenant_row and raw_slug:
+        resolved_from_slug = resolve_tenant_from_host(raw_slug, db=db)
+        if resolved_from_slug:
+            tenant_row = {
+                "id": resolved_from_slug["company_id"] or resolved_from_slug["tenant_id"],
+                "slug": resolved_from_slug["tenant_slug"],
+                "name": resolved_from_slug["name"],
+            }
+            company_name = resolved_from_slug["name"]
+            raw_slug = resolved_from_slug["tenant_slug"]
+        else:
+            slug_variants = list(dict.fromkeys([
+                raw_slug,
+                raw_slug.replace("-", "_"),
+                raw_slug.replace("_", "-"),
+            ]))
+            tenant_row = db.execute(
+                text("SELECT id, slug, name FROM public.master_tenants WHERE slug = ANY(:slugs) OR custom_domain = ANY(:slugs) LIMIT 1"),
                 {"slugs": slug_variants},
             ).mappings().first()
-            tenant_row = comp_row
+            if not tenant_row:
+                tenant_row = db.execute(
+                    text("SELECT id, domain_slug AS slug, name FROM public.res_companies WHERE domain_slug = ANY(:slugs) OR slug = ANY(:slugs) OR custom_domain = ANY(:slugs) LIMIT 1"),
+                    {"slugs": slug_variants},
+                ).mappings().first()
+            if tenant_row:
+                company_name = tenant_row.get("name", raw_slug)
 
-        if not tenant_row:
-            # Addendum D: the old fallback also probed public.users (absent) and raised HTTP 500 for unknown
-            # accounts - itself an enumeration oracle. Any lookup failure now yields the uniform response.
+    # Priority C: Public flow custom domain resolution from HTTP request host (e.g. myon-contract.cloud)
+    if not tenant_row and request_host and request_host not in ("localhost", "127.0.0.1", "oxengl.me", "oxengl.com", "api.oxengl.me"):
+        resolved_from_host = resolve_tenant_from_host(request_host, db=db)
+        if resolved_from_host:
+            tenant_row = {
+                "id": resolved_from_host["company_id"] or resolved_from_host["tenant_id"],
+                "slug": resolved_from_host["tenant_slug"],
+                "name": resolved_from_host["name"],
+            }
+            company_name = resolved_from_host["name"]
+            raw_slug = resolved_from_host["tenant_slug"]
+
+    # Priority D: Fallback for explicit master plane
+    if not tenant_row:
+        if not raw_slug or raw_slug in ("master", "platform", "system", "superadmin", "super-admin"):
+            tenant_row = {"id": "master", "slug": "master", "name": "Platform Master Control Plane"}
+            company_name = "OxenGL Platform Master"
+            raw_slug = "master"
+        else:
+            # Check if user exists anywhere to avoid account enumeration
             try:
                 if is_phone:
                     user_exists_anywhere = account_lookup.find_account_by_phone(db, [], identifier)
@@ -187,30 +248,36 @@ async def request_password_reset(
                         text("SELECT id FROM public.tenant_users WHERE LOWER(email) = :e LIMIT 1"),
                         {"e": norm_email},
                     ).first()
+                    if not user_exists_anywhere:
+                        user_exists_anywhere = db.execute(
+                            text("SELECT id FROM public.res_users WHERE LOWER(email) = :e LIMIT 1"),
+                            {"e": norm_email},
+                        ).first()
             except Exception:
                 db.rollback()
                 user_exists_anywhere = None
             if not user_exists_anywhere:
-                return _generic_recovery_response()  # no workspace / account enumeration
+                return _generic_recovery_response()
             tenant_row = {"id": raw_slug, "slug": raw_slug, "name": raw_slug.capitalize()}
+            company_name = raw_slug.capitalize()
 
-        company_name = tenant_row.get("name", raw_slug)
-
-    # 2. Verify user exists inside that partition
+    # 2. Verify user exists inside that partition or across active tenants
     sanitized_slug = re.sub(r"[^a-zA-Z0-9_]", "_", raw_slug)
+    tenant_slug_val = tenant_row.get("slug", raw_slug) if hasattr(tenant_row, "get") else getattr(tenant_row, "slug", raw_slug)
     target_schemas = list(dict.fromkeys([
         sanitized_slug,
         raw_slug,
-        tenant_row.get("slug", raw_slug),
-        str(tenant_row.get("slug", raw_slug)).replace("-", "_"),
+        str(tenant_slug_val),
+        str(tenant_slug_val).replace("-", "_"),
     ]))
 
     user_found = False
     user_phone = None
+    user_company_id = None
     if is_phone:
         resolved_account = account_lookup.find_account_by_phone(db, target_schemas, identifier)
         if not resolved_account:
-            return _generic_recovery_response()  # unknown or ambiguous number: no enumeration
+            return _generic_recovery_response()
         norm_email = resolved_account["email"]
         user_phone = resolved_account["phone"]
         user_found = True
@@ -255,12 +322,13 @@ async def request_password_reset(
     if not user_found:
         try:
             chk = db.execute(
-                text("SELECT id, email, phone FROM public.res_users WHERE LOWER(email) = :e LIMIT 1"),
+                text("SELECT id, email, phone, company_id FROM public.res_users WHERE LOWER(email) = :e LIMIT 1"),
                 {"e": norm_email},
             ).mappings().first()
             if chk:
                 user_found = True
                 user_phone = chk.get("phone")
+                user_company_id = chk.get("company_id")
         except Exception:
             db.rollback()
 
@@ -296,11 +364,45 @@ async def request_password_reset(
 
     # 4. Asynchronously dispatch through the resolved tenant (or platform default).
     reset_tenant_id = None
-    if isinstance(tenant_row, dict) and tenant_row.get("id") not in (None, "master"):
+    if getattr(payload, "tenant_id", None):
         try:
-            reset_tenant_id = uuid.UUID(str(tenant_row["id"]))
+            reset_tenant_id = uuid.UUID(str(payload.tenant_id))
         except (ValueError, TypeError):
             reset_tenant_id = None
+
+    if not reset_tenant_id and tenant_row is not None:
+        raw_tid = tenant_row.get("id") if hasattr(tenant_row, "get") else getattr(tenant_row, "id", None)
+        if raw_tid is not None and str(raw_tid).lower() not in ("master", "platform", "system", "none", ""):
+            try:
+                reset_tenant_id = uuid.UUID(str(raw_tid))
+            except (ValueError, TypeError):
+                reset_tenant_id = None
+
+    if not reset_tenant_id and user_company_id is not None:
+        try:
+            reset_tenant_id = uuid.UUID(str(user_company_id))
+        except (ValueError, TypeError):
+            reset_tenant_id = None
+
+    if reset_tenant_id and (not company_name or company_name in ("OxenGL Enterprise", "OxenGL Platform Master")):
+        try:
+            c_name = db.execute(
+                text("SELECT name FROM public.res_companies WHERE id = :id LIMIT 1"),
+                {"id": reset_tenant_id},
+            ).scalar()
+            if c_name:
+                company_name = c_name
+        except Exception:
+            db.rollback()
+
+    logger.info(
+        "Request password reset: user=%s, resolved_tenant_id=%s, company_name=%s, channel=%s",
+        _masked_identifier(norm_email or identifier),
+        reset_tenant_id,
+        company_name,
+        payload.channel,
+    )
+
     background_tasks.add_task(
         NotificationService.send_password_reset_otp,
         NotificationService.select_channels(payload.channel, bool(user_phone)),

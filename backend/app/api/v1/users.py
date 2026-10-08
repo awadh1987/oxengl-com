@@ -470,11 +470,18 @@ async def _dispatch_existing_reset_flow(
 
         company = db.get(ResCompany, company_id) if company_id else None
         slug = (company.domain_slug or company.slug) if company else "master"
-        await request_password_reset(ForgotPasswordRequest(email=email, workspace_slug=slug), background_tasks, db)
+        await request_password_reset(
+            ForgotPasswordRequest(email=email, workspace_slug=slug, tenant_id=company_id),
+            background_tasks,
+            db,
+        )
         return True
     except Exception as err:
         db.rollback()
-        logger.warning("Existing reset flow could not be started (%s)", type(err).__name__)
+        logger.error(
+            "Existing reset flow could not be started for email=%s, company_id=%s: %s",
+            email, company_id, err, exc_info=True,
+        )
         return False
 
 

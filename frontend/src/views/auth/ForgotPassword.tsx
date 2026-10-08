@@ -25,7 +25,11 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
   const [workspaceSlug, setWorkspaceSlug] = useState(() => {
     if (typeof window !== 'undefined') {
       const param = new URLSearchParams(window.location.search).get('slug');
-      return param ? param.trim().toLowerCase() : '';
+      if (param) return param.trim().toLowerCase();
+      const host = window.location.hostname.toLowerCase();
+      if (!['localhost', '127.0.0.1', 'oxengl.me', 'oxengl.com', 'app.oxengl.me'].includes(host)) {
+        return host;
+      }
     }
     return '';
   });
@@ -52,12 +56,17 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
 
     setLoading(true);
     try {
+      const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+      const resolvedSlug = workspaceSlug.trim() || (!['localhost', '127.0.0.1', 'oxengl.me', 'oxengl.com'].includes(host) ? host : 'master');
       const response = await fetch('/api/v1/auth/forgot-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(host ? { 'X-Tenant-Domain': host } : {}),
+        },
         body: JSON.stringify({
           identifier: cleanEmail,
-          workspace_slug: workspaceSlug.trim() || 'master',
+          workspace_slug: resolvedSlug,
           channel,
         }),
       });

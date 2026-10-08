@@ -171,3 +171,118 @@ async def test_password_reset_legacy_token_fallback(async_client):
         db.commit()
     finally:
         db.close()
+
+
+@pytest.mark.asyncio
+async def test_self_service_password_reset_custom_domain_resolution_and_background_tenant_context(async_client, monkeypatch):
+    """
+    Validates Scenario 2:
+    Public reset on custom tenant domain (myon-contract.cloud) resolves to tenant_id f7b38b2f-5426-4625-a110-e38261fdf6e1,
+    generates 6-digit OTP in Redis, and passes explicit tenant context to background dispatch.
+    """
+    from backend.app.services.notification_service import NotificationService, redis_client
+    from backend.app.services.communication_service import resolve_setting
+    import json
+
+    captured_dispatch = {}
+
+    async def mock_send_otp(channels, *, email, phone, otp, company_name, tenant_id=None, audit_context=None):
+        captured_dispatch["email"] = email
+        captured_dispatch["otp"] = otp
+        captured_dispatch["company_name"] = company_name
+        captured_dispatch["tenant_id"] = tenant_id
+
+    monkeypatch.setattr(NotificationService, "send_password_reset_otp", mock_send_otp)
+
+    target_email = "admin@oxengl.com"
+    myon_tenant_uuid = uuid.UUID("f7b38b2f-5426-4625-a110-e38261fdf6e1")
+
+    # Send forgot-password request with Host header set to custom domain
+    res = await async_client.post(
+        "/api/v1/auth/forgot-password",
+        headers={"Host": "myon-contract.cloud"},
+        json={
+            "identifier": target_email,
+            "workspace_slug": "master",  # UI default fallback
+            "channel": "email",
+        },
+    )
+    assert res.status_code == status.HTTP_200_OK
+    data = res.json()
+    assert data["status"] == "OTP_DISPATCHED"
+
+    # Verify captured background task payload
+    assert captured_dispatch.get("email") == target_email
+    assert captured_dispatch.get("tenant_id") == myon_tenant_uuid
+    assert "Myon" in str(captured_dispatch.get("company_name"))
+    otp_code = captured_dispatch.get("otp")
+    assert otp_code is not None and len(otp_code) == 6 and otp_code.isdigit()
+
+    # Verify Redis OTP storage
+    redis_val = await redis_client.get(f"otp:reset:{target_email}")
+    assert redis_val is not None
+    stored_str = redis_val.decode("utf-8") if isinstance(redis_val, bytes) else str(redis_val)
+    assert stored_str == otp_code
+
+    # Verify tenant SMTP setting exists and can be resolved
+    db = SessionLocal()
+    try:
+        smtp_setting = resolve_setting(db, captured_dispatch["tenant_id"], "email")
+        assert smtp_setting is not None
+        assert smtp_setting.provider == "smtp"
+        assert smtp_setting.config.get("host") == "mail.myon.com.sa"
+        assert smtp_setting.config.get("username") == "dev@myon-contract.cloud"
+    finally:
+        db.close()
+
+
+@pytest.mark.asyncio
+async def test_admin_initiated_force_reset_tenant_scoped_dispatch(monkeypatch):
+    """
+    Validates Scenario 1:
+    Admin initiated reset for user awadh.a.1987@gmail.com within tenant wac-ye (4c9dbe63-d09f-4a90-a380-d9f3a05bca5f)
+    preserves tenant_id into background task payload and retrieves wac-ye SMTP settings.
+    """
+    from fastapi import BackgroundTasks
+    from backend.app.api.v1.users import _dispatch_existing_reset_flow
+    from backend.app.services.notification_service import NotificationService
+    from backend.app.services.communication_service import resolve_setting
+
+    captured_dispatch = {}
+
+    async def mock_send_otp(channels, *, email, phone, otp, company_name, tenant_id=None, audit_context=None):
+        captured_dispatch["email"] = email
+        captured_dispatch["otp"] = otp
+        captured_dispatch["company_name"] = company_name
+        captured_dispatch["tenant_id"] = tenant_id
+
+    monkeypatch.setattr(NotificationService, "send_password_reset_otp", mock_send_otp)
+
+    wac_tenant_uuid = uuid.UUID("4c9dbe63-d09f-4a90-a380-d9f3a05bca5f")
+    target_email = "awadh.a.1987@gmail.com"
+
+    db = SessionLocal()
+    bg_tasks = BackgroundTasks()
+    try:
+        success = await _dispatch_existing_reset_flow(db, bg_tasks, target_email, wac_tenant_uuid)
+        assert success is True
+
+        # Execute background task
+        assert len(bg_tasks.tasks) == 1
+        task = bg_tasks.tasks[0]
+        await task()
+
+        assert captured_dispatch.get("email") == target_email
+        assert captured_dispatch.get("tenant_id") == wac_tenant_uuid
+        assert "Alwehda" in str(captured_dispatch.get("company_name"))
+        assert len(captured_dispatch.get("otp")) == 6
+
+        # Verify tenant SMTP setting exists and can be resolved
+        smtp_setting = resolve_setting(db, captured_dispatch["tenant_id"], "email")
+        assert smtp_setting is not None
+        assert smtp_setting.provider == "smtp"
+        assert smtp_setting.config.get("host") == "mail.wac-ye.com"
+        assert smtp_setting.config.get("username") == "admin@wac-ye.com"
+    finally:
+        db.close()
+
