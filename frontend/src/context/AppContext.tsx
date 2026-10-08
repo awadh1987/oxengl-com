@@ -1257,6 +1257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       role: mappedRole,
       companyId: activeTenantId || undefined,
       status: 'Active',
+      mustChangePassword: !!(res?.must_change_password ?? (userObj as any)?.must_change_password),
     };
     setCurrentUser(newUser);
     localStorage.setItem('oxengl_user', JSON.stringify(newUser));
@@ -1280,6 +1281,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language === 'ar' ? `مرحباً بك في مساحة عمل المنشأة: ${slug}` : `Welcome to workspace: ${slug}`,
       'success'
     );
+    if (newUser.mustChangePassword) {
+      showToast(
+        language === 'ar'
+          ? 'يجب تغيير كلمة المرور المؤقتة من الملف الشخصي قبل المتابعة'
+          : 'Please replace your temporary password from your profile',
+        'warning'
+      );
+    }
     return res;
   };
 

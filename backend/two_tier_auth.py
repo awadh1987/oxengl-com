@@ -427,6 +427,9 @@ class AuthTokenResponse(BaseModel):
     user: Optional[dict] = None
     status: Optional[str] = None
     two_factor_token: Optional[str] = None
+    company_id: Optional[str] = None
+    domain_slug: Optional[str] = None
+    must_change_password: Optional[bool] = None
 
 
 # ==============================================================================
@@ -748,8 +751,9 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                     with tenant_db.begin_nested():
                         res = tenant_db.execute(
                             text(
-                                "SELECT id, email, phone, password_hash, full_name as name, role "
+                                "SELECT id, email, phone, password_hash, full_name as name, role, is_active "
                                 "FROM res_users WHERE company_id = :tenant_id "
+                                "AND deleted_at IS NULL "
                                 "AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
                             ),
                             {"val": normalized_val, "tenant_id": tenant.id},
@@ -772,7 +776,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                     last_name=last_name,
                     password_hash=found_user_row["password_hash"],
                     role=str(found_user_row.get("role", "admin")).lower(),
-                    is_active=True,
+                    is_active=found_user_row.get("is_active") is not False,
                 )
                 tenant_db.merge(user)
                 tenant_db.commit()
@@ -810,7 +814,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                         res = tenant_db.execute(
                         text(
                             "SELECT password_hash FROM res_users WHERE company_id = :tenant_id "
-                            "AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
+                            "AND deleted_at IS NULL AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
                         ),
                         {"val": normalized_val, "tenant_id": tenant.id},
                     ).mappings().first()
@@ -841,6 +845,30 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         user.failed_login_attempts = 0
         user.last_login_at = datetime.now(timezone.utc)
         tenant_db.commit()
+
+        # Invited/temporary-credential accounts live in res_users; surface the first-login flag and
+        # refuse accounts that were soft-deleted or deactivated there.
+        must_change_password = False
+        try:
+            with tenant_db.begin_nested():
+                flags = tenant_db.execute(
+                    text(
+                        "SELECT must_change_password, is_active, deleted_at FROM res_users "
+                        "WHERE id = :uid AND company_id = :cid"
+                    ),
+                    {"uid": user.id, "cid": tenant.id},
+                ).mappings().first()
+            if flags:
+                if flags["deleted_at"] is not None or flags["is_active"] is False:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User account is inactive. Contact tenant administrator.",
+                    )
+                must_change_password = bool(flags["must_change_password"])
+        except HTTPException:
+            raise
+        except Exception:
+            logger.warning("Could not resolve must_change_password flag", exc_info=True)
 
         # [TEMPORARY BYPASS] Two-Factor Authentication (2FA) check is temporarily disabled
         # so users can sign in directly with email and password without triggering 2FA_REQUIRED.
@@ -911,6 +939,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             "tenant_id": str(canonical_cid),
             "tenant_slug": tenant.slug,
             "domain_slug": tenant.slug,
+            "must_change_password": must_change_password,
             "user": {
                 "id": str(user.id),
                 "email": user.email,
@@ -921,6 +950,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                 "tenant_id": str(canonical_cid),
                 "tenant_slug": tenant.slug,
                 "domain_slug": tenant.slug,
+                "must_change_password": must_change_password,
             },
         }
 

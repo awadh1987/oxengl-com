@@ -399,6 +399,7 @@ export interface TwoTierAuthResponse {
   tenant_slug?: string;
   status?: string;
   two_factor_token?: string;
+  must_change_password?: boolean;
   message?: string;
   user?: {
     id: string;
