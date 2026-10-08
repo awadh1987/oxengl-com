@@ -2241,21 +2241,53 @@ class TenantUserCreateRequest(BaseModel):
     email: str = Field(min_length=5, max_length=255)
     full_name: str = Field(min_length=2, max_length=255)
     password: str = Field(min_length=6, max_length=128)
-    role: Literal["Admin", "COO", "Accountant", "Data_Entry", "Guest"] = "Data_Entry"
+    role: str = Field(default="Guest", max_length=48)
 
 
 class TenantUserRead(ORMReadModel):
     id: UUID
-    company_id: UUID
+    company_id: Optional[UUID] = None
     email: str
     full_name: str
     role: str
+    iam_role: Optional[str] = None
     is_active: bool
+    status: Optional[str] = "active"
+    created_at: datetime
+
+
+class TenantAssignmentItem(BaseModel):
+    tenant_id: UUID
+    tenant_name: Optional[str] = None
+    role: str
+
+
+class AdminUserCreateRequest(BaseModel):
+    email: str = Field(min_length=5, max_length=255)
+    full_name: str = Field(min_length=2, max_length=255)
+    password: str = Field(min_length=6, max_length=128)
+    role: str = Field(default="Admin", min_length=2, max_length=48)
+    company_id: Optional[UUID] = None
+    tenant_ids: list[UUID] = Field(default_factory=list)
+    is_superuser: bool = False
+
+
+class AdminUserRead(ORMReadModel):
+    id: UUID
+    email: str
+    full_name: str
+    role: str
+    iam_role: Optional[str] = None
+    is_superuser: bool = False
+    is_active: bool = True
+    company_id: Optional[UUID] = None
+    company_name: Optional[str] = None
+    assigned_tenants: list[TenantAssignmentItem] = Field(default_factory=list)
     created_at: datetime
 
 
 class TenantUserRoleUpdateRequest(BaseModel):
-    role: Literal["Super_Admin", "Admin", "COO", "Accountant", "Data_Entry", "Guest"]
+    role: str = Field(default="Guest", max_length=48)
 
 
 class TenantApiKeyCreateRequest(BaseModel):

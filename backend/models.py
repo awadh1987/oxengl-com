@@ -99,6 +99,9 @@ class ResCompany(TimestampMixin, Base):
     users: Mapped[list["ResUser"]] = relationship(
         "ResUser", cascade="all, delete-orphan", passive_deletes=True
     )
+    tenant_user_roles: Mapped[list["TenantUserRole"]] = relationship(
+        "TenantUserRole", cascade="all, delete-orphan", passive_deletes=True, back_populates="company"
+    )
     partners: Mapped[list["ResPartner"]] = relationship(
         "ResPartner", cascade="all, delete-orphan", passive_deletes=True
     )
@@ -328,6 +331,9 @@ class ResUser(TimestampMixin, Base):
     iam_role: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)
     abac_context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    tenant_roles: Mapped[list["TenantUserRole"]] = relationship(
+        "TenantUserRole", cascade="all, delete-orphan", passive_deletes=True, back_populates="user"
+    )
 
     __table_args__ = (
         CheckConstraint(f"role IN ({ALLOWED_RES_USER_ROLES_SQL})", name="ck_res_user_role"),
@@ -2304,6 +2310,32 @@ class TenantUser(TimestampMixin, Base):
 
     __table_args__ = (
         CheckConstraint("role IN ('admin', 'ADMIN', 'Admin', 'owner', 'OWNER', 'Owner', 'ceo', 'user', 'USER', 'guest_user')", name="ck_tenant_user_role"),
+    )
+
+
+class TenantUserRole(TimestampMixin, Base):
+    """Level 2: Relational mapping between users and multiple tenant workspaces with localized roles."""
+    __tablename__ = "tenant_user_roles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_users.id", ondelete="CASCADE"), nullable=False, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    role: Mapped[str] = mapped_column(String(32), nullable=False, default="Data_Entry")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
+
+    user: Mapped["ResUser"] = relationship("ResUser", back_populates="tenant_roles")
+    company: Mapped["ResCompany"] = relationship("ResCompany", back_populates="tenant_user_roles")
+
+    @property
+    def tenant_id(self) -> uuid.UUID:
+        return self.company_id
+
+    @tenant_id.setter
+    def tenant_id(self, val: uuid.UUID):
+        self.company_id = val
+
+    __table_args__ = (
+        Index("uq_tenant_user_roles_user_company", "user_id", "company_id", unique=True),
     )
 
 

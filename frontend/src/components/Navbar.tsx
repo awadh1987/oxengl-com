@@ -6,6 +6,7 @@ import {
   Globe,
   UserCheck,
   Shield,
+  ShieldCheck,
   Crown,
   LogOut,
   AlertTriangle,

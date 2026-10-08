@@ -21,6 +21,7 @@ import {
   Printer,
   Upload,
   Database,
+  Paperclip,
 } from 'lucide-react';
 import { formatCurrency, formatDate, formatTonnage } from '../utils/formatters';
 import { exportOperationsToExcel } from '../utils/excelExporter';

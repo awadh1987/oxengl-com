@@ -2032,6 +2032,85 @@ export const erpApi = {
       }
     ),
 
+  getAdminUsers: () =>
+    request<
+      Array<{
+        id: string;
+        email: string;
+        full_name: string;
+        role: string;
+        iam_role?: string | null;
+        is_superuser: boolean;
+        is_active: boolean;
+        company_id?: string | null;
+        company_name?: string | null;
+        assigned_tenants: Array<{ tenant_id: string; tenant_name?: string | null; role: string }>;
+        created_at: string;
+      }>
+    >('/api/v1/admin/users'),
+
+  createAdminUser: (payload: {
+    email: string;
+    full_name: string;
+    password: string;
+    role: string;
+    company_id?: string | null;
+    tenant_ids?: string[];
+    is_superuser?: boolean;
+  }) =>
+    request<{
+      id: string;
+      email: string;
+      full_name: string;
+      role: string;
+      iam_role?: string | null;
+      is_superuser: boolean;
+      is_active: boolean;
+      company_id?: string | null;
+      company_name?: string | null;
+      assigned_tenants: Array<{ tenant_id: string; tenant_name?: string | null; role: string }>;
+      created_at: string;
+    }>('/api/v1/admin/users', undefined, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  getTenantUsersScoped: () =>
+    request<
+      Array<{
+        id: string;
+        company_id?: string | null;
+        email: string;
+        full_name: string;
+        role: string;
+        iam_role?: string | null;
+        is_active: boolean;
+        status?: string;
+        created_at: string;
+      }>
+    >('/api/v1/tenant/users'),
+
+  createTenantUserScoped: (payload: {
+    email: string;
+    full_name: string;
+    password: string;
+    role: string;
+  }) =>
+    request<{
+      id: string;
+      company_id?: string | null;
+      email: string;
+      full_name: string;
+      role: string;
+      iam_role?: string | null;
+      is_active: boolean;
+      status?: string;
+      created_at: string;
+    }>('/api/v1/tenant/users', undefined, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
   async createWeighbridgeOperation(input: {
     companyId: string;
     transporterName: string;

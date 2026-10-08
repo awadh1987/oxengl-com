@@ -26,6 +26,11 @@ from backend.models import (
     TenantAuditLog,
     PlatformFeatureFlag,
 )
+from backend.schemas import (
+    AdminUserCreateRequest,
+    AdminUserRead,
+    TenantAssignmentItem,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -517,6 +522,157 @@ def toggle_or_patch_feature_flag(payload: ToggleFeatureFlagRequest, db: Session 
         "enabled": target_state,
         "flags": all_flags,
     }
+
+
+# ==============================================================================
+# Platform Admin User Management Endpoints (Super Admin Protected)
+# ==============================================================================
+
+@admin_router.get("/users", response_model=list[AdminUserRead], status_code=status.HTTP_200_OK)
+def list_platform_users(
+    db: Session = Depends(get_db),
+    current_user: ResUser = Depends(require_super_admin),
+) -> list[AdminUserRead]:
+    """List all users across the entire database with their tenant assignments."""
+    users = db.scalars(
+        select(ResUser)
+        .where(ResUser.deleted_at.is_(None))
+        .order_by(ResUser.created_at.desc())
+    ).all()
+
+    companies_map = {c.id: c.name for c in db.scalars(select(ResCompany)).all()}
+    from backend.models import TenantUserRole
+    all_roles = db.scalars(select(TenantUserRole).where(TenantUserRole.is_active.is_(True))).all()
+    roles_by_user: dict[uuid.UUID, list[TenantAssignmentItem]] = {}
+    for r in all_roles:
+        c_name = companies_map.get(r.company_id, "Unknown Tenant")
+        roles_by_user.setdefault(r.user_id, []).append(
+            TenantAssignmentItem(tenant_id=r.company_id, tenant_name=c_name, role=r.role)
+        )
+
+    results: list[AdminUserRead] = []
+    for u in users:
+        assigned = roles_by_user.get(u.id, [])
+        primary_co_name = companies_map.get(u.company_id) if u.company_id else None
+        if u.company_id and not any(a.tenant_id == u.company_id for a in assigned):
+            assigned.append(
+                TenantAssignmentItem(
+                    tenant_id=u.company_id,
+                    tenant_name=primary_co_name,
+                    role=u.role,
+                )
+            )
+
+        results.append(
+            AdminUserRead(
+                id=u.id,
+                email=u.email,
+                full_name=u.full_name or u.email.split("@")[0],
+                role=u.role,
+                iam_role=u.iam_role,
+                is_superuser=bool(u.is_superuser),
+                is_active=bool(u.is_active),
+                company_id=u.company_id,
+                company_name=primary_co_name,
+                assigned_tenants=assigned,
+                created_at=u.created_at or datetime.now(timezone.utc),
+            )
+        )
+    return results
+
+
+@admin_router.post("/users", response_model=AdminUserRead, status_code=status.HTTP_201_CREATED)
+def create_platform_user(
+    payload: AdminUserCreateRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: ResUser = Depends(require_super_admin),
+) -> AdminUserRead:
+    """Create a global system-wide user and assign them to specific tenants."""
+    from backend.two_tier_auth import hash_password
+    from backend.models import TenantUserRole
+    from backend.app.main import record_platform_audit, resolve_client_ip, get_request_id
+
+    email_clean = payload.email.strip().lower()
+    existing = db.scalar(select(ResUser).where(func.lower(ResUser.email) == email_clean))
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email address already exists.",
+        )
+
+    is_su = bool(payload.is_superuser or payload.role in ("Super_Admin", "SUPER_ADMIN", "super_admin"))
+    primary_cid = payload.company_id
+    if primary_cid:
+        target_co = db.get(ResCompany, primary_cid)
+        if not target_co:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Specified primary company does not exist.")
+
+    user_id = uuid.uuid4()
+    pwd_hash = hash_password(payload.password)
+    new_user = ResUser(
+        id=user_id,
+        email=email_clean,
+        full_name=payload.full_name.strip(),
+        password_hash=pwd_hash,
+        role=payload.role,
+        iam_role=payload.role,
+        company_id=primary_cid,
+        is_active=True,
+        is_superuser=is_su,
+        firebase_uid=f"native:{email_clean}",
+    )
+    db.add(new_user)
+    db.flush()
+
+    assigned_items: list[TenantAssignmentItem] = []
+    tenant_ids_to_add = set(payload.tenant_ids or [])
+    if primary_cid:
+        tenant_ids_to_add.add(primary_cid)
+
+    for tid in tenant_ids_to_add:
+        co = db.get(ResCompany, tid)
+        if co:
+            tur = TenantUserRole(
+                id=uuid.uuid4(),
+                user_id=new_user.id,
+                company_id=co.id,
+                role=payload.role,
+                is_active=True,
+            )
+            db.add(tur)
+            assigned_items.append(
+                TenantAssignmentItem(tenant_id=co.id, tenant_name=co.name, role=payload.role)
+            )
+
+    record_platform_audit(
+        db,
+        actor_email=current_user.email,
+        action="PLATFORM_USER_CREATED",
+        outcome="SUCCESS",
+        endpoint=request.url.path,
+        ip_address=resolve_client_ip(request),
+        company_id=primary_cid,
+        request_id=get_request_id(request),
+        user_agent=request.headers.get("user-agent"),
+    )
+    db.commit()
+    db.refresh(new_user)
+
+    company_name = db.get(ResCompany, primary_cid).name if primary_cid else None
+    return AdminUserRead(
+        id=new_user.id,
+        email=new_user.email,
+        full_name=new_user.full_name,
+        role=new_user.role,
+        iam_role=new_user.iam_role,
+        is_superuser=bool(new_user.is_superuser),
+        is_active=bool(new_user.is_active),
+        company_id=new_user.company_id,
+        company_name=company_name,
+        assigned_tenants=assigned_items,
+        created_at=new_user.created_at or datetime.now(timezone.utc),
+    )
 
 
 # Export standard Super Admin security dependencies

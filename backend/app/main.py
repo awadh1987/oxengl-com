@@ -5398,6 +5398,7 @@ def list_platform_security_audit_logs(
 
 # --- Tenant Security & User Management (TenantContext Isolated) ---
 
+@app.get("/api/v1/tenant/users", response_model=list[TenantUserRead], tags=["Tenant Security"])
 @app.get("/api/tenant/users", response_model=list[TenantUserRead], tags=["Tenant Security"])
 def list_tenant_users(
 	company_id: uuid.UUID = Depends(get_active_company_id),
@@ -5405,19 +5406,42 @@ def list_tenant_users(
 	database: Session = Depends(get_db),
 ):
 	"""List users strictly belonging to the active company tenant."""
+	user_ids_subq = select(models.TenantUserRole.user_id).where(models.TenantUserRole.company_id == company_id)
 	return database.scalars(
-		select(models.ResUser).where(models.ResUser.company_id == company_id).order_by(models.ResUser.created_at.asc())
+		select(models.ResUser)
+		.where(
+			or_(
+				models.ResUser.company_id == company_id,
+				models.ResUser.id.in_(user_ids_subq),
+			),
+			models.ResUser.deleted_at.is_(None),
+		)
+		.distinct()
+		.order_by(models.ResUser.created_at.asc())
 	).all()
 
 
+@app.post("/api/v1/tenant/users", response_model=TenantUserRead, status_code=status.HTTP_201_CREATED, tags=["Tenant Security"])
 @app.post("/api/tenant/users", response_model=TenantUserRead, status_code=status.HTTP_201_CREATED, tags=["Tenant Security"])
 def create_tenant_user(
 	payload: TenantUserCreateRequest,
+	request: Request,
 	company_id: uuid.UUID = Depends(get_active_company_id),
 	current_user: models.ResUser = Depends(require_tenant_admin),
 	database: Session = Depends(get_db),
 ):
-	"""Create a new tenant user enforcing active subscription tier limits."""
+	"""Create a new tenant user strictly bounded within the active company tenant."""
+	from backend.app.domains.iam.role_catalog import (
+		HR_REGISTRATION_REQUIRED_MESSAGE,
+		is_internal_or_privileged_role_name,
+	)
+
+	if is_internal_or_privileged_role_name(payload.role):
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail=HR_REGISTRATION_REQUIRED_MESSAGE,
+		)
+
 	company = database.get(models.ResCompany, company_id)
 	master_tenant = database.scalar(select(models.MasterTenant).where(models.MasterTenant.slug == company.slug)) if company else None
 	tier = (master_tenant.subscription_tier if master_tenant else company.subscription_tier or "standard").lower() if company else "standard"
@@ -5448,11 +5472,36 @@ def create_tenant_user(
 		is_active=True,
 	)
 	database.add(new_user)
+	database.flush()
+
+	tur = models.TenantUserRole(
+		id=uuid.uuid4(),
+		user_id=new_user.id,
+		company_id=company_id,
+		role=payload.role,
+		is_active=True,
+	)
+	database.add(tur)
+
+	record_security_event(
+		database,
+		event_type="tenant_user_created",
+		severity="LOW",
+		company_id=company_id,
+		user_id=current_user.id,
+		actor_email=current_user.email,
+		ip_address=resolve_client_ip(request),
+		user_agent=request.headers.get("user-agent"),
+		request_path=request.url.path,
+		request_method=request.method,
+		details=f"Created tenant user '{new_user.email}' with role '{new_user.role}' in tenant '{company_id}'",
+	)
 	database.commit()
 	database.refresh(new_user)
 	return new_user
 
 
+@app.patch("/api/v1/tenant/users/{user_id}/role", response_model=TenantUserRead, tags=["Tenant Security"])
 @app.patch("/api/tenant/users/{user_id}/role", response_model=TenantUserRead, tags=["Tenant Security"])
 def update_tenant_user_role(
 	user_id: uuid.UUID,
