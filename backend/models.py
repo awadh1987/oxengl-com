@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
+from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
@@ -333,6 +333,9 @@ class ResUser(TimestampMixin, Base):
     must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     tenant_roles: Mapped[list["TenantUserRole"]] = relationship(
         "TenantUserRole", cascade="all, delete-orphan", passive_deletes=True, back_populates="user"
+    )
+    hr_employee: Mapped[Optional["HrEmployee"]] = relationship(
+        "HrEmployee", uselist=False, cascade="all, delete-orphan", back_populates="user"
     )
 
     __table_args__ = (
@@ -2336,6 +2339,38 @@ class TenantUserRole(TimestampMixin, Base):
 
     __table_args__ = (
         Index("uq_tenant_user_roles_user_company", "user_id", "company_id", unique=True),
+    )
+
+
+class HrEmployee(TimestampMixin, Base):
+    """Core HR employee profile with 1-to-1 linkage to ResUser IAM and strict tenant isolation."""
+    __tablename__ = "hr_employees"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    employee_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    department_id: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    job_title: Mapped[str] = mapped_column(String(128), nullable=False, default="Standard")
+    hire_date: Mapped[date] = mapped_column(Date, nullable=False, default=date.today)
+    employment_status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE")
+    base_salary: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=Decimal("0.00"))
+    manager_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("hr_employees.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    user: Mapped["ResUser"] = relationship("ResUser", back_populates="hr_employee")
+    company: Mapped["ResCompany"] = relationship("ResCompany")
+    manager: Mapped[Optional["HrEmployee"]] = relationship("HrEmployee", remote_side="HrEmployee.id")
+
+    @property
+    def tenant_id(self) -> uuid.UUID:
+        return self.company_id
+
+    @tenant_id.setter
+    def tenant_id(self, val: uuid.UUID):
+        self.company_id = val
+
+    __table_args__ = (
+        Index("uq_hr_employees_company_employee_id", "company_id", "employee_id", unique=True),
     )
 
 

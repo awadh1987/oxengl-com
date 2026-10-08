@@ -49,10 +49,30 @@ export const HRMSView: React.FC = () => {
   const [postingPayrollId, setPostingPayrollId] = useState<string | null>(null);
   const [isDraftingPayroll, setIsDraftingPayroll] = useState(false);
 
-  // 1. Fetch live employees from /api/hrms/employees
+  // 1. Fetch live staff from /api/v1/tenant/hr/employees & fallback to /api/hrms/employees
   const loadEmployees = async () => {
     setIsLoadingEmployees(true);
     try {
+      // Query the authoritative tenant HR employee pipeline
+      const tenantStaff = await erpApi.getTenantHrEmployees(currentCompany?.id).catch(() => null);
+      if (Array.isArray(tenantStaff) && tenantStaff.length > 0) {
+        setEmployees(tenantStaff.map((d: any) => ({
+          id: d.id,
+          employeeNumber: d.employee_id || d.employeeNumber || 'EMP-0000',
+          nameAr: d.full_name || d.nameAr || 'موظف',
+          nameEn: d.full_name || d.nameEn || 'Employee',
+          roleAr: d.job_title || d.roleAr || 'موظف',
+          roleEn: d.job_title || d.roleEn || 'Employee',
+          departmentAr: d.department || d.department_id || 'العمليات',
+          departmentEn: d.department || d.department_id || 'Operations',
+          baseSalary: typeof d.base_salary === 'number' ? d.base_salary : (parseFloat(d.base_salary) || 10000),
+          attendanceRate: 100,
+          status: (d.employment_status === 'TERMINATED' || d.is_active === false ? 'TERMINATED' : d.employment_status === 'ON_LEAVE' ? 'ON_LEAVE' : 'ACTIVE') as 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED',
+          iqamaOrNationalId: d.email || '',
+        })));
+        return;
+      }
+
       const data = await erpApi.getHrmsEmployees(currentCompany?.id);
       if (Array.isArray(data)) {
         setEmployees(data.map((d: any) => ({
@@ -717,7 +737,13 @@ export const HRMSView: React.FC = () => {
         isOpen={isAddEmployeeOpen}
         onClose={() => setIsAddEmployeeOpen(false)}
         onEmployeeAdded={(newEmployee) => {
-          setEmployees((prev) => [newEmployee, ...prev]);
+          setEmployees((prev) => [newEmployee, ...prev.filter((e) => e.id !== newEmployee.id)]);
+          showToast(
+            isAr
+              ? 'تم تسجيل الموظف وإصدار بيانات الدخول بنجاح.'
+              : 'Employee registered and credentials dispatched successfully.',
+            'success',
+          );
         }}
       />
     </div>

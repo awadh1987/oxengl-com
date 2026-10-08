@@ -93,6 +93,8 @@ interface EmployeeFormState {
   certifications: string;
   driversLicenseType: string;
   driversLicenseExpiryDate: string;
+  iamRole: string;
+  initialPassword?: string;
 }
 
 const JOB_TITLE_GROUPS = [
@@ -231,6 +233,8 @@ const initialForm = (): EmployeeFormState => ({
   certifications: '',
   driversLicenseType: '',
   driversLicenseExpiryDate: '',
+  iamRole: 'Standard',
+  initialPassword: '',
 });
 
 const normalizeIban = (value: string) => value.replace(/\s+/g, '').toUpperCase();
@@ -309,6 +313,11 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       setError(isAr ? 'الاسم الكامل باللغة العربية مطلوب.' : 'Full Name (Arabic) is required.');
       return false;
     }
+    if (!form.personalEmail.trim() || !form.personalEmail.includes('@')) {
+      setActiveStep(0);
+      setError(isAr ? 'يرجى إدخال بريد إلكتروني صحيح لإنشاء حساب الموظف في النظام.' : 'Please enter a valid login email for the employee account.');
+      return false;
+    }
     if (!form.idType) {
       setActiveStep(1);
       setError(isAr ? 'يرجى تحديد نوع الهوية.' : 'Select an ID type.');
@@ -350,6 +359,8 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     try {
       const fullName = form.nameEn.trim() || form.nameAr.trim();
       const nameParts = fullName.split(/\s+/);
+      const email = form.personalEmail.trim();
+
       const payload = {
         registration_mode: mode,
         employee_code: form.employeeNumber.trim() || undefined,
@@ -366,7 +377,7 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         personal_mobile: form.personalMobile.trim() || null,
         emergency_contact_name: form.emergencyContactName.trim() || null,
         emergency_contact_number: form.emergencyContactNumber.trim() || null,
-        personal_email: form.personalEmail.trim() || null,
+        personal_email: email,
         id_type: form.idType,
         identity_number: form.identityNumber.trim(),
         iqama_expiry_hijri: form.iqamaExpiryHijri.trim() || null,
@@ -407,7 +418,30 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         custom_attributes: customAttributes,
       };
 
-      const response = await erpApi.createEmployee(payload, currentCompany?.id);
+      // Primary internal staff registration pipeline: POST /api/v1/tenant/hr/employees
+      const hrPayload = {
+        full_name: fullName,
+        email: email,
+        role: form.iamRole || 'Standard',
+        password: form.initialPassword?.trim() || undefined,
+        phone: form.personalMobile?.trim() || undefined,
+        job_title: form.jobTitle,
+        department: form.department,
+        department_id: form.department,
+        employee_id: form.employeeNumber.trim() || undefined,
+        hire_date: form.hireDate || undefined,
+        employment_status: 'ACTIVE',
+        base_salary: Number(form.baseSalary) || 0,
+      };
+
+      let response: any = null;
+      try {
+        response = await erpApi.registerTenantEmployee(hrPayload, currentCompany?.id);
+      } catch (hrErr: any) {
+        console.warn('Tenant HR registration pipeline error, falling back to legacy endpoint:', hrErr);
+        response = await erpApi.createEmployee(payload, currentCompany?.id);
+      }
+
       const id = response.id || response.employee_id;
       if (!id) throw new Error(isAr ? 'لم يُرجع الخادم رقم الموظف.' : 'The server did not return an employee ID.');
 
@@ -422,17 +456,17 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
 
       const newRecord: EmployeeRecord = {
         id,
-        employeeNumber: response.employee_code || response.employeeNumber || payload.employee_code || 'EMP-0000',
-        nameAr: response.name_ar || response.nameAr || payload.name_ar,
-        nameEn: response.name_en || response.nameEn || fullName,
-        roleAr: response.roleAr || form.jobTitle,
-        roleEn: response.roleEn || form.jobTitle,
-        departmentAr: response.departmentAr || form.department,
-        departmentEn: response.departmentEn || form.department,
+        employeeNumber: response.employee_id || response.employee_code || response.employeeNumber || payload.employee_code || 'EMP-0000',
+        nameAr: response.name_ar || response.nameAr || form.nameAr || fullName,
+        nameEn: response.name_en || response.nameEn || form.nameEn || fullName,
+        roleAr: response.job_title || response.roleAr || form.jobTitle,
+        roleEn: response.job_title || response.roleEn || form.jobTitle,
+        departmentAr: response.department || response.departmentAr || form.department,
+        departmentEn: response.department || response.departmentEn || form.department,
         baseSalary: Number(response.base_salary ?? payload.base_salary),
         attendanceRate: 100,
         status: 'ACTIVE',
-        iqamaOrNationalId: response.identity_number || payload.identity_number,
+        iqamaOrNationalId: response.identity_number || payload.identity_number || email,
       };
       onEmployeeAdded(newRecord);
       if (failedUploads.length) {
@@ -530,7 +564,9 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       {textField(isAr ? 'الجوال الشخصي' : 'Personal Mobile', 'personalMobile', { type: 'tel', placeholder: '+966 5X XXX XXXX' })}
       {textField(isAr ? 'اسم جهة اتصال الطوارئ' : 'Emergency Contact Name', 'emergencyContactName')}
       {textField(isAr ? 'رقم جهة اتصال الطوارئ' : 'Emergency Contact Number', 'emergencyContactNumber', { type: 'tel' })}
-      <div className="sm:col-span-2">{textField(isAr ? 'البريد الإلكتروني الشخصي' : 'Personal Email', 'personalEmail', { type: 'email' })}</div>
+      <div className="sm:col-span-2">
+        {textField(isAr ? 'البريد الإلكتروني للدخول وحساب النظام (IAM Email) *' : 'Work / Login Email for IAM Account *', 'personalEmail', { type: 'email', required: true, placeholder: 'employee@company.com' })}
+      </div>
     </div>
   );
 
@@ -555,7 +591,14 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   const renderEmploymentTab = () => (
     <div className="grid gap-4 sm:grid-cols-2">
       {textField(isAr ? 'الرقم الوظيفي' : 'Employee ID (Auto / Custom)', 'employeeNumber')}
-      <label className="block space-y-1.5">
+      {selectField(isAr ? 'الدور الوظيفي في النظام (IAM Role) *' : 'IAM System Role *', 'iamRole', [
+        { value: 'Standard', label: isAr ? 'موظف قياسي (Standard Staff)' : 'Standard Staff' },
+        { value: 'Manager', label: isAr ? 'مدير عمليات (Operations Manager)' : 'Operations Manager' },
+        { value: 'Admin', label: isAr ? 'مسؤول موارد بشرية / نظام (Admin)' : 'HR / System Admin' },
+        { value: 'HR_Manager', label: isAr ? 'مدير الموارد البشرية (HR Manager)' : 'HR Manager' },
+        { value: 'Finance_Manager', label: isAr ? 'المدير المالي (Finance Manager)' : 'Finance Manager' },
+      ], true)}
+      <label className="block space-y-1.5 sm:col-span-2">
         <span className="flex items-center gap-1 text-xs font-bold text-slate-600 dark:text-slate-300">
           <Building2 className="h-3.5 w-3.5" />{isAr ? 'القسم' : 'Department'} *
         </span>
@@ -730,6 +773,16 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     <div className="grid gap-4 sm:grid-cols-2">
       {textField(isAr ? 'الاسم الكامل (عربي)' : 'Full Name (Arabic)', 'nameAr', { required: true })}
       {textField(isAr ? 'الاسم الكامل (إنجليزي)' : 'Full Name (English)', 'nameEn')}
+      <div className="sm:col-span-2">
+        {textField(isAr ? 'البريد الإلكتروني للعمل / الدخول (IAM Account Email) *' : 'Work / Login Email (IAM Account) *', 'personalEmail', { type: 'email', required: true, placeholder: 'employee@company.com' })}
+      </div>
+      {selectField(isAr ? 'الدور الوظيفي في النظام (IAM Role) *' : 'IAM System Role *', 'iamRole', [
+        { value: 'Standard', label: isAr ? 'موظف قياسي (Standard Staff)' : 'Standard Staff' },
+        { value: 'Manager', label: isAr ? 'مدير عمليات (Operations Manager)' : 'Operations Manager' },
+        { value: 'Admin', label: isAr ? 'مسؤول موارد بشرية / نظام (Admin)' : 'HR / System Admin' },
+        { value: 'HR_Manager', label: isAr ? 'مدير الموارد البشرية (HR Manager)' : 'HR Manager' },
+        { value: 'Finance_Manager', label: isAr ? 'المدير المالي (Finance Manager)' : 'Finance Manager' },
+      ], true)}
       {selectField(isAr ? 'نوع الهوية' : 'ID Type', 'idType', [
         { value: 'SAUDI_NATIONAL_ID', label: isAr ? 'هوية وطنية سعودية' : 'Saudi National ID' },
         { value: 'IQAMA', label: 'Iqama' },

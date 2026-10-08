@@ -581,6 +581,46 @@ export interface ApiEmployee {
   drivers_license_expiry_date?: string | null;
 }
 
+export interface HrEmployeeItem {
+  id: string;
+  user_id: string;
+  company_id: string;
+  employee_id: string;
+  department_id?: string | null;
+  department?: string | null;
+  job_title: string;
+  hire_date: string;
+  employment_status: string;
+  status: string;
+  base_salary: number;
+  manager_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  role: string;
+  iam_role?: string | null;
+  is_active: boolean;
+  must_change_password: boolean;
+}
+
+export interface RegisterEmployeePayload {
+  full_name: string;
+  email: string;
+  role: string;
+  password?: string;
+  phone?: string;
+  job_title: string;
+  department?: string;
+  department_id?: string;
+  employee_id?: string;
+  hire_date?: string;
+  employment_status?: string;
+  base_salary?: number;
+  manager_id?: string;
+}
+
 export interface ApiAttendanceLog {
   id: string;
   tenant_id: string;
@@ -2208,6 +2248,21 @@ export const erpApi = {
     request<ApiCustomsManifest>(`/api/v1/logistics/customs/manifests/${manifestId}/status`, companyId, {
       method: 'PUT',
       body: JSON.stringify({ status, review_notes: reviewNotes }),
+    }),
+
+  // Tenant HR Staff Module (1-to-1 ResUser & HrEmployee Pipeline)
+  getTenantHrEmployees: (companyId?: string, params?: { department?: string; search?: string; status?: string }) => {
+    const query = new URLSearchParams();
+    if (params?.department) query.append('department', params.department);
+    if (params?.search) query.append('search', params.search);
+    if (params?.status) query.append('status', params.status);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return request<HrEmployeeItem[]>(`/api/v1/tenant/hr/employees${qs}`, companyId);
+  },
+  registerTenantEmployee: (payload: RegisterEmployeePayload, companyId?: string) =>
+    request<HrEmployeeItem>('/api/v1/tenant/hr/employees', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
     }),
 
   // HR Personnel Core

@@ -536,6 +536,9 @@ for _tc_prefix in ("/api/tenant/control", "/api/v1/tenant/control", "/tenant/con
 from backend.app.api.v1 import form_schemas as form_schemas_api
 for _fs_prefix in ("/api/v1/tenant", "/api/tenant"):
 	app.include_router(form_schemas_api.router, prefix=_fs_prefix)
+from backend.app.api.v1 import tenant_hr
+for _hr_prefix in ("/api/v1/tenant/hr", "/api/tenant/hr"):
+	app.include_router(tenant_hr.router, prefix=_hr_prefix)
 app.include_router(master_platform.router, prefix="/api/master/platform")
 app.include_router(master_platform.router, prefix="/api/v1/master/platform")
 app.include_router(master_platform.admin_router, prefix="/api/admin")
