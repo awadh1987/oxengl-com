@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OxenGL Enterprise ERP // Sovereign Cloud Infrastructure & Ledger Engine</title>
+  <meta name="description" content="OxenGL is an enterprise-grade cloud ERP platform featuring multi-tenant PostgreSQL 16 persistence, ZATCA Phase 2 clearance, weighbridge dispatch, and real-time sovereign telemetry." />
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ==========================================================================
+       1. OMNIPRESENT DARK THEME CSS CUSTOM PROPERTIES & DESIGN TOKENS
+       ========================================================================== */
+    :root {
+      --bg-void: #06080d;
+      --bg-primary: #0b0f17;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #162032;
+      --bg-inset: #0a0d14;
+      
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(255, 255, 255, 0.18);
+      --border-lit: rgba(249, 115, 22, 0.45);
+
+      --color-primary: #f97316;
+      --color-primary-hover: #ea580c;
+      --color-primary-glow: rgba(249, 115, 22, 0.16);
+      
+      --color-accent: #38bdf8;
+      --color-accent-glow: rgba(56, 189, 248, 0.14);
+      
+      --color-success: #10b981;
+      --color-success-glow: rgba(16, 185, 129, 0.15);
+      --color-warning: #f59e0b;
+      --color-danger: #f43f5e;
+
+      --text-white: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+
+      --mouse-x: 50vw;
+      --mouse-y: 50vh;
+
+      --radius-sm: 4px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+
+      --shadow-window: 0 20px 40px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
+      --shadow-window-active: 0 25px 50px -12px rgba(249, 115, 22, 0.15), 0 0 0 1px var(--border-lit);
+    }
+
+    /* Reset & Base */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background-color: var(--bg-void);
+      color: var(--text-white);
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    body {
+      background-color: var(--bg-void);
+      background-image: 
+        radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(249, 115, 22, 0.05) 0%, transparent 45%),
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.08), transparent 70%),
+        linear-gradient(to bottom, #06080d 0%, #080c14 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Universal Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-void);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-primary);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    .font-mono {
+      font-family: var(--font-mono);
+    }
+
+    .text-primary { color: var(--color-primary); }
+    .text-emerald { color: var(--color-success); }
+    .text-cyan { color: var(--color-accent); }
+    .text-amber { color: var(--color-warning); }
+    .text-rose { color: var(--color-danger); }
+
+    /* ==========================================================================
+       2. TOP STATUS BAR & GLOBAL NAVIGATION
+       ========================================================================== */
+    .top-system-radar {
+      background: #04060a;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 6px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+
+    .radar-left, .radar-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .radar-status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-success);
+      box-shadow: 0 0 8px var(--color-success);
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
+    }
+
+    .domain-switch-toggle {
+      display: inline-flex;
+      background: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 2px 4px;
+      gap: 4px;
+    }
+
+    .domain-btn {
+      background: transparent;
+      border: none;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.2s ease;
+    }
+
+    .domain-btn.active {
+      background: rgba(249, 115, 22, 0.2);
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    /* Main Navbar */
+    .oxengl-navbar {
+      background: rgba(11, 15, 23, 0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 29px;
+      z-index: 999;
+    }
+
+    .brand-cluster {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo-mark {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--color-primary), #c2410c);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      color: #000;
+      box-shadow: 0 0 16px var(--color-primary-glow);
+    }
+
+    .brand-title {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-family: var(--font-mono);
+      font-size: 9px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--color-accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .nav-links a:hover {
+      color: var(--text-white);
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--color-primary) 0%, #ea580c 100%);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px var(--color-primary-glow);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.3);
+      background: #ea580c;
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface);
+      color: var(--text-white);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-bright);
+    }
+
+    /* ==========================================================================
+       3. INTERACTIVE HERO WORKSPACE SECTION
+       ========================================================================== */
+    .hero-container {
+      padding: 48px 32px 32px 32px;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .hero-intro {
+      text-align: center;
+      max-width: 860px;
+      margin: 0 auto 36px auto;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-primary);
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.25);
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+      letter-spacing: 0.04em;
+    }
+
+    .hero-heading {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .hero-heading span.gradient-text {
+      background: linear-gradient(135deg, #f8fafc 30%, var(--color-primary) 90%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subheading {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .hero-cta-strip {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* WORKSPACE DESKTOP STAGE (Interactive Multi-Window Area) */
+    .workspace-stage-wrapper {
+      position: relative;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 12px;
+      box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      margin-top: 16px;
+    }
+
+    .workspace-dock-top {
+      background: var(--bg-inset);
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .dock-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+    }
+
+    .dock-tray {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dock-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-dim);
+      transition: all 0.2s;
+    }
+
+    .dock-pill:hover, .dock-pill.active {
+      color: var(--color-primary);
+      border-color: rgba(249, 115, 22, 0.3);
+    }
+
+    .workspace-stage {
+      height: 580px;
+      background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(249, 115, 22, 0.06) 0%, transparent 40%),
+                  radial-gradient(circle at 80% 20%, rgba(56, 189, 248, 0.04) 0%, transparent 40%),
+                  #070a10;
+      position: relative;
+      overflow: hidden;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+
+    /* RESIZABLE WINDOW COMPONENT */
+    .workspace-window {
+      position: absolute;
+      background: var(--bg-primary);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-window);
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+      min-width: 300px;
+      min-height: 220px;
+      transition: box-shadow 0.2s ease, border-color 0.2s ease;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .workspace-window.active {
+      box-shadow: var(--shadow-window-active);
+      border-color: var(--border-lit);
+    }
+
+    .window-header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: move;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .window-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .win-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .win-close { background: #ef4444; }
+    .win-min { background: #f59e0b; }
+    .win-max { background: #10b981; }
+
+    .window-caption {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-white);
+    }
+
+    .window-tag {
+      font-size: 9px;
+      font-family: var(--font-mono);
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--color-success);
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+
+    .window-content {
+      padding: 14px;
+      flex: 1;
+      overflow-y: auto;
+      background: var(--bg-primary);
+    }
+
+    /* Resizing Handles */
+    .resize-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      bottom: 2px;
+      right: 2px;
+      cursor: se-resize;
+      background: transparent;
+    }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      right: 3px;
+      bottom: 3px;
+      width: 5px;
+      height: 5px;
+      border-right: 2px solid var(--text-dim);
+      border-bottom: 2px solid var(--text-dim);
+    }
+
+    /* Window Inner Forms & Components */
+    .window-form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .dark-input {
+      width: 100%;
+      background: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-white);
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .dark-input:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px var(--color-primary-glow);
+    }
+
+    .zatca-validator-strip {
+      background: var(--bg-surface);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin-bottom: 12px;
+    }
+
+    .zatca-header-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+      font-size: 11px;
+    }
+
+    .zatca-hash-box {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      word-break: break-all;
+    }
+
+    .btn-micro {
+      padding: 4px 10px;
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      color: var(--text-white);
+      transition: all 0.2s;
+    }
+    .btn-micro:hover {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+    }
+
+    /* Data Tables inside Windows */
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .mini-table th {
+      background: var(--bg-inset);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-weight: 500;
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .mini-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+    .mini-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-white);
+    }
+
+    /* Telemetry Visuals */
+    .radar-stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      font-size: 11px;
+    }
+    .meter-container {
+      width: 100px;
+      height: 6px;
+      background: var(--bg-inset);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .meter-bar {
+      height: 100%;
+      background: var(--color-accent);
+      border-radius: 3px;
+    }
+
+    /* ==========================================================================
+       4. INFRASTRUCTURE PROOF BENCHMARK RIBBON
+       ========================================================================== */
+    .proof-ribbon-section {
+      padding: 32px 0;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-primary);
+    }
+
+    .proof-grid {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 32px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .proof-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .proof-card:hover {
+      border-color: var(--border-bright);
+      transform: translateY(-2px);
+    }
+
+    .proof-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .proof-card:hover::before {
+      opacity: 1;
+    }
+
+    .proof-metric {
+      font-size: 32px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+
+    .proof-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-white);
+      margin-bottom: 6px;
+    }
+
+    .proof-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* ==========================================================================
+       5. INTERACTIVE WORKFLOW MATRIX (MODULE CATALOG & FASTAPI PREVIEW)
+       ========================================================================== */
+    .matrix-section {
+      max-width: 1440px;
+      margin: 64px auto;
+      padding: 0 32px;
+    }
+
+    .section-header-block {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 40px auto;
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 12px;
+    }
+
+    .section-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .matrix-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .matrix-tab {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .matrix-tab.active {
+      background: var(--color-primary-glow);
+      border-color: var(--color-primary);
+      color: var(--text-white);
+    }
+
+    .matrix-display-container {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+    }
+
+    .matrix-panel-ui {
+      padding: 32px;
+      border-right: 1px solid var(--border-subtle);
+    }
+
+    .matrix-panel-code {
+      background: var(--bg-inset);
+      padding: 24px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      overflow-x: auto;
+    }
+
+    .code-titlebar {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-dim);
+      font-size: 11px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    pre code {
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+    .kw { color: #f43f5e; }
+    .fn { color: #38bdf8; }
+    .str { color: #10b981; }
+    .num { color: #f59e0b; }
+    .com { color: #64748b; font-style: italic; }
+
+    /* ==========================================================================
+       6. DEPLOYMENT PRICING TIERS
+       ========================================================================== */
+    .pricing-section {
+      background: #080c14;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 64px 32px;
+    }
+
+    .pricing-container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .billing-toggle-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 40px;
+      font-size: 13px;
+    }
+
+    .billing-switch {
+      background: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      padding: 3px;
+      border-radius: 20px;
+      display: flex;
+      cursor: pointer;
+    }
+
+    .billing-opt {
+      padding: 6px 14px;
+      border-radius: 16px;
+      transition: all 0.2s;
+      color: var(--text-dim);
+    }
+    .billing-opt.active {
+      background: var(--color-primary);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 28px;
+    }
+
+    .pricing-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--color-primary);
+      box-shadow: 0 10px 30px -10px var(--color-primary-glow);
+    }
+
+    .featured-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      padding: 2px 12px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .tier-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .tier-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      min-height: 36px;
+    }
+
+    .tier-price-box {
+      margin-bottom: 24px;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .tier-currency {
+      font-size: 14px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .tier-amount {
+      font-size: 38px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+    }
+
+    .tier-period {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .tier-features {
+      list-style: none;
+      margin-bottom: 32px;
+      flex: 1;
+    }
+
+    .tier-features li {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 8px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .tier-features li svg {
+      color: var(--color-success);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       7. PROVISIONING TERMINAL CONVERSION SECTION
+       ========================================================================== */
+    .conversion-section {
+      max-width: 1100px;
+      margin: 80px auto;
+      padding: 0 32px;
+    }
+
+    .conversion-terminal {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-bright);
+      border-radius: var(--radius-xl);
+      padding: 48px;
+      box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(249, 115, 22, 0.2);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .conversion-terminal::before {
+      content: '';
+      position: absolute;
+      top: -150px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 300px;
+      background: radial-gradient(circle, var(--color-primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .slug-builder-box {
+      max-width: 580px;
+      margin: 28px auto;
+      display: flex;
+      background: var(--bg-inset);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      padding: 4px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .slug-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-family: var(--font-mono);
+      color: var(--text-white);
+      outline: none;
+    }
+
+    .slug-suffix {
+      background: var(--bg-surface);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      padding: 12px 16px;
+      font-size: 13px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+    }
+
+    /* ==========================================================================
+       8. COMPREHENSIVE SYSTEM FOOTER
+       ========================================================================== */
+    .oxengl-footer {
+      background: #040609;
+      border-top: 1px solid var(--border-subtle);
+      padding: 56px 32px 24px 32px;
+      margin-top: auto;
+    }
+
+    .footer-grid {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr repeat(4, 1fr);
+      gap: 40px;
+      margin-bottom: 48px;
+    }
+
+    .footer-col h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-white);
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .footer-col ul {
+      list-style: none;
+    }
+
+    .footer-col li {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .footer-col a:hover {
+      color: var(--color-primary);
+    }
+
+    .footer-bottom-bar {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding-top: 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+    }
+
+    .source-spec-link {
+      color: var(--text-dim);
+      text-decoration: underline;
+      transition: color 0.2s;
+    }
+    .source-spec-link:hover {
+      color: var(--color-primary);
+    }
+
+    /* Responsive degradation */
+    @media (max-width: 1024px) {
+      .proof-grid { grid-template-columns: repeat(2, 1fr); }
+      .pricing-grid { grid-template-columns: 1fr; }
+      .matrix-display-container { grid-template-columns: 1fr; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .workspace-stage { height: 720px; }
+    }
+
+    @media (max-width: 768px) {
+      .hero-heading { font-size: 32px; }
+      .proof-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .workspace-stage { height: 800px; }
+      .workspace-window { position: static !important; width: 100% !important; margin-bottom: 16px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- =========================================================================
+       SYSTEM TELEMETRY RADAR STATUS BAR
+       ========================================================================= -->
+  <div class="top-system-radar">
+    <div class="radar-left">
+      <span class="radar-status-dot"></span>
+      <span>CLUSTER: KSA-RIYADH-01 [ONLINE]</span>
+      <span style="color: var(--border-bright);">|</span>
+      <span class="text-cyan">POSTGRESQL 16.4</span>
+      <span style="color: var(--border-bright);">|</span>
+      <span>UPTIME: 99.984%</span>
+    </div>
+    <div class="radar-right">
+      <div class="domain-switch-toggle">
+        <button class="domain-btn active" id="btn-domain-me" onclick="setDomainSwitch('me')">oxengl.me [Tenant]</button>
+        <button class="domain-btn" id="btn-domain-com" onclick="setDomainSwitch('com')">oxengl.com [Corporate]</button>
+      </div>
+      <a href="/admin" class="text-primary font-mono" style="font-size: 11px;">SuperAdmin Cockpit &rarr;</a>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       GLOBAL PLATFORM NAVBAR
+       ========================================================================= -->
+  <nav class="oxengl-navbar">
+    <div class="brand-cluster">
+      <div class="brand-logo-mark">OX</div>
+      <div class="brand-title">
+        <span>OxenGL</span>
+        <span class="brand-badge">ENTERPRISE ERP</span>
+      </div>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#workspace-stage">Live Cockpit</a></li>
+      <li><a href="#proof-metrics">Telemetry Radar</a></li>
+      <li><a href="#modules">Module Matrix</a></li>
+      <li><a href="#pricing">Deployment Tiers</a></li>
+      <li><a href="#provision">Instant Namespace</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="btn-secondary" onclick="alert('Redirecting to Tenant Login...')">Tenant Sign In</button>
+      <a href="#provision" class="btn-primary">
+        <span>Deploy Instance</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- =========================================================================
+       HERO WORKSPACE SECTION (RESIZABLE MULTI-WINDOW STAGE)
+       ========================================================================= -->
+  <main>
+    <section class="hero-container" id="workspace-stage">
+      <div class="hero-intro">
+        <div class="hero-eyebrow">
+          <span>🛡️ SOVEREIGN ENTERPRISE OPERATING PLATFORM</span>
+        </div>
+        <h1 class="hero-heading">
+          Continuous Financial Telemetry.<br />
+          <span class="gradient-text">Sovereign Ledger Integrity.</span>
+        </h1>
+        <p class="hero-subheading">
+          A windowed, multi-tenant cloud operating environment for conglomerates and holdings.
+          Integrate double-entry general ledgers, live ZATCA Phase 2 clearance, biometric workforce payroll,
+          and quarry weighbridge dispatch in one resizable dark-theme canvas.
+        </p>
+        <div class="hero-cta-strip">
+          <a href="#provision" class="btn-primary">
+            <span>Provision Enterprise Workspace</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <button class="btn-secondary" onclick="resetWorkspaceWindows()">
+            <span>Reset Window Coordinates</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- WORKSPACE MULTI-WINDOW STAGE -->
+      <div class="workspace-stage-wrapper">
+        <div class="workspace-dock-top">
+          <div class="dock-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            <span>ACTIVE WORKSPACE DESKTOP // MULTI-WINDOW COMPOSITOR</span>
+          </div>
+          <div class="dock-tray">
+            <span class="dock-pill active" id="dock-win-finance" onclick="restoreWindow('win-finance')">GL-Voucher [Win 1]</span>
+            <span class="dock-pill active" id="dock-win-telemetry" onclick="restoreWindow('win-telemetry')">Node-Radar [Win 2]</span>
+            <span class="dock-pill active" id="dock-win-weighbridge" onclick="restoreWindow('win-weighbridge')">Weighbridge [Win 3]</span>
+          </div>
+        </div>
+
+        <div class="workspace-stage" id="stage-canvas">
+          
+          <!-- WINDOW 1: General Ledger & ZATCA Engine -->
+          <div class="workspace-window active" id="win-finance" style="top: 24px; left: 24px; width: 440px; height: 380px; z-index: 10;">
+            <div class="window-header" onmousedown="startDrag(event, 'win-finance')">
+              <div class="window-controls">
+                <span class="win-dot win-close" onclick="closeWindow('win-finance')"></span>
+                <span class="win-dot win-min" onclick="toggleMinimize('win-finance')"></span>
+                <span class="win-dot win-max" onclick="toggleMaximize('win-finance')"></span>
+              </div>
+              <div class="window-caption">
+                <span>GL-VOUCHER // ZATCA Engine</span>
+              </div>
+              <span class="window-tag">LIVE SYNC</span>
+            </div>
+            <div class="window-content">
+              <div class="window-form-grid">
+                <div class="form-group">
+                  <label>Debit Account</label>
+                  <select id="v-debit" class="dark-input" onchange="recalcVoucher()">
+                    <option value="101001">101001 - Corporate Treasury (SAR)</option>
+                    <option value="102005">102005 - Trade Receivables (Logistics)</option>
+                    <option value="103002">103002 - Weighbridge Revenue In-Transit</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Debit Amount (SAR)</label>
+                  <input type="number" id="v-amount" class="dark-input font-mono" value="125000" step="5000" oninput="recalcVoucher()" />
+                </div>
+                <div class="form-group">
+                  <label>Credit Account</label>
+                  <select class="dark-input">
+                    <option value="401002">401002 - Freight & Customs Revenue</option>
+                    <option value="201001">201001 - ZATCA Tax Payable (15%)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Credit Balance (SAR)</label>
+                  <input type="text" id="v-credit-display" class="dark-input font-mono text-emerald" value="125,000.00" readonly />
+                </div>
+              </div>
+
+              <!-- ZATCA Phase 2 Validation Strip -->
+              <div class="zatca-validator-strip">
+                <div class="zatca-header-line">
+                  <span style="font-weight: 600;">🛡️ ZATCA Phase 2 Compliance Stamp</span>
+                  <span class="text-emerald font-mono">CLEARED</span>
+                </div>
+                <div class="zatca-hash-box" id="v-hash">SHA256: 4a7e201b80232ee9e8a7f10b832c9184d09ec78aa410b98</div>
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                <button class="btn-micro" onclick="commitVoucher()">Commit Journal Entry</button>
+                <span class="font-mono text-dim" style="font-size: 11px;" id="v-status">Status: BALANCED (Δ 0.00)</span>
+              </div>
+            </div>
+            <div class="resize-handle" onmousedown="startResize(event, 'win-finance')"></div>
+          </div>
+
+          <!-- WINDOW 2: Ubuntu Linux VPS & PostgreSQL 16 Telemetry Radar -->
+          <div class="workspace-window" id="win-telemetry" style="top: 24px; left: 488px; width: 430px; height: 380px; z-index: 9;">
+            <div class="window-header" onmousedown="startDrag(event, 'win-telemetry')">
+              <div class="window-controls">
+                <span class="win-dot win-close" onclick="closeWindow('win-telemetry')"></span>
+                <span class="win-dot win-min" onclick="toggleMinimize('win-telemetry')"></span>
+                <span class="win-dot win-max" onclick="toggleMaximize('win-telemetry')"></span>
+              </div>
+              <div class="window-caption">
+                <span>NODE-RADAR // Linux & PG16</span>
+              </div>
+              <span class="window-tag" style="background: rgba(56, 189, 248, 0.15); color: var(--color-accent);">TELEMETRY</span>
+            </div>
+            <div class="window-content">
+              <div class="radar-stat-row">
+                <span class="text-muted">Host Server:</span>
+                <span class="font-mono">Ubuntu 24.04 LTS (Primary Node)</span>
+              </div>
+              <div class="radar-stat-row">
+                <span class="text-muted">CPU Workload:</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="meter-container"><div class="meter-bar" style="width: 22%;"></div></div>
+                  <span class="font-mono text-cyan" id="stat-cpu">18.4%</span>
+                </div>
+              </div>
+              <div class="radar-stat-row">
+                <span class="text-muted">RAM Utilization:</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="meter-container"><div class="meter-bar" style="width: 24%; background: var(--color-primary);"></div></div>
+                  <span class="font-mono">14.2 / 64 GB</span>
+                </div>
+              </div>
+              <div class="radar-stat-row">
+                <span class="text-muted">Active PG Connections:</span>
+                <span class="font-mono text-emerald" id="stat-conn">84 / 300</span>
+              </div>
+              <div class="radar-stat-row">
+                <span class="text-muted">WAL Replication Lag:</span>
+                <span class="font-mono text-emerald">0 ms (Synchronous)</span>
+              </div>
+
+              <!-- Animated Query Bencher -->
+              <div style="margin-top: 14px; background: var(--bg-inset); border-radius: var(--radius-sm); padding: 10px; border: 1px solid var(--border-subtle);">
+                <div style="display: flex; justify-content: space-between; font-size: 10px; font-family: var(--font-mono); color: var(--text-dim); margin-bottom: 6px;">
+                  <span>LIVE TRANSACTION BUFFER</span>
+                  <span class="text-emerald">HIT RATIO: 99.72%</span>
+                </div>
+                <svg width="100%" height="45" viewBox="0 0 380 45" style="overflow: visible;">
+                  <polyline fill="none" stroke="var(--color-accent)" stroke-width="2" points="0,35 40,28 80,32 120,15 160,20 200,8 240,25 280,12 320,18 360,6 380,10" />
+                  <circle cx="380" cy="10" r="3" fill="var(--color-primary)" />
+                </svg>
+              </div>
+            </div>
+            <div class="resize-handle" onmousedown="startResize(event, 'win-telemetry')"></div>
+          </div>
+
+          <!-- WINDOW 3: Weighbridge & Quarry Logistics Dispatch -->
+          <div class="workspace-window" id="win-weighbridge" style="top: 180px; left: 160px; width: 620px; height: 340px; z-index: 11;">
+            <div class="window-header" onmousedown="startDrag(event, 'win-weighbridge')">
+              <div class="window-controls">
+                <span class="win-dot win-close" onclick="closeWindow('win-weighbridge')"></span>
+                <span class="win-dot win-min" onclick="toggleMinimize('win-weighbridge')"></span>
+                <span class="win-dot win-max" onclick="toggleMaximize('win-weighbridge')"></span>
+              </div>
+              <div class="window-caption">
+                <span>WEIGHBRIDGE // Logistics Dispatch Terminal</span>
+              </div>
+              <span class="window-tag" style="background: rgba(245, 158, 11, 0.15); color: var(--color-warning);">IOT STREAM</span>
+            </div>
+            <div class="window-content">
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>TICKET #</th>
+                    <th>PLATE NO</th>
+                    <th>MATERIAL</th>
+                    <th>GROSS</th>
+                    <th>TARE</th>
+                    <th>NET (MT)</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="weighbridge-rows">
+                  <tr>
+                    <td class="font-mono text-cyan">WB-2026-0984</td>
+                    <td>4821-KSA</td>
+                    <td>Aggregate 20mm</td>
+                    <td>42,100 KG</td>
+                    <td>13,650 KG</td>
+                    <td class="font-mono text-emerald">28.45 MT</td>
+                    <td><span class="window-tag">DISPATCHED</span></td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-cyan">WB-2026-0985</td>
+                    <td>3190-KSA</td>
+                    <td>Sub-base Class A</td>
+                    <td>39,800 KG</td>
+                    <td>14,100 KG</td>
+                    <td class="font-mono text-emerald">25.70 MT</td>
+                    <td><span class="window-tag">SCALED</span></td>
+                  </tr>
+                  <tr>
+                    <td class="font-mono text-cyan">WB-2026-0986</td>
+                    <td>8812-KSA</td>
+                    <td>Washed Sand</td>
+                    <td>44,200 KG</td>
+                    <td>14,300 KG</td>
+                    <td class="font-mono text-amber">29.90 MT</td>
+                    <td><span class="window-tag" style="background: rgba(245, 158, 11, 0.15); color: var(--color-warning);">IN-SCALE</span></td>
+                  </tr>
+                </tbody>
+              </table>
+              <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <span class="font-mono text-dim" style="font-size: 11px;">Active Scale: Mettler Toledo Dual-Platform • COM1 Baud: 9600</span>
+                <button class="btn-micro" onclick="addSampleTicket()">+ Ingest New Scale Event</button>
+              </div>
+            </div>
+            <div class="resize-handle" onmousedown="startResize(event, 'win-weighbridge')"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         4. INFRASTRUCTURE PROOF BENCHMARK RIBBON
+         ========================================================================= -->
+    <section class="proof-ribbon-section" id="proof-metrics">
+      <div class="proof-grid">
+        <div class="proof-card">
+          <div class="proof-metric text-emerald">0.42 ms</div>
+          <div class="proof-title">Partitioned Query Latency</div>
+          <p class="proof-desc">Optimized PostgreSQL 16 schema-per-tenant indexed queries executed across 10M+ transaction rows.</p>
+        </div>
+        <div class="proof-card">
+          <div class="proof-metric text-primary">99.7%</div>
+          <div class="proof-title">Buffer Cache Hit Ratio</div>
+          <p class="proof-desc">High-efficiency RAM memory architecture on Ubuntu Linux VPS running Nginx edge reverse proxy.</p>
+        </div>
+        <div class="proof-card">
+          <div class="proof-metric text-cyan">SAR 418.9M+</div>
+          <div class="proof-title">Quarterly Settled Volume</div>
+          <p class="proof-desc">Continuous multi-currency general ledger reconciliations across 64 enterprise client organizations.</p>
+        </div>
+        <div class="proof-card">
+          <div class="proof-metric text-amber">&lt; 14 ms</div>
+          <div class="proof-title">ZATCA Clearance Speed</div>
+          <p class="proof-desc">Cryptographic stamp, XML hashing, and QR generation clearing Saudi ZATCA Phase 2 compliance mandates.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         5. INTERACTIVE WORKFLOW MATRIX (MODULE CATALOG & FASTAPI PREVIEW)
+         ========================================================================= -->
+    <section class="matrix-section" id="modules">
+      <div class="section-header-block">
+        <div class="section-eyebrow">MODULE CATALOG & RUNTIME CONTRACTS</div>
+        <h2 class="section-title">Engineered for Autonomous Multi-Entity Operations</h2>
+        <p class="section-desc">Inspect live ERP workflows paired with production-ready FastAPI endpoint definitions and relational schemas.</p>
+      </div>
+
+      <div class="matrix-tabs">
+        <button class="matrix-tab active" onclick="switchMatrixTab('finance')">General Ledger & ZATCA</button>
+        <button class="matrix-tab" onclick="switchMatrixTab('logistics')">Weighbridge & Customs P2P</button>
+        <button class="matrix-tab" onclick="switchMatrixTab('hrms')">HRMS & Biometric Payroll</button>
+        <button class="matrix-tab" onclick="switchMatrixTab('infra')">Two-Tier Multi-Tenancy</button>
+      </div>
+
+      <div class="matrix-display-container">
+        <!-- Interactive UI Panel -->
+        <div class="matrix-panel-ui" id="matrix-ui-panel">
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;" id="matrix-ui-title">Financial Engine & Chart of Accounts</h3>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="matrix-ui-desc">
+            Autonomous 5-depth hierarchical accounts chart with automatic double-entry balance validation and real-time VAT returns.
+          </p>
+          <div style="background: var(--bg-inset); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 16px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px;">
+              <span class="text-dim">Active Ledger Currency:</span>
+              <span class="font-mono text-emerald">SAR (Saudi Riyal)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 12px;">
+              <span class="text-dim">VAT Compliance Standard:</span>
+              <span class="font-mono text-cyan">15% Standard ZATCA Rule</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 12px;">
+              <span class="text-dim">Automatic Reconciliation:</span>
+              <span class="font-mono text-primary">ENFORCED (Strict Mode)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Code Runtime Preview Panel -->
+        <div class="matrix-panel-code">
+          <div class="code-titlebar">
+            <span id="matrix-code-filename">backend/app/api/v1/branding.py</span>
+            <span>FASTAPI // ASYNC ROUTE</span>
+          </div>
+          <pre><code id="matrix-code-content"><span class="com"># Tier 2: Tenant Scoped Dynamic Branding Endpoint</span>
+<span class="kw">@router.get</span>(<span class="str">"/api/v1/tenant/branding"</span>, response_model=TenantBrandingResponse)
+<span class="kw">def</span> <span class="fn">get_tenant_branding</span>(
+    request: Request,
+    db: Session = <span class="fn">Depends</span>(get_db),
+    tenant_id: Optional[str] = <span class="fn">Query</span>(<span class="kw">None</span>),
+):
+    <span class="str">"""Resolves visual identity from Host subdomain or headers."""</span>
+    org, branding = <span class="fn">_resolve_tenant_entity</span>(db, request, tenant_id)
+    <span class="kw">return</span> <span class="fn">TenantBrandingResponse</span>(
+        tenant_id=org.id,
+        brand_name=branding.brand_name,
+        primary_color=branding.primary_color,
+        accent_color=branding.accent_color,
+        logo_url=branding.logo_url,
+    )</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         6. DEPLOYMENT PRICING TIERS
+         ========================================================================= -->
+    <section class="pricing-section" id="pricing">
+      <div class="pricing-container">
+        <div class="section-header-block">
+          <div class="section-eyebrow">TRANSPARENT CLOUD DEPLOYMENTS</div>
+          <h2 class="section-title">Scalable Infrastructure for Growing Holdings</h2>
+          <p class="section-desc">Deploy with complete tenant data isolation, daily snapshots, and zero vendor lock-in.</p>
+        </div>
+
+        <div class="billing-toggle-wrapper">
+          <span>Monthly Billing</span>
+          <div class="billing-switch" onclick="toggleBillingCycle()">
+            <span class="billing-opt active" id="billing-m">Monthly</span>
+            <span class="billing-opt" id="billing-y">Annual (Save 20%)</span>
+          </div>
+          <span>Annual Billing</span>
+        </div>
+
+        <div class="pricing-grid">
+          <!-- Growth Tier -->
+          <div class="pricing-card">
+            <div class="tier-name">Growth Workspace</div>
+            <div class="tier-desc">Ideal for single-entity firms requiring strict ZATCA compliance and general ledger accounting.</div>
+            <div class="tier-price-box">
+              <span class="tier-currency">SAR</span>
+              <span class="tier-amount" id="price-growth">3,750</span>
+              <span class="tier-period">/ month</span>
+            </div>
+            <ul class="tier-features">
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Up to 25 Active Users</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> PostgreSQL Schema Isolation</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> ZATCA Phase 2 E-Invoicing Engine</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Automated Daily Backups</li>
+            </ul>
+            <button class="btn-secondary" onclick="selectPricingTier('Growth')">Deploy Growth Tier</button>
+          </div>
+
+          <!-- Enterprise Syndicate (Featured) -->
+          <div class="pricing-card featured">
+            <div class="featured-badge">MOST POPULAR</div>
+            <div class="tier-name">Enterprise Syndicate</div>
+            <div class="tier-desc">Engineered for multi-branch logistics conglomerates with high weighbridge and supply volume.</div>
+            <div class="tier-price-box">
+              <span class="tier-currency">SAR</span>
+              <span class="tier-amount text-primary" id="price-syndicate">8,900</span>
+              <span class="tier-period">/ month</span>
+            </div>
+            <ul class="tier-features">
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Up to 100 Active Users</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated Virtual Compute Slice</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Custom Subdomain & Custom SSL</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> IoT Weighbridge Serial Ingestion</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> 99.98% High-Availability SLA</li>
+            </ul>
+            <button class="btn-primary" onclick="selectPricingTier('Enterprise Syndicate')">Deploy Syndicate Tier</button>
+          </div>
+
+          <!-- Sovereign Dedicated -->
+          <div class="pricing-card">
+            <div class="tier-name">Sovereign Dedicated</div>
+            <div class="tier-desc">Tailored for government contractors and national infrastructure operators requiring on-premise DBs.</div>
+            <div class="tier-price-box">
+              <span class="tier-amount" style="font-size: 26px;">Custom</span>
+              <span class="tier-period">/ tailored SLA</span>
+            </div>
+            <ul class="tier-features">
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Unlimited Users & Entities</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated On-Premise Database</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Air-Gapped Encryption Vault</li>
+              <li><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Dedicated On-Site Solution Architect</li>
+            </ul>
+            <button class="btn-secondary" onclick="alert('Opening Sovereign RFP Consultation Form...')">Request Sovereign Audit</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         7. INSTANT NAMESPACE CONVERSION TERMINAL
+         ========================================================================= -->
+    <section class="conversion-section" id="provision">
+      <div class="conversion-terminal">
+        <h2 style="font-size: 32px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px;">
+          Deploy Your Sovereign Workspace in Seconds
+        </h2>
+        <p style="font-size: 15px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+          Reserve your company subdomain on the OxenGL high-throughput multi-tenant cluster with automated schema provisioning.
+        </p>
+
+        <form class="slug-builder-box" onsubmit="handleProvisionSubmit(event)">
+          <input type="text" class="slug-input" id="namespace-slug" placeholder="your-holding-name" required pattern="^[a-zA-Z0-9-]+$" />
+          <div class="slug-suffix">.oxengl.me</div>
+          <button type="submit" class="btn-primary" style="margin-left: 8px; border-radius: var(--radius-sm);">
+            <span>Deploy</span>
+          </button>
+        </form>
+
+        <div style="font-family: var(--font-mono); font-size: 12px; color: var(--text-dim);" id="provision-feedback">
+          Status: Ready for deployment on KSA-RIYADH-01 cluster
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- =========================================================================
+       8. COMPREHENSIVE FOOTER & METADATA
+       ========================================================================= -->
+  <footer class="oxengl-footer">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <div class="brand-cluster" style="margin-bottom: 14px;">
+          <div class="brand-logo-mark">OX</div>
+          <span style="font-weight: 700; font-size: 16px;">OxenGL Enterprise</span>
+        </div>
+        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.6; max-width: 320px; margin-bottom: 14px;">
+          Next-generation sovereign ERP platform delivering military-grade database isolation, ZATCA Phase 2 clearance, and logistics operations.
+        </p>
+        <div style="font-family: var(--font-mono); font-size: 10px; color: var(--text-dim);">
+          ISO 27001 Certified • ZATCA Phase 2 Qualified • NDMO Aligned
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <h4>Architecture</h4>
+        <ul>
+          <li><a href="#workspace-stage">Two-Tier Tenancy</a></li>
+          <li><a href="#proof-metrics">PostgreSQL Schema Engine</a></li>
+          <li><a href="#proof-metrics">Nginx Low-Latency Proxy</a></li>
+          <li><a href="#modules">FastAPI Asynchronous Mesh</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Core Modules</h4>
+        <ul>
+          <li><a href="#modules">General Ledger & VAT</a></li>
+          <li><a href="#modules">Weighbridge Logistics</a></li>
+          <li><a href="#modules">ZATCA Clearance Engine</a></li>
+          <li><a href="#modules">HRMS Biometric Payroll</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Platforms</h4>
+        <ul>
+          <li><a href="/admin">SuperAdmin Portal</a></li>
+          <li><a href="/login">Tenant Workspace</a></li>
+          <li><a href="https://oxengl.me">oxengl.me [Tenant Hub]</a></li>
+          <li><a href="https://oxengl.com">oxengl.com [Corporate]</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Infrastructure</h4>
+        <ul>
+          <li><span>Riyadh (DC-01): ONLINE</span></li>
+          <li><span>Jeddah (DC-02): ONLINE</span></li>
+          <li><span>Frankfurt (Edge): ONLINE</span></li>
+          <li><span>Database: PG 16.4 Clustered</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom-bar">
+      <div>&copy; 2026 OxenGL Technologies Inc. All rights reserved. Sovereign Cloud ERP Platform.</div>
+      <div>
+        <a href="/docs/docs/FRONTEND_OVERHAUL_PHASE4.md" class="source-spec-link">Architecture Specification // Phase 4 Production Asset</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- =========================================================================
+       9. CLIENT INTERACTION & WINDOW COMPOSITOR ENGINE (JAVASCRIPT)
+       ========================================================================== -->
+  <script>
+    /* Global Lighting & Mousemove Handler */
+    window.addEventListener('mousemove', (e) => {
+      document.documentElement.style.setProperty('--mouse-x', `${e.clientX}px`);
+      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
+    });
+
+    /* Window Drag & Resize State Management */
+    let currentDrag = null;
+    let currentResize = null;
+    let highestZ = 20;
+
+    const initialWindowPositions = {
+      'win-finance': { top: 24, left: 24, width: 440, height: 380 },
+      'win-telemetry': { top: 24, left: 488, width: 430, height: 380 },
+      'win-weighbridge': { top: 180, left: 160, width: 620, height: 340 }
+    };
+
+    function bringToFront(winId) {
+      highestZ += 1;
+      const el = document.getElementById(winId);
+      if (el) {
+        document.querySelectorAll('.workspace-window').forEach(w => w.classList.remove('active'));
+        el.classList.add('active');
+        el.style.zIndex = highestZ;
+      }
+    }
+
+    document.querySelectorAll('.workspace-window').forEach(win => {
+      win.addEventListener('mousedown', () => bringToFront(win.id));
+    });
+
+    function startDrag(e, winId) {
+      bringToFront(winId);
+      const el = document.getElementById(winId);
+      const rect = el.getBoundingClientRect();
+      const stage = document.getElementById('stage-canvas').getBoundingClientRect();
+      
+      currentDrag = {
+        el: el,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        stageLeft: stage.left,
+        stageTop: stage.top,
+        stageWidth: stage.width,
+        stageHeight: stage.height
+      };
+      
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+    }
+
+    function onDrag(e) {
+      if (!currentDrag) return;
+      let left = e.clientX - currentDrag.stageLeft - currentDrag.offsetX;
+      let top = e.clientY - currentDrag.stageTop - currentDrag.offsetY;
+
+      // Bound constraints within stage canvas
+      left = Math.max(0, Math.min(left, currentDrag.stageWidth - currentDrag.el.offsetWidth));
+      top = Math.max(0, Math.min(top, currentDrag.stageHeight - currentDrag.el.offsetHeight));
+
+      currentDrag.el.style.left = `${left}px`;
+      currentDrag.el.style.top = `${top}px`;
+    }
+
+    function stopDrag() {
+      currentDrag = null;
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+    }
+
+    function startResize(e, winId) {
+      e.stopPropagation();
+      bringToFront(winId);
+      const el = document.getElementById(winId);
+      currentResize = {
+        el: el,
+        startX: e.clientX,
+        startY: e.clientY,
+        startWidth: el.offsetWidth,
+        startHeight: el.offsetHeight
+      };
+      document.addEventListener('mousemove', onResize);
+      document.addEventListener('mouseup', stopResize);
+    }
+
+    function onResize(e) {
+      if (!currentResize) return;
+      const newWidth = Math.max(300, currentResize.startWidth + (e.clientX - currentResize.startX));
+      const newHeight = Math.max(220, currentResize.startHeight + (e.clientY - currentResize.startY));
+      currentResize.el.style.width = `${newWidth}px`;
+      currentResize.el.style.height = `${newHeight}px`;
+    }
+
+    function stopResize() {
+      currentResize = null;
+      document.removeEventListener('mousemove', onResize);
+      document.removeEventListener('mouseup', stopResize);
+    }
+
+    function closeWindow(winId) {
+      const el = document.getElementById(winId);
+      if (el) el.style.display = 'none';
+      const pill = document.getElementById(`dock-${winId}`);
+      if (pill) pill.classList.remove('active');
+    }
+
+    function restoreWindow(winId) {
+      const el = document.getElementById(winId);
+      if (el) {
+        el.style.display = 'flex';
+        bringToFront(winId);
+      }
+      const pill = document.getElementById(`dock-${winId}`);
+      if (pill) pill.classList.add('active');
+    }
+
+    function toggleMinimize(winId) {
+      const el = document.getElementById(winId);
+      if (!el) return;
+      const content = el.querySelector('.window-content');
+      if (content.style.display === 'none') {
+        content.style.display = 'block';
+        el.style.height = 'auto';
+      } else {
+        content.style.display = 'none';
+        el.style.height = '40px';
+      }
+    }
+
+    function toggleMaximize(winId) {
+      const el = document.getElementById(winId);
+      if (!el) return;
+      if (el.dataset.maximized === 'true') {
+        const init = initialWindowPositions[winId];
+        el.style.top = `${init.top}px`;
+        el.style.left = `${init.left}px`;
+        el.style.width = `${init.width}px`;
+        el.style.height = `${init.height}px`;
+        el.dataset.maximized = 'false';
+      } else {
+        el.dataset.maximized = 'true';
+        el.style.top = '10px';
+        el.style.left = '10px';
+        el.style.width = 'calc(100% - 20px)';
+        el.style.height = 'calc(100% - 20px)';
+        bringToFront(winId);
+      }
+    }
+
+    function resetWorkspaceWindows() {
+      Object.keys(initialWindowPositions).forEach(winId => {
+        const el = document.getElementById(winId);
+        const init = initialWindowPositions[winId];
+        if (el) {
+          el.style.display = 'flex';
+          el.style.top = `${init.top}px`;
+          el.style.left = `${init.left}px`;
+          el.style.width = `${init.width}px`;
+          el.style.height = `${init.height}px`;
+          el.querySelector('.window-content').style.display = 'block';
+          el.dataset.maximized = 'false';
+        }
+        const pill = document.getElementById(`dock-${winId}`);
+        if (pill) pill.classList.add('active');
+      });
+      bringToFront('win-weighbridge');
+    }
+
+    /* Live Voucher Balancer Logic */
+    function recalcVoucher() {
+      const amountVal = parseFloat(document.getElementById('v-amount').value) || 0;
+      document.getElementById('v-credit-display').value = amountVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('v-status').textContent = `Status: BALANCED (Δ 0.00 SAR)`;
+      
+      // Dynamic SHA-256 Mock Hash based on Amount
+      const mockHash = (amountVal * 1234567).toString(16).padEnd(20, 'a').substring(0, 32);
+      document.getElementById('v-hash').textContent = `SHA256: 4a7e201b${mockHash}`;
+    }
+
+    function commitVoucher() {
+      const amt = document.getElementById('v-amount').value;
+      const statusEl = document.getElementById('v-status');
+      statusEl.textContent = 'COMMITTING TO POSTGRESQL...';
+      statusEl.className = 'font-mono text-cyan';
+      setTimeout(() => {
+        statusEl.textContent = `COMMITTED [TX-${Math.floor(Math.random() * 900000 + 100000)}]`;
+        statusEl.className = 'font-mono text-emerald';
+      }, 400);
+    }
+
+    /* Weighbridge Table Event Append */
+    let ticketCounter = 987;
+    function addSampleTicket() {
+      const tbody = document.getElementById('weighbridge-rows');
+      const gross = Math.floor(Math.random() * 8000 + 38000);
+      const tare = 14000;
+      const net = ((gross - tare) / 1000).toFixed(2);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="font-mono text-cyan">WB-2026-0${ticketCounter++}</td>
+        <td>${Math.floor(Math.random()*8000+1000)}-KSA</td>
+        <td>Gabbro Aggregate</td>
+        <td>${gross.toLocaleString()} KG</td>
+        <td>${tare.toLocaleString()} KG</td>
+        <td class="font-mono text-emerald">${net} MT</td>
+        <td><span class="window-tag">DISPATCHED</span></td>
+      `;
+      tbody.prepend(tr);
+    }
+
+    /* Domain Switch Simulator */
+    function setDomainSwitch(type) {
+      document.getElementById('btn-domain-me').classList.toggle('active', type === 'me');
+      document.getElementById('btn-domain-com').classList.toggle('active', type === 'com');
+    }
+
+    /* Module Matrix Content Switcher */
+    const matrixModules = {
+      finance: {
+        title: "Financial Engine & Chart of Accounts",
+        desc: "Autonomous 5-depth hierarchical accounts chart with automatic double-entry balance validation and real-time VAT returns.",
+        filename: "backend/app/api/v1/branding.py",
+        code: `<span class="com"># Tier 2: Tenant Scoped Dynamic Branding Endpoint</span>
+<span class="kw">@router.get</span>(<span class="str">"/api/v1/tenant/branding"</span>, response_model=TenantBrandingResponse)
+<span class="kw">def</span> <span class="fn">get_tenant_branding</span>(
+    request: Request,
+    db: Session = <span class="fn">Depends</span>(get_db),
+    tenant_id: Optional[str] = <span class="fn">Query</span>(<span class="kw">None</span>),
+):
+    <span class="str">"""Resolves visual identity from Host subdomain or headers."""</span>
+    org, branding = <span class="fn">_resolve_tenant_entity</span>(db, request, tenant_id)
+    <span class="kw">return</span> <span class="fn">TenantBrandingResponse</span>(
+        tenant_id=org.id,
+        brand_name=branding.brand_name,
+        primary_color=branding.primary_color,
+        accent_color=branding.accent_color,
+        logo_url=branding.logo_url,
+    )`
+      },
+      logistics: {
+        title: "Logistics Weighbridge & Customs Clearance",
+        desc: "Automated hardware serial scale integration with customs manifest filing and axle weight compliance safeguards.",
+        filename: "backend/app/domains/logistics/weighbridge.py",
+        code: `<span class="com"># Serial IoT Weighbridge Ticket Capture</span>
+<span class="kw">@router.post</span>(<span class="str">"/api/v1/weighbridge/tickets"</span>)
+<span class="kw">async def</span> <span class="fn">ingest_scale_ticket</span>(
+    payload: ScaleTicketPayload,
+    db: Session = <span class="fn">Depends</span>(get_tenant_db)
+):
+    net_weight = payload.gross_weight - payload.tare_weight
+    ticket = <span class="fn">WeighbridgeTicket</span>(
+        ticket_no=payload.ticket_no,
+        plate_number=payload.plate_number,
+        net_weight_mt=net_weight / <span class="num">1000.0</span>,
+        status=<span class="str">"DISPATCHED"</span>
+    )
+    db.add(ticket)
+    db.commit()
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"DISPATCH_COMMITTED"</span>, <span class="str">"net_mt"</span>: ticket.net_weight_mt}`
+      },
+      hrms: {
+        title: "HRMS & Biometric GOSI Payroll Matrix",
+        desc: "Biometric attendance ingestion with automated GOSI social insurance and Ministry of Labor overtime calculations.",
+        filename: "backend/app/domains/hrms/payroll.py",
+        code: `<span class="com"># GOSI Sovereign Wage Protection Ingestion</span>
+<span class="kw">def</span> <span class="fn">calculate_gosi_deductions</span>(employee_id: UUID, gross_salary: Decimal):
+    saudi_contrib = gross_salary * Decimal(<span class="str">"0.0975"</span>)
+    hazard_contrib = gross_salary * Decimal(<span class="str">"0.02"</span>)
+    <span class="kw">return</span> {
+        <span class="str">"annuity"</span>: saudi_contrib,
+        <span class="str">"hazard"</span>: hazard_contrib,
+        <span class="str">"net_payable"</span>: gross_salary - saudi_contrib
+    }`
+      },
+      infra: {
+        title: "Two-Tier Tenancy & Schema Multi-Tenant Core",
+        desc: "Strict isolation engine provisioning dedicated schemas or external databases with automatic migration synchronization.",
+        filename: "backend/app/api/v1/super_admin.py",
+        code: `<span class="com"># Enterprise Tenant Provisioning Pipeline</span>
+<span class="kw">@router.post</span>(<span class="str">"/api/v1/superadmin/tenants/register"</span>, status_code=<span class="num">201</span>)
+<span class="kw">def</span> <span class="fn">deploy_register_new_tenant</span>(
+    payload: TenantDeploymentRegistrationPayload,
+    db: Session = <span class="fn">Depends</span>(get_db)
+):
+    <span class="com"># Provision isolated PostgreSQL schema and clone base tables</span>
+    db.execute(text(<span class="str">f'CREATE SCHEMA IF NOT EXISTS "{payload.domain_slug}";'</span>))
+    db.execute(text(<span class="str">f'CREATE TABLE IF NOT EXISTS "{payload.domain_slug}".users (LIKE public.users);'</span>))
+    <span class="kw">return</span> {<span class="str">"status"</span>: <span class="str">"PROVISIONED"</span>, <span class="str">"workspace_slug"</span>: payload.domain_slug}`
+      }
+    };
+
+    function switchMatrixTab(tabKey) {
+      document.querySelectorAll('.matrix-tab').forEach((tab, index) => {
+        tab.classList.toggle('active', Object.keys(matrixModules)[index] === tabKey);
+      });
+      const data = matrixModules[tabKey];
+      if (data) {
+        document.getElementById('matrix-ui-title').textContent = data.title;
+        document.getElementById('matrix-ui-desc').textContent = data.desc;
+        document.getElementById('matrix-code-filename').textContent = data.filename;
+        document.getElementById('matrix-code-content').innerHTML = data.code;
+      }
+    }
+
+    /* Pricing Billing Cycle Toggle */
+    let isAnnual = false;
+    function toggleBillingCycle() {
+      isAnnual = !isAnnual;
+      document.getElementById('billing-m').classList.toggle('active', !isAnnual);
+      document.getElementById('billing-y').classList.toggle('active', isAnnual);
+      
+      document.getElementById('price-growth').textContent = isAnnual ? '3,000' : '3,750';
+      document.getElementById('price-syndicate').textContent = isAnnual ? '7,120' : '8,900';
+    }
+
+    function selectPricingTier(tier) {
+      const slugInput = document.getElementById('namespace-slug');
+      if (slugInput) {
+        slugInput.scrollIntoView({ behavior: 'smooth' });
+        slugInput.focus();
+        document.getElementById('provision-feedback').textContent = `Target Tier Selected: ${tier}. Enter your workspace name to deploy.`;
+        document.getElementById('provision-feedback').className = 'font-mono text-cyan';
+      }
+    }
+
+    /* Provisioning Form Submit */
+    function handleProvisionSubmit(e) {
+      e.preventDefault();
+      const slug = document.getElementById('namespace-slug').value.trim().toLowerCase();
+      const fb = document.getElementById('provision-feedback');
+      if (!slug) return;
+
+      fb.textContent = `Validating namespace '${slug}.oxengl.me' across master_tenants...`;
+      fb.className = 'font-mono text-cyan';
+
+      setTimeout(() => {
+        fb.innerHTML = `✅ Namespace <span class="text-emerald">${slug}.oxengl.me</span> is available. Initializing PostgreSQL schema provisioning...`;
+        fb.className = 'font-mono text-emerald';
+        setTimeout(() => {
+          alert(`Workspace [${slug}.oxengl.me] reserved. Redirecting to Tenant Workspace Setup...`);
+        }, 800);
+      }, 600);
+    }
+  </script>
+</body>
+</html>
