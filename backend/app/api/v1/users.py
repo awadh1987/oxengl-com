@@ -969,6 +969,7 @@ async def invite_tenant_user(
                 full_name=full_name,
                 workspace_name=workspace_name,
                 tenant_id=tenant_id,
+                db=db,
             )
     except NotificationDeliveryError as exc:
         _commit_audit(
@@ -1303,6 +1304,7 @@ async def force_password_reset(
                 full_name=target.full_name or "External User",
                 workspace_name=(company.name if company else None) or "Workspace",
                 tenant_id=target.company_id,
+                db=db,
             )
         except NotificationDeliveryError as exc:
             _commit_audit(

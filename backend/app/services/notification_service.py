@@ -60,6 +60,7 @@ async def dispatch_temporary_credentials(
     full_name: str,
     workspace_name: str,
     tenant_id: Any = None,
+    db: Any = None,
 ) -> None:
     """Deliver a temporary password through a registered or tenant-resolved adapter."""
     from backend.app.services.communication_service import CommunicationError, send_message
@@ -84,7 +85,8 @@ async def dispatch_temporary_credentials(
         "Sign in and change this password immediately."
     )
     try:
-        await send_message(channel, destination, body, tenant_id=tenant_id)
+        db_session = db if hasattr(db, "scalar") else None
+        await send_message(channel, destination, body, tenant_id=tenant_id, db=db_session)
     except CommunicationError as exc:
         if str(exc).startswith("No active "):
             raise NotificationDeliveryError(

@@ -139,7 +139,7 @@ def test_provider_resolution_prefers_tenant_then_platform_and_fails_closed(facto
             svc.resolve_setting(db, tenants["A"], "sms")
 
 
-def test_email_dispatch_falls_back_to_platform_when_tenant_delivery_fails(factory, tenants, monkeypatch):
+def test_email_dispatch_strictly_uses_tenant_setting_without_platform_fallback(factory, tenants, monkeypatch):
     platform_id = add_setting(factory, provider="sendgrid")
     tenant_id = add_setting(
         factory, tenant_id=tenants["A"], provider="smtp",
@@ -156,12 +156,13 @@ def test_email_dispatch_falls_back_to_platform_when_tenant_delivery_fails(factor
 
     monkeypatch.setattr(svc, "deliver", deliver)
     with factory() as db:
-        asyncio.run(svc.send_message(
-            "email", "recipient@example.test", "notification",
-            tenant_id=tenants["A"], db=db,
-        ))
+        with pytest.raises(svc.CommunicationError, match="Tenant provider did not accept the message."):
+            asyncio.run(svc.send_message(
+                "email", "recipient@example.test", "notification",
+                tenant_id=tenants["A"], db=db,
+            ))
 
-    assert [call[0] for call in attempted] == [tenant_id, platform_id]
+    assert [call[0] for call in attempted] == [tenant_id]
     assert all(call[1:] == ("recipient@example.test", "notification") for call in attempted)
 
 
@@ -298,7 +299,7 @@ def test_smtp_adapter_calls_tls_login_and_send(monkeypatch):
         def ehlo(self): calls.append(("ehlo",))
         def starttls(self, context): calls.append(("starttls", isinstance(context, object)))
         def login(self, username, password): calls.append(("login", username, password))
-        def send_message(self, message): calls.append(("send", message["To"], message.get_content().strip())); return {}
+        def send_message(self, message, from_addr=None, **kwargs): calls.append(("send", message["To"], message.get_content().strip(), from_addr)); return {}
 
     monkeypatch.setattr(svc.smtplib, "SMTP", FakeSMTP)
     row = make_setting(provider="smtp", config={"host": "smtp.example", "port": 587, "security": "starttls", "username": "mailer"}, credentials={"password": "smtp-password"}, sender="sender@example.test")
@@ -306,7 +307,7 @@ def test_smtp_adapter_calls_tls_login_and_send(monkeypatch):
     assert calls[0] == ("connect", "smtp.example", 587, 10)
     assert any(call[0] == "starttls" for call in calls)
     assert ("login", "mailer", "smtp-password") in calls
-    assert any(call[0] == "send" and call[1] == "recipient@example.test" and call[2] == "private body" for call in calls)
+    assert any(call[0] == "send" and call[1] == "recipient@example.test" and call[2] == "private body" and call[3] == "sender@example.test" for call in calls)
 
 
 @pytest.mark.parametrize(("provider", "config", "credentials", "expected_url", "status_code", "response_body"), [
@@ -487,3 +488,95 @@ def test_invite_and_password_reset_flows_reach_communication_delivery(monkeypatc
             asyncio.run(awaitable)
     assert any(channel == "email" and destination == "recover@example.test" and "482601" in body
                for channel, destination, body, _tenant in sent)
+
+
+def test_tenant_user_invitation_strictly_resolves_and_delivers_via_tenant_settings(factory, tenants, monkeypatch):
+    from backend.app.api.v1 import users as users_api
+
+    # Platform superadmin provider (e.g. superadmin@oxengl.com)
+    platform_setting_id = add_setting(
+        factory,
+        tenant_id=None,
+        provider="smtp",
+        sender="superadmin@oxengl.com",
+        config={"host": "smtp.office365.com", "port": 587, "security": "starttls", "username": "superadmin@oxengl.com"},
+        credentials={"password": "superadmin-pwd"},
+    )
+
+    # Tenant-specific provider (e.g. admin@wac-ye.com)
+    tenant_setting_id = add_setting(
+        factory,
+        tenant_id=tenants["A"],
+        provider="smtp",
+        sender="admin@wac-ye.com",
+        config={"host": "mail.wac-ye.com", "port": 465, "security": "ssl", "username": "admin@wac-ye.com"},
+        credentials={"password": "tenant-pwd"},
+    )
+
+    deliveries = []
+
+    async def mock_deliver(setting, destination, body):
+        deliveries.append({
+            "setting_id": setting.id,
+            "sender_identity": setting.sender_identity,
+            "tenant_id": setting.tenant_id,
+            "destination": destination,
+            "body": body,
+        })
+
+    monkeypatch.setattr(svc, "deliver", mock_deliver)
+    monkeypatch.setattr(users_api, "append_audit_from_context", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr("backend.database.PlatformSessionLocal", factory)
+
+    class EmptyQuery:
+        def filter(self, *_args, **_kwargs): return self
+        def first(self): return None
+
+    class InviteDB:
+        def __init__(self): self.added = []; self.commits = 0
+        def query(self, *_args, **_kwargs): return EmptyQuery()
+        def get(self, *_args, **_kwargs): return None
+        def add(self, item): self.added.append(item)
+        def commit(self): self.commits += 1
+
+    actor_id = uuid.uuid4()
+    audit = users_api.AuditContext(
+        actor_id=actor_id, actor_identifier="admin@wac-ye.com", ip_address="192.0.2.20",
+        user_agent="test", request_id="tenant-invite-req", endpoint="/api/v1/users/invite",
+    )
+    actor = users_api.IamActor(
+        user=types.SimpleNamespace(id=actor_id), user_id=actor_id, identifier="admin@wac-ye.com",
+        company_id=tenants["A"], level=users_api.LEVEL_OWNER, audit=audit,
+    )
+
+    # 1. Successful dispatch strictly uses tenant setting and sender identity
+    invite = asyncio.run(users_api.invite_tenant_user(
+        users_api.InviteUserRequest(email="newuser@example.test", role="Guest"), actor, InviteDB(),
+    ))
+    assert invite.reset_dispatched is True
+    assert len(deliveries) == 1
+    assert deliveries[0]["setting_id"] == tenant_setting_id
+    assert deliveries[0]["sender_identity"] == "admin@wac-ye.com"
+    assert deliveries[0]["tenant_id"] == tenants["A"]
+    assert deliveries[0]["destination"] == "newuser@example.test"
+
+    # 2. When tenant delivery fails, it must NOT fall back to platform superadmin
+    async def failing_deliver(setting, destination, body):
+        deliveries.append({"setting_id": setting.id, "sender_identity": setting.sender_identity})
+        if setting.id == tenant_setting_id:
+            raise svc.CommunicationError("Tenant SMTP server unavailable.")
+
+    monkeypatch.setattr(svc, "deliver", failing_deliver)
+    deliveries.clear()
+
+    with pytest.raises(users_api.HTTPException) as exc_info:
+        asyncio.run(users_api.invite_tenant_user(
+            users_api.InviteUserRequest(email="failuser@example.test", role="Guest"), actor, InviteDB(),
+        ))
+
+    assert exc_info.value.status_code == 503
+    # Must only have attempted tenant setting; NEVER platform superadmin
+    assert len(deliveries) == 1
+    assert deliveries[0]["setting_id"] == tenant_setting_id
+    assert deliveries[0]["sender_identity"] == "admin@wac-ye.com"
+

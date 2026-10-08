@@ -290,8 +290,14 @@ def _sender_email(sender_identity: str) -> tuple[str, str]:
 
 def _smtp_send(setting: CommunicationSetting, destination: str, body: str, credentials: Mapping[str, str]) -> None:
     config = setting.config or {}
+    name, addr = _sender_email(setting.sender_identity)
+    from_addr = addr or setting.sender_identity
+
     message = EmailMessage()
-    message["From"] = setting.sender_identity
+    if name:
+        message["From"] = email.utils.formataddr((name, addr))
+    else:
+        message["From"] = setting.sender_identity
     message["To"] = destination
     message["Subject"] = "OxenGL notification"
     message.set_content(body)
@@ -309,8 +315,8 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
     timeout = 10
 
     logger.info(
-        "Initiating SMTP delivery to %s via %s:%s (security=%s, user=%s, tenant_id=%s)",
-        destination, host, port, security, username or "none", setting.tenant_id,
+        "Initiating SMTP delivery to %s via %s:%s (security=%s, user=%s, tenant_id=%s, from_addr=%s)",
+        destination, host, port, security, username or "none", setting.tenant_id, from_addr,
     )
 
     client = None
@@ -326,7 +332,10 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
                     )
                     raise CommunicationError(f"SMTP authentication requires a password for user '{username}', but credentials were missing or could not be decrypted.")
                 client.login(username, password)
-            refused = client.send_message(message)
+            try:
+                refused = client.send_message(message, from_addr=from_addr)
+            except TypeError:
+                refused = client.send_message(message)
         else:
             client = smtplib.SMTP(host, port, timeout=timeout)
             client.ehlo()
@@ -342,7 +351,10 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
                     )
                     raise CommunicationError(f"SMTP authentication requires a password for user '{username}', but credentials were missing or could not be decrypted.")
                 client.login(username, password)
-            refused = client.send_message(message)
+            try:
+                refused = client.send_message(message, from_addr=from_addr)
+            except TypeError:
+                refused = client.send_message(message)
 
         if refused:
             logger.error(
@@ -527,63 +539,20 @@ async def send_message(
             except Exception:
                 db.rollback()
 
-        if channel == "email" and tenant_id is not None:
+        if tenant_id is not None:
             tenant_setting = db.scalar(
                 select(CommunicationSetting).where(
                     CommunicationSetting.tenant_id == tenant_id,
-                    CommunicationSetting.channel == "email",
+                    CommunicationSetting.channel == channel,
                     CommunicationSetting.is_active.is_(True),
                 )
             )
             if tenant_setting is not None:
-                try:
-                    await deliver(tenant_setting, destination, body)
-                    return
-                except CommunicationError as err:
-                    platform_setting = db.scalar(
-                        select(CommunicationSetting).where(
-                            CommunicationSetting.tenant_id.is_(None),
-                            CommunicationSetting.channel == "email",
-                            CommunicationSetting.is_active.is_(True),
-                        )
-                    )
-                    if platform_setting is None:
-                        logger.error(
-                            "Tenant email delivery failed and no platform setting exists (tenant_id=%s tenant_setting_id=%s provider=%s): %s",
-                            tenant_id,
-                            tenant_setting.id,
-                            tenant_setting.provider,
-                            err,
-                            exc_info=True,
-                        )
-                        raise
-                    logger.warning(
-                        "Tenant email delivery failed; attempting platform fallback "
-                        "(tenant_id=%s tenant_setting_id=%s provider=%s error=%s)",
-                        tenant_id,
-                        tenant_setting.id,
-                        tenant_setting.provider,
-                        err,
-                    )
-                    try:
-                        await deliver(platform_setting, destination, body)
-                        return
-                    except CommunicationError:
-                        logger.error(
-                            "Tenant and platform email delivery both failed "
-                            "(tenant_id=%s tenant_setting_id=%s platform_setting_id=%s)",
-                            tenant_id,
-                            tenant_setting.id,
-                            platform_setting.id,
-                            exc_info=True,
-                        )
-                        raise CommunicationError(
-                            "Email delivery failed through both tenant and platform providers."
-                        ) from None
-            else:
-                setting = resolve_setting(db, tenant_id, channel)
-        else:
-            setting = resolve_setting(db, tenant_id, channel)
+                # Deliver strictly using tenant settings; do not fall back to platform superadmin
+                await deliver(tenant_setting, destination, body)
+                return
+
+        setting = resolve_setting(db, tenant_id, channel)
         await deliver(setting, destination, body)
     finally:
         if owned_db:
