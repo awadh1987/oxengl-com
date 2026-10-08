@@ -256,3 +256,175 @@ def test_tenant_invite_endpoint_background_task_dispatch():
         assert task.kwargs["tenant_name"] == "Desert Transport Co."
         assert task.kwargs["target_url"] == "https://desert-trans.oxengl.me/tenant/login"
         assert task.kwargs["tenant_logo_url"] == "https://desert.sa/logo.png"
+
+
+def test_send_password_reset_email_platform():
+    """Verify send_password_reset_email for platform admins."""
+    from backend.services.email import send_password_reset_email
+
+    with patch("backend.services.email.send_smtp_email", return_value=True) as mock_send:
+        result = send_password_reset_email(
+            to_email="admin@oxengl.com",
+            user_first_name="Ahmed",
+            reset_url="https://admin.oxengl.com/reset?token=abc",
+            is_platform=True,
+        )
+
+        assert result is True
+        mock_send.assert_called_once()
+        _, kwargs = mock_send.call_args
+        assert kwargs["to_email"] == "admin@oxengl.com"
+        assert kwargs["subject"] == "Reset your OxenGL password"
+        assert kwargs["from_name"] == "OxenGL Security"
+        html = kwargs["html_body"]
+        assert "Password Reset Request" in html
+        assert "Hi <strong>Ahmed</strong>" in html
+        assert "We received a request to reset your password" in html
+        assert "https://admin.oxengl.com/reset?token=abc" in html
+        assert "Reset Password" in html
+        assert "The OxenGL Platform Team" in html
+        assert "OxenGL Global Operations" in html
+
+
+def test_send_password_reset_email_tenant():
+    """Verify send_password_reset_email for tenant users."""
+    from backend.services.email import send_password_reset_email
+
+    with patch("backend.services.email.send_smtp_email", return_value=True) as mock_send:
+        result = send_password_reset_email(
+            to_email="user@desert.sa",
+            user_first_name="Tariq",
+            reset_url="https://desert.oxengl.me/reset?token=xyz",
+            is_platform=False,
+            tenant_name="Desert Logistics",
+        )
+
+        assert result is True
+        mock_send.assert_called_once()
+        _, kwargs = mock_send.call_args
+        assert kwargs["to_email"] == "user@desert.sa"
+        assert kwargs["subject"] == "Reset your Desert Logistics password"
+        assert kwargs["from_name"] == "Desert Logistics Security via OxenGL"
+        html = kwargs["html_body"]
+        assert "Password Reset Request" in html
+        assert "Hi <strong>Tariq</strong>" in html
+        assert "We received a request to reset your password" in html
+        assert "https://desert.oxengl.me/reset?token=xyz" in html
+        assert "Reset Password" in html
+        assert "The Desert Logistics Team" in html
+        assert "Desert Logistics · Powered by OxenGL" in html
+
+
+def test_superadmin_admin_invite_queues_email():
+    """Verify superadmin inviting a platform admin queues send_platform_admin_invite."""
+    from fastapi import BackgroundTasks
+    from backend.app.api.v1.super_admin import invite_platform_admin, InvitePlatformAdminRequest
+    from backend.services.email import send_platform_admin_invite
+
+    mock_db = MagicMock()
+    mock_db.execute().scalar_one_or_none.return_value = None
+
+    payload = InvitePlatformAdminRequest(
+        email="newadmin@oxengl.com",
+        full_name="New Ops Admin",
+        role="Admin",
+    )
+    bg_tasks = BackgroundTasks()
+    mock_admin = MagicMock()
+
+    resp = invite_platform_admin(
+        payload=payload,
+        background_tasks=bg_tasks,
+        admin=mock_admin,
+        db=mock_db,
+    )
+
+    assert resp["success"] is True
+    assert len(bg_tasks.tasks) == 1
+    task = bg_tasks.tasks[0]
+    assert task.func == send_platform_admin_invite
+    assert task.kwargs["to_email"] == "newadmin@oxengl.com"
+    assert task.kwargs["user_first_name"] == "New"
+    assert "https://admin.oxengl.com/setup" in task.kwargs["target_url"]
+
+
+def test_superadmin_tenant_onboarding_queues_email():
+    """Verify superadmin creating a tenant queues the owner onboarding email."""
+    from fastapi import BackgroundTasks
+    from backend.app.api.v1.super_admin import deploy_register_new_tenant, TenantDeploymentRegistrationPayload
+    from backend.services.email import send_tenant_member_invite
+
+    mock_db = MagicMock()
+    # No existing company
+    mock_db.execute().scalar_one_or_none.return_value = None
+    mock_db.execute().all.return_value = []
+    mock_db.execute().first.return_value = None
+
+    payload = TenantDeploymentRegistrationPayload(
+        domain_slug="riyadh-fleet",
+        admin_email="fleetowner@riyadh.sa",
+        company_name="Riyadh Fleet Logistics",
+        subscription_tier="standard",
+    )
+    bg_tasks = BackgroundTasks()
+
+    resp = deploy_register_new_tenant(
+        payload=payload,
+        background_tasks=bg_tasks,
+        db=mock_db,
+    )
+
+    assert resp["status"] == "PROVISIONED"
+    assert len(bg_tasks.tasks) == 1
+    task = bg_tasks.tasks[0]
+    assert task.func == send_tenant_member_invite
+    assert task.kwargs["to_email"] == "fleetowner@riyadh.sa"
+    assert task.kwargs["inviter_name"] == "OxenGL Platform Administration"
+    assert task.kwargs["tenant_name"] == "Riyadh Fleet Logistics"
+    assert "riyadh-fleet" in task.kwargs["target_url"]
+
+
+@pytest.mark.asyncio
+async def test_password_recovery_queues_email():
+    """Verify password recovery endpoint queues send_password_reset_email."""
+    from fastapi import BackgroundTasks
+    from backend.app.api.v1.auth import request_password_reset, ForgotPasswordRequest
+    from backend.services.email import send_password_reset_email
+
+    mock_db = MagicMock()
+    # Mock user exists in public.res_users
+    mock_db.execute().mappings().first.return_value = {
+        "id": "11111111-1111-1111-1111-111111111111",
+        "email": "user@acme.com",
+        "name": "Faisal Al-Zahrani",
+        "company_id": "22222222-2222-2222-2222-222222222222",
+    }
+    mock_db.execute().first.return_value = ("user_id",)
+
+    payload = ForgotPasswordRequest(
+        email="user@acme.com",
+        workspace_slug="acme-corp",
+    )
+    bg_tasks = BackgroundTasks()
+
+    with patch("backend.app.api.v1.auth.ensure_password_resets_table"), \
+         patch("backend.app.api.v1.auth.resolve_tenant_from_host", return_value={"company_id": "22222222-2222-2222-2222-222222222222", "tenant_id": "22222222-2222-2222-2222-222222222222", "tenant_slug": "acme-corp", "name": "Acme Corp"}), \
+         patch("backend.app.api.v1.auth.VerificationService.generate_and_store_otp", return_value="654321"), \
+         patch("backend.app.api.v1.auth.VerificationService.store_registration_payload", return_value=None), \
+         patch("backend.app.api.v1.auth.NotificationService.send_password_reset_otp", return_value=None):
+
+        resp = await request_password_reset(
+            payload=payload,
+            background_tasks=bg_tasks,
+            db=mock_db,
+        )
+
+        assert resp["status"] == "OTP_DISPATCHED"
+        # Verify background tasks contain send_password_reset_email
+        reset_tasks = [t for t in bg_tasks.tasks if t.func == send_password_reset_email]
+        assert len(reset_tasks) == 1
+        reset_task = reset_tasks[0]
+        assert reset_task.kwargs["to_email"] == "user@acme.com"
+        assert reset_task.kwargs["user_first_name"] == "Faisal"
+        assert "reset-password" in reset_task.kwargs["reset_url"]
+

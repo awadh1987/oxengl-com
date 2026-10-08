@@ -438,7 +438,28 @@ async def request_password_reset(
 
     logger.info("[PASSWORD RECOVERY] verification code issued for a registered account (workspace=%s)", raw_slug)
 
-    # Compile HTML recovery email template via Jinja2
+    # Dispatch standard password reset notification email
+    from backend.services.email import send_password_reset_email
+
+    first_name = "there"
+    if 'chk' in locals() and chk:
+        name_val = chk.get("name") or chk.get("first_name") or chk.get("full_name") or ""
+        if name_val:
+            first_name = name_val.split()[0]
+
+    is_platform = (raw_slug == "master" or not raw_slug or reset_tenant_id is None)
+    tenant_display = company_name if (not is_platform and company_name and company_name != "OxenGL Enterprise") else None
+
+    background_tasks.add_task(
+        send_password_reset_email,
+        to_email=norm_email,
+        user_first_name=first_name,
+        reset_url=recovery_link,
+        is_platform=is_platform,
+        tenant_name=tenant_display,
+    )
+
+    # Compile HTML recovery email template via Jinja2 (legacy fallback)
     try:
         template = template_env.get_template("auth/forgot_password.html")
         html_payload = template.render(

@@ -12,7 +12,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import desc, func, select, text
@@ -113,6 +113,7 @@ class TenantDeploymentRegistrationPayload(BaseModel):
 @router.post("/register-tenant", status_code=status.HTTP_201_CREATED)
 def deploy_register_new_tenant(
     payload: TenantDeploymentRegistrationPayload,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_platform_db),
 ):
     """
@@ -372,6 +373,26 @@ def deploy_register_new_tenant(
     db.add(audit_entry)
     db.commit()
 
+    # Dispatch onboarding invitation to the initial tenant owner
+    from backend.services.email import send_tenant_member_invite
+
+    workspace_url = f"https://{slug_cleaned}.{os.getenv('DOMAIN', 'oxengl.me').strip()}/tenant/login"
+    first_name = norm_email.split('@')[0].capitalize()
+    if company_name and company_name != "Administrator":
+        parts = company_name.split()
+        if len(parts) > 1:
+            first_name = parts[0]
+
+    background_tasks.add_task(
+        send_tenant_member_invite,
+        to_email=norm_email,
+        user_first_name=first_name,
+        inviter_name="OxenGL Platform Administration",
+        tenant_name=company_name or slug_cleaned.capitalize(),
+        target_url=workspace_url,
+        tenant_logo_url=None,
+    )
+
     return {
         "status": "PROVISIONED",
         "message": "Enterprise workspace container generated and admin user seeded.",
@@ -381,6 +402,76 @@ def deploy_register_new_tenant(
         "admin_user_id": str(admin_user_id),
         "storage_mode": "DEDICATED_EXTERNAL" if payload.use_external_db else "LOCAL_SHARED",
         "is_external_db": bool(payload.use_external_db),
+    }
+
+
+class InvitePlatformAdminRequest(BaseModel):
+    email: str
+    full_name: str
+    role: Optional[str] = "Admin"
+
+
+@router.post("/admins/invite", status_code=status.HTTP_201_CREATED)
+def invite_platform_admin(
+    payload: InvitePlatformAdminRequest,
+    background_tasks: BackgroundTasks,
+    admin: Any = Depends(get_current_super_admin),
+    db: Session = Depends(get_platform_db),
+):
+    """SuperAdmin endpoint to invite a platform administrator and dispatch notification."""
+    from backend.two_tier_auth import hash_password
+    from backend.services.email import send_platform_admin_invite
+
+    norm_email = payload.email.strip().lower()
+    existing = db.execute(select(ResUser).where(func.lower(ResUser.email) == norm_email)).scalar_one_or_none()
+    if existing and existing.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Platform user with email '{norm_email}' already exists.",
+        )
+
+    admin_id = existing.id if existing else uuid.uuid4()
+    temp_pw = uuid.uuid4().hex[:16]
+    hashed_pwd = hash_password(temp_pw)
+
+    if existing:
+        existing.role = payload.role or "Admin"
+        existing.full_name = payload.full_name
+        existing.password_hash = hashed_pwd
+        existing.is_active = True
+        existing.must_change_password = True
+    else:
+        new_user = ResUser(
+            id=admin_id,
+            firebase_uid=f"native:{norm_email}",
+            email=norm_email,
+            full_name=payload.full_name,
+            password_hash=hashed_pwd,
+            role=payload.role or "Admin",
+            is_active=True,
+            must_change_password=True,
+        )
+        db.add(new_user)
+
+    db.commit()
+
+    setup_url = f"https://admin.oxengl.com/setup?email={norm_email}"
+    first_name = payload.full_name.strip().split()[0] if payload.full_name else "Administrator"
+
+    background_tasks.add_task(
+        send_platform_admin_invite,
+        to_email=norm_email,
+        user_first_name=first_name,
+        target_url=setup_url,
+        action_text="Access Platform Panel",
+    )
+
+    return {
+        "success": True,
+        "message": f"Platform admin invitation dispatched to {norm_email}",
+        "admin_id": str(admin_id),
+        "email": norm_email,
+        "role": payload.role or "Admin",
     }
 
 

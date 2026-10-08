@@ -11,7 +11,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
@@ -140,7 +140,11 @@ def list_tenants(db: Session = Depends(get_platform_db)):
 
 
 @router.post("/tenants", status_code=status.HTTP_201_CREATED)
-def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_platform_db)):
+def provision_tenant(
+    payload: ProvisionTenantRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_platform_db),
+):
     """
     Provisions a new multi-tenant workspace directly in PostgreSQL.
     Inserts into both master_tenants and res_companies.
@@ -211,6 +215,23 @@ def provision_tenant(payload: ProvisionTenantRequest, db: Session = Depends(get_
 
     db.commit()
     db.refresh(company)
+
+    # Dispatch onboarding invitation to the initial tenant owner
+    from backend.services.email import send_tenant_member_invite
+
+    owner_email = payload.owner_email or f"admin@{clean_slug}.oxengl.com"
+    first_name = payload.name.split()[0] if payload.name else "Admin"
+    activation_url = f"https://{clean_slug}.oxengl.me/tenant/login"
+
+    background_tasks.add_task(
+        send_tenant_member_invite,
+        to_email=owner_email,
+        user_first_name=first_name,
+        inviter_name="OxenGL Platform Administration",
+        tenant_name=payload.name,
+        target_url=activation_url,
+        tenant_logo_url=None,
+    )
 
     rls_schema = f"tenant_{clean_slug.replace('-', '_')}"
     return {
@@ -585,6 +606,7 @@ def list_platform_users(
 def create_platform_user(
     payload: AdminUserCreateRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: ResUser = Depends(require_super_admin),
 ) -> AdminUserRead:
@@ -658,6 +680,19 @@ def create_platform_user(
     )
     db.commit()
     db.refresh(new_user)
+
+    # Dispatch platform admin setup / invitation email asynchronously
+    from backend.services.email import send_platform_admin_invite
+
+    first_name = (new_user.full_name or "Administrator").split()[0]
+    setup_url = f"https://admin.oxengl.com/setup?email={new_user.email}"
+    background_tasks.add_task(
+        send_platform_admin_invite,
+        to_email=new_user.email,
+        user_first_name=first_name,
+        target_url=setup_url,
+        action_text="Access Platform Panel",
+    )
 
     company_name = db.get(ResCompany, primary_cid).name if primary_cid else None
     return AdminUserRead(
