@@ -27,6 +27,7 @@ from backend.schemas import (
 )
 from backend.app.services import migration_service
 from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized
+from backend.app.api.v1.users import is_ghost_or_unverified_account
 
 
 # SECURITY (2026-10-04, incident Addendum B):
@@ -228,14 +229,17 @@ def invite_team_member(
     norm_email = payload.email.strip().lower()
 
     existing = db.query(ResUser).filter(
-        ResUser.company_id == target_uuid,
         ResUser.email == norm_email,
     ).first()
+    is_reinvite = False
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"User '{norm_email}' already belongs to this workspace.",
-        )
+        if is_ghost_or_unverified_account(existing, target_uuid, db):
+            is_reinvite = True
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"User '{norm_email}' already belongs to this workspace.",
+            )
 
     role_mapping = {
         "admin": "Admin",
@@ -256,22 +260,36 @@ def invite_team_member(
             detail="Only platform Super Admins may assign the Super_Admin role.",
         )
 
-    new_id = uuid.uuid4()
-    user = ResUser(
-        id=new_id,
-        firebase_uid=f"native:{norm_email}",
-        email=norm_email,
-        full_name=payload.full_name,
-        company_id=target_uuid,
-        role=assigned_role,
-        is_active=True,
-        password_hash=hash_password(uuid.uuid4().hex[:12]),
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-
-    increment_tenant_seat_usage(db, target_uuid)
+    temp_pw = uuid.uuid4().hex[:12]
+    if is_reinvite and existing:
+        user = existing
+        user.company_id = target_uuid
+        user.full_name = payload.full_name
+        user.role = assigned_role
+        user.is_active = True
+        user.deleted_at = None
+        user.must_change_password = True
+        user.password_hash = hash_password(temp_pw)
+        user.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
+    else:
+        new_id = uuid.uuid4()
+        user = ResUser(
+            id=new_id,
+            firebase_uid=f"native:{norm_email}",
+            email=norm_email,
+            full_name=payload.full_name,
+            company_id=target_uuid,
+            role=assigned_role,
+            is_active=True,
+            must_change_password=True,
+            password_hash=hash_password(temp_pw),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        increment_tenant_seat_usage(db, target_uuid)
 
     member_data = {
         "id": str(user.id),

@@ -307,3 +307,187 @@ def test_owner_is_an_assignable_privileged_role():
     assert "Owner" in PRIVILEGED_IAM_ROLES and "Owner" not in HR_PROVISIONED_ROLES
     assert users._mirror_role("Owner", "Owner") == "Owner"
     assert "Owner" in users.WORKSPACE_ASSIGNABLE_ROLES
+
+
+def test_invite_reinvites_soft_deleted_ghost_user(monkeypatch):
+    company_id = uuid.uuid4()
+    ghost_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="ghost@example.com",
+        phone=None,
+        company_id=company_id,
+        is_superuser=False,
+        role="Guest",
+        deleted_at="2026-10-05 18:31:10",
+        must_change_password=True,
+        is_active=False,
+        password_hash="some_hash",
+        full_name="Ghost User",
+        firebase_uid="native:old",
+    )
+
+    class QueryWithGhost:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return ghost_user
+
+    class ReinviteDB(FakeDB):
+        def query(self, model, *args, **kwargs):
+            if model == users.ResUser:
+                return QueryWithGhost()
+            return FakeQuery()
+
+    db = ReinviteDB()
+    audits = []
+    monkeypatch.setattr(users, "append_audit_from_context", lambda _db, _ctx, **event: audits.append(event))
+
+    async def ok_dispatch(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(users, "dispatch_temporary_credentials", ok_dispatch)
+
+    request = users.InviteUserRequest(email="ghost@example.com", role="Guest")
+    response = asyncio.run(users.invite_tenant_user(request, _actor(company_id), db))
+
+    assert response.user_id == str(ghost_user.id)
+    assert ghost_user.deleted_at is None
+    assert ghost_user.is_active is True
+    assert ghost_user.must_change_password is True
+    assert db.commits >= 1
+    assert any("IAM_USER_REINVITED" in a.get("action", "") for a in audits)
+
+
+def test_invite_reinvites_unverified_invited_user(monkeypatch):
+    company_id = uuid.uuid4()
+    unverified_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="unverified@example.com",
+        phone=None,
+        company_id=company_id,
+        is_superuser=False,
+        role="Guest",
+        deleted_at=None,
+        must_change_password=True,
+        is_active=True,
+        password_hash="old_temp_hash",
+        full_name="Unverified User",
+        firebase_uid="native:old",
+    )
+
+    class QueryWithUnverified:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return unverified_user
+
+    class ReinviteDB(FakeDB):
+        def query(self, model, *args, **kwargs):
+            if model == users.ResUser:
+                return QueryWithUnverified()
+            return FakeQuery()
+
+    db = ReinviteDB()
+    audits = []
+    monkeypatch.setattr(users, "append_audit_from_context", lambda _db, _ctx, **event: audits.append(event))
+
+    async def ok_dispatch(*args, **kwargs):
+        return None
+
+    monkeypatch.setattr(users, "dispatch_temporary_credentials", ok_dispatch)
+
+    request = users.InviteUserRequest(email="unverified@example.com", role="Guest")
+    response = asyncio.run(users.invite_tenant_user(request, _actor(company_id), db))
+
+    assert response.user_id == str(unverified_user.id)
+    assert unverified_user.is_active is True
+    assert unverified_user.must_change_password is True
+    assert any("IAM_USER_REINVITED" in a.get("action", "") for a in audits)
+
+
+def test_invite_denies_active_established_user(monkeypatch):
+    company_id = uuid.uuid4()
+    active_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="active@example.com",
+        phone=None,
+        company_id=company_id,
+        is_superuser=False,
+        role="Guest",
+        deleted_at=None,
+        must_change_password=False,  # password already set and established
+        is_active=True,
+        password_hash="real_secure_hash",
+        full_name="Active User",
+        firebase_uid="native:user",
+    )
+
+    class QueryWithActive:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return active_user
+
+    class ActiveDB(FakeDB):
+        def query(self, model, *args, **kwargs):
+            if model == users.ResUser:
+                return QueryWithActive()
+            return FakeQuery()
+
+    db = ActiveDB()
+    audits = []
+    monkeypatch.setattr(users, "_commit_audit", lambda _db, _ctx, action, outcome, tid: audits.append((action, outcome)))
+
+    request = users.InviteUserRequest(email="active@example.com", role="Guest")
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(users.invite_tenant_user(request, _actor(company_id), db))
+
+    assert exc.value.status_code == 409
+    assert "already be registered" in exc.value.detail
+    assert any(a[1] == "DENIED" for a in audits)
+
+
+def test_invite_denies_cross_tenant_user(monkeypatch):
+    caller_company_id = uuid.uuid4()
+    other_company_id = uuid.uuid4()
+    other_tenant_user = SimpleNamespace(
+        id=uuid.uuid4(),
+        email="other@example.com",
+        phone=None,
+        company_id=other_company_id,
+        is_superuser=False,
+        role="Guest",
+        deleted_at="2026-10-01",
+        must_change_password=True,
+        is_active=False,
+        password_hash="hash",
+        full_name="Other User",
+        firebase_uid="native:other",
+    )
+
+    class QueryWithOther:
+        def filter(self, *args, **kwargs):
+            return self
+
+        def first(self):
+            return other_tenant_user
+
+    class CrossTenantDB(FakeDB):
+        def query(self, model, *args, **kwargs):
+            if model == users.ResUser:
+                return QueryWithOther()
+            return FakeQuery()
+
+    db = CrossTenantDB()
+    monkeypatch.setattr(users, "_commit_audit", lambda *_a, **_k: None)
+
+    request = users.InviteUserRequest(email="other@example.com", role="Guest")
+    with pytest.raises(HTTPException) as exc:
+        asyncio.run(users.invite_tenant_user(request, _actor(caller_company_id), db))
+
+    assert exc.value.status_code == 409
+    assert "already be registered" in exc.value.detail
+

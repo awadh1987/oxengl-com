@@ -816,6 +816,54 @@ def change_own_password(
 
 
 # ==============================================================================
+def is_ghost_or_unverified_account(user: ResUser, tenant_id: uuid.UUID, db: Session) -> bool:
+    """
+    Determine if an existing user record is genuinely an unverified 'ghost' account
+    eligible for safe re-invitation and credential regeneration.
+
+    Security & State Validation rules:
+    - Never overwrite platform superusers.
+    - Strictly preserve tenant boundary: must belong to caller's workspace (or be orphaned).
+    - If user is fully active, has deleted_at IS NULL, must_change_password IS FALSE,
+      and has a valid password hash: this is an established user -> NOT a ghost (Conflict).
+    - If user has a TenantUser mirror with last_login_at IS NOT NULL and must_change_password IS FALSE:
+      -> established user -> NOT a ghost (Conflict).
+    - An account IS a ghost if:
+      1. Soft-deleted (deleted_at is not None), OR
+      2. Missing password hash (None or empty), OR
+      3. Still in initial unverified invite state (must_change_password is True and
+         no record of actual login in TenantUser), OR
+      4. Inactive (is_active is False) with must_change_password is True.
+    """
+    if getattr(user, "is_superuser", False) or str(getattr(user, "role", "")).lower() == "super_admin":
+        return False
+
+    if user.company_id is not None and user.company_id != tenant_id:
+        return False
+
+    # Soft-deleted record in this workspace is eligible for re-invite/upsert
+    if getattr(user, "deleted_at", None) is not None:
+        return True
+
+    # Missing password hash
+    pwd_hash = getattr(user, "password_hash", None)
+    if not pwd_hash or not str(pwd_hash).strip():
+        return True
+
+    # Check if user ever logged in
+    mirror = db.query(TenantUser).filter(TenantUser.id == user.id).first() if getattr(user, "id", None) else None
+    has_logged_in = mirror is not None and getattr(mirror, "last_login_at", None) is not None
+
+    if getattr(user, "must_change_password", False) and not has_logged_in:
+        return True
+
+    if not getattr(user, "is_active", True) and getattr(user, "must_change_password", False):
+        return True
+
+    return False
+
+
+# ==============================================================================
 # 2. POST /api/v1/users/invite  (external / contractor identities ONLY)
 # ==============================================================================
 @router.post(
@@ -833,6 +881,8 @@ async def invite_tenant_user(
     Internal staff must be registered through HR. A temporary password is sent out-of-band through
     the selected channel, stored only as a strong hash, and marked for change on first login.
     Credentials are never logged; they are returned once, only for the explicit manual channel.
+    If an existing account is in an unverified or soft-deleted 'ghost' state, it is safely
+    re-invited with newly generated temporary credentials.
     """
     tenant_id = actor.company_id
     if tenant_id is None:
@@ -852,33 +902,56 @@ async def invite_tenant_user(
 
     email_clean = (payload.email or "").strip().lower() or None
     phone_clean = payload.phone if payload.channel in ("sms", "manual") else None
-    duplicate_email = (
-        db.query(ResUser.id).filter(ResUser.email.ilike(email_clean)).first()
+
+    existing_by_email = (
+        db.query(ResUser).filter(ResUser.email.ilike(email_clean)).first()
         if email_clean
         else None
     )
-    duplicate_phone = (
-        db.query(ResUser.id)
+    existing_by_phone = (
+        db.query(ResUser)
         .filter(ResUser.company_id == tenant_id, ResUser.phone == phone_clean)
         .first()
         if phone_clean
         else None
     )
-    if duplicate_email or duplicate_phone:
-        _commit_audit(
-            db,
-            actor.audit,
-            f"IAM_INVITE_DENIED:duplicate_identity:channel={payload.channel}",
-            "DENIED",
-            tenant_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This contact cannot be invited. It may already be registered.",
-        )
+
+    target_user: Optional[ResUser] = None
+    is_reinvite = False
+
+    if existing_by_email or existing_by_phone:
+        if existing_by_email and existing_by_phone and existing_by_email.id != existing_by_phone.id:
+            _commit_audit(
+                db,
+                actor.audit,
+                f"IAM_INVITE_DENIED:conflicting_identities:channel={payload.channel}",
+                "DENIED",
+                tenant_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This contact cannot be invited. Email and phone match separate existing records.",
+            )
+
+        candidate = existing_by_email or existing_by_phone
+        if is_ghost_or_unverified_account(candidate, tenant_id, db):
+            target_user = candidate
+            is_reinvite = True
+        else:
+            _commit_audit(
+                db,
+                actor.audit,
+                f"IAM_INVITE_DENIED:duplicate_identity:channel={payload.channel}",
+                "DENIED",
+                tenant_id,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This contact cannot be invited. It may already be registered.",
+            )
 
     spec = EXTERNAL_INVITE_ROLES[external_role]
-    user_id = uuid.uuid4()
+    user_id = target_user.id if (is_reinvite and target_user) else uuid.uuid4()
     name_fallback = email_clean.split("@")[0].replace(".", " ").title() if email_clean else "External User"
     full_name = ((payload.full_name or name_fallback).strip() or "External User")[:255]
     temporary_password = secrets.token_urlsafe(18)
@@ -910,29 +983,83 @@ async def invite_tenant_user(
             detail=f"{payload.channel.upper()} invite delivery failed; no account was created. {exc}",
         ) from None
 
-    new_user = ResUser(
-        id=user_id,
-        email=email_clean or _sms_placeholder_email(user_id),
-        full_name=full_name,
-        phone=phone_clean,
-        password_hash=password_hash,
-        company_id=tenant_id,
-        role=spec["legacy_role"],
-        iam_role=external_role,
-        abac_context=dict(spec["abac_context"]),
-        must_change_password=True,
-        is_active=True,
-        firebase_uid=f"native:{user_id}",
-    )
-    db.add(new_user)
-    append_audit_from_context(
-        db,
-        _with_target(actor.audit, user_id),
-        action=f"IAM_USER_INVITED:{external_role}:channel={payload.channel}",
-        outcome="SUCCESS",
-        tenant_id=tenant_id,
-    )
-    db.commit()
+    if is_reinvite and target_user:
+        target_user.deleted_at = None
+        target_user.is_active = True
+        target_user.must_change_password = True
+        target_user.password_hash = password_hash
+        target_user.full_name = full_name
+        if email_clean:
+            target_user.email = email_clean
+        if phone_clean:
+            target_user.phone = phone_clean
+        target_user.company_id = tenant_id
+        target_user.role = spec["legacy_role"]
+        target_user.iam_role = external_role
+        target_user.abac_context = dict(spec["abac_context"])
+        target_user.updated_at = datetime.now(timezone.utc)
+        if not getattr(target_user, "firebase_uid", None) or not target_user.firebase_uid.startswith("native:"):
+            target_user.firebase_uid = f"native:{target_user.id}"
+
+        mirror = db.query(TenantUser).filter(TenantUser.id == target_user.id).first()
+        if mirror is not None:
+            mirror.is_active = True
+            mirror.password_hash = password_hash
+            parts = full_name.split()
+            mirror.first_name = parts[0] if parts else "External"
+            mirror.last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
+            if email_clean:
+                mirror.email = email_clean
+            if phone_clean:
+                mirror.mobile_number = phone_clean
+            mirror.updated_at = datetime.now(timezone.utc)
+
+        append_audit_from_context(
+            db,
+            _with_target(actor.audit, target_user.id),
+            action=f"IAM_USER_REINVITED:{external_role}:channel={payload.channel}",
+            outcome="SUCCESS",
+            tenant_id=tenant_id,
+        )
+        db.commit()
+        logger.info(
+            "IAM invite refreshed ghost user=%s role=%s tenant=%s channel=%s",
+            target_user.id,
+            external_role,
+            tenant_id,
+            payload.channel,
+        )
+    else:
+        new_user = ResUser(
+            id=user_id,
+            email=email_clean or _sms_placeholder_email(user_id),
+            full_name=full_name,
+            phone=phone_clean,
+            password_hash=password_hash,
+            company_id=tenant_id,
+            role=spec["legacy_role"],
+            iam_role=external_role,
+            abac_context=dict(spec["abac_context"]),
+            must_change_password=True,
+            is_active=True,
+            firebase_uid=f"native:{user_id}",
+        )
+        db.add(new_user)
+        append_audit_from_context(
+            db,
+            _with_target(actor.audit, user_id),
+            action=f"IAM_USER_INVITED:{external_role}:channel={payload.channel}",
+            outcome="SUCCESS",
+            tenant_id=tenant_id,
+        )
+        db.commit()
+        logger.info(
+            "IAM invite created user=%s role=%s tenant=%s channel=%s",
+            user_id,
+            external_role,
+            tenant_id,
+            payload.channel,
+        )
 
     logger.info(
         "IAM invite created user=%s role=%s tenant=%s channel=%s",
