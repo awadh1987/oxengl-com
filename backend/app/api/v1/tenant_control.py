@@ -208,6 +208,7 @@ def list_team_members(
 @router.post("/team/invite", status_code=status.HTTP_201_CREATED)
 def invite_team_member(
     payload: InviteMemberRequest,
+    background_tasks: BackgroundTasks,
     current_user: ResUser = Depends(require_tenant_admin),
     db: Session = Depends(get_db),
 ):
@@ -290,6 +291,33 @@ def invite_team_member(
         db.commit()
         db.refresh(user)
         increment_tenant_seat_usage(db, target_uuid)
+
+    # Resolve tenant details and dispatch invitation email asynchronously via BackgroundTasks
+    from backend.services.email import send_tenant_member_invite
+
+    company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
+    tenant_name = (company.name if company and company.name else None) or "Workspace"
+    tenant_logo_url = (getattr(company, "ui_logo_url", None) or getattr(company, "logo_url", None)) if company else None
+
+    first_name = (payload.full_name.strip().split()[0] if payload.full_name else "Team Member")
+    inviter_name = current_user.full_name or current_user.email or "Workspace Administrator"
+
+    slug = getattr(company, "slug", "") or getattr(company, "domain_slug", "") if company else ""
+    base_url = "https://oxengl.me"
+    if slug:
+        target_url = f"https://{slug}.oxengl.me/tenant/login"
+    else:
+        target_url = f"{base_url}/tenant/login"
+
+    background_tasks.add_task(
+        send_tenant_member_invite,
+        to_email=norm_email,
+        user_first_name=first_name,
+        inviter_name=inviter_name,
+        tenant_name=tenant_name,
+        target_url=target_url,
+        tenant_logo_url=tenant_logo_url,
+    )
 
     member_data = {
         "id": str(user.id),

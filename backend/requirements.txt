@@ -36,3 +36,6 @@ langchain>=1.0.0
 langgraph>=1.0.0
 langchain-openai>=1.0.0
 lxml>=6.0.0
+jinja2
+aiosmtplib
+pydantic-settings
