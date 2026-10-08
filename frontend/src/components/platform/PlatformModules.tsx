@@ -856,6 +856,25 @@ export const PlatformSettingsView: React.FC = () => {
       });
     } catch (_) {}
 
+    // Persist to database site_settings
+    try {
+      await fetch('/api/settings/admin', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('oxengl_auth_jwt') || ''}`,
+        },
+        body: JSON.stringify([
+          { key: 'site_name', value: nameEn || 'OxenGL' },
+          { key: 'site_logo', value: logoUrl || '/oxengl-wordmark.svg' },
+          { key: 'site_description', value: tagline },
+          { key: 'site_tagline', value: tagline },
+          { key: 'contact_email', value: supportEmail },
+          { key: 'contact_phone', value: supportPhone },
+        ]),
+      });
+    } catch (_) {}
+
     setSaved(true);
     window.setTimeout(() => setSaved(false), 3500);
   };

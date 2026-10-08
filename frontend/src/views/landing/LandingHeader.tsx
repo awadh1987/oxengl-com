@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { BrandWordmark } from './BrandWordmark';
 
+import { SiteSettings } from '../../hooks/useSiteSettings';
+
 interface LandingHeaderProps {
+  settings?: Partial<SiteSettings>;
   onLoginClick?: () => void;
 }
 
-export const LandingHeader: React.FC<LandingHeaderProps> = ({ onLoginClick }) => {
+export const LandingHeader: React.FC<LandingHeaderProps> = ({ settings, onLoginClick }) => {
   const [domainType, setDomainType] = useState<'me' | 'com'>('me');
 
   const scrollToSection = (id: string) => (e: React.MouseEvent) => {
@@ -48,8 +51,8 @@ export const LandingHeader: React.FC<LandingHeaderProps> = ({ onLoginClick }) =>
 
       {/* 2. Top Application Navigation */}
       <header className="main-nav">
-        <a href="#workspace-stage" onClick={scrollToSection('workspace-stage')} className="nav-brand" aria-label="OxenGL home">
-          <BrandWordmark height={26} />
+        <a href="#workspace-stage" onClick={scrollToSection('workspace-stage')} className="nav-brand" aria-label={settings?.site_name ? `${settings.site_name} home` : "OxenGL home"}>
+          <BrandWordmark height={26} logoUrl={settings?.site_logo} siteName={settings?.site_name} />
         </a>
 
         <nav className="nav-links">

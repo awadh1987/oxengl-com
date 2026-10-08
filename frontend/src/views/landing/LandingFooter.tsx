@@ -12,10 +12,10 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ settings }) => {
       <div className="footer-top">
         <div className="footer-brand">
           <div className="nav-brand" style={{ marginBottom: '12px' }}>
-            <BrandWordmark height={24} />
+            <BrandWordmark height={24} logoUrl={settings.site_logo} siteName={settings.site_name} />
           </div>
           <p className="footer-desc">
-            Sovereign Saudi-first Enterprise Resource Planning platform. Engineering high-density quarry, heavy contracting, and multi-tenant financial infrastructure.
+            {settings.site_description || settings.site_tagline || 'Sovereign Saudi-first Enterprise Resource Planning platform. Engineering high-density quarry, heavy contracting, and multi-tenant financial infrastructure.'}
           </p>
           <div className="compliance-badges">
             <span className="badge-tag">ISO 27001 COMPLIANT</span>
@@ -65,7 +65,7 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ settings }) => {
       </div>
 
       <div className="footer-bottom">
-        <span>© 2026 OxenGL ERP Platform. Sovereign Multi-Tenant Architecture. All rights reserved.</span>
+        <span>© 2026 {settings.site_name || 'OxenGL'} ERP Platform. Sovereign Multi-Tenant Architecture. All rights reserved.</span>
         <span className="font-mono text-dim" style={{ fontSize: '11px' }}>
           NODE: KSA-CENTRAL-01 // POSTGRESQL 16.4 BARE-METAL
         </span>
