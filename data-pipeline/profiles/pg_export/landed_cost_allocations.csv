@@ -1,0 +1,1 @@
+id,tenant_id,goods_receipt_id,freight_amount,customs_amount,port_handling_amount,insurance_amount,total_landed_cost,allocation_method,is_posted,created_at

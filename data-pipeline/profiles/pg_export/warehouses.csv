@@ -1,0 +1,6 @@
+id,company_id,code,name,address,is_active,created_at,updated_at
+3710b463-ff3c-456f-a641-4ac90b32a23d,df5dc940-2f26-4620-86fa-1012735b7ee5,WH-MAIN,المستودع اللوجستي الرئيسي / Central Hub,King Fahd Industrial Port Logistics Yard,t,2026-09-28 21:31:43.042637+00,2026-09-28 21:31:43.042637+00
+d267ac03-0ec8-4201-8f0b-4d2f1c2f417a,df5dc940-2f26-4620-86fa-1012735b7ee5,WH-58711,Test Regional Distribution Hub,,t,2026-09-29 04:53:01.48689+00,2026-09-29 04:53:01.48689+00
+43d7a43b-2a5f-4acf-98ba-ea47eeb9a6ac,df5dc940-2f26-4620-86fa-1012735b7ee5,WH-QIDDIYA,Qiddiya Mega-Project Logistics Hub & Yard,"Qiddiya Entertainment City Access Corridor, Riyadh Province",t,2026-09-29 04:53:58.836861+00,2026-09-29 04:53:58.836861+00
+36031d1e-95f7-4fa1-ac25-6ba9972db1ff,df5dc940-2f26-4620-86fa-1012735b7ee5,WH-BC2D3,Test Regional Distribution Hub,,t,2026-09-29 04:58:48.977287+00,2026-09-29 04:58:48.977287+00
+d4716f7d-b2be-4eec-a3f2-a3ac23131ece,df5dc940-2f26-4620-86fa-1012735b7ee5,WH-0CA72,Test Regional Distribution Hub,,t,2026-09-29 05:02:45.903196+00,2026-09-29 05:02:45.903196+00

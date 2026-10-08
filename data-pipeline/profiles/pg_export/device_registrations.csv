@@ -1,0 +1,1 @@
+id,company_id,user_id,device_token,device_model,os_version,app_version,is_revoked,revoked_at,revocation_reason,last_sync_at,created_at,updated_at

@@ -1,0 +1,1 @@
+id,company_id,user_id,model_config_id,agent_name,prompt_hash,prompt_tokens,completion_tokens,total_tokens,confidence_score,safety_validation_status,risk_level,action_type,proposal_payload,validation_errors,hitl_required,hitl_approved,hitl_approved_by,hitl_approved_at,hitl_approval_token,execution_status,executed_at,created_at,updated_at

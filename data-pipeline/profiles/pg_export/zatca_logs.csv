@@ -1,0 +1,181 @@
+id,company_id,tax_profile_id,invoice_id,invoice_uuid,invoice_hash,previous_invoice_hash,xml_payload,qr_code_payload,cryptographic_stamp,submission_status,clearance_status,reporting_status,validation_errors,warning_messages,retry_count,last_attempt_at,response_payload,created_at
+b9b5c2e2-5cd3-4c30-b67a-7a9c63976112,df5dc940-2f26-4620-86fa-1012735b7ee5,,7e9f1813-c272-46b8-9462-5c211abee2d8,9240f566-baa9-4058-9ca5-77dfe10cec6f,soRumWVT2lVku1c49mVdnbM9eKZHyKgDl3vVj0XXJvM=,NWZlMWMwMmRhMjA3ZjBhMmQ1MTUzYTM4MGQ2NTY1M2MwODFjMzg4OTdhNzg2N2VlYzA4OWI5Mjc4NjVkZDJjNA==,"<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"" xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"" xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>INV-023B54</cbc:ID>
+  <cbc:UUID>9240f566-baa9-4058-9ca5-77dfe10cec6f</cbc:UUID>
+  <cbc:IssueDate>2026-09-29</cbc:IssueDate>
+  <cbc:IssueTime>01:24:49</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name=""0100000"">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>PIH</cbc:ID>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>NWZlMWMwMmRhMjA3ZjBhMmQ1MTUzYTM4MGQ2NTY1M2MwODFjMzg4OTdhNzg2N2VlYzA4OWI5Mjc4NjVkZDJjNA==</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>OxenGL Logistics Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310123456700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>Al-Yamamah Contracting Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310999888700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""SAR"">50000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""SAR"">50000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""SAR"">57500.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""SAR"">57500.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>",ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjI0OjQ5WgQINTc1MDAuMDAFBzc1MDAuMDAGLHNvUnVtV1ZUMmxWa3UxYzQ5bVZkbmJNOWVLWkh5S2dEbDN2VmowWFhKdk09,,CLEARED,CLEARED,REPORTED,,,0,,,2026-09-29 01:24:49.51263+00
+b0bc1032-2066-438b-a210-a56ca6a2cc5f,df5dc940-2f26-4620-86fa-1012735b7ee5,,eb634b4d-d792-4f70-9520-d867c9e6adfc,13e9fead-50c5-4f14-9cf3-17ae799efedc,LvJViuK4+CaJZvGUWQuQCNArJyB4gADCiTl9/7A0hNs=,soRumWVT2lVku1c49mVdnbM9eKZHyKgDl3vVj0XXJvM=,"<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"" xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"" xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>INV-FA42E2</cbc:ID>
+  <cbc:UUID>13e9fead-50c5-4f14-9cf3-17ae799efedc</cbc:UUID>
+  <cbc:IssueDate>2026-09-29</cbc:IssueDate>
+  <cbc:IssueTime>01:24:49</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name=""0100000"">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>PIH</cbc:ID>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>soRumWVT2lVku1c49mVdnbM9eKZHyKgDl3vVj0XXJvM=</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>OxenGL Logistics Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310123456700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>Bahri Shipping Lines</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310555444300003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""SAR"">75000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""SAR"">75000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""SAR"">86250.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""SAR"">86250.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>",ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjI0OjQ5WgQIODYyNTAuMDAFCDExMjUwLjAwBixMdkpWaXVLNCtDYUpadkdVV1F1UUNOQXJKeUI0Z0FEQ2lUbDkvN0EwaE5zPQ==,,CLEARED,CLEARED,REPORTED,,,0,,,2026-09-29 01:24:49.538664+00
+d5a4395a-9aff-4a0c-9b6b-6fd1403aa9b4,df5dc940-2f26-4620-86fa-1012735b7ee5,,d0ce0aaa-5a13-49fc-8313-4622631c7a34,90c97827-0372-448a-915e-1d5dead67324,rZ+v2XIxji1IUi6uNvgxDDdRdg0CMBeeUitlFCIehBU=,LvJViuK4+CaJZvGUWQuQCNArJyB4gADCiTl9/7A0hNs=,"<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"" xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"" xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>INV-83B097</cbc:ID>
+  <cbc:UUID>90c97827-0372-448a-915e-1d5dead67324</cbc:UUID>
+  <cbc:IssueDate>2026-09-29</cbc:IssueDate>
+  <cbc:IssueTime>01:48:25</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name=""0100000"">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>PIH</cbc:ID>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>LvJViuK4+CaJZvGUWQuQCNArJyB4gADCiTl9/7A0hNs=</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>OxenGL Logistics Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310123456700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>Saudi Logistics Consortium</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310999999900003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""SAR"">50000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""SAR"">50000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""SAR"">57500.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""SAR"">57500.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>",ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjQ4OjI1WgQINTc1MDAuMDAFBzc1MDAuMDAGLHJaK3YyWEl4amkxSVVpNnVOdmd4RERkUmRnMENNQmVlVWl0bEZDSWVoQlU9,,CLEARED,CLEARED,REPORTED,,,0,,,2026-09-29 01:48:25.073864+00
+7469eaeb-1a45-4b8f-814d-23cf67aa07f8,df5dc940-2f26-4620-86fa-1012735b7ee5,,25861b50-9916-4dc5-8ccb-3328812f415f,34c19730-6e19-4ce3-9252-4ff797eac85b,RboNaKmr7FCGvODFDUJFFg/4HbIirmHIeMLm45MWeyc=,rZ+v2XIxji1IUi6uNvgxDDdRdg0CMBeeUitlFCIehBU=,"<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"" xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"" xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>INV-0E7D2B</cbc:ID>
+  <cbc:UUID>34c19730-6e19-4ce3-9252-4ff797eac85b</cbc:UUID>
+  <cbc:IssueDate>2026-09-29</cbc:IssueDate>
+  <cbc:IssueTime>01:49:16</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name=""0100000"">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>PIH</cbc:ID>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>rZ+v2XIxji1IUi6uNvgxDDdRdg0CMBeeUitlFCIehBU=</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>OxenGL Logistics Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310123456700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>Saudi Logistics Consortium</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310999999900003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""SAR"">50000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""SAR"">50000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""SAR"">57500.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""SAR"">57500.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>",ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAxOjQ5OjE2WgQINTc1MDAuMDAFBzc1MDAuMDAGLFJib05hS21yN0ZDR3ZPREZEVUpGRmcvNEhiSWlybUhJZU1MbTQ1TVdleWM9,,CLEARED,CLEARED,REPORTED,,,0,,,2026-09-29 01:49:16.52339+00
+4a6b42cb-050b-43ab-8efe-d860ac54f362,df5dc940-2f26-4620-86fa-1012735b7ee5,,bf0518af-71ad-41d4-9efa-7f9ff626f921,7e94f458-795d-4ab9-a9ea-efe4a0374db7,YrAAyPmoIrW4RrONWTGdmXeFqd9+VLMGSYpDnjgYr1M=,RboNaKmr7FCGvODFDUJFFg/4HbIirmHIeMLm45MWeyc=,"<Invoice xmlns=""urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"" xmlns:cac=""urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"" xmlns:cbc=""urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"">
+  <cbc:ProfileID>reporting:1.0</cbc:ProfileID>
+  <cbc:ID>INV-926836</cbc:ID>
+  <cbc:UUID>7e94f458-795d-4ab9-a9ea-efe4a0374db7</cbc:UUID>
+  <cbc:IssueDate>2026-09-29</cbc:IssueDate>
+  <cbc:IssueTime>02:36:00</cbc:IssueTime>
+  <cbc:InvoiceTypeCode name=""0100000"">388</cbc:InvoiceTypeCode>
+  <cbc:DocumentCurrencyCode>SAR</cbc:DocumentCurrencyCode>
+  <cbc:TaxCurrencyCode>SAR</cbc:TaxCurrencyCode>
+  <cac:AdditionalDocumentReference>
+    <cbc:ID>PIH</cbc:ID>
+    <cac:Attachment>
+      <cac:ExternalReference>
+        <cbc:URI>RboNaKmr7FCGvODFDUJFFg/4HbIirmHIeMLm45MWeyc=</cbc:URI>
+      </cac:ExternalReference>
+    </cac:Attachment>
+  </cac:AdditionalDocumentReference>
+  <cac:AccountingSupplierParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>OxenGL Logistics Co.</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>310123456700003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingSupplierParty>
+  <cac:AccountingCustomerParty>
+    <cac:Party>
+      <cac:PartyLegalEntity><cbc:RegistrationName>Red Sea Logistics</cbc:RegistrationName></cac:PartyLegalEntity>
+      <cac:PartyTaxScheme><cbc:CompanyID>300000000000003</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
+    </cac:Party>
+  </cac:AccountingCustomerParty>
+  <cac:LegalMonetaryTotal>
+    <cbc:LineExtensionAmount currencyID=""SAR"">24000.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID=""SAR"">24000.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID=""SAR"">27600.00</cbc:TaxInclusiveAmount>
+    <cbc:PayableAmount currencyID=""SAR"">27600.00</cbc:PayableAmount>
+  </cac:LegalMonetaryTotal>
+</Invoice>",ARRPeGVuR0wgTG9naXN0aWNzIENvLgIPMzEwMTIzNDU2NzAwMDAzAxQyMDI2LTA5LTI5VDAyOjM2OjAwWgQIMjc2MDAuMDAFBzM2MDAuMDAGLFlyQUF5UG1vSXJXNFJyT05XVEdkbVhlRnFkOStWTE1HU1lwRG5qZ1lyMU09,,CLEARED,CLEARED,REPORTED,,,0,,,2026-09-29 02:36:00.14801+00

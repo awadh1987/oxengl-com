@@ -1,0 +1,237 @@
+{
+  "table": "account_journals",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/account_journals.csv",
+  "row_count": 10,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 10
+      },
+      "sample_values": [
+        "7a2826ff-7f25-4da9-a571-7ce02ddb27b7",
+        "77682a13-bbdc-4de3-87c5-729fd5b90939",
+        "63768297-b014-4e39-add4-b4a0ad2eb046",
+        "0acea3e8-a2a4-450c-8906-b22474a0d8d4",
+        "7a816b4a-89b4-4ff7-a8e0-94503b470dd1"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 20.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 10
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "code": {
+      "name": "code",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 50.0,
+      "max_length": 5,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 10
+      },
+      "sample_values": [
+        "GEN",
+        "SALE",
+        "PURCH",
+        "BANK",
+        "CASH"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 50.0,
+      "max_length": 28,
+      "min_length": 20,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 10
+      },
+      "sample_values": [
+        "General Operations Journal",
+        "Customer Invoicing Journal",
+        "Vendor Bills Journal",
+        "Bank Operations Journal",
+        "Cash Receipts and Petty Cash"
+      ]
+    },
+    "journal_type": {
+      "name": "journal_type",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 50.0,
+      "max_length": 8,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 10
+      },
+      "sample_values": [
+        "general",
+        "sale",
+        "purchase",
+        "bank",
+        "cash"
+      ]
+    },
+    "sequence_prefix": {
+      "name": "sequence_prefix",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 50.0,
+      "max_length": 4,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 10
+      },
+      "sample_values": [
+        "MISC",
+        "INV",
+        "BILL",
+        "BNK",
+        "CSH"
+      ]
+    },
+    "next_sequence": {
+      "name": "next_sequence",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 10.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 10
+      },
+      "sample_values": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 10.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 10
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 20.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 10
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 20.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 10
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "next_sequence",
+      "issue": "Single distinct value: 1",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 2
+  }
+}

@@ -1,0 +1,98 @@
+<svg width="220" height="200" viewBox="0 0 220 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="orangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F97316" />
+      <stop offset="100%" stop-color="#F05627" />
+    </linearGradient>
+    <linearGradient id="brandDarkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2A2A2A" />
+      <stop offset="50%" stop-color="#1A1A1A" />
+      <stop offset="100%" stop-color="#F05627" />
+    </linearGradient>
+    <linearGradient id="amberOrangeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FB923C" />
+      <stop offset="50%" stop-color="#F05627" />
+      <stop offset="100%" stop-color="#C2410C" />
+    </linearGradient>
+    <radialGradient id="centerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#F05627" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#F05627" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <circle cx="110" cy="100" r="85" fill="url(#centerGlow)" />
+  <circle cx="110" cy="100" r="14" fill="#0B132B" stroke="#F05627" stroke-width="3" />
+  <circle cx="110" cy="100" r="6" fill="#F05627" />
+  <g id="spiralPills">
+    <rect x="129.84" y="101.62" width="6" height="14" rx="3.00" transform="rotate(65.0, 132.84, 108.62)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="124.82" y="107.42" width="6" height="14" rx="3.00" transform="rotate(85.0, 127.82, 114.42)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="117.65" y="111.49" width="6" height="14" rx="3.00" transform="rotate(105.0, 120.65, 118.49)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="109.20" y="113.32" width="6" height="14" rx="3.00" transform="rotate(125.0, 112.20, 120.32)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="100.48" y="112.70" width="6" height="14" rx="3.00" transform="rotate(145.0, 103.48, 119.70)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="92.55" y="109.71" width="6" height="14" rx="3.00" transform="rotate(165.0, 95.55, 116.71)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="86.36" y="104.70" width="6" height="14" rx="3.00" transform="rotate(185.0, 89.36, 111.70)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="82.66" y="98.28" width="6" height="14" rx="3.00" transform="rotate(205.0, 85.66, 105.28)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="81.90" y="91.22" width="6" height="14" rx="3.00" transform="rotate(225.0, 84.90, 98.22)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="84.16" y="84.38" width="6" height="14" rx="3.00" transform="rotate(245.0, 87.16, 91.38)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="89.18" y="78.58" width="6" height="14" rx="3.00" transform="rotate(265.0, 92.18, 85.58)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="96.35" y="74.51" width="6" height="14" rx="3.00" transform="rotate(285.0, 99.35, 81.51)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="104.80" y="72.68" width="6" height="14" rx="3.00" transform="rotate(305.0, 107.80, 79.68)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="113.52" y="73.30" width="6" height="14" rx="3.00" transform="rotate(325.0, 116.52, 80.30)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="121.45" y="76.29" width="6" height="14" rx="3.00" transform="rotate(345.0, 124.45, 83.29)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="127.64" y="81.30" width="6" height="14" rx="3.00" transform="rotate(365.0, 130.64, 88.30)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="131.34" y="87.72" width="6" height="14" rx="3.00" transform="rotate(385.0, 134.34, 94.72)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="132.10" y="94.78" width="6" height="14" rx="3.00" transform="rotate(405.0, 135.10, 101.78)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="137.05" y="119.95" width="8" height="20" rx="4.00" transform="rotate(90.0, 141.05, 129.95)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="126.41" y="125.44" width="8" height="20" rx="4.00" transform="rotate(105.0, 130.41, 135.44)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="114.39" y="128.51" width="8" height="20" rx="4.00" transform="rotate(120.0, 118.39, 138.51)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="101.79" y="128.95" width="8" height="20" rx="4.00" transform="rotate(135.0, 105.79, 138.95)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="89.48" y="126.74" width="8" height="20" rx="4.00" transform="rotate(150.0, 93.48, 136.74)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="78.30" y="122.03" width="8" height="20" rx="4.00" transform="rotate(165.0, 82.30, 132.03)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="69.00" y="115.13" width="8" height="20" rx="4.00" transform="rotate(180.0, 73.00, 125.13)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="62.23" y="106.52" width="8" height="20" rx="4.00" transform="rotate(195.0, 66.23, 116.52)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="58.43" y="96.79" width="8" height="20" rx="4.00" transform="rotate(210.0, 62.43, 106.79)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="57.88" y="86.59" width="8" height="20" rx="4.00" transform="rotate(225.0, 61.88, 96.59)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="60.61" y="76.63" width="8" height="20" rx="4.00" transform="rotate(240.0, 64.61, 86.63)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="66.43" y="67.57" width="8" height="20" rx="4.00" transform="rotate(255.0, 70.43, 77.57)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="74.95" y="60.05" width="8" height="20" rx="4.00" transform="rotate(270.0, 78.95, 70.05)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="85.59" y="54.56" width="8" height="20" rx="4.00" transform="rotate(285.0, 89.59, 64.56)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="97.61" y="51.49" width="8" height="20" rx="4.00" transform="rotate(300.0, 101.61, 61.49)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="110.21" y="51.05" width="8" height="20" rx="4.00" transform="rotate(315.0, 114.21, 61.05)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="122.52" y="53.26" width="8" height="20" rx="4.00" transform="rotate(330.0, 126.52, 63.26)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="133.70" y="57.97" width="8" height="20" rx="4.00" transform="rotate(345.0, 137.70, 67.97)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="143.00" y="64.87" width="8" height="20" rx="4.00" transform="rotate(360.0, 147.00, 74.87)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="149.77" y="73.48" width="8" height="20" rx="4.00" transform="rotate(375.0, 153.77, 83.48)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="153.57" y="83.21" width="8" height="20" rx="4.00" transform="rotate(390.0, 157.57, 93.21)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="154.12" y="93.41" width="8" height="20" rx="4.00" transform="rotate(405.0, 158.12, 103.41)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="151.39" y="103.37" width="8" height="20" rx="4.00" transform="rotate(420.0, 155.39, 113.37)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="145.57" y="112.43" width="8" height="20" rx="4.00" transform="rotate(435.0, 149.57, 122.43)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="124.07" y="145.11" width="11" height="28" rx="5.50" transform="rotate(115.0, 129.57, 159.11)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="107.33" y="147.16" width="11" height="28" rx="5.50" transform="rotate(127.9, 112.83, 161.16)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="90.45" y="146.13" width="11" height="28" rx="5.50" transform="rotate(140.7, 95.95, 160.13)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="74.27" y="142.09" width="11" height="28" rx="5.50" transform="rotate(153.6, 79.77, 156.09)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="59.61" y="135.24" width="11" height="28" rx="5.50" transform="rotate(166.4, 65.11, 149.24)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="47.20" y="125.92" width="11" height="28" rx="5.50" transform="rotate(179.3, 52.70, 139.92)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="37.66" y="114.60" width="11" height="28" rx="5.50" transform="rotate(192.1, 43.16, 128.60)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="31.48" y="101.84" width="11" height="28" rx="5.50" transform="rotate(205.0, 36.98, 115.84)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="28.95" y="88.29" width="11" height="28" rx="5.50" transform="rotate(217.9, 34.45, 102.29)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="30.22" y="74.62" width="11" height="28" rx="5.50" transform="rotate(230.7, 35.72, 88.62)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="35.21" y="61.53" width="11" height="28" rx="5.50" transform="rotate(243.6, 40.71, 75.53)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="43.67" y="49.66" width="11" height="28" rx="5.50" transform="rotate(256.4, 49.17, 63.66)" fill="url(#brandDarkGrad)" opacity="0.98" />
+    <rect x="55.19" y="39.61" width="11" height="28" rx="5.50" transform="rotate(269.3, 60.69, 53.61)" fill="url(#brandDarkGrad)" opacity="0.92" />
+    <rect x="69.17" y="31.89" width="11" height="28" rx="5.50" transform="rotate(282.1, 74.67, 45.89)" fill="url(#brandDarkGrad)" opacity="0.95" />
+    <rect x="84.93" y="26.89" width="11" height="28" rx="5.50" transform="rotate(295.0, 90.43, 40.89)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="101.67" y="24.84" width="11" height="28" rx="5.50" transform="rotate(307.9, 107.17, 38.84)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="118.55" y="25.87" width="11" height="28" rx="5.50" transform="rotate(320.7, 124.05, 39.87)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="134.73" y="29.91" width="11" height="28" rx="5.50" transform="rotate(333.6, 140.23, 43.91)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="149.39" y="36.76" width="11" height="28" rx="5.50" transform="rotate(346.4, 154.89, 50.76)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="161.80" y="46.08" width="11" height="28" rx="5.50" transform="rotate(359.3, 167.30, 60.08)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="171.34" y="57.40" width="11" height="28" rx="5.50" transform="rotate(372.1, 176.84, 71.40)" fill="url(#amberOrangeGrad)" opacity="0.98" />
+    <rect x="177.52" y="70.16" width="11" height="28" rx="5.50" transform="rotate(385.0, 183.02, 84.16)" fill="url(#amberOrangeGrad)" opacity="0.92" />
+    <rect x="180.05" y="83.71" width="11" height="28" rx="5.50" transform="rotate(397.9, 185.55, 97.71)" fill="url(#amberOrangeGrad)" opacity="0.95" />
+    <rect x="178.78" y="97.38" width="11" height="28" rx="5.50" transform="rotate(410.7, 184.28, 111.38)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="173.79" y="110.47" width="11" height="28" rx="5.50" transform="rotate(423.6, 179.29, 124.47)" fill="url(#orangeGrad)" opacity="0.92" />
+    <rect x="165.33" y="122.34" width="11" height="28" rx="5.50" transform="rotate(436.4, 170.83, 136.34)" fill="url(#orangeGrad)" opacity="0.95" />
+    <rect x="153.81" y="132.39" width="11" height="28" rx="5.50" transform="rotate(449.3, 159.31, 146.39)" fill="url(#orangeGrad)" opacity="0.98" />
+    <rect x="139.83" y="140.11" width="11" height="28" rx="5.50" transform="rotate(462.1, 145.33, 154.11)" fill="url(#orangeGrad)" opacity="0.92" />
+  </g>
+</svg>

@@ -1,0 +1,1 @@
+id,tenant_id,company_id,code,name,category,primary_uom,secondary_uom,uom_conversion_ratio,valuation_method,standard_cost,current_moving_avg_cost,density_factor,is_active,created_at

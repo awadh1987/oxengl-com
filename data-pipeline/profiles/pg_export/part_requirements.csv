@@ -1,0 +1,1 @@
+id,company_id,work_order_id,product_id,quantity_required,quantity_used,unit_cost,total_cost,is_issued,created_at,updated_at

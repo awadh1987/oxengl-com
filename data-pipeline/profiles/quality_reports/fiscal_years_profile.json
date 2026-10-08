@@ -1,0 +1,183 @@
+{
+  "table": "fiscal_years",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/fiscal_years.csv",
+  "row_count": 2,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "cc98deb1-04f6-4ee8-84cb-8c69543f2a18",
+        "a1473ca3-e4aa-4020-b174-6643bf9efc92"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "676c1824-384c-476e-8914-a21a1a57f5d2"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "FY-2026",
+        "FY-2026"
+      ]
+    },
+    "date_start": {
+      "name": "date_start",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 22,
+      "min_length": 22,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-01-01 00:00:00+00",
+        "2026-01-01 00:00:00+00"
+      ]
+    },
+    "date_end": {
+      "name": "date_end",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 22,
+      "min_length": 22,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-12-31 23:59:59+00",
+        "2026-12-31 23:59:59+00"
+      ]
+    },
+    "state": {
+      "name": "state",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 4,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "open",
+        "open"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 13:26:02.595748+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 13:26:02.595748+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "name",
+      "issue": "Single distinct value: FY-2026",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "date_start",
+      "issue": "Single distinct value: 2026-01-01 00:00:00+00",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "date_end",
+      "issue": "Single distinct value: 2026-12-31 23:59:59+00",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "state",
+      "issue": "Single distinct value: open",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 4
+  }
+}

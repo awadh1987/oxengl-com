@@ -1,0 +1,168 @@
+{
+  "profiled_at": "2026-09-29T05:43:08.799999",
+  "total_tables": 86,
+  "tables_with_data": 31,
+  "empty_tables": 55,
+  "total_rows": 610,
+  "avg_quality_score": 61.5,
+  "total_flags": {
+    "CRITICAL": 69,
+    "WARNING": 82,
+    "INFO": 91
+  },
+  "tables_needing_attention": [
+    {
+      "table": "customer_invoices",
+      "score": 0,
+      "flags": {
+        "critical": 7,
+        "warning": 7,
+        "info": 3
+      }
+    },
+    {
+      "table": "employees",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 6
+      }
+    },
+    {
+      "table": "finance_journal_entries",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 0
+      }
+    },
+    {
+      "table": "finance_journal_lines",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 0
+      }
+    },
+    {
+      "table": "fleet_trips",
+      "score": 0,
+      "flags": {
+        "critical": 9,
+        "warning": 9,
+        "info": 3
+      }
+    },
+    {
+      "table": "invoices",
+      "score": 0,
+      "flags": {
+        "critical": 4,
+        "warning": 4,
+        "info": 1
+      }
+    },
+    {
+      "table": "purchase_orders",
+      "score": 25,
+      "flags": {
+        "critical": 3,
+        "warning": 3,
+        "info": 3
+      }
+    },
+    {
+      "table": "res_companies",
+      "score": 0,
+      "flags": {
+        "critical": 8,
+        "warning": 10,
+        "info": 10
+      }
+    },
+    {
+      "table": "res_partners",
+      "score": 0,
+      "flags": {
+        "critical": 7,
+        "warning": 7,
+        "info": 3
+      }
+    },
+    {
+      "table": "res_users",
+      "score": 0,
+      "flags": {
+        "critical": 7,
+        "warning": 8,
+        "info": 2
+      }
+    },
+    {
+      "table": "stock_locations",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 3
+      }
+    },
+    {
+      "table": "tenant_audit_logs",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 0
+      }
+    },
+    {
+      "table": "tenant_subscriptions",
+      "score": 50,
+      "flags": {
+        "critical": 1,
+        "warning": 6,
+        "info": 5
+      }
+    },
+    {
+      "table": "tenant_users",
+      "score": 0,
+      "flags": {
+        "critical": 4,
+        "warning": 5,
+        "info": 3
+      }
+    },
+    {
+      "table": "tenants",
+      "score": 75,
+      "flags": {
+        "critical": 1,
+        "warning": 1,
+        "info": 1
+      }
+    },
+    {
+      "table": "vehicles",
+      "score": 0,
+      "flags": {
+        "critical": 7,
+        "warning": 7,
+        "info": 4
+      }
+    },
+    {
+      "table": "zatca_logs",
+      "score": 0,
+      "flags": {
+        "critical": 6,
+        "warning": 6,
+        "info": 5
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+id,company_id,appointment_number,warehouse_id,vehicle_id,transporter_id,driver_name,driver_phone,scheduled_time,arrival_time,gate_in_time,gate_out_time,waiting_area,loading_slot,purpose,status,notes,created_at,updated_at

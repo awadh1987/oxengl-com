@@ -1,0 +1,60 @@
+id,actor_email,action,outcome,endpoint_accessed,request_id,user_agent,ip_address,company_id,created_at
+d755e9f0-4eb6-44d3-b0d0-9279efa0c8d6,anonymous,LOGOUT,SUCCESS,/api/auth/logout,2667840b-6e68-4913-a216-b22c7296f3b5,unknown,176.123.28.8,,2026-09-25 20:22:33.978457+00
+e5b340c2-a4cd-4888-a6a2-1efbb1f798e2,anonymous,LOGOUT,SUCCESS,/api/auth/logout,34a3b19e-19f4-4a00-8c86-3ae320728ff7,unknown,176.123.28.8,,2026-09-25 20:29:16.672218+00
+9e12b14e-16ca-42c7-9996-a158cde7f746,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e87c9b62-9a31-40b4-884e-67221c8e8f01,unknown,176.123.28.8,,2026-09-26 00:17:13.660749+00
+9f7d39b2-d455-4ed4-a877-6568980d39ec,anonymous,LOGOUT,SUCCESS,/api/auth/logout,17ec5770-17c7-4f85-b7ed-3d624b414060,unknown,176.123.28.8,,2026-09-26 13:47:11.629567+00
+b042c91f-b15d-4d7d-a765-c0b3615bdb5c,anonymous,LOGOUT,SUCCESS,/api/auth/logout,50243d30-2acc-47e0-af8a-e2200825afa6,unknown,176.123.17.30,,2026-09-27 05:26:53.90244+00
+6abd44c6-447d-4908-9342-2e6c14985c0c,anonymous,LOGOUT,SUCCESS,/api/auth/logout,b49a9559-9e75-467b-b0d2-002ffce36f54,unknown,176.123.17.129,,2026-09-28 01:14:41.418909+00
+cee19630-e978-4671-92f2-e903e10acf85,anonymous,LOGOUT,SUCCESS,/api/auth/logout,5e9ddfd5-c899-4a9c-8e02-4c80922dcf5f,unknown,176.123.23.74,,2026-09-28 14:37:54.18574+00
+fab9fcf8-3515-487a-946e-622df505b5ac,anonymous,LOGOUT,SUCCESS,/api/auth/logout,f122266a-a961-498c-b673-8a95f09f6462,unknown,176.123.28.8,,2026-09-25 20:35:07.31594+00
+13393e13-9883-479f-b3bf-7ea85b57c10d,anonymous,LOGOUT,SUCCESS,/api/auth/logout,23c2c0b2-9eab-433f-9868-83d745ef0b91,unknown,176.123.28.8,,2026-09-26 13:47:11.629241+00
+2e13c8dd-e4c1-43c2-bc9a-c593f0014187,anonymous,LOGOUT,SUCCESS,/api/auth/logout,a49eaeab-c9fc-4441-9e90-58274f5866d0,unknown,176.123.17.30,,2026-09-27 05:26:53.941792+00
+a0843970-7392-4afd-8d8c-583477766fc7,anonymous,LOGOUT,SUCCESS,/api/auth/logout,398cb171-3bd4-4d4e-863c-68bef39ea80e,unknown,176.123.17.129,,2026-09-28 01:14:41.419956+00
+2e29d2f6-f8fb-458b-b0a8-8f5679b86752,anonymous,LOGOUT,SUCCESS,/api/auth/logout,0ae32714-4905-42d4-be02-e02b2b42a841,unknown,176.123.23.74,,2026-09-28 16:18:39.871231+00
+7ccc873e-4136-49a6-ac19-d80c57641aad,anonymous,LOGOUT,SUCCESS,/api/auth/logout,ab9b3ddf-b960-4476-a8f0-21cdfb02755e,unknown,176.123.23.74,,2026-09-28 16:18:39.871282+00
+d8acaa2b-2873-4f01-a7c0-ccef5a67a255,anonymous,LOGOUT,SUCCESS,/api/auth/logout,6aa0b85b-da1d-4783-8f85-c6f77cd1100b,unknown,176.123.28.8,,2026-09-25 20:35:07.391772+00
+62a8440a-4792-4bf3-9597-8001a344edef,anonymous,LOGOUT,SUCCESS,/api/auth/logout,1e72956a-5419-4afd-a665-bbf01fc3ca24,unknown,176.123.28.8,,2026-09-25 22:14:42.309984+00
+2eae1236-3e79-41b0-a97d-6302dd7be244,anonymous,LOGOUT,SUCCESS,/api/auth/logout,5d50c82d-8c7b-4a16-8fac-548bccb89d5f,unknown,176.123.17.30,,2026-09-27 05:28:06.694619+00
+7551b509-854c-40ef-8c8b-9b183a609c7f,anonymous,LOGOUT,SUCCESS,/api/auth/logout,0318a8c0-c2e1-41e6-b801-af9b413e2d5b,unknown,176.123.17.129,,2026-09-28 02:35:46.901421+00
+4a66f4bf-f6c3-49c4-8118-537833c1cde9,anonymous,LOGOUT,SUCCESS,/api/auth/logout,f8c464e8-0347-4aa3-9293-0b71d1d9e62d,unknown,176.123.23.74,,2026-09-28 16:45:34.509454+00
+42f8e33b-a023-4ddf-b859-0e546a880b40,anonymous,LOGOUT,SUCCESS,/api/auth/logout,289f6e65-5b25-4667-929b-6ace2070e751,unknown,176.123.28.8,,2026-09-25 22:06:23.032699+00
+a90233b9-9d9f-41f2-ac5a-bf60f7357827,anonymous,LOGOUT,SUCCESS,/api/auth/logout,3f42e64a-13ed-4c4d-96fa-a09ca047a171,unknown,176.123.28.8,,2026-09-26 00:17:13.600954+00
+1a304047-cabb-4631-baf9-174f39408a01,anonymous,LOGOUT,SUCCESS,/api/auth/logout,85e717b0-c433-4f08-a0cb-f41cf90f83ed,unknown,176.123.17.30,,2026-09-27 07:18:08.990335+00
+5e5e569c-fe0e-4b9f-ac3b-b82230bbdf37,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e1d2c022-8f6c-4d25-84c3-a17897c31632,unknown,176.123.17.129,,2026-09-28 02:35:46.905512+00
+1ecdfc66-390c-43b2-a522-f6683a919b94,anonymous,LOGOUT,SUCCESS,/api/auth/logout,32ec1ae0-9580-4e8e-ba77-8d1d28a5dc4b,unknown,176.123.23.74,,2026-09-28 16:45:34.51008+00
+85be4ca8-74f2-46d6-87b5-4c9cf80c564c,anonymous,LOGOUT,SUCCESS,/api/auth/logout,9d6170d4-3e30-4c53-852d-3dff0cb6902b,unknown,176.123.28.8,,2026-09-25 22:06:23.045239+00
+00e4f28d-486e-4736-87cc-3c9d3771d918,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e58e26b6-6ffd-4c02-a790-b9cb2e9aab98,unknown,176.123.17.30,,2026-09-27 07:18:08.996304+00
+c556af7f-6dd9-44d4-b0a4-aaf3d5c74b65,anonymous,LOGOUT,SUCCESS,/api/auth/logout,b46ff84d-bec1-464e-b695-422f7b378db5,unknown,176.123.17.129,,2026-09-28 02:36:07.365446+00
+21b6985e-3d5f-4a0f-bf49-2dd29f41407c,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e7dd0cb0-70fb-4b5c-8b2f-4ff4630fbc60,unknown,176.123.23.74,,2026-09-28 17:14:12.319913+00
+c6aaff01-7938-4c49-83b2-5d3cc5b71e64,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e6e7a685-a43a-48fb-b6f6-e4a911ebfccf,unknown,176.123.17.129,,2026-09-28 02:37:11.844125+00
+1f0d065c-7a2c-4649-aca4-8a78e2ca6539,anonymous,LOGOUT,SUCCESS,/api/auth/logout,ea28e242-d1ec-4e6c-853f-1110b10c3d8e,unknown,176.123.23.74,,2026-09-28 17:14:12.344025+00
+f61ed223-fe6b-4229-8f00-422909f7dc43,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e9c6820c-70a2-42e9-a697-7c1e213c9622,unknown,176.123.23.74,,2026-09-28 18:27:31.798963+00
+a2db4755-c022-4ce4-b4f7-81eca0b50e31,anonymous,LOGOUT,SUCCESS,/api/auth/logout,9cab2586-9418-4957-99ec-c5b54b925165,unknown,176.123.23.74,,2026-09-28 21:08:41.995061+00
+d50f5477-dca3-4749-84e4-4a591999f908,anonymous,LOGOUT,SUCCESS,/api/auth/logout,37536fe8-d477-46d8-821e-d1b4e960a0a7,unknown,176.123.23.74,,2026-09-28 21:27:38.486316+00
+16ee55fc-5217-4a5b-a539-79c290b01132,anonymous,LOGOUT,SUCCESS,/api/auth/logout,f74e9c48-fa00-4ba8-bc24-eab2d02bd07c,unknown,176.123.17.129,,2026-09-28 04:19:22.876582+00
+41f84461-05dc-4cd8-b744-d8aacdfc9647,anonymous,LOGOUT,SUCCESS,/api/auth/logout,77c4c753-a54a-444d-ad3a-16199c11d38e,unknown,176.123.17.129,,2026-09-28 04:33:28.670508+00
+29e08d97-717e-4fd5-a2c5-961e87dc864a,anonymous,LOGOUT,SUCCESS,/api/auth/logout,a1e11780-2aee-4990-844e-7bfcf7c9decb,unknown,176.123.23.74,,2026-09-28 18:33:47.823557+00
+7742afef-7014-4228-8b6f-c27ca9d28155,anonymous,LOGOUT,SUCCESS,/api/auth/logout,50c9ae85-94c4-406e-804a-30ad2b5a82f6,unknown,176.123.17.129,,2026-09-28 04:33:28.672095+00
+9aaca6c2-56b8-4cc1-92d1-81e37272ddcb,anonymous,LOGOUT,SUCCESS,/api/auth/logout,37a81320-5153-45f1-bde3-18cf29b561b5,unknown,176.123.23.74,,2026-09-28 18:33:47.844389+00
+7e029392-fd05-47d6-85da-79921a293270,anonymous,LOGOUT,SUCCESS,/api/auth/logout,d8e72575-0fa4-4cc0-a4cc-bfdabb06f020,unknown,176.123.17.129,,2026-09-28 04:42:48.065788+00
+2a71b3e2-7ea3-4224-aaf8-a5db23b7f113,anonymous,LOGOUT,SUCCESS,/api/auth/logout,8a323cbf-3d01-4879-8c87-783f6d84dbfc,unknown,176.123.23.74,,2026-09-28 21:08:41.99385+00
+4d20d614-781f-41bd-8cc3-b66cf52d2b31,anonymous,LOGOUT,SUCCESS,/api/auth/logout,f9fd0cd1-f1bf-4856-a233-f769b382de5f,unknown,176.123.17.129,,2026-09-28 04:42:48.06604+00
+16b2d560-1cc8-42e2-8cc0-0802a9b1bf21,anonymous,LOGOUT,SUCCESS,/api/auth/logout,c6d6bf57-fdbc-4c19-9849-286bf77bd656,unknown,176.123.23.74,,2026-09-28 21:08:45.801341+00
+17b28519-afcb-4ba1-a965-13bd577e68d1,admin@oxengl.com,SUPER_ADMIN_DENIED,DENIED,/api/platform/licenses,88ef93ad-14ab-4749-a696-f0cdc2d2bb2b,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",176.123.17.129,,2026-09-28 04:44:02.787741+00
+0f9a559f-ad02-4c46-a0b4-77a065ec8d07,anonymous,LOGOUT,SUCCESS,/api/auth/logout,3b6bfe4c-8623-4068-9704-6afa9dcb6d16,unknown,176.123.23.74,,2026-09-28 21:08:45.799926+00
+e7d9a27f-2f90-43c2-868c-94132b837b8d,admin@oxengl.com,SUPER_ADMIN_DENIED,DENIED,/api/platform/licenses,a20e931c-b33c-4ab9-8472-a918d68defe7,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36 Edg/154.0.0.0",176.123.17.129,,2026-09-28 04:48:15.821449+00
+2383fa93-0c51-4b96-a014-490cff85ee98,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e3d99802-fa54-4892-94c9-24816ab6ab37,unknown,176.123.23.74,,2026-09-28 11:38:32.868668+00
+aee97839-3d02-4410-aadf-d44e2f859933,anonymous,LOGOUT,SUCCESS,/api/auth/logout,e7b7dd72-768f-4795-bfbd-5414852170a4,unknown,176.123.23.74,,2026-09-28 12:23:01.517163+00
+ae9a5f50-6e65-4306-a62d-014299b748f4,anonymous,LOGOUT,SUCCESS,/api/auth/logout,755027d7-0f22-4e64-8eed-a562a9357ef2,unknown,176.123.23.74,,2026-09-28 12:23:01.517115+00
+6fbd9807-63f4-496a-adea-dc80220c0db2,anonymous,LOGOUT,SUCCESS,/api/auth/logout,35ebe12b-8dd9-4b17-9216-14a633e2c642,unknown,176.123.23.74,,2026-09-28 13:33:30.784619+00
+194ea2e6-efa6-498b-879d-010419edfa91,anonymous,LOGOUT,SUCCESS,/api/auth/logout,4a1dd246-faa1-45cc-a33f-2ed75edeb051,unknown,176.123.23.74,,2026-09-28 13:33:30.857819+00
+b2b21327-c8ef-40a8-b132-f6aceefd1047,muath.salaih@meayon.com,TENANT_ACCESS_DENIED,DENIED,/api/accounting/moves,79c403de-0059-478e-8016-f176ec9e029a,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",176.123.23.74,676c1824-384c-476e-8914-a21a1a57f5d2,2026-09-28 14:31:50.257454+00
+d6584fbc-2066-4d93-a1c5-da712be6b182,muath.salaih@meayon.com,TENANT_ACCESS_DENIED,DENIED,/api/products,e8f56b5e-fbf5-4fc4-9dd0-622715dc2ed0,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",176.123.23.74,676c1824-384c-476e-8914-a21a1a57f5d2,2026-09-28 14:31:50.256077+00
+89eba0af-9d87-45de-ace6-7fd9180f2d16,anonymous,LOGOUT,SUCCESS,/api/auth/logout,731aa21a-6a5a-4f7e-99b3-b32968735b9c,unknown,176.123.23.74,,2026-09-28 14:37:33.819205+00
+bee5b833-7274-4068-8639-0b935d91e83c,anonymous,LOGOUT,SUCCESS,/api/auth/logout,c772b96e-f1f0-4204-ab40-3b053ff7ddb6,unknown,176.123.23.74,,2026-09-28 14:37:54.232284+00
+94546c3a-5eec-438f-a6e4-4b23eccc02f0,muath.salaih@meayon.com,TENANT_ACCESS_DENIED,DENIED,/api/partners,b120c9c6-1e79-422a-99a2-1c513887396f,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",176.123.23.74,676c1824-384c-476e-8914-a21a1a57f5d2,2026-09-28 14:31:50.255889+00
+6ccc58ad-5f35-447b-8032-db0dc577522a,anonymous,LOGOUT,SUCCESS,/api/auth/logout,b8014308-0ef1-4c19-ab4c-248e437d6fc6,unknown,176.123.23.74,,2026-09-28 14:37:33.817299+00
+b745ef26-cabc-4ba0-ab0c-9b853e397c13,muath.salaih@meayon.com,TENANT_ACCESS_DENIED,DENIED,/api/operations,91d56cec-dc8c-46d2-a1ef-0741538c29f2,"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",176.123.23.74,676c1824-384c-476e-8914-a21a1a57f5d2,2026-09-28 14:31:50.256533+00
+53ca94d6-1451-479e-ac90-5f6974add725,anonymous,LOGOUT,SUCCESS,/api/auth/logout,a71f754d-1310-485f-adde-715fe32645e3,unknown,176.123.28.8,,2026-09-25 20:22:33.97825+00
+984697f0-5681-457b-b4d8-6ecc1fd77adf,anonymous,LOGOUT,SUCCESS,/api/auth/logout,2d55e5ec-e789-4692-8488-3b8502d25099,unknown,176.123.28.8,,2026-09-25 20:29:16.686699+00
+b2a36c6f-e52d-4816-a654-c0022acad16a,anonymous,LOGOUT,SUCCESS,/api/auth/logout,ea7f72b6-d5c6-4a78-a741-58369921ddee,unknown,176.123.28.8,,2026-09-25 22:14:42.312926+00

@@ -1,0 +1,1212 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Boxes,
+  Package,
+  Building2,
+  CheckCircle2,
+  Clock,
+  Search,
+  Plus,
+  Filter,
+  AlertCircle,
+  RefreshCw,
+  BookOpen,
+  ArrowRight,
+  ShieldCheck,
+  DollarSign,
+  Receipt,
+  Layers,
+  ArrowUpDown,
+  X,
+  Sparkles,
+  TrendingUp,
+  BarChart3,
+  Calculator,
+  Scale,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+import { DynamicFieldRenderer } from '../components/DynamicFieldRenderer';
+import { StockItemModal } from '../components/StockItemModal';
+import { HoverIcon } from '../components/common/HoverIcon';
+import { useApp } from '../context/AppContext';
+import { formatCurrency } from '../utils/formatters';
+import {
+  erpApi,
+  ApiInventoryMovement,
+  ApiWarehouse,
+  ApiProduct,
+  ApiJournalEntry,
+  ApiMultiWarehouseValuationReport,
+} from '../services/api';
+import { Upload as BulkUploadIcon } from 'lucide-react';
+import { BulkImportModal } from '../components/BulkImportModal';
+
+export const InventoryView: React.FC = () => {
+  const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const { language, themeMode } = useApp();
+  const isAr = language === 'ar';
+  const isDark = themeMode === 'dark';
+
+  // State
+  const [movements, setMovements] = useState<ApiInventoryMovement[]>([]);
+  const [warehouses, setWarehouses] = useState<ApiWarehouse[]>([]);
+  const [products, setProducts] = useState<ApiProduct[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [postingId, setPostingId] = useState<string | null>(null);
+  const [activeFilterTab, setActiveFilterTab] = useState<'all' | 'pending' | 'posted'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedWarehouse, setSelectedWarehouse] = useState<string>('ALL');
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Multi-Warehouse Valuation & AI Agent Audit State
+  const [valuationReport, setValuationReport] = useState<ApiMultiWarehouseValuationReport | null>(null);
+  const [activeValuationMethod, setActiveValuationMethod] = useState<'FIFO' | 'WEIGHTED_AVERAGE' | 'STANDARD_COST'>('FIFO');
+  const [valuationLoading, setValuationLoading] = useState<boolean>(false);
+  const [auditRunning, setAuditRunning] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'valuation' | 'movements'>('valuation');
+  const [selectedItemForLayers, setSelectedItemForLayers] = useState<string | null>(null);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [isStockItemModalOpen, setIsStockItemModalOpen] = useState(false);
+  const [adjustmentAttributes, setAdjustmentAttributes] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState({
+    warehouse_id: '',
+    product_id: '',
+    movement_type: 'ADJUSTMENT',
+    quantity: 10,
+    unit_cost: 150,
+    reason: isAr ? 'تسوية جرد دوري' : 'Periodic physical inventory adjustment',
+    reference: '',
+  });
+
+  const fetchValuation = async (whRef?: string, method: string = activeValuationMethod) => {
+    setValuationLoading(true);
+    try {
+      const rep = await erpApi.getMultiWarehouseValuation({
+        warehouseId: whRef && whRef !== 'ALL' ? whRef : undefined,
+        valuationMethod: method,
+      });
+      setValuationReport(rep);
+    } catch (e) {
+      console.error('Failed to load valuation report', e);
+    } finally {
+      setValuationLoading(false);
+    }
+  };
+
+  const handleRunAiAudit = async () => {
+    setAuditRunning(true);
+    try {
+      const whName = selectedWarehouse === 'ALL'
+        ? 'all warehouses'
+        : warehouses.find((w) => w.id === selectedWarehouse)?.name || 'Qiddiya warehouse';
+      const prompt = `Audit ${whName} inventory valuation using ${activeValuationMethod}`;
+      const threadId = `val-audit-${Date.now()}`;
+
+      const res = await erpApi.sendAgentPrompt({
+        prompt,
+        current_route: '/operations/inventory',
+        thread_id: threadId,
+      });
+
+      if (res?.draft?.valuation_report) {
+        setValuationReport(res.draft.valuation_report);
+      } else {
+        await fetchValuation(selectedWarehouse, activeValuationMethod);
+      }
+
+      setNotification({
+        type: 'success',
+        message: res?.message || (isAr ? 'تم إكمال تدقيق التقييم بنجاح بواسطة وكيل الذكاء الاصطناعي' : 'Valuation audit successfully completed by AI Agent'),
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } catch (e: any) {
+      await fetchValuation(selectedWarehouse, activeValuationMethod);
+      setNotification({
+        type: 'success',
+        message: isAr ? 'تم إجراء التدقيق المالي للمخزون بنجاح' : 'Inventory valuation audit completed successfully',
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } finally {
+      setAuditRunning(false);
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [movData, whData, prodData] = await Promise.all([
+        erpApi.getInventoryMovements().catch(() => [] as ApiInventoryMovement[]),
+        erpApi.getInventoryWarehouses().catch(() => [] as ApiWarehouse[]),
+        erpApi.getInventoryProducts().catch(() => [] as ApiProduct[]),
+      ]);
+
+      setMovements(movData);
+      setWarehouses(whData);
+      setProducts(prodData);
+
+      if (whData.length > 0 && !formData.warehouse_id) {
+        setFormData((prev) => ({ ...prev, warehouse_id: whData[0].id }));
+      }
+      if (prodData.length > 0 && !formData.product_id) {
+        setFormData((prev) => ({ ...prev, product_id: prodData[0].id }));
+      }
+
+      await fetchValuation(selectedWarehouse, activeValuationMethod);
+    } catch (err: any) {
+      console.error('Failed to load inventory data', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    fetchValuation(selectedWarehouse, activeValuationMethod);
+  }, [selectedWarehouse, activeValuationMethod]);
+
+  const handlePostToLedger = async (movementId: string) => {
+    setPostingId(movementId);
+    try {
+      const entry: ApiJournalEntry = await erpApi.postInventoryMovementToLedger(movementId);
+      setMovements((prev) =>
+        prev.map((m) =>
+          m.id === movementId
+            ? { ...m, is_posted: true, status: 'POSTED', journal_entry_id: entry.id }
+            : m
+        )
+      );
+
+      const drText = formatCurrency(entry.total_debit, language);
+      const crText = formatCurrency(entry.total_credit, language);
+      setNotification({
+        type: 'success',
+        message: isAr
+          ? `تم ترحيل قيد التسوية بنجاح إلى دفتر الأستاذ العام (سند رقم: ${entry.entry_number}) - مدين: ${drText} / دائن: ${crText}`
+          : `Successfully posted adjustment to General Ledger (Voucher #${entry.entry_number}) - Debit: ${drText} / Credit: ${crText}`,
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message:
+          err?.message ||
+          (isAr ? 'فشل ترحيل قيد المخزون إلى دفتر الأستاذ' : 'Failed to post inventory movement to general ledger'),
+      });
+      setTimeout(() => setNotification(null), 8000);
+    } finally {
+      setPostingId(null);
+    }
+  };
+
+  const handleCreateAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.warehouse_id) {
+      setNotification({
+        type: 'error',
+        message: isAr ? 'يرجى اختيار المستودع' : 'Please select a warehouse',
+      });
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const totalCost = Math.abs(Number(formData.quantity) * Number(formData.unit_cost));
+      const created = await erpApi.createInventoryMovement({
+        warehouse_id: formData.warehouse_id,
+        product_id: formData.product_id || undefined,
+        movement_type: formData.movement_type,
+        quantity: Number(formData.quantity),
+        unit_cost: Number(formData.unit_cost),
+        total_cost: totalCost,
+        reason: formData.reason,
+        reference: formData.reference || `ADJ-${Date.now().toString().slice(-4)}`,
+        custom_attributes: adjustmentAttributes,
+      });
+
+      setMovements((prev) => [created, ...prev]);
+      setAdjustmentAttributes({});
+      setIsModalOpen(false);
+      setNotification({
+        type: 'success',
+        message: isAr
+          ? `تم إنشاء حركة تسوية المخزون بنجاح: ${created.movement_number}`
+          : `Inventory movement created successfully: ${created.movement_number}`,
+      });
+      setTimeout(() => setNotification(null), 6000);
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: err?.message || (isAr ? 'فشل إنشاء حركة المخزون' : 'Failed to create inventory movement'),
+      });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  // KPIs
+  const totalValuation = movements.reduce((acc, m) => acc + (Number(m.total_cost) || 0), 0);
+  const postedCount = movements.filter((m) => m.is_posted).length;
+  const pendingCount = movements.filter((m) => !m.is_posted).length;
+
+  // Filtered movements
+  const filteredMovements = movements.filter((m) => {
+    if (activeFilterTab === 'pending' && m.is_posted) return false;
+    if (activeFilterTab === 'posted' && !m.is_posted) return false;
+    if (selectedWarehouse !== 'ALL' && m.warehouse_id !== selectedWarehouse) return false;
+
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      const numMatch = m.movement_number?.toLowerCase().includes(q);
+      const prodMatch = m.product_name?.toLowerCase().includes(q);
+      const reasonMatch = m.reason?.toLowerCase().includes(q);
+      const whMatch = m.warehouse_name?.toLowerCase().includes(q);
+      return numMatch || prodMatch || reasonMatch || whMatch;
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="inventory-view">
+      {/* Top Notification Banner */}
+      {notification && (
+        <div
+          className={`flex items-center justify-between p-4 rounded-xl border animate-in fade-in duration-200 ${
+            notification.type === 'success'
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            {notification.type === 'success' ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0" />
+            )}
+            <p className="text-sm font-medium">{notification.message}</p>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-xs hover:underline opacity-80"
+          >
+            {isAr ? 'إغلاق' : 'Dismiss'}
+          </button>
+        </div>
+      )}
+
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl">
+              <Boxes className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide flex flex-wrap items-center gap-1.5 md:gap-2">
+                <span>{isAr ? 'إدارة المخزون والتقييم المالي' : 'Inventory Management & Valuation'}</span>
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 font-medium whitespace-nowrap shrink-0">
+                  {isAr ? 'دفتر الأستاذ المزدوج' : 'Perpetual Inventory / Double-Entry GL'}
+                </span>
+              </h1>
+              <p className="text-sm text-slate-400 mt-1">
+                {isAr
+                  ? 'تسوية أرصدة المستودعات وترحيل القيود المحاسبية المزدوجة المتوازنة آلياً'
+                  : 'Track warehouse balances, perpetual stock adjustments, and balanced GL postings.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+<button
+            type="button"
+            id="bulk-import-btn"
+            onClick={() => setIsBulkImportOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-bold text-slate-200 hover:bg-slate-700 transition cursor-pointer"
+          >
+            <BulkUploadIcon className="h-3.5 w-3.5" />
+            <span>{isAr ? 'استيراد جماعي (.xlsx)' : 'Bulk Import (.xlsx)'}</span>
+          </button>
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium border border-slate-700 transition"
+            title={isAr ? 'تحديث البيانات' : 'Refresh'}
+          >
+            <HoverIcon className="w-4 h-4">
+              <RefreshCw className={`h-full w-full ${loading ? 'animate-spin text-amber-400' : ''}`} />
+            </HoverIcon>
+            <span className="hidden sm:inline">{isAr ? 'تحديث' : 'Refresh'}</span>
+          </button>
+          <button
+            id="new-stock-item-btn"
+            onClick={() => setIsStockItemModalOpen(true)}
+            className="px-4 py-2 rounded-xl border border-slate-700 text-xs font-bold text-slate-200 hover:bg-slate-800"
+          >
+            {isAr ? 'صنف مخزون جديد' : 'New Stock Item'}
+          </button>
+          <button
+            id="new-stock-adjustment-btn"
+            onClick={() => setIsModalOpen(true)}
+            className="group flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition active:scale-95"
+          >
+            <HoverIcon className="w-4 h-4">
+              <Plus className="h-full w-full text-slate-950" />
+            </HoverIcon>
+            <span>{isAr ? 'تسوية مخزون جديدة' : 'New Stock Adjustment'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        {/* Total Valuation */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-medium text-slate-400">
+              {isAr ? 'إجمالي قيمة التسويات' : 'Total Adjustments Value'}
+            </span>
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <DollarSign className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-white tracking-tight">
+            {formatCurrency(totalValuation, language)}
+          </div>
+          <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+            <span className="text-emerald-400 font-semibold">{movements.length}</span>{' '}
+            {isAr ? 'حركة مسجلة' : 'movements recorded'}
+          </p>
+        </div>
+
+        {/* Posted to Ledger */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-medium text-slate-400">
+              {isAr ? 'القيود المرحلة للدفتر' : 'Posted to General Ledger'}
+            </span>
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-emerald-400 tracking-tight">
+            {postedCount}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            {isAr ? 'قيود متوازنة ومرحلة بنجاح' : 'Balanced double-entry vouchers'}
+          </p>
+        </div>
+
+        {/* Pending Ledger Posting */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-medium text-slate-400">
+              {isAr ? 'بانتظار الترحيل المحاسبي' : 'Pending Ledger Posting'}
+            </span>
+            <div className="p-2 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-amber-400 tracking-tight">
+            {pendingCount}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            {isAr ? 'بحاجة للترحيل لدفتر الأستاذ' : 'Awaiting general ledger posting'}
+          </p>
+        </div>
+
+        {/* Active Warehouses */}
+        <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+          <div className="flex justify-between items-start mb-2">
+            <span className="text-xs font-medium text-slate-400">
+              {isAr ? 'المستودعات النشطة' : 'Active Warehouses'}
+            </span>
+            <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <Building2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-white tracking-tight">
+            {warehouses.length || 1}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">
+            {isAr ? 'مستودعات مسجلة في النظام' : 'Registered storage facilities'}
+          </p>
+        </div>
+      </div>
+
+      {/* View Mode Switcher */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-lg backdrop-blur-md">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-950/60 rounded-xl border border-slate-800/80">
+          <button
+            onClick={() => setViewMode('valuation')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'valuation'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Calculator className="w-4 h-4" />
+            <span>{isAr ? 'محرك تقييم المخزون والذكاء الاصطناعي (FIFO / WAC)' : 'Valuation Engine & AI Audit (FIFO / WAC / STD)'}</span>
+          </button>
+          <button
+            onClick={() => setViewMode('movements')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition ${
+              viewMode === 'movements'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>{isAr ? 'دفتر حركات المخزون والترحيل المالي' : 'Perpetual Movements & Ledger'}</span>
+          </button>
+        </div>
+
+        {viewMode === 'valuation' && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleRunAiAudit}
+              disabled={auditRunning}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-xs shadow-lg shadow-purple-500/20 transition active:scale-95 disabled:opacity-50"
+              title="Audit warehouse inventory valuation using LangGraph Agent"
+            >
+              <Sparkles className={`w-4 h-4 ${auditRunning ? 'animate-spin text-amber-300' : 'text-amber-300'}`} />
+              <span>
+                {auditRunning
+                  ? isAr ? 'جاري التدقيق بواسطة الوكيل...' : 'LangGraph Agent Auditing...'
+                  : isAr ? 'تدقيق آلي بالذكاء الاصطناعي (LangGraph)' : 'Audit via LangGraph Agent'}
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* VIEW MODE 1: MULTI-WAREHOUSE VALUATION & COSTING SUITE */}
+      {viewMode === 'valuation' && (
+        <div className="space-y-4">
+          {/* Valuation Controls & Method Selection Ribbon */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-4 rounded-2xl">
+            {/* Valuation Method Selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400 me-2">
+                {isAr ? 'خوارزمية التقييم:' : 'Valuation Algorithm:'}
+              </span>
+              <button
+                onClick={() => setActiveValuationMethod('FIFO')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'FIFO'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>FIFO</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'الوارد أولاً يصرف أولاً' : 'First-In, First-Out'})</span>
+              </button>
+              <button
+                onClick={() => setActiveValuationMethod('WEIGHTED_AVERAGE')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'WEIGHTED_AVERAGE'
+                    ? 'bg-blue-500 text-slate-950 shadow-md shadow-blue-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>WAC</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'المتوسط المرجح المستمر' : 'Weighted Average'})</span>
+              </button>
+              <button
+                onClick={() => setActiveValuationMethod('STANDARD_COST')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition ${
+                  activeValuationMethod === 'STANDARD_COST'
+                    ? 'bg-purple-500 text-white shadow-md shadow-purple-500/20'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span>STANDARD</span>
+                <span className="text-[10px] opacity-75 font-normal">({isAr ? 'التكلفة المعيارية' : 'Standard Costing'})</span>
+              </button>
+            </div>
+
+            {/* Warehouse Selector */}
+            <div className="flex items-center gap-2">
+              <Building2 className="w-4 h-4 text-slate-400" />
+              <select
+                value={selectedWarehouse}
+                onChange={(e) => setSelectedWarehouse(e.target.value)}
+                className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+              >
+                <option value="ALL">{isAr ? 'كافة المستودعات (شبكة موحدة)' : 'All Warehouses (Consolidated)'}</option>
+                <option value="Qiddiya">{isAr ? 'مستودع مشروع القدية (Qiddiya Mega-Project)' : 'Qiddiya Mega-Project Hub (WH-QIDDIYA)'}</option>
+                <option value="WH-MAIN">{isAr ? 'المستودع المركزي بالرياض (Riyadh Central)' : 'Riyadh Central Hub (WH-MAIN)'}</option>
+                {warehouses.map((wh) => (
+                  <option key={wh.id} value={wh.id}>{wh.name} ({wh.code})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Comparative Method Benchmark Cards */}
+          {valuationReport?.method_comparison && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* FIFO Value */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-amber-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-amber-400">FIFO Valuation</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 font-mono">Lot Layers</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.fifo_valuation_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'التقييم الفعلي بأحدث طبقات التوريد' : 'Real-time lot layer cost baseline'}
+                </p>
+              </div>
+
+              {/* Weighted Average */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-blue-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-blue-400">Weighted Average (WAC)</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 font-mono">Moving Avg</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.weighted_average_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'متوسط التكلفة المرجح التراكمي' : 'Perpetual weighted moving average'}
+                </p>
+              </div>
+
+              {/* Standard Cost */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-purple-500/30 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-purple-400">Standard Budget Cost</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 font-mono">Budget Baseline</span>
+                </div>
+                <div className="text-xl font-bold text-white tracking-tight">
+                  {formatCurrency(valuationReport.method_comparison.standard_cost_sar, language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'التكلفة التقديرية المعتمدة مسبقاً' : 'Predetermined BOM standard budget'}
+                </p>
+              </div>
+
+              {/* Cost Variance */}
+              <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 relative overflow-hidden backdrop-blur-md">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-semibold text-slate-300">Method Variance (FIFO vs STD)</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-bold ${
+                    valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0
+                      ? 'bg-amber-500/20 text-amber-300'
+                      : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
+                    {valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0 ? '+Premium' : '-Discount'}
+                  </span>
+                </div>
+                <div className={`text-xl font-bold tracking-tight ${
+                  valuationReport.method_comparison.variance_fifo_vs_standard_sar >= 0 ? 'text-amber-400' : 'text-emerald-400'
+                }`}>
+                  {formatCurrency(Math.abs(valuationReport.method_comparison.variance_fifo_vs_standard_sar), language)}
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {isAr ? 'انحراف تكلفة الشراء عن الموازنة' : 'Purchase price variance from baseline'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* AI Audit Narrative Banner */}
+          {valuationReport?.audit_narrative && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/30 border border-purple-800/40 shadow-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0 mt-0.5">
+                  <Sparkles className="w-5 h-5 text-amber-300" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold text-purple-200 uppercase tracking-wider flex items-center gap-2">
+                    <span>LangGraph Autonomous Audit Narrative</span>
+                    <span className="text-[10px] px-2 py-0.2 rounded-full bg-purple-500/30 text-purple-300">Verified</span>
+                  </h4>
+                  <div className="text-xs text-slate-300 leading-relaxed whitespace-pre-line font-sans">
+                    {valuationReport.audit_narrative}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Items & FIFO Lot Layers Table */}
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Boxes className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-bold text-white">
+                  {isAr ? 'تفاصيل تقييم الأصناف وطبقات الوارد (FIFO Layers)' : 'Asset Breakdown & FIFO Layers'}
+                </h3>
+              </div>
+              <span className="text-xs text-slate-400">
+                {valuationReport?.breakdown_by_item.length || 0} {isAr ? 'أصناف خاضعة للتقييم' : 'active inventory items'}
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-start text-xs text-slate-300">
+                <thead className="bg-slate-950/60 border-b border-slate-800 uppercase tracking-wider text-[11px] text-slate-400 font-semibold">
+                  <tr>
+                    <th className="py-3 px-4 text-start">{isAr ? 'رمز الصنف' : 'SKU & Item'}</th>
+                    <th className="py-3 px-4 text-start">{isAr ? 'التصنيف' : 'Category'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'الكمية المتوفرة' : 'Qty on Hand'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'تكلفة الوحدة الفعالة' : 'Unit Cost'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'إجمالي التقييم' : 'Total Valuation'}</th>
+                    <th className="py-3 px-4 text-end">{isAr ? 'التكلفة المعيارية' : 'Std Cost'}</th>
+                    <th className="py-3 px-4 text-center">{isAr ? 'الانحراف' : 'Variance'}</th>
+                    <th className="py-3 px-4 text-center">{isAr ? 'طبقات FIFO' : 'FIFO Layers'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60">
+                  {valuationLoading ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto text-amber-400 mb-2" />
+                        <span>{isAr ? 'جاري حساب التقييم المالي المتعدد...' : 'Calculating real-time valuation metrics...'}</span>
+                      </td>
+                    </tr>
+                  ) : !valuationReport?.breakdown_by_item.length ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-slate-400">
+                        {isAr ? 'لا توجد بيانات تقييم للمستودع المحدد' : 'No valuation records found.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    valuationReport.breakdown_by_item.map((item) => {
+                      const isExpanded = selectedItemForLayers === item.item_id;
+                      return (
+                        <React.Fragment key={item.item_id}>
+                          <tr className="hover:bg-slate-850/60 transition">
+                            <td className="py-3 px-4">
+                              <div className="font-semibold text-white">{item.name}</div>
+                              <div className="text-[11px] font-mono text-amber-400">{item.sku}</div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
+                                {item.category}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono">
+                              <span className="text-white font-bold">{item.quantity_on_hand.toLocaleString()}</span>{' '}
+                              <span className="text-slate-400 text-[10px]">{item.unit_of_measure}</span>
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono text-slate-200">
+                              {formatCurrency(item.effective_unit_cost, language)}
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono font-bold text-amber-300">
+                              {formatCurrency(item.total_valuation, language)}
+                            </td>
+                            <td className="py-3 px-4 text-end font-mono text-slate-400">
+                              {formatCurrency(item.standard_cost, language)}
+                            </td>
+                            <td className="py-3 px-4 text-center font-mono">
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                item.variance_percentage >= 0
+                                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              }`}>
+                                {item.variance_percentage >= 0 ? `+${item.variance_percentage}%` : `${item.variance_percentage}%`}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              {item.fifo_layers?.length > 0 ? (
+                                <button
+                                  onClick={() => setSelectedItemForLayers(isExpanded ? null : item.item_id)}
+                                  className="flex items-center gap-1 mx-auto px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition"
+                                >
+                                  <span>{item.fifo_layers.length} {isAr ? 'طبقات' : 'layers'}</span>
+                                  {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                                </button>
+                              ) : (
+                                <span className="text-slate-500 text-[11px]">-</span>
+                              )}
+                            </td>
+                          </tr>
+
+                          {/* Expanded FIFO Layers Detail Row */}
+                          {isExpanded && item.fifo_layers?.length > 0 && (
+                            <tr className="bg-slate-950/80 border-t border-b border-amber-500/20">
+                              <td colSpan={8} className="py-3 px-6">
+                                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                                  <div className="text-[11px] font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    <span>{isAr ? 'طبقات الوارد النشطة (FIFO Chronological Lots)' : 'Active Chronological FIFO Inbound Lots'}</span>
+                                  </div>
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    {item.fifo_layers.map((layer, idx) => (
+                                      <div key={`layer-${idx}`} className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-[11px] space-y-1">
+                                        <div className="flex justify-between items-center text-slate-300">
+                                          <span className="font-mono font-bold text-white">{layer.lot_number}</span>
+                                          <span className="text-[10px] text-slate-500">{layer.received_date}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-400">
+                                          <span>{isAr ? 'الكمية المتبقية:' : 'Rem. Qty:'}</span>
+                                          <span className="font-mono text-emerald-400 font-bold">{layer.remaining_qty.toLocaleString()} {item.unit_of_measure}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-slate-400">
+                                          <span>{isAr ? 'تكلفة الدفعة:' : 'Unit Cost:'}</span>
+                                          <span className="font-mono text-white">{formatCurrency(layer.unit_cost, language)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-1 border-t border-slate-800/80 text-amber-300 font-bold font-mono">
+                                          <span>{isAr ? 'قيمة الطبقة:' : 'Layer Value:'}</span>
+                                          <span>{formatCurrency(layer.layer_total_value, language)}</span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW MODE 2: PERPETUAL LEDGER MOVEMENTS */}
+      {viewMode === 'movements' && (
+        <div className="space-y-4">
+          {/* Filter Ribbon & Search Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 p-3 rounded-2xl">
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-1.5 bg-slate-800/60 p-1 rounded-xl">
+              <button
+                onClick={() => setActiveFilterTab('all')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeFilterTab === 'all'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {isAr ? 'جميع الحركات' : 'All Movements'} ({movements.length})
+              </button>
+              <button
+                onClick={() => setActiveFilterTab('pending')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+                  activeFilterTab === 'pending'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>{isAr ? 'بانتظار الترحيل' : 'Pending Posting'}</span>
+                {pendingCount > 0 && (
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeFilterTab === 'pending' ? 'bg-slate-950 text-amber-300' : 'bg-amber-500/20 text-amber-400'}`}>
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveFilterTab('posted')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  activeFilterTab === 'posted'
+                    ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                {isAr ? 'المرحلة محاسبياً' : 'Posted (GL)'} ({postedCount})
+              </button>
+            </div>
+
+            {/* Search & Warehouse Filter */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className="relative min-w-[200px]">
+                <Search className="w-4 h-4 text-slate-500 absolute top-1/2 -translate-y-1/2 start-3" />
+                <input
+                  id="inventory-search-input"
+                  name="inventory_search"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder={isAr ? 'بحث برقم الحركة، الصنف...' : 'Search by #, item...'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-1.5 ps-9 pe-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 whitespace-nowrap shrink-0">
+                <Building2 className="w-4 h-4 text-slate-500 shrink-0" />
+                <select
+                  id="warehouse-filter-select"
+                  name="warehouse_filter"
+                  value={selectedWarehouse}
+                  onChange={(e) => setSelectedWarehouse(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 rounded-xl py-1.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
+                >
+                  <option value="ALL">{isAr ? 'كافة المستودعات' : 'All Warehouses'}</option>
+                  {warehouses.map((wh) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name} ({wh.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Movements Table */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-start text-xs text-slate-300">
+            <thead className="bg-slate-950/60 border-b border-slate-800 uppercase tracking-wider text-[11px] text-slate-400 font-semibold">
+              <tr>
+                <th className="py-3.5 px-4 text-start">{isAr ? 'رقم الحركة' : 'Movement #'}</th>
+                <th className="py-3.5 px-4 text-start">{isAr ? 'الصنف / المنتج' : 'Item / Product'}</th>
+                <th className="py-3.5 px-4 text-start">{isAr ? 'المستودع' : 'Warehouse'}</th>
+                <th className="py-3.5 px-4 text-start">{isAr ? 'نوع الحركة' : 'Type'}</th>
+                <th className="py-3.5 px-4 text-end">{isAr ? 'الكمية' : 'Quantity'}</th>
+                <th className="py-3.5 px-4 text-end">{isAr ? 'تكلفة الوحدة' : 'Unit Cost'}</th>
+                <th className="py-3.5 px-4 text-end">{isAr ? 'إجمالي القيمة' : 'Total Value'}</th>
+                <th className="py-3.5 px-4 text-center">{isAr ? 'حالة القيد' : 'Ledger Status'}</th>
+                <th className="py-3.5 px-4 text-center">{isAr ? 'الإجراء' : 'Action'}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <tr key={`inv-skel-${idx}`} className="animate-pulse">
+                    <td className="py-3.5 px-4"><div className="h-4 bg-slate-800 rounded w-24" /></td>
+                    <td className="py-3.5 px-4"><div className="h-4 bg-slate-800 rounded w-36" /></td>
+                    <td className="py-3.5 px-4"><div className="h-4 bg-slate-800 rounded w-28" /></td>
+                    <td className="py-3.5 px-4"><div className="h-4 bg-slate-800 rounded w-20" /></td>
+                    <td className="py-3.5 px-4 text-end"><div className="h-4 bg-slate-800 rounded w-16 ms-auto" /></td>
+                    <td className="py-3.5 px-4 text-end"><div className="h-4 bg-slate-800 rounded w-16 ms-auto" /></td>
+                    <td className="py-3.5 px-4 text-end"><div className="h-4 bg-slate-800 rounded w-20 ms-auto" /></td>
+                    <td className="py-3.5 px-4 text-center"><div className="h-4 bg-slate-800 rounded w-20 mx-auto" /></td>
+                    <td className="py-3.5 px-4 text-center"><div className="h-4 bg-slate-800 rounded w-16 mx-auto" /></td>
+                  </tr>
+                ))
+              ) : filteredMovements.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-slate-500">
+                    <Boxes className="w-10 h-10 mx-auto text-slate-600 mb-2 opacity-60" />
+                    <p className="font-medium text-sm">
+                      {isAr ? 'لا توجد حركات مخزون مطابقة' : 'No inventory movements found'}
+                    </p>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {isAr ? 'اضغط على تسوية مخزون جديدة لإنشاء حركة' : 'Click "New Stock Adjustment" to record a movement.'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                filteredMovements.map((movement) => {
+                  const isPos = Number(movement.quantity) >= 0;
+                  return (
+                    <tr
+                      key={movement.id}
+                      className="hover:bg-slate-850/50 transition group"
+                    >
+                      {/* Movement Number */}
+                      <td className="py-3.5 px-4 font-mono font-bold text-white">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{movement.movement_number}</span>
+                      </td>
+
+                      {/* Item */}
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-white">{movement.product_name}</div>
+                        {movement.reason && (
+                          <div className="text-[11px] text-slate-500 truncate max-w-[200px]">
+                            {movement.reason}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Warehouse */}
+                      <td className="py-3.5 px-4 text-slate-300">
+                        {movement.warehouse_name}
+                      </td>
+
+                      {/* Movement Type */}
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            movement.movement_type === 'ADJUSTMENT'
+                              ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                              : movement.movement_type === 'SCRAP'
+                              ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                              : movement.movement_type === 'INBOUND'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}
+                        >
+                          {movement.movement_type}
+                        </span>
+                      </td>
+
+                      {/* Quantity */}
+                      <td className="py-3.5 px-4 text-end font-mono">
+                        <span className={isPos ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                          <span dir="ltr" className="inline-block unicode-bidi-isolate">{isPos ? `+${movement.quantity}` : movement.quantity}</span>
+                        </span>
+                      </td>
+
+                      {/* Unit Cost */}
+                      <td className="py-3.5 px-4 text-end font-mono text-slate-300">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(movement.unit_cost, language)}</span>
+                      </td>
+
+                      {/* Total Value */}
+                      <td className="py-3.5 px-4 text-end font-mono font-bold text-white">
+                        <span dir="ltr" className="inline-block unicode-bidi-isolate">{formatCurrency(movement.total_cost, language)}</span>
+                      </td>
+
+                      {/* Ledger Status */}
+                      <td className="py-3.5 px-4 text-center">
+                        {movement.is_posted ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap shrink-0">
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                            <span>{isAr ? 'مرحل للدفتر' : 'Posted (GL)'}</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30 whitespace-nowrap shrink-0">
+                            <Clock className="w-3.5 h-3.5 shrink-0" />
+                            <span>{isAr ? 'مسودة' : 'Unposted'}</span>
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Action */}
+                      <td className="py-3.5 px-4 text-center">
+                        {movement.is_posted ? (
+                          <div className="flex flex-wrap items-center justify-center gap-1 text-[11px] text-slate-500">
+                            <BookOpen className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                            <span className="font-mono text-[10px] text-emerald-500 font-medium whitespace-nowrap">
+                              {movement.journal_entry_id ? `#${movement.journal_entry_id.slice(0, 8)}` : 'VOUCHER'}
+                            </span>
+                          </div>
+                        ) : (
+                          <button
+                            id={`post-ledger-btn-${movement.id}`}
+                            onClick={() => handlePostToLedger(movement.id)}
+                            disabled={postingId === movement.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500 text-amber-300 hover:text-slate-950 font-bold text-xs border border-amber-500/30 transition shadow-sm active:scale-95 disabled:opacity-50 whitespace-nowrap shrink-0"
+                          >
+                            {postingId === movement.id ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                <span>{isAr ? 'جاري الترحيل...' : 'Posting...'}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Receipt className="w-3.5 h-3.5" />
+                                <span>{isAr ? 'ترحيل القيد' : 'Post to Ledger'}</span>
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {isStockItemModalOpen && (
+        <StockItemModal
+          isAr={isAr}
+          products={products as any}
+          onClose={() => setIsStockItemModalOpen(false)}
+          onCreated={() => {
+            setNotification({ type: 'success', message: isAr ? 'تم إنشاء صنف المخزون' : 'Stock item created' });
+            setTimeout(() => setNotification(null), 6000);
+          }}
+        />
+      )}
+
+      {/* New Stock Adjustment Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 shadow-2xl space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  <Boxes className="w-5 h-5" />
+                </div>
+                <h3 className="text-lg font-bold text-white">
+                  {isAr ? 'تسجيل تسوية مخزون جديدة' : 'Record Stock Adjustment'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAdjustment} className="space-y-4">
+              {/* Warehouse */}
+              <div>
+                <label htmlFor="adj-warehouse-select" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isAr ? 'المستودع المستهدف' : 'Target Warehouse'} *
+                </label>
+                <select
+                  id="adj-warehouse-select"
+                  name="warehouse_id"
+                  value={formData.warehouse_id}
+                  onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                  required
+                >
+                  {warehouses.map((wh) => (
+                    <option key={wh.id} value={wh.id}>
+                      {wh.name} ({wh.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Product */}
+              <div>
+                <label htmlFor="adj-product-select" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isAr ? 'الصنف / المادة' : 'Product / Material'}
+                </label>
+                <select
+                  id="adj-product-select"
+                  name="product_id"
+                  value={formData.product_id}
+                  onChange={(e) => {
+                    const sel = products.find((p) => p.id === e.target.value);
+                    setFormData({
+                      ...formData,
+                      product_id: e.target.value,
+                      unit_cost: sel ? Number(sel.standard_cost) || 150 : formData.unit_cost,
+                    });
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                >
+                  <option value="">{isAr ? 'صنف عام / مادة قياسية' : 'Standard Stock Item'}</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.sku})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Movement Type */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="adj-movement-type-select" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'نوع الحركة' : 'Movement Type'}
+                  </label>
+                  <select
+                    id="adj-movement-type-select"
+                    name="movement_type"
+                    value={formData.movement_type}
+                    onChange={(e) => setFormData({ ...formData, movement_type: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="ADJUSTMENT">{isAr ? 'تسوية جردية (ADJUSTMENT)' : 'Adjustment'}</option>
+                    <option value="INBOUND">{isAr ? 'استلام إضافي (INBOUND)' : 'Inbound Receipt'}</option>
+                    <option value="OUTBOUND">{isAr ? 'صرف مخزني (OUTBOUND)' : 'Outbound Issue'}</option>
+                    <option value="SCRAP">{isAr ? 'إتلاف وتالف (SCRAP)' : 'Scrap / Loss'}</option>
+                  </select>
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label htmlFor="adj-quantity-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'الكمية (+ أو -)' : 'Quantity (+ / -)'} *
+                  </label>
+                  <input
+                    id="adj-quantity-input"
+                    name="quantity"
+                    type="number"
+                    step="any"
+                    value={formData.quantity}
+                    onChange={(e) => setFormData({ ...formData, quantity: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Unit Cost & Total Value Preview */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="adj-unit-cost-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'تكلفة الوحدة (SAR)' : 'Unit Cost (SAR)'} *
+                  </label>
+                  <input
+                    id="adj-unit-cost-input"
+                    name="unit_cost"
+                    type="number"
+                    step="0.01"
+                    value={formData.unit_cost}
+                    onChange={(e) => setFormData({ ...formData, unit_cost: Number(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    {isAr ? 'إجمالي التقييم التقديري' : 'Calculated Valuation'}
+                  </label>
+                  <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl py-2 px-3 text-xs font-mono font-bold text-amber-400">
+                    {formatCurrency(Math.abs(formData.quantity * formData.unit_cost), language)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div>
+                <label htmlFor="adj-reason-input" className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  {isAr ? 'السبب / الملاحظات' : 'Reason / Justification'}
+                </label>
+                <input
+                  id="adj-reason-input"
+                  name="reason"
+                  type="text"
+                  value={formData.reason}
+                  onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                  placeholder={isAr ? 'سبب إجراء التسوية المخزنية...' : 'Reason for stock adjustment...'}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2 px-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <DynamicFieldRenderer entity="stock_adjustment" values={adjustmentAttributes} onChange={setAdjustmentAttributes} isAr={isAr} />
+
+              {/* Footer Actions */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 transition"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95 disabled:opacity-50"
+                >
+                  {creating ? (isAr ? 'جاري الحفظ...' : 'Saving...') : (isAr ? 'حفظ التسوية' : 'Save Adjustment')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      <BulkImportModal isOpen={isBulkImportOpen} onClose={() => setIsBulkImportOpen(false)} defaultCategory="operations" />
+    </div>
+  );
+};

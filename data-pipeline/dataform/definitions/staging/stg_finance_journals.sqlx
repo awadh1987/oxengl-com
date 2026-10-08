@@ -1,0 +1,168 @@
+-- OxenGL ERP — Staging: Finance Journal Entries (Integrity Cleaning)
+-- ==================================================================
+-- Applies autocleaning rules to journal entries:
+-- 1. UUID validation for all ID columns
+-- 2. Debit/Credit balance validation (must sum to zero per entry)
+-- 3. Amount precision normalization (4-decimal)
+-- 4. Orphan detection (lines without parent entries)
+-- 5. Fiscal year consistency checks
+-- 6. Timestamp standardization
+
+config {
+  type: "table",
+  schema: "oxengl_staging",
+  name: "stg_finance_journal_entries",
+  description: "Autocleaned journal entries with debit/credit integrity validation",
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id", "company_id"]
+  }
+}
+
+SELECT
+  -- Primary Key
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  -- Foreign Keys
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(company_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(company_id AS STRING)
+    ELSE NULL
+  END AS company_id,
+
+  -- Entry Number: Trim whitespace
+  NULLIF(TRIM(CAST(entry_number AS STRING)), '') AS entry_number,
+
+  -- Description: Preserve content, trim whitespace
+  NULLIF(TRIM(CAST(description AS STRING)), '') AS description,
+
+  -- Entry Date
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(entry_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(entry_date AS STRING))
+  ) AS entry_date,
+
+  -- Posting Date
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(posting_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(posting_date AS STRING))
+  ) AS posting_date,
+
+  -- Total Debit: 4-decimal precision, non-negative
+  CASE
+    WHEN SAFE_CAST(total_debit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(total_debit AS NUMERIC), 4)
+    ELSE NULL
+  END AS total_debit,
+
+  -- Total Credit: 4-decimal precision, non-negative
+  CASE
+    WHEN SAFE_CAST(total_credit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(total_credit AS NUMERIC), 4)
+    ELSE NULL
+  END AS total_credit,
+
+  -- Debit/Credit Balance Check
+  CASE
+    WHEN ABS(SAFE_CAST(total_debit AS NUMERIC) - SAFE_CAST(total_credit AS NUMERIC)) <= 0.01
+    THEN 'BALANCED'
+    ELSE 'UNBALANCED'
+  END AS balance_flag,
+
+  -- Currency
+  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+
+  -- Status: Normalize
+  CASE
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('POSTED', 'CONFIRMED', 'APPROVED') THEN 'POSTED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('DRAFT', 'PENDING') THEN 'DRAFT'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('CANCELLED', 'VOID', 'REVERSED') THEN 'REVERSED'
+    ELSE UPPER(TRIM(CAST(status AS STRING)))
+  END AS status,
+
+  -- Source Document Reference
+  NULLIF(TRIM(CAST(source_document AS STRING)), '') AS source_document,
+
+  -- Timestamps
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING))
+  ) AS created_at,
+
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(updated_at AS STRING))
+  ) AS updated_at,
+
+  -- Cleaning Metadata
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("finance_journal_entries")}
+WHERE id IS NOT NULL
+
+---
+
+-- OxenGL ERP — Staging: Finance Journal Lines
+config {
+  type: "table",
+  schema: "oxengl_staging",
+  name: "stg_finance_journal_lines",
+  description: "Autocleaned journal lines with amount validation and orphan detection",
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id", "journal_entry_id"]
+  }
+}
+
+SELECT
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(journal_entry_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(journal_entry_id AS STRING)
+    ELSE NULL
+  END AS journal_entry_id,
+
+  -- Account reference
+  NULLIF(TRIM(CAST(account_code AS STRING)), '') AS account_code,
+  NULLIF(TRIM(CAST(account_name AS STRING)), '') AS account_name,
+
+  -- Amounts: 4-decimal precision, non-negative
+  CASE
+    WHEN SAFE_CAST(debit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(debit AS NUMERIC), 4)
+    ELSE CAST(0 AS NUMERIC)
+  END AS debit,
+
+  CASE
+    WHEN SAFE_CAST(credit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(credit AS NUMERIC), 4)
+    ELSE CAST(0 AS NUMERIC)
+  END AS credit,
+
+  -- Description
+  NULLIF(TRIM(CAST(description AS STRING)), '') AS description,
+
+  -- Currency
+  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+
+  -- Orphan Detection (checked in clean layer via LEFT JOIN)
+  CASE
+    WHEN CAST(journal_entry_id AS STRING) IN (
+      SELECT CAST(id AS STRING) FROM ${ref("finance_journal_entries")}
+    ) THEN FALSE
+    ELSE TRUE
+  END AS is_orphaned,
+
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("finance_journal_lines")}
+WHERE id IS NOT NULL

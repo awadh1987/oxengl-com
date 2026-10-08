@@ -1,0 +1,233 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { ShieldCheck, ArrowLeft, KeyRound, AlertCircle, RefreshCw } from 'lucide-react';
+
+interface MfaVerificationViewProps {
+  challengeToken?: string | null;
+  tenantSlug?: string;
+  email?: string;
+  onSuccess?: (tokens: { accessToken: string; refreshToken: string }) => void;
+  onCancel?: () => void;
+}
+
+export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
+  challengeToken,
+  tenantSlug,
+  email,
+  onSuccess,
+  onCancel,
+}) => {
+  const [otp, setOtp] = useState<string[]>(new Array(6).fill(''));
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    // Focus first input box automatically
+    if (inputRefs.current[0]) {
+      inputRefs.current[0].focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  const handleChange = (value: string, index: number) => {
+    if (!/^\d*$/.test(value)) return;
+
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setError(null);
+
+    // Auto-focus next field input loop
+    if (value !== '' && index < 5) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && otp[index] === '' && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text/plain').trim();
+    if (/^\d{6}$/.test(pastedData)) {
+      const digits = pastedData.split('');
+      setOtp(digits);
+      inputRefs.current[5]?.focus();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length !== 6) {
+      setError('Please enter all 6 digits of the TOTP code.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const twoFactorToken =
+        challengeToken ||
+        localStorage.getItem('oxengl_2fa_pending_token') ||
+        localStorage.getItem('oxengl_challenge_token');
+      if (!twoFactorToken) {
+        throw new Error('Your verification session has expired. Please sign in again.');
+      }
+
+      const activeTenantSlug =
+        tenantSlug ||
+        localStorage.getItem('oxengl_tenant_slug') ||
+        localStorage.getItem('tenant_slug') ||
+        'myon';
+      const response = await fetch('/api/v1/auth/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          two_factor_token: twoFactorToken,
+          code,
+          tenant_slug: activeTenantSlug,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.detail || 'Invalid or expired MFA authentication code');
+      }
+
+      const data = await response.json();
+      if (!data.access_token) {
+        throw new Error('Two-factor verification did not establish an authenticated session.');
+      }
+      const authTokens = {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token || '',
+      };
+      localStorage.removeItem('oxengl_2fa_pending_token');
+      localStorage.removeItem('oxengl_challenge_token');
+      if (onSuccess) {
+        onSuccess(authTokens);
+      } else {
+        localStorage.setItem('oxengl_access_token', authTokens.accessToken);
+        if (authTokens.refreshToken) {
+          localStorage.setItem('oxengl_refresh_token', authTokens.refreshToken);
+        } else {
+          localStorage.removeItem('oxengl_refresh_token');
+        }
+        window.location.href = '/dashboard';
+      }
+    } catch (err: any) {
+      setError(err.message || 'Verification failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = () => {
+    if (resendCooldown > 0) return;
+    setResendCooldown(60);
+    setError(null);
+    // Trigger resend endpoint if applicable
+  };
+
+  return (
+    <div className="flex min-h-dvh erp-viewport-root items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8 font-sans">
+      <div className="w-full max-w-md space-y-8 rounded-2xl bg-slate-900/90 p-8 shadow-2xl border border-slate-800 backdrop-blur-xl">
+        <div className="text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+            <ShieldCheck className="h-8 w-8 text-emerald-400" />
+          </div>
+          <h2 className="mt-5 text-2xl font-bold tracking-tight text-white">
+            Two-Factor Authentication
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Enter the 6-digit security code generated by your authenticator app for{' '}
+            <span className="text-slate-200 font-medium">{email || 'your account'}</span>.
+          </p>
+        </div>
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="flex justify-center gap-2.5 sm:gap-3" onPaste={handlePaste}>
+            {otp.map((data, index) => (
+              <input
+                key={index}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                className="h-13 w-12 sm:h-14 sm:w-13 rounded-xl bg-slate-950/80 text-center text-2xl font-bold text-white border border-slate-700/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 focus:outline-none transition-all shadow-inner"
+                value={data}
+                onChange={e => handleChange(e.target.value, index)}
+                onKeyDown={e => handleKeyDown(e, index)}
+                ref={el => { inputRefs.current[index] = el; }}
+                disabled={isLoading}
+              />
+            ))}
+          </div>
+
+          {error && (
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-400">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <button
+              type="submit"
+              disabled={isLoading || otp.join('').length !== 6}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-semibold text-white shadow-lg hover:from-emerald-500 hover:to-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {isLoading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Verifying Token...</span>
+                </>
+              ) : (
+                <>
+                  <KeyRound className="h-4 w-4" />
+                  <span>Authenticate Session</span>
+                </>
+              )}
+            </button>
+
+            {onCancel && (
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700/80 bg-slate-800/40 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-all"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Return to Login</span>
+              </button>
+            )}
+          </div>
+
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={resendCooldown > 0}
+              className="text-xs text-slate-500 hover:text-slate-400 disabled:opacity-50 transition-colors"
+            >
+              {resendCooldown > 0
+                ? `Resend security code in ${resendCooldown}s`
+                : "Didn't receive a prompt? Request backup code"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

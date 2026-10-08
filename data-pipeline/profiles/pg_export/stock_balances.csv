@@ -1,0 +1,1 @@
+id,tenant_id,warehouse_id,material_id,quantity_on_hand,quantity_reserved,quantity_available,unit_cost_moving_avg,total_valuation,last_revaluation_date

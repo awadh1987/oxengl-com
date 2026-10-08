@@ -1,0 +1,698 @@
+{
+  "table": "res_companies",
+  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/res_companies.csv",
+  "row_count": 5,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "08a6aca4-93b3-476c-9710-e8c5811db264",
+        "fb47be25-2f85-4908-9a8f-f0176ec2ca4d",
+        "48923f60-2eba-4d1b-b55d-23da78cb4d43",
+        "676c1824-384c-476e-8914-a21a1a57f5d2"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 16,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "Myon Economic Co Ltd",
+        "Test Tenant Alpha",
+        "Test Tenant Beta",
+        "Test Custom Domain Corp",
+        "Alwehda Alarabia Oil Services Co Ltd"
+      ]
+    },
+    "slug": {
+      "name": "slug",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 23,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "myon-contract-cloud",
+        "alpha_965e5e",
+        "beta_08a34f",
+        "test-custom-domain-corp",
+        "wac-ye"
+      ]
+    },
+    "tax_id": {
+      "name": "tax_id",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "commercial_registration": {
+      "name": "commercial_registration",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "currency": {
+      "name": "currency",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR"
+      ]
+    },
+    "subscription_tier": {
+      "name": "subscription_tier",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 12,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "PROFESSIONAL",
+        "PROFESSIONAL",
+        "PROFESSIONAL",
+        "PROFESSIONAL",
+        "PROFESSIONAL"
+      ]
+    },
+    "license_key": {
+      "name": "license_key",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "license_expires_at": {
+      "name": "license_expires_at",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "max_cost_centers": {
+      "name": "max_cost_centers",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 2,
+      "min_length": 2,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 5
+      },
+      "sample_values": [
+        "25",
+        "25",
+        "25",
+        "25",
+        "25"
+      ]
+    },
+    "theme_mode": {
+      "name": "theme_mode",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 6,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "CUSTOM",
+        "CUSTOM",
+        "CUSTOM",
+        "CUSTOM",
+        "CUSTOM"
+      ]
+    },
+    "ui_primary_color": {
+      "name": "ui_primary_color",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 40.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "#6366F1",
+        "#1E3A8A",
+        "#1E3A8A",
+        "#1E3A8A",
+        "#1E3A8A"
+      ]
+    },
+    "ui_logo_url": {
+      "name": "ui_logo_url",
+      "total_values": 5,
+      "null_count": 4,
+      "null_rate_pct": 80.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 100.0,
+      "max_length": 30806,
+      "min_length": 30806,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 1
+      },
+      "sample_values": [
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIsAAACUCAYAAACjmdqxAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAFnFSURBVHhe7b2HV1TZ1u79/Sv3vvfe9/Rp2zaHbm3b3OYcUUQUzAlzTmDOOWDOqK"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 80.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 5
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 12:40:16.603662+00",
+        "2026-09-28 12:40:16.603662+00",
+        "2026-09-28 14:05:01.104233+00",
+        "2026-09-28 13:26:02.595748+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 80.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 5
+      },
+      "sample_values": [
+        "2026-09-28 04:37:45.516762+00",
+        "2026-09-28 12:40:16.603662+00",
+        "2026-09-28 12:40:16.603662+00",
+        "2026-09-28 14:05:01.104233+00",
+        "2026-09-28 14:15:47.818456+00"
+      ]
+    },
+    "parent_id": {
+      "name": "parent_id",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "fiscal_calendar": {
+      "name": "fiscal_calendar",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 9,
+      "min_length": 9,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "gregorian",
+        "gregorian",
+        "gregorian",
+        "gregorian",
+        "gregorian"
+      ]
+    },
+    "fiscal_year_start_month": {
+      "name": "fiscal_year_start_month",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 5
+      },
+      "sample_values": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "tax_regime": {
+      "name": "tax_regime",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "KSA_VAT",
+        "KSA_VAT",
+        "KSA_VAT",
+        "KSA_VAT",
+        "KSA_VAT"
+      ]
+    },
+    "logo_url": {
+      "name": "logo_url",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "domain_slug": {
+      "name": "domain_slug",
+      "total_values": 5,
+      "null_count": 2,
+      "null_rate_pct": 40.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 23,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "myon-contract-cloud",
+        "test-custom-domain-corp",
+        "wac-ye"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 5
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 6,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "ACTIVE",
+        "ACTIVE",
+        "ACTIVE",
+        "ACTIVE",
+        "ACTIVE"
+      ]
+    },
+    "primary_color": {
+      "name": "primary_color",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 40.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "#f59e0b",
+        "#0ea5e9",
+        "#0ea5e9",
+        "#0ea5e9",
+        "#0ea5e9"
+      ]
+    },
+    "secondary_color": {
+      "name": "secondary_color",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 40.0,
+      "max_length": 7,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "#451a03",
+        "#0f172a",
+        "#0f172a",
+        "#0f172a",
+        "#0f172a"
+      ]
+    },
+    "wallpaper_url": {
+      "name": "wallpaper_url",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "background_url": {
+      "name": "background_url",
+      "total_values": 5,
+      "null_count": 5,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "custom_domain": {
+      "name": "custom_domain",
+      "total_values": 5,
+      "null_count": 3,
+      "null_rate_pct": 60.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 27,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "enterprise.customdomain.org",
+        "wac-ye.com"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "tax_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tax_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "commercial_registration",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "commercial_registration",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "currency",
+      "issue": "Single distinct value: SAR",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "subscription_tier",
+      "issue": "Single distinct value: PROFESSIONAL",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "license_key",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "license_key",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "license_expires_at",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "license_expires_at",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "max_cost_centers",
+      "issue": "Single distinct value: 25",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "theme_mode",
+      "issue": "Single distinct value: CUSTOM",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "ui_logo_url",
+      "issue": "High null rate: 80.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "ui_logo_url",
+      "issue": "Single distinct value: data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIsA",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "parent_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "parent_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "fiscal_calendar",
+      "issue": "Single distinct value: gregorian",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "fiscal_year_start_month",
+      "issue": "Single distinct value: 1",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "tax_regime",
+      "issue": "Single distinct value: KSA_VAT",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "logo_url",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "logo_url",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "status",
+      "issue": "Single distinct value: ACTIVE",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "wallpaper_url",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "wallpaper_url",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "background_url",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "background_url",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "custom_domain",
+      "issue": "High null rate: 60.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 8,
+    "warning": 10,
+    "info": 10
+  }
+}

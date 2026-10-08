@@ -1,0 +1,5 @@
+Alembic migrations for the OxenGL FastAPI/PostgreSQL backend.
+
+Run migrations from the application root:
+
+    .venv/bin/alembic -c Backend/alembic.ini upgrade head

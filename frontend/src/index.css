@@ -1,0 +1,1702 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *, .dark, .dark *));
+
+.fixed.inset-0 {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: max(0.75rem, env(safe-area-inset-top));
+}
+
+.fixed.inset-0 > :first-child:not(.erp-modal-shell) {
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  margin-block: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fixed.inset-0.items-start > :first-child:not(.erp-modal-shell) {
+  margin-block: 0;
+}
+
+.fixed.inset-0 header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.fixed.inset-0 footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+
+.erp-modal-shell {
+  display: flex;
+  max-height: calc(100vh - 1.5rem);
+  max-height: calc(100dvh - 1.5rem);
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.erp-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  flex: none;
+}
+
+.erp-modal-body {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.erp-modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  flex: none;
+  background-color: inherit;
+}
+
+:root {
+  --color-primary: #f97316;
+  --color-accent: #0f172a;
+  --primary-color: var(--color-primary, #f97316);
+  --secondary-color: var(--color-accent, #0f172a);
+  --font-family: 'Plus Jakarta Sans', 'Tajawal', 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+}
+
+#meayon-erp-app-root > .flex {
+  align-items: stretch;
+}
+
+#meayon-erp-app-root main > div > .space-y-5,
+#meayon-erp-app-root main > div > .space-y-6,
+#operations-log-view,
+#customer-invoicing-view,
+#financial-vouchers-view,
+#master-data-view,
+#crusher-ledger-view,
+#transporter-performance-view,
+#executive-dashboard-view {
+  animation: oxengl-view-in 180ms ease-out;
+}
+
+@keyframes oxengl-view-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@theme {
+  --color-brand-primary: var(--color-primary, #f97316);
+  --color-brand-accent: var(--color-accent, #0f172a);
+  --color-brand-primary-hover: #d94418;
+  --color-brand-primary-light: #fff2ed;
+  --color-brand-dark: #1A1A1A;
+  --color-brand-dark-surface: #242424;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-family);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  html[dir="rtl"],
+  html[lang="ar"],
+  html[dir="rtl"] body,
+  html[lang="ar"] body {
+    font-family: 'Tajawal', 'Noto Kufi Arabic', system-ui, -apple-system, sans-serif;
+  }
+
+  html[data-theme-mode="dark"],
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html[data-theme-mode="dark"] body,
+  html.dark body {
+    background: #020617; /* bg-slate-950 */
+    color: #e2e8f0; /* text-slate-200 */
+  }
+}
+
+/* ==========================================================================
+   RTL & Localization Standardization for Arabic & Financial Tables
+   ========================================================================== */
+
+/* Directional Base Alignment */
+[dir="rtl"] {
+  text-align: right;
+}
+
+[dir="ltr"] {
+  text-align: left;
+}
+
+/* Text alignment for table headers and body cells */
+[dir="rtl"] table th.text-start,
+[dir="rtl"] table td.text-start,
+[dir="rtl"] .text-start {
+  text-align: right !important;
+}
+
+[dir="ltr"] table th.text-start,
+[dir="ltr"] table td.text-start,
+[dir="ltr"] .text-start {
+  text-align: left !important;
+}
+
+[dir="rtl"] table th.text-end,
+[dir="rtl"] table td.text-end,
+[dir="rtl"] .text-end {
+  text-align: left !important;
+}
+
+[dir="ltr"] table th.text-end,
+[dir="ltr"] table td.text-end,
+[dir="ltr"] .text-end {
+  text-align: right !important;
+}
+
+/* Standard financial table numeric columns: right-aligned with monospace tabular figures */
+.financial-num,
+.tabular-nums,
+td.financial-num,
+th.financial-num {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* RTL-aware icon flipping for back/forward navigation */
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Fix 1: Global Mixed-Direction Text & Alphanumeric Isolation */
+.unicode-bidi-isolate {
+  unicode-bidi: isolate !important;
+}
+
+[dir="ltr"].unicode-bidi-isolate,
+[dir="rtl"] [dir="ltr"].unicode-bidi-isolate,
+[dir="rtl"] .unicode-bidi-isolate[dir="ltr"] {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  text-align: left;
+}
+
+.bidi-code,
+.bidi-metric,
+.bidi-ref {
+  direction: ltr !important;
+  unicode-bidi: isolate !important;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+/* Fix 2: Global Sidebar Drawers & Floating Action Button (FAB) Safe-Area Layering */
+.erp-mobile-fab {
+  position: fixed;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+  z-index: 40;
+}
+
+[dir="rtl"] .erp-mobile-fab,
+.erp-mobile-fab-left {
+  left: calc(1.5rem + env(safe-area-inset-left, 0px));
+  right: auto;
+}
+
+[dir="ltr"] .erp-mobile-fab,
+.erp-mobile-fab-right {
+  right: calc(1.5rem + env(safe-area-inset-right, 0px));
+  left: auto;
+}
+
+/* Mobile Drawer Safe Areas & Z-Index Layering */
+.erp-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.erp-sidebar-drawer {
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix 3: Global Status Badge & Metadata Pill Wrapping */
+.erp-badge-container,
+.erp-pill-container,
+.erp-metadata-container {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0.375rem !important;
+}
+
+@media (min-width: 768px) {
+  .erp-badge-container,
+  .erp-pill-container,
+  .erp-metadata-container {
+    gap: 0.5rem !important;
+  }
+}
+
+.erp-badge,
+.erp-pill {
+  white-space: nowrap !important;
+  flex-shrink: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+}
+
+.erp-badge-truncate,
+.erp-pill-truncate {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 200px;
+}
+
+/* Fix 4: Global Mobile Card Layout & Gutters */
+.erp-container-responsive,
+.erp-module-container {
+  width: 100% !important;
+  max-width: 80rem !important; /* max-w-7xl */
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding-left: 0.75rem !important; /* px-3 */
+  padding-right: 0.75rem !important;
+}
+
+@media (min-width: 640px) {
+  .erp-container-responsive,
+  .erp-module-container {
+    padding-left: 1rem !important; /* sm:px-4 */
+    padding-right: 1rem !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .erp-container-responsive,
+  .erp-module-container {
+    padding-left: 1.5rem !important; /* md:px-6 */
+    padding-right: 1.5rem !important;
+  }
+}
+
+.erp-card-grid-responsive {
+  display: grid !important;
+  grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  gap: 0.75rem !important; /* gap-3 */
+}
+
+@media (min-width: 640px) {
+  .erp-card-grid-responsive {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important; /* sm:grid-cols-2 */
+  }
+}
+
+@media (min-width: 1024px) {
+  .erp-card-grid-responsive {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important; /* lg:grid-cols-4 */
+    gap: 1rem !important; /* md:gap-4 */
+  }
+}
+
+/* Responsive Table Wrapper with Smooth Mobile Touch Scrolling */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix 5: Global Mobile Viewport Height Handling (h-dvh) */
+.erp-viewport-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.erp-viewport-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Fallback & normalization for mobile browser dynamic viewport */
+@supports (min-height: 100dvh) {
+  .min-h-screen {
+    min-height: 100dvh;
+  }
+}
+
+@supports (height: 100dvh) {
+  .h-screen {
+    height: 100dvh;
+  }
+}
+
+
+/* ==========================================================================
+   Phase 9: Neo-Classic High-Density ERP System (Enterprise Data Grid Style)
+   ========================================================================== */
+
+/* High-Density Global Grid Layouts (Designed to fit 50+ rows on 1080p screen) */
+.neo-grid-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 10.5px;
+  line-height: 1.15;
+}
+
+.neo-grid-table th {
+  padding: 2.5px 6px !important;
+  height: 21px !important;
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-inline-end: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: inset 0 -1px 0 rgba(148, 163, 184, 0.25);
+}
+
+.neo-grid-table td {
+  padding: 1px 6px !important;
+  height: 18px !important;
+  max-height: 19px !important;
+  font-size: 10.5px !important;
+  line-height: 1.15 !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  border-inline-end: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.neo-grid-table tbody tr {
+  height: 18px !important;
+  transition: background-color 70ms ease;
+}
+
+.neo-grid-table tbody tr:hover {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+.neo-grid-table tbody tr:nth-child(even) {
+  background-color: rgba(148, 163, 184, 0.045);
+}
+
+.neo-grid-table tbody tr:nth-child(odd) {
+  background-color: transparent;
+}
+
+/* Tight vertical screen real estate */
+.neo-compact-panel {
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  margin-bottom: 4px !important;
+}
+
+.neo-compact-row {
+  height: 20px !important;
+  line-height: 20px !important;
+}
+
+/* Classic Enterprise Module Icon Colors */
+.neo-icon-core {
+  color: #0284c7 !important; /* Sky Blue */
+  background: rgba(2, 132, 199, 0.14) !important;
+  border: 1px solid rgba(2, 132, 199, 0.35) !important;
+}
+
+.neo-icon-procurement {
+  color: #d97706 !important; /* Classic Amber / Gold */
+  background: rgba(217, 119, 6, 0.14) !important;
+  border: 1px solid rgba(217, 119, 6, 0.35) !important;
+}
+
+.neo-icon-logistics {
+  color: #059669 !important; /* Emerald / Transport Green */
+  background: rgba(5, 150, 105, 0.14) !important;
+  border: 1px solid rgba(5, 150, 105, 0.35) !important;
+}
+
+.neo-icon-finance {
+  color: #4f46e5 !important; /* Classic Sapphire / Indigo */
+  background: rgba(79, 70, 229, 0.14) !important;
+  border: 1px solid rgba(79, 70, 229, 0.35) !important;
+}
+
+.neo-icon-hr {
+  color: #9333ea !important; /* Purple / HR Personnel */
+  background: rgba(147, 51, 234, 0.14) !important;
+  border: 1px solid rgba(147, 51, 234, 0.35) !important;
+}
+
+.neo-icon-governance {
+  color: #e11d48 !important; /* Crimson / Executive Red */
+  background: rgba(225, 29, 72, 0.14) !important;
+  border: 1px solid rgba(225, 29, 72, 0.35) !important;
+}
+
+.neo-icon-vault {
+  color: #0284c7 !important; /* Statutory Cyan / Enterprise Blue */
+  background: rgba(2, 132, 199, 0.14) !important;
+  border: 1px solid rgba(2, 132, 199, 0.35) !important;
+}
+
+/* Classic Enterprise High-Contrast Action Buttons */
+.neo-action-btn {
+  height: 19px !important;
+  width: 19px !important;
+  padding: 1.5px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.neo-action-btn svg {
+  transition: filter 0.25s ease-in-out, transform 0.2s ease-in-out, opacity 0.25s ease-in-out;
+}
+
+.neo-action-btn:hover svg {
+  filter: brightness(1.3) drop-shadow(0 0 5px currentColor);
+  transform: scale(1.08);
+}
+
+.neo-btn-edit {
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.12) !important;
+  border: 1px solid rgba(2, 132, 199, 0.35) !important;
+}
+.neo-btn-edit:hover {
+  background: rgba(2, 132, 199, 0.28) !important;
+  border-color: #0284c7 !important;
+}
+
+.neo-btn-delete {
+  color: #e11d48 !important;
+  background: rgba(225, 29, 72, 0.12) !important;
+  border: 1px solid rgba(225, 29, 72, 0.35) !important;
+}
+.neo-btn-delete:hover {
+  background: rgba(225, 29, 72, 0.28) !important;
+  border-color: #e11d48 !important;
+}
+
+.neo-btn-verify {
+  color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+}
+.neo-btn-verify:hover {
+  background: rgba(16, 185, 129, 0.28) !important;
+  border-color: #10b981 !important;
+}
+
+.neo-btn-view {
+  color: #d97706 !important;
+  background: rgba(217, 119, 6, 0.12) !important;
+  border: 1px solid rgba(217, 119, 6, 0.35) !important;
+}
+.neo-btn-view:hover {
+  background: rgba(217, 119, 6, 0.28) !important;
+  border-color: #d97706 !important;
+}
+
+.neo-btn-download {
+  color: #2563eb !important;
+  background: rgba(37, 99, 235, 0.12) !important;
+  border: 1px solid rgba(37, 99, 235, 0.35) !important;
+}
+.neo-btn-download:hover {
+  background: rgba(37, 99, 235, 0.28) !important;
+  border-color: #2563eb !important;
+}
+
+/* Monospace alignment for data grids */
+.neo-cell-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+  font-size: 10.5px !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* High-Density Viewport: Maximizes vertical height to fit 50+ rows */
+.neo-data-viewport {
+  max-height: calc(100vh - 120px) !important;
+  max-height: calc(100dvh - 120px) !important;
+  min-height: 480px;
+  overflow-y: auto;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+.neo-data-viewport::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.neo-data-viewport::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 2px;
+}
+
+/* Global Density Mode Automatic Application */
+html[data-density="compact"] main {
+  padding: 4px 8px !important;
+}
+
+html[data-density="compact"] .space-y-6 {
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+html[data-density="compact"] .space-y-5 {
+  margin-top: 0.25rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+html[data-density="compact"] .space-y-4 {
+  margin-top: 0.2rem !important;
+  margin-bottom: 0.2rem !important;
+}
+
+html[data-density="compact"] .neo-compact-panel {
+  padding: 3.5px 7px !important;
+  margin-bottom: 3.5px !important;
+  border-radius: 6px !important;
+}
+
+html[data-density="compact"] .neo-compact-row {
+  height: 18px !important;
+  line-height: 18px !important;
+}
+
+/* Skeleton Loading Shimmer Animation */
+@keyframes oxengl-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(226, 232, 240, 0.6) 25%, rgba(241, 245, 249, 0.9) 50%, rgba(226, 232, 240, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: oxengl-shimmer 1.5s infinite;
+}
+
+.dark .skeleton-shimmer,
+[data-theme-mode="dark"] .skeleton-shimmer {
+  background: linear-gradient(90deg, rgba(30, 41, 59, 0.6) 25%, rgba(51, 65, 85, 0.8) 50%, rgba(30, 41, 59, 0.6) 75%);
+  background-size: 200% 100%;
+  animation: oxengl-shimmer 1.5s infinite;
+}
+
+/* ==========================================================================
+   OxenGL Enterprise Design System Custom Utilities & Keyframes
+   ========================================================================== */
+
+:root {
+  --tenant-primary: #f97316;
+  --tenant-primary-hover: #ea580c;
+  --tenant-primary-light: #fff7ed;
+  --tenant-secondary: #f59e0b;
+  --tenant-glow: rgba(249, 115, 22, 0.4);
+  --tenant-surface: rgba(249, 115, 22, 0.12);
+  --tenant-border: rgba(249, 115, 22, 0.35);
+  --bg-deep-dark: #020617; /* bg-slate-950 */
+  --bg-deep-surface: #0f172a; /* bg-slate-900 */
+  --bg-deep-elevated: #1e293b; /* bg-slate-800 */
+}
+
+/* ==========================================================================
+   Phase 1: Unified Dark Theme Overhaul & Interactive Glow Effects
+   ========================================================================== */
+
+/* Standard Elevated Card */
+.erp-card-elevated {
+  background-color: #0f172a; /* bg-slate-900 */
+  border: 1px solid #1e293b; /* border-slate-800 */
+  color: #e2e8f0; /* text-slate-200 */
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-card-elevated:hover {
+  border-color: #334155; /* border-slate-700 */
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+}
+
+/* Standard Interactive Card (with tactile glow) */
+.erp-card-interactive {
+  background-color: #0f172a; /* bg-slate-900 */
+  border: 1px solid #1e293b; /* border-slate-800 */
+  color: #e2e8f0; /* text-slate-200 */
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-card-interactive:hover {
+  border-color: rgba(14, 165, 233, 0.5); /* border-sky-500/50 */
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Tactile Interactive Glow Button */
+.erp-glow-btn {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.erp-glow-btn:hover {
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.5);
+}
+
+/* Glassmorphism Card Surface */
+.oxengl-glass-card {
+  background: rgba(15, 23, 42, 0.85); /* slate-900 with high blur */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid #1e293b; /* border-slate-800 */
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.oxengl-glass-card:hover {
+  border-color: rgba(14, 165, 233, 0.4);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(14, 165, 233, 0.25);
+}
+
+html[data-theme-mode="light"] .oxengl-glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #e2e8f0;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+/* Dotted Canvas Background for Workflow Builder */
+.canvas-dotted-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+html[data-theme-mode="light"] .canvas-dotted-grid {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.15) 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+/* Workflow Animated Directional Connector Pulses */
+@keyframes oxengl-pulse-flow {
+  0% {
+    stroke-dashoffset: 48;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-pulse-flow {
+  stroke-dasharray: 8 16;
+  animation: oxengl-pulse-flow 1.8s linear infinite;
+}
+
+/* Glowing Neon Borders */
+.glow-border-tenant {
+  box-shadow: 0 0 15px -2px var(--tenant-glow);
+  border-color: var(--tenant-primary);
+}
+
+/* Monospace Telemetry Digital Value */
+.telemetry-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  letter-spacing: -0.02em;
+}
+
+.export-preview-frame {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+
+.export-preview-paper {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  overflow: hidden;
+  width: min(794px, 100%);
+  min-height: 1123px;
+  aspect-ratio: 210 / 297;
+}
+
+.export-paper-landscape {
+  width: min(1123px, 100%);
+  min-height: 794px;
+  aspect-ratio: 297 / 210;
+}
+
+/* ==========================================================================
+   Print-Safe sRGB & Hex Color System for Invoices, Scale Tickets & PDF Export
+   Ensures html2canvas and print renderers never encounter oklab/oklch colors
+   ========================================================================== */
+
+:root,
+body,
+.print-container,
+.zatca-invoice-wrapper,
+#customer-tax-invoice-printable,
+#export-print-preview-content,
+#public-tax-invoice-container,
+.printable-ticket-page,
+.printable-voucher-page,
+[data-pdf-staging-container="true"] {
+  /* Slate */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  /* Gray */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+
+  /* Zinc */
+  --color-zinc-50: #fafafa;
+  --color-zinc-100: #f4f4f5;
+  --color-zinc-200: #e4e4e7;
+  --color-zinc-300: #d4d4d8;
+  --color-zinc-400: #a1a1aa;
+  --color-zinc-500: #71717a;
+  --color-zinc-600: #52525b;
+  --color-zinc-700: #3f3f46;
+  --color-zinc-800: #27272a;
+  --color-zinc-900: #18181b;
+  --color-zinc-950: #09090b;
+
+  /* Neutral */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+  --color-neutral-950: #0a0a0a;
+
+  /* Stone */
+  --color-stone-50: #fafaf9;
+  --color-stone-100: #f5f5f4;
+  --color-stone-200: #e7e5e4;
+  --color-stone-300: #d6d3d1;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #78716c;
+  --color-stone-600: #57534e;
+  --color-stone-700: #44403c;
+  --color-stone-800: #292524;
+  --color-stone-900: #1c1917;
+  --color-stone-950: #0c0a09;
+
+  /* Red */
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-300: #fca5a5;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-700: #b91c1c;
+  --color-red-800: #991b1b;
+  --color-red-900: #7f1d1d;
+  --color-red-950: #450a0a;
+
+  /* Orange */
+  --color-orange-50: #fff7ed;
+  --color-orange-100: #ffedd5;
+  --color-orange-200: #fed7aa;
+  --color-orange-300: #fdba74;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-orange-600: #ea580c;
+  --color-orange-700: #c2410c;
+  --color-orange-800: #9a3412;
+  --color-orange-900: #7c2d12;
+  --color-orange-950: #431407;
+
+  /* Amber */
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-700: #b45309;
+  --color-amber-800: #92400e;
+  --color-amber-900: #78350f;
+  --color-amber-950: #451a03;
+
+  /* Yellow */
+  --color-yellow-50: #fefce8;
+  --color-yellow-100: #fef9c3;
+  --color-yellow-200: #fef08a;
+  --color-yellow-300: #fde047;
+  --color-yellow-400: #facc15;
+  --color-yellow-500: #eab308;
+  --color-yellow-600: #ca8a04;
+  --color-yellow-700: #a16207;
+  --color-yellow-800: #854d0e;
+  --color-yellow-900: #713f12;
+  --color-yellow-950: #422006;
+
+  /* Lime */
+  --color-lime-50: #f7fee7;
+  --color-lime-100: #ecfccb;
+  --color-lime-200: #d9f99d;
+  --color-lime-300: #bef264;
+  --color-lime-400: #a3e635;
+  --color-lime-500: #84cc16;
+  --color-lime-600: #65a30d;
+  --color-lime-700: #4d7c0f;
+  --color-lime-800: #3f6212;
+  --color-lime-900: #365314;
+  --color-lime-950: #1a2e05;
+
+  /* Green */
+  --color-green-50: #f0fdf4;
+  --color-green-100: #dcfce7;
+  --color-green-200: #bbf7d0;
+  --color-green-300: #86efac;
+  --color-green-400: #4ade80;
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+  --color-green-700: #15803d;
+  --color-green-800: #166534;
+  --color-green-900: #14532d;
+  --color-green-950: #052e16;
+
+  /* Emerald */
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #6ee7b7;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-700: #047857;
+  --color-emerald-800: #065f46;
+  --color-emerald-900: #064e3b;
+  --color-emerald-950: #022c22;
+
+  /* Teal */
+  --color-teal-50: #f0fdfa;
+  --color-teal-100: #ccfbf1;
+  --color-teal-200: #99f6e4;
+  --color-teal-300: #5eead4;
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #0d9488;
+  --color-teal-700: #0f766e;
+  --color-teal-800: #115e59;
+  --color-teal-900: #134e4a;
+  --color-teal-950: #042f2e;
+
+  /* Cyan */
+  --color-cyan-50: #ecfeff;
+  --color-cyan-100: #cffafe;
+  --color-cyan-200: #a5f3fc;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-cyan-600: #0891b2;
+  --color-cyan-700: #0e7490;
+  --color-cyan-800: #155e75;
+  --color-cyan-900: #164e63;
+  --color-cyan-950: #083344;
+
+  /* Sky */
+  --color-sky-50: #f0f9ff;
+  --color-sky-100: #e0f2fe;
+  --color-sky-200: #bae6fd;
+  --color-sky-300: #7dd3fc;
+  --color-sky-400: #38bdf8;
+  --color-sky-500: #0ea5e9;
+  --color-sky-600: #0284c7;
+  --color-sky-700: #0369a1;
+  --color-sky-800: #075985;
+  --color-sky-900: #0c4a6e;
+  --color-sky-950: #082f49;
+
+  /* Blue */
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-blue-800: #1e40af;
+  --color-blue-900: #1e3a8a;
+  --color-blue-950: #172554;
+
+  /* Indigo */
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-indigo-800: #3730a3;
+  --color-indigo-900: #312e81;
+  --color-indigo-950: #1e1b4b;
+
+  /* Violet */
+  --color-violet-50: #f5f3ff;
+  --color-violet-100: #ede9fe;
+  --color-violet-200: #ddd6fe;
+  --color-violet-300: #c4b5fd;
+  --color-violet-400: #a78bfa;
+  --color-violet-500: #8b5cf6;
+  --color-violet-600: #7c3aed;
+  --color-violet-700: #6d28d9;
+  --color-violet-800: #5b21b6;
+  --color-violet-900: #4c1d95;
+  --color-violet-950: #2e1065;
+
+  /* Purple */
+  --color-purple-50: #faf5ff;
+  --color-purple-100: #f3e8ff;
+  --color-purple-200: #e9d5ff;
+  --color-purple-300: #d8b4fe;
+  --color-purple-400: #c084fc;
+  --color-purple-500: #a855f7;
+  --color-purple-600: #9333ea;
+  --color-purple-700: #7e22ce;
+  --color-purple-800: #6b21a8;
+  --color-purple-900: #581c87;
+  --color-purple-950: #3b0764;
+
+  /* Fuchsia */
+  --color-fuchsia-50: #fdf4ff;
+  --color-fuchsia-100: #fae8ff;
+  --color-fuchsia-200: #f5d0fe;
+  --color-fuchsia-300: #f0abfc;
+  --color-fuchsia-400: #e879f9;
+  --color-fuchsia-500: #d946ef;
+  --color-fuchsia-600: #c026d3;
+  --color-fuchsia-700: #a21caf;
+  --color-fuchsia-800: #86198f;
+  --color-fuchsia-900: #701a75;
+  --color-fuchsia-950: #4a044e;
+
+  /* Pink */
+  --color-pink-50: #fdf2f8;
+  --color-pink-100: #fce7f3;
+  --color-pink-200: #fbcfe8;
+  --color-pink-300: #f472b6;
+  --color-pink-400: #f472b6;
+  --color-pink-500: #ec4899;
+  --color-pink-600: #db2777;
+  --color-pink-700: #be185d;
+  --color-pink-800: #9d174d;
+  --color-pink-900: #831843;
+  --color-pink-950: #500724;
+
+  /* Rose */
+  --color-rose-50: #fff1f2;
+  --color-rose-100: #ffe4e6;
+  --color-rose-200: #fecdd3;
+  --color-rose-300: #fda4af;
+  --color-rose-400: #fb7185;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
+  --color-rose-700: #be123c;
+  --color-rose-800: #9f1239;
+  --color-rose-900: #881337;
+  --color-rose-950: #4c0519;
+
+  --color-black: #000000;
+  --color-white: #ffffff;
+}
+
+/* Explicit sRGB print-safe utility rules for transparent/opacity classes */
+.print-container .border-rose-500\/20,
+[data-pdf-staging-container="true"] .border-rose-500\/20 {
+  border-color: rgba(244, 63, 94, 0.2) !important;
+}
+
+.print-container .bg-rose-500\/5,
+[data-pdf-staging-container="true"] .bg-rose-500\/5 {
+  background-color: rgba(244, 63, 94, 0.05) !important;
+}
+
+.print-container .text-rose-500\/30,
+[data-pdf-staging-container="true"] .text-rose-500\/30 {
+  color: rgba(244, 63, 94, 0.3) !important;
+}
+
+.print-container .border-orange-500\/30,
+[data-pdf-staging-container="true"] .border-orange-500\/30 {
+  border-color: rgba(249, 115, 22, 0.3) !important;
+}
+
+.print-container .bg-orange-50\/80,
+[data-pdf-staging-container="true"] .bg-orange-50\/80 {
+  background-color: rgba(255, 247, 237, 0.8) !important;
+}
+
+.print-container .border-orange-200\/70,
+[data-pdf-staging-container="true"] .border-orange-200\/70 {
+  border-color: rgba(254, 215, 170, 0.7) !important;
+}
+
+.print-container .bg-slate-50\/70,
+[data-pdf-staging-container="true"] .bg-slate-50\/70 {
+  background-color: rgba(248, 250, 252, 0.7) !important;
+}
+
+.print-container .bg-emerald-500\/10,
+[data-pdf-staging-container="true"] .bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.print-container .border-emerald-500\/20,
+[data-pdf-staging-container="true"] .border-emerald-500\/20 {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.print-container .text-emerald-600,
+[data-pdf-staging-container="true"] .text-emerald-600 {
+  color: #059669 !important;
+}
+
+/* Ensure shadows never leak modern color-mix during canvas capture */
+[data-pdf-staging-container="true"] *,
+[data-pdf-staging-container="true"] *::before,
+[data-pdf-staging-container="true"] *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* ==========================================================================
+   Platform-Wide Interactive Hover-Lightable Icon Effect
+   ========================================================================== */
+.hover-lightable-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hover-lightable-icon img,
+.hover-lightable-icon svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon .icon-default {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon .icon-hover {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out, filter 0.3s ease-in-out, transform 0.2s ease-in-out;
+}
+
+.hover-lightable-icon:hover .icon-default,
+.group:hover .hover-lightable-icon .icon-default,
+.hover-lightable-container:hover .hover-lightable-icon .icon-default,
+button:hover .hover-lightable-icon .icon-default,
+a:hover .hover-lightable-icon .icon-default {
+  opacity: 0;
+}
+
+.hover-lightable-icon:hover .icon-hover,
+.group:hover .hover-lightable-icon .icon-hover,
+.hover-lightable-container:hover .hover-lightable-icon .icon-hover,
+button:hover .hover-lightable-icon .icon-hover,
+a:hover .hover-lightable-icon .icon-hover {
+  opacity: 1;
+}
+
+/* Single-icon illumination enhancement for buttons & controls */
+.hover-lightable-icon.single-icon,
+svg.hover-lightable-icon {
+  transition: filter 0.3s ease-in-out, transform 0.2s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.hover-lightable-icon.single-icon:hover,
+svg.hover-lightable-icon:hover,
+.group:hover .hover-lightable-icon.single-icon,
+.group:hover svg.hover-lightable-icon,
+button:hover .hover-lightable-icon.single-icon,
+button:hover > svg.hover-lightable-icon,
+a:hover .hover-lightable-icon.single-icon,
+a:hover > svg.hover-lightable-icon {
+  filter: brightness(1.3) drop-shadow(0 0 6px currentColor);
+}
+
+/* Custom Print Styles for Official Saudi Tax Invoices, Scale Tickets, Vouchers & Reports */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+
+  *,
+  *::before,
+  *::after {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Universal reset for print root & parent hierarchy */
+  html,
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  #root,
+  #meayon-erp-app-root,
+  main,
+  #customer-invoicing-view,
+  #operations-log-view,
+  #financial-vouchers-view,
+  #crusher-ledger-view,
+  #transporter-performance-view,
+  .app-view-container {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* Global UI Elements to Hide during printing */
+  header,
+  aside,
+  nav,
+  footer,
+  #app-sidebar-navigation,
+  #main-app-header,
+  #domain-navigation-switcher,
+  #notification-topbar,
+  #ai-assistant-widget,
+  #nav-ai-assistant-btn,
+  #nav-notifications-btn,
+  #nav-lang-toggle-btn,
+  #nav-role-switcher-btn,
+  #invoice-export-share-modal-backdrop,
+  .no-print,
+  button,
+  input,
+  select,
+  textarea,
+  [role="tablist"],
+  .tab-control,
+  .pagination-controls,
+  .search-filter-bar,
+  .action-buttons-bar,
+  #export-modal-sidebar,
+  .export-modal-header {
+    display: none !important;
+  }
+
+  /* Specific Printable Invoice & Document Containers: MUST BE VISIBLE */
+  .print-container,
+  .zatca-invoice-wrapper,
+  #customer-tax-invoice-printable,
+  #export-print-preview-content,
+  #public-tax-invoice-container,
+  .printable-ticket-page,
+  .printable-voucher-page {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .print-container *,
+  .zatca-invoice-wrapper *,
+  #customer-tax-invoice-printable *,
+  #export-print-preview-content *,
+  #public-tax-invoice-container * {
+    visibility: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* ----------------------------------------------------
+     PRINT ISOLATION: Primary Tax Invoice (Direct Page Print)
+     ---------------------------------------------------- */
+  body.printing-invoice #customer-invoicing-view > *:not(#customer-tax-invoice-printable):not(:has(#customer-tax-invoice-printable)) {
+    display: none !important;
+  }
+
+  /* ----------------------------------------------------
+     MODAL PRINT ISOLATION: Single Voucher Detail Modal
+     ---------------------------------------------------- */
+  body.printing-voucher-modal #financial-vouchers-view > *:not(#voucher-detail-modal-backdrop):not(:has(#voucher-detail-modal-backdrop)) {
+    display: none !important;
+  }
+
+  #voucher-detail-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    inset: auto !important;
+    z-index: auto !important;
+    display: block !important;
+  }
+
+  #voucher-detail-modal-backdrop > div {
+    position: static !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  #voucher-detail-modal-backdrop button,
+  #voucher-detail-modal-backdrop [role="toolbar"],
+  #voucher-detail-modal-backdrop .modal-footer-actions {
+    display: none !important;
+  }
+
+  /* ----------------------------------------------------
+     MODAL PRINT ISOLATION: Universal Export & Print Studio
+     ---------------------------------------------------- */
+  body.printing-export-modal #customer-invoicing-view > *:not(#export-print-modal-backdrop):not(:has(#export-print-modal-backdrop)),
+  body.printing-export-modal #operations-log-view > *:not(#export-print-modal-backdrop):not(:has(#export-print-modal-backdrop)) {
+    display: none !important;
+  }
+
+  #export-print-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    inset: auto !important;
+    z-index: auto !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  #export-print-modal-backdrop > div[role="dialog"],
+  #export-print-modal-backdrop > div {
+    position: static !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    height: auto !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  #export-print-modal-backdrop .flex-1 {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  #export-print-modal-backdrop [style*="scale"] {
+    transform: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+  }
+
+  #export-print-modal-backdrop button,
+  #export-print-modal-backdrop select,
+  #export-print-modal-backdrop input,
+  #export-print-modal-backdrop textarea,
+  #export-print-modal-backdrop [role="toolbar"],
+  #export-print-modal-backdrop #export-modal-sidebar,
+  #export-print-modal-backdrop .export-modal-header {
+    display: none !important;
+  }
+
+  /* ----------------------------------------------------
+     GLOBAL VIEW PRINT STANDARDIZATION
+     Stripping dark-mode backgrounds, cards, tables
+     ---------------------------------------------------- */
+  #crusher-ledger-view,
+  #financial-vouchers-view,
+  #transporter-performance-view,
+  #operations-log-view,
+  .app-view-container {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Override dark mode cards and tables across ledger/voucher/operations */
+  #crusher-ledger-view *,
+  #financial-vouchers-view *,
+  #transporter-performance-view *,
+  #operations-log-view * {
+    background-color: transparent !important;
+    color: #0f172a !important;
+  }
+
+  /* White document container */
+  #crusher-ledger-view .bg-\[\#141726\],
+  #financial-vouchers-view .bg-\[\#141726\],
+  #transporter-performance-view .bg-\[\#141726\],
+  #operations-log-view .bg-\[\#141726\],
+  .bg-\[\#141726\],
+  .bg-slate-900,
+  .erp-card-elevated,
+  .erp-card-interactive {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+  }
+
+  /* Standardized Print Tables */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 1px solid #cbd5e1 !important;
+    background-color: #ffffff !important;
+  }
+
+  thead tr,
+  th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  tbody tr {
+    background-color: #ffffff !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tbody tr:nth-child(even) {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  td {
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    padding: 5px 8px !important;
+  }
+
+  /* ----------------------------------------------------
+     PAGINATION & SINGLE-PAGE CONSTRAINTS
+     ---------------------------------------------------- */
+  .page-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
+
+  .page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .avoid-page-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Single Voucher & Scale Ticket Guaranteed 1-Page Fit */
+  .printable-ticket-page {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 270mm !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    overflow: hidden !important;
+    background: #ffffff !important;
+  }
+
+  #customer-tax-invoice-printable,
+  #public-tax-invoice-container {
+    display: block !important;
+    visibility: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+
+  .official-letterhead-print {
+    display: block !important;
+    border-bottom: 2px solid #0f172a !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .official-footer-print {
+    display: block !important;
+    border-top: 1.5px solid #cbd5e1 !important;
+    padding-top: 8px !important;
+    margin-top: 16px !important;
+  }
+}
+
+
+/* ==========================================================================
+   OXENGL PHASE 1: GLOBAL UI/UX TOKENS */
+/* Source: docs/GLOBAL_UI_UX_OVERHAUL_SPEC.md
+   Scope rule: the Deep Dark Theme is OPT-IN via `.platform-dark` (central platform only:
+   SuperAdmin Cockpit, global landing page). Tenant workspaces are NOT affected and keep
+   honouring tenant_branding (--color-primary, data-theme-mode, etc.).
+   ========================================================================== */
+
+/* --- Platform Deep Dark tokens (exposed as Tailwind utilities, e.g. bg-platform-void) --- */
+@theme {
+  --color-platform-void: #020617;      /* slate-950: base layer */
+  --color-platform-surface: #0f172a;   /* slate-900: elevated surfaces */
+  --color-platform-raised: #1e293b;    /* slate-800: inputs, hover rows */
+  --color-platform-border: #1e293b;    /* slate-800: hairlines */
+  --color-platform-text: #cbd5e1;      /* slate-300: body text */
+  --color-platform-muted: #94a3b8;     /* slate-400: secondary text */
+  --color-platform-accent: #f97316;    /* OxenGL signature orange (fixed, not tenant-overridable) */
+  --color-platform-accent-soft: #fb923c;
+  --color-platform-glow: #f59e0b;      /* amber-500: spotlight tail */
+}
+
+/* --- Opt-in central platform surface --- */
+.platform-dark {
+  --platform-spot-color: rgba(249, 115, 22, 0.14);
+  color-scheme: dark;
+  background-color: var(--color-platform-void);
+  color: var(--color-platform-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.platform-dark ::selection {
+  background-color: rgba(249, 115, 22, 0.3);
+  color: #fff;
+}
+
+.platform-dark ::-webkit-scrollbar { width: 10px; height: 10px; }
+.platform-dark ::-webkit-scrollbar-track { background: var(--color-platform-void); }
+.platform-dark ::-webkit-scrollbar-thumb {
+  background: var(--color-platform-raised);
+  border-radius: 9999px;
+  border: 2px solid var(--color-platform-void);
+}
+.platform-dark ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* --- Standard 2: Hover Spotlight (cursor-tracking radial glow) ---
+   Used by <SpotlightCard />. JS writes --spot-x / --spot-y on mousemove. */
+.oxen-spotlight {
+  --spot-x: 50%;
+  --spot-y: 50%;
+  isolation: isolate;
+}
+
+.oxen-spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(
+    420px circle at var(--spot-x) var(--spot-y),
+    var(--platform-spot-color, rgba(249, 115, 22, 0.14)),
+    rgba(245, 158, 11, 0.05) 40%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+
+.oxen-spotlight:hover::before,
+.oxen-spotlight:focus-within::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oxen-spotlight::before { transition: none; }
+}
+
+/* --- Fix 1: Mixed-direction text & alphanumeric isolation ---
+   <span class="ltr-isolate">V-1002</span>, <span class="ltr-isolate">16.80 KM</span> */
+.ltr-isolate {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.bidi-isolate {
+  unicode-bidi: isolate;
+}
+
+/* Keeps numeric columns aligned in RTL tables without flipping punctuation */
+.ltr-isolate-num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Fix 2: Safe-area helpers (requires viewport-fit=cover in index.html) ---
+   Registered with @utility so Tailwind variants work, e.g. lg:pb-safe. */
+@utility pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+@utility pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+@utility pl-safe { padding-left: env(safe-area-inset-left, 0px); }
+@utility pr-safe { padding-right: env(safe-area-inset-right, 0px); }
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+@utility top-safe { top: env(safe-area-inset-top, 0px); }
+@utility bottom-safe { bottom: env(safe-area-inset-bottom, 0px); }
+@utility bottom-safe-4 { bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+@utility bottom-safe-6 { bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+@utility mb-safe { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* --- Fix 5: Dynamic viewport height ---
+   Tailwind v4 ships h-dvh / min-h-dvh natively. These classes add a 100vh fallback
+   for browsers without dvh support. */
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-dvh-safe {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Global Modal & Dialog Responsive Overrides */
+.modal-container,
+dialog,
+[role="dialog"],
+.MuiDialog-paper,
+.ant-modal-content {
+  width: min(90vw, 1200px) !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  margin: auto !important;
+}

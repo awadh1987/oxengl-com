@@ -1,0 +1,12 @@
+core.repositoryformatversion=0
+core.filemode=true
+core.bare=false
+core.logallrefupdates=true
+remote.main.url=https://github.com/awadh1987/Oxen-gl.git
+remote.main.fetch=+refs/heads/*:refs/remotes/main/*
+remote.Oxen-gl.url=git remote add oxen-gl git@github.com:awadh1987/Oxen-gl.git
+remote.Oxen-gl.fetch=+refs/heads/*:refs/remotes/Oxen-gl/*
+branch.Oxen-gl/audited.vscode-merge-base=main/main
+branch.main.remote=main
+branch.main.merge=refs/heads/main
+branch.main.vscode-merge-base=main/main
