@@ -1105,7 +1105,7 @@ def check_cross_tenant_idor(
 async def root():
 	return {
 		"status": "online",
-		"message": "Meayon ERP backend API is running successfully",
+		"message": "oxen-gl backend API is running successfully",
 		"documentation": "/docs",
 	}
 
