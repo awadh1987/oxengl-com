@@ -548,12 +548,21 @@ async def send_message(
                 )
             )
             if tenant_setting is not None:
-                # Deliver strictly using tenant settings; do not fall back to platform superadmin
+                # Deliver strictly using tenant settings; any error immediately raises without falling back to platform credentials
                 await deliver(tenant_setting, destination, body)
                 return
 
-        setting = resolve_setting(db, tenant_id, channel)
-        await deliver(setting, destination, body)
+        # Deliver via platform setting only when no tenant-specific setting exists at all (e.g. system-level platform notifications)
+        platform_setting = db.scalar(
+            select(CommunicationSetting).where(
+                CommunicationSetting.tenant_id.is_(None),
+                CommunicationSetting.channel == channel,
+                CommunicationSetting.is_active.is_(True),
+            )
+        )
+        if platform_setting is None:
+            raise CommunicationError(f"No active {channel.upper()} communication provider is configured.")
+        await deliver(platform_setting, destination, body)
     finally:
         if owned_db:
             db.close()
