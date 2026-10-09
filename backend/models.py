@@ -76,6 +76,11 @@ class ResCompany(TimestampMixin, Base):
     ui_logo_url: Mapped[Optional[str]] = mapped_column(Text)
     features_override: Mapped[Optional[dict]] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=True)
     logo_url = Column(Text, nullable=True, default=None)
+    workspace_domain: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    signature_name: Mapped[Optional[str]] = mapped_column(String(100), default="Executive Administration", server_default=text("'Executive Administration'"), nullable=True)
+    signature_title: Mapped[Optional[str]] = mapped_column(String(100), default="Operations Team", server_default=text("'Operations Team'"), nullable=True)
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    custom_smtp_settings = Column(JSONB, nullable=True, default=None)
     is_active = Column(Boolean, default=True, server_default="true", nullable=False)
     status = Column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
     primary_color = Column(String(7), default="#0ea5e9", server_default="#0ea5e9", nullable=False)
@@ -287,6 +292,11 @@ class Tenant(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
     logo_url = Column(Text, nullable=True, default=None)
+    workspace_domain: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    signature_name: Mapped[Optional[str]] = mapped_column(String(100), default="Executive Administration", server_default=text("'Executive Administration'"), nullable=True)
+    signature_title: Mapped[Optional[str]] = mapped_column(String(100), default="Operations Team", server_default=text("'Operations Team'"), nullable=True)
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    custom_smtp_settings = Column(JSONB, nullable=True, default=None)
     features_override = Column(JSONB, default=dict, server_default=text("'{}'::jsonb"))
 
     def __init__(self, *args, **kwargs):
@@ -2147,6 +2157,12 @@ class MasterTenant(TimestampMixin, Base):
     paddle_subscription_id: Mapped[Optional[str]] = mapped_column(String(128), unique=True, nullable=True, index=True)
     license_expiry_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     features_override: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
+    logo_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    workspace_domain: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    signature_name: Mapped[Optional[str]] = mapped_column(String(100), default="Executive Administration", server_default=text("'Executive Administration'"), nullable=True)
+    signature_title: Mapped[Optional[str]] = mapped_column(String(100), default="Operations Team", server_default=text("'Operations Team'"), nullable=True)
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    custom_smtp_settings = Column(JSONB, nullable=True, default=None)
 
     @property
     def grade(self) -> str:

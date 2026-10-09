@@ -8,7 +8,7 @@
     ],
     "python.testing.pytestEnabled": false,
     "python.testing.unittestEnabled": true,
-    "python.defaultInterpreterPath": "/root/oxen-gl/backend/.venv/bin/python",
+    "python.defaultInterpreterPath": "/root/oxen_gl/backend/.venv/bin/python",
     "python.analysis.autoSearchPaths": true,
     "python.analysis.extraPaths": [
         "${workspaceFolder}",

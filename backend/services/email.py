@@ -307,3 +307,26 @@ def send_password_reset_email(
         from_name=from_name,
     )
 
+
+# Standardized multi-tenant transactional email engine re-exports
+try:
+    from app.services.email_service import (
+        EmailService,
+        resolve_tenant_branding,
+        dispatch_user_invitation,
+        dispatch_password_reset,
+        dispatch_system_instructions,
+        dispatch_security_alert,
+        dispatch_role_updated,
+    )
+except ImportError:
+    from backend.app.services.email_service import (
+        EmailService,
+        resolve_tenant_branding,
+        dispatch_user_invitation,
+        dispatch_password_reset,
+        dispatch_system_instructions,
+        dispatch_security_alert,
+        dispatch_role_updated,
+    )
+
