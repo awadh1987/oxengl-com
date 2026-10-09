@@ -1,0 +1,40 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<div style="display: inline-block; padding: 4px 10px; background-color: #FEF2F2; color: #991B1B; border-radius: 4px; font-size: 12px; font-weight: 600; margin-bottom: 16px;">
+  Security Notification
+</div>
+
+<h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px;">
+  New Sign-In Detected
+</h1>
+
+<p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+  Your account on <strong>{{ tenant.name }}</strong> was accessed from an unrecognized device or location:
+</p>
+
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; margin: 0 0 24px 0;">
+  <tr>
+    <td style="padding: 16px 20px; font-size: 13px; color: #334155; line-height: 1.6;">
+      <strong>Device/Client:</strong> {{ session.user_agent }}<br>
+      <strong>Time:</strong> {{ session.timestamp }}<br>
+      <strong>IP Address:</strong> {{ session.ip_address }}<br>
+      <strong>Location:</strong> {{ session.location | default('Unknown') }}
+    </td>
+  </tr>
+</table>
+
+<p style="font-size: 14px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
+  If this was you, you can ignore this alert. If you did not perform this login, revoke all active sessions immediately and secure your credentials.
+</p>
+
+<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 0 0 16px 0;">
+  <tr>
+    <td>
+      <a href="{{ secure_account_url }}" class="btn-primary" style="background-color: #DC2626;" target="_blank">
+        Review &amp; Lock Account
+      </a>
+    </td>
+  </tr>
+</table>
+{% endblock %}

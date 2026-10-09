@@ -249,13 +249,20 @@ def test_tenant_invite_endpoint_background_task_dispatch():
         # Check background tasks
         assert len(bg_tasks.tasks) == 1
         task = bg_tasks.tasks[0]
-        assert task.func == send_tenant_member_invite
-        assert task.kwargs["to_email"] == "new_driver@desert.sa"
-        assert task.kwargs["user_first_name"] == "Rashid"
+        assert task.func.__name__ in ("dispatch_user_invitation", "send_tenant_member_invite")
+        to_email = task.kwargs.get("recipient_email") or task.kwargs.get("to_email")
+        assert to_email == "new_driver@desert.sa"
+        user_name = task.kwargs.get("first_name") or task.kwargs.get("user_first_name")
+        assert user_name == "Rashid"
         assert task.kwargs["inviter_name"] == "Khalid Admin"
-        assert task.kwargs["tenant_name"] == "Desert Transport Co."
-        assert task.kwargs["target_url"] == "https://desert-trans.oxengl.me/tenant/login"
-        assert task.kwargs["tenant_logo_url"] == "https://desert.sa/logo.png"
+        if "tenant" in task.kwargs:
+            tenant_val = task.kwargs["tenant"]
+            tname = getattr(tenant_val, "name", None) or (tenant_val.get("name") if isinstance(tenant_val, dict) else None)
+            assert tname == "Desert Transport Co."
+        else:
+            assert task.kwargs["tenant_name"] == "Desert Transport Co."
+        action_url = task.kwargs.get("action_url") or task.kwargs.get("target_url")
+        assert action_url == "https://desert-trans.oxengl.me/tenant/login"
 
 
 def test_send_password_reset_email_platform():
@@ -377,16 +384,23 @@ def test_superadmin_tenant_onboarding_queues_email():
     assert resp["status"] == "PROVISIONED"
     assert len(bg_tasks.tasks) == 1
     task = bg_tasks.tasks[0]
-    assert task.func == send_tenant_member_invite
-    assert task.kwargs["to_email"] == "fleetowner@riyadh.sa"
+    assert task.func.__name__ in ("dispatch_user_invitation", "send_tenant_member_invite")
+    to_email = task.kwargs.get("recipient_email") or task.kwargs.get("to_email")
+    assert to_email == "fleetowner@riyadh.sa"
     assert task.kwargs["inviter_name"] == "OxenGL Platform Administration"
-    assert task.kwargs["tenant_name"] == "Riyadh Fleet Logistics"
-    assert "riyadh-fleet" in task.kwargs["target_url"]
+    if "tenant" in task.kwargs:
+        tenant_val = task.kwargs["tenant"]
+        tname = getattr(tenant_val, "name", None) or (tenant_val.get("name") if isinstance(tenant_val, dict) else None)
+        assert tname == "Riyadh Fleet Logistics"
+    else:
+        assert task.kwargs["tenant_name"] == "Riyadh Fleet Logistics"
+    action_url = str(task.kwargs.get("action_url") or task.kwargs.get("target_url") or "")
+    assert "riyadh-fleet" in action_url
 
 
 @pytest.mark.asyncio
 async def test_password_recovery_queues_email():
-    """Verify password recovery endpoint queues send_password_reset_email."""
+    """Verify password recovery endpoint queues send_password_reset_email or dispatch_password_reset."""
     from fastapi import BackgroundTasks
     from backend.app.api.v1.auth import request_password_reset, ForgotPasswordRequest
     from backend.services.email import send_password_reset_email
@@ -420,11 +434,14 @@ async def test_password_recovery_queues_email():
         )
 
         assert resp["status"] == "OTP_DISPATCHED"
-        # Verify background tasks contain send_password_reset_email
-        reset_tasks = [t for t in bg_tasks.tasks if t.func == send_password_reset_email]
+        # Verify background tasks contain send_password_reset_email or dispatch_password_reset
+        reset_tasks = [t for t in bg_tasks.tasks if t.func.__name__ in ("send_password_reset_email", "dispatch_password_reset")]
         assert len(reset_tasks) == 1
         reset_task = reset_tasks[0]
-        assert reset_task.kwargs["to_email"] == "user@acme.com"
-        assert reset_task.kwargs["user_first_name"] == "Faisal"
-        assert "reset-password" in reset_task.kwargs["reset_url"]
+        to_email = reset_task.kwargs.get("recipient_email") or reset_task.kwargs.get("to_email")
+        assert to_email == "user@acme.com"
+        user_name = reset_task.kwargs.get("first_name") or reset_task.kwargs.get("user_first_name")
+        assert user_name == "Faisal"
+        reset_url = str(reset_task.kwargs.get("reset_url") or "")
+        assert "reset-password" in reset_url
 

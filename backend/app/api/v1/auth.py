@@ -439,7 +439,7 @@ async def request_password_reset(
     logger.info("[PASSWORD RECOVERY] verification code issued for a registered account (workspace=%s)", raw_slug)
 
     # Dispatch standard password reset notification email
-    from backend.services.email import send_password_reset_email
+    from app.services.email_service import dispatch_password_reset, resolve_tenant_branding
 
     first_name = "there"
     if 'chk' in locals() and chk:
@@ -448,15 +448,31 @@ async def request_password_reset(
             first_name = name_val.split()[0]
 
     is_platform = (raw_slug == "master" or not raw_slug or reset_tenant_id is None)
-    tenant_display = company_name if (not is_platform and company_name and company_name != "OxenGL Enterprise") else None
+    tenant_obj = None
+    if not is_platform and reset_tenant_id:
+        try:
+            from backend.models import ResCompany
+            tenant_obj = db.query(ResCompany).filter(ResCompany.id == reset_tenant_id).first()
+        except Exception:
+            tenant_obj = None
+
+    tenant_brand = resolve_tenant_branding(tenant_obj) if tenant_obj else resolve_tenant_branding({
+        "name": company_name or "OxenGL Enterprise",
+        "slug": raw_slug or "master",
+    })
+
+    client_ip = request.client.host if (request and request.client) else "Undisclosed"
+    custom_smtp = getattr(tenant_obj, "custom_smtp_settings", None) if tenant_obj else None
 
     background_tasks.add_task(
-        send_password_reset_email,
-        to_email=norm_email,
-        user_first_name=first_name,
+        dispatch_password_reset,
+        recipient_email=norm_email,
+        first_name=first_name,
         reset_url=recovery_link,
-        is_platform=is_platform,
-        tenant_name=tenant_display,
+        request_ip=client_ip,
+        tenant=tenant_brand,
+        expiry_minutes=30,
+        custom_smtp=custom_smtp,
     )
 
     # Compile HTML recovery email template via Jinja2 (legacy fallback)
@@ -478,7 +494,12 @@ async def request_password_reset(
 @router.post("/auth/reset-password", status_code=status.HTTP_200_OK)
 @router.post("/password-reset-verify", status_code=status.HTTP_200_OK)
 @router.post("/auth/password-reset-verify", status_code=status.HTTP_200_OK)
-async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Session = Depends(get_db)):
+async def confirm_password_reset(
+    payload: ResetPasswordConfirmRequest,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
     """
     Password Reset Confirmation Endpoint.
     Validates either dynamic 6-digit Redis OTP (via VerificationService) or
@@ -653,6 +674,59 @@ async def confirm_password_reset(payload: ResetPasswordConfirmRequest, db: Sessi
     except Exception as err:
         db.rollback()
         logger.error("Error purging reset token (%s)", type(err).__name__)
+
+    # 6. Dispatch Security Alert via BackgroundTasks
+    try:
+        try:
+            from backend.app.services.email_service import dispatch_security_alert, resolve_tenant_branding
+        except ImportError:
+            from app.services.email_service import dispatch_security_alert, resolve_tenant_branding
+        from backend.models import ResCompany, ResUser
+
+        client_ip = request.headers.get("x-forwarded-for")
+        if client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+        elif request.client:
+            client_ip = request.client.host
+        else:
+            client_ip = "127.0.0.1"
+
+        user_agent = request.headers.get("user-agent", "Unknown Device/Browser")
+
+        session_info = {
+            "user_agent": user_agent,
+            "ip_address": client_ip,
+            "location": "Detected IP Session",
+            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+        }
+
+        # Resolve tenant branding
+        company = None
+        if raw_slug and raw_slug != "master":
+            company = db.query(ResCompany).filter(
+                (ResCompany.schema_name == raw_slug) | (ResCompany.domain_slug == raw_slug)
+            ).first()
+        if not company and norm_email:
+            user_row = db.query(ResUser).filter(ResUser.email.ilike(norm_email)).first()
+            if user_row and user_row.company_id:
+                company = db.query(ResCompany).filter(ResCompany.id == user_row.company_id).first()
+
+        tenant_brand = resolve_tenant_branding(company)
+        domain = getattr(company, "workspace_domain", None) or getattr(tenant_brand, "workspace_domain", None) or "portal.oxengl.com"
+        base_domain = f"https://{domain}" if not str(domain).startswith("http") else str(domain)
+        secure_account_url = f"{base_domain}/settings/security"
+        custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+
+        background_tasks.add_task(
+            dispatch_security_alert,
+            recipient_email=norm_email,
+            session=session_info,
+            secure_account_url=secure_account_url,
+            tenant=tenant_brand,
+            custom_smtp=custom_smtp,
+        )
+    except Exception as sec_err:
+        logger.warning("Failed to queue security alert for %s: %s", _masked_identifier(norm_email), sec_err)
 
     logger.info("[PASSWORD RESET] Password updated for recipient %s across %s record(s).", _masked_identifier(norm_email), updated_count)
     return {

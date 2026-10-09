@@ -163,6 +163,27 @@ class InviteMemberRequest(BaseModel):
     department: Optional[str] = "Operations"
 
 
+class TeamMemberUpdateRequest(BaseModel):
+    role: Optional[str] = Field(None, description="New role for member")
+    department: Optional[str] = Field(None, description="Department for member")
+    full_name: Optional[str] = Field(None, description="Member full name")
+
+
+class InstructionStep(BaseModel):
+    title: str = Field(..., description="Step title")
+    description: str = Field(..., description="Step description")
+
+
+class SystemInstructionsBroadcastRequest(BaseModel):
+    target_user_ids: Optional[List[str]] = Field(None, description="Optional target user UUIDs")
+    target_emails: Optional[List[EmailStr]] = Field(None, description="Optional target user emails")
+    instruction_title: str = Field(..., description="Title of the SOP or instructions")
+    instruction_summary: str = Field(..., description="Summary of the instructions")
+    steps: List[InstructionStep] = Field(..., description="Ordered list of instruction steps")
+    action_url: Optional[str] = Field(None, description="Optional action CTA URL")
+    button_label: Optional[str] = Field("Open Workspace", description="Action button label")
+
+
 class SettingsUpdateRequest(BaseModel):
     general: Optional[Dict[str, Any]] = None
     webhooks: Optional[Dict[str, Any]] = None
@@ -293,11 +314,10 @@ def invite_team_member(
         increment_tenant_seat_usage(db, target_uuid)
 
     # Resolve tenant details and dispatch invitation email asynchronously via BackgroundTasks
-    from backend.services.email import send_tenant_member_invite
+    from app.services.email_service import dispatch_user_invitation, resolve_tenant_branding
 
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
-    tenant_name = (company.name if company and company.name else None) or "Workspace"
-    tenant_logo_url = (getattr(company, "ui_logo_url", None) or getattr(company, "logo_url", None)) if company else None
+    tenant_brand = resolve_tenant_branding(company)
 
     first_name = (payload.full_name.strip().split()[0] if payload.full_name else "Team Member")
     inviter_name = current_user.full_name or current_user.email or "Workspace Administrator"
@@ -309,14 +329,19 @@ def invite_team_member(
     else:
         target_url = f"{base_url}/tenant/login"
 
+    custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+
     background_tasks.add_task(
-        send_tenant_member_invite,
-        to_email=norm_email,
-        user_first_name=first_name,
+        dispatch_user_invitation,
+        recipient_email=norm_email,
+        first_name=first_name,
+        role=assigned_role,
+        action_url=target_url,
         inviter_name=inviter_name,
-        tenant_name=tenant_name,
-        target_url=target_url,
-        tenant_logo_url=tenant_logo_url,
+        tenant=tenant_brand,
+        temp_password=temp_pw,
+        expiry_hours=48,
+        custom_smtp=custom_smtp,
     )
 
     member_data = {
@@ -366,6 +391,201 @@ def delete_team_member(
     db.commit()
 
     return {"success": True, "message": f"Member {removed_name} removed."}
+
+
+@router.put("/team/{member_id}", status_code=status.HTTP_200_OK)
+@router.patch("/team/{member_id}", status_code=status.HTTP_200_OK)
+def update_team_member(
+    member_id: str,
+    payload: TeamMemberUpdateRequest,
+    background_tasks: BackgroundTasks,
+    current_user: ResUser = Depends(require_tenant_admin),
+    db: Session = Depends(get_db),
+):
+    """Updates team member role and properties and dispatches role update notification."""
+    target_uuid = _caller_tenant_id(current_user)
+    try:
+        user_uuid = uuid.UUID(member_id)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid member UUID format")
+
+    user = db.query(ResUser).filter(
+        ResUser.id == user_uuid,
+        ResUser.company_id == target_uuid,
+    ).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found")
+
+    old_role = user.role
+    role_changed = False
+
+    role_mapping = {
+        "admin": "Admin",
+        "super_admin": "Super_Admin",
+        "coo": "COO",
+        "ceo": "CEO",
+        "accountant": "Accountant",
+        "data_entry": "Data_Entry",
+        "user": "Data_Entry",
+        "guest": "Guest",
+    }
+
+    if payload.role:
+        raw_role = payload.role.strip().lower()
+        assigned_role = role_mapping.get(raw_role, payload.role.strip())
+        if assigned_role == "Super_Admin" and not is_super_admin_authorized(current_user, None):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only platform Super Admins may assign the Super_Admin role.",
+            )
+        if assigned_role != user.role:
+            user.role = assigned_role
+            role_changed = True
+
+    if payload.full_name is not None:
+        user.full_name = payload.full_name.strip()
+
+    user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(user)
+
+    if role_changed and user.email:
+        try:
+            from backend.app.services.email_service import dispatch_role_updated, resolve_tenant_branding
+        except ImportError:
+            from app.services.email_service import dispatch_role_updated, resolve_tenant_branding
+
+        company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
+        tenant_brand = resolve_tenant_branding(company)
+        first_name = (user.full_name or "").strip().split()[0] if user.full_name else "Team Member"
+        modifier_name = current_user.full_name or current_user.email or "Workspace Administrator"
+        domain = getattr(company, "workspace_domain", None) or getattr(tenant_brand, "workspace_domain", None) or "portal.oxengl.com"
+        workspace_url = f"https://{domain}" if not str(domain).startswith("http") else str(domain)
+        effective_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+
+        target_email = str(user.email)
+        assigned_role_name = str(user.role or "Member")
+        modifier_display = str(current_user.full_name or current_user.email or "Workspace Administrator")
+
+        background_tasks.add_task(
+            dispatch_role_updated,
+            recipient_email=target_email,
+            first_name=first_name,
+            modifier_name=modifier_display,
+            new_role=assigned_role_name,
+            workspace_url=workspace_url,
+            tenant=tenant_brand,
+            effective_date=effective_date,
+            custom_smtp=custom_smtp,
+        )
+
+    return {
+        "success": True,
+        "message": f"Team member {user.full_name or user.email} updated.",
+        "member": {
+            "id": str(user.id),
+            "tenant_id": str(target_uuid),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": (user.role or "user").lower(),
+            "department": payload.department or "Operations",
+            "updated_at": user.updated_at.isoformat() if user.updated_at else datetime.now(timezone.utc).isoformat(),
+        },
+    }
+
+
+@router.post("/team/notify-instructions", status_code=status.HTTP_200_OK)
+@router.post("/control/team/notify-instructions", status_code=status.HTTP_200_OK)
+def notify_system_instructions(
+    payload: SystemInstructionsBroadcastRequest,
+    background_tasks: BackgroundTasks,
+    current_user: ResUser = Depends(require_tenant_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    Administrative broadcast endpoint: dispatches system SOP instructions to selected
+    team members via branded email notifications.
+    """
+    target_uuid = _caller_tenant_id(current_user)
+    company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
+
+    try:
+        from backend.app.services.email_service import dispatch_system_instructions, resolve_tenant_branding
+    except ImportError:
+        from app.services.email_service import dispatch_system_instructions, resolve_tenant_branding
+
+    tenant_brand = resolve_tenant_branding(company)
+    custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+
+    # Collect recipient list
+    recipients: List[Dict[str, str]] = []
+    seen_emails = set()
+
+    if payload.target_emails:
+        for em in payload.target_emails:
+            clean_em = str(em).strip().lower()
+            if clean_em and clean_em not in seen_emails:
+                seen_emails.add(clean_em)
+                u = db.query(ResUser).filter(
+                    ResUser.company_id == target_uuid,
+                    ResUser.email.ilike(clean_em),
+                ).first()
+                first_name = (u.full_name.strip().split()[0] if u and u.full_name else "Team Member")
+                recipients.append({"email": clean_em, "first_name": first_name})
+
+    if payload.target_user_ids:
+        for uid_str in payload.target_user_ids:
+            try:
+                uid = uuid.UUID(uid_str)
+                u = db.query(ResUser).filter(
+                    ResUser.id == uid,
+                    ResUser.company_id == target_uuid,
+                ).first()
+                if u and u.email:
+                    clean_em = u.email.strip().lower()
+                    if clean_em not in seen_emails:
+                        seen_emails.add(clean_em)
+                        first_name = (u.full_name.strip().split()[0] if u and u.full_name else "Team Member")
+                        recipients.append({"email": clean_em, "first_name": first_name})
+            except Exception:
+                continue
+
+    if not recipients:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No valid recipient emails or user IDs provided for the workspace.",
+        )
+
+    # Format steps
+    formatted_steps = [{"title": s.title, "description": s.description} for s in payload.steps]
+
+    action_url = payload.action_url
+    if not action_url:
+        domain = getattr(company, "workspace_domain", None) or getattr(tenant_brand, "workspace_domain", None) or "portal.oxengl.com"
+        action_url = f"https://{domain}" if not str(domain).startswith("http") else str(domain)
+
+    # Queue background task for each recipient
+    for r in recipients:
+        background_tasks.add_task(
+            dispatch_system_instructions,
+            recipient_email=r["email"],
+            first_name=r["first_name"],
+            instruction_title=payload.instruction_title,
+            instruction_summary=payload.instruction_summary,
+            steps=formatted_steps,
+            tenant=tenant_brand,
+            action_url=action_url,
+            button_label=payload.button_label or "Open Workspace",
+            custom_smtp=custom_smtp,
+        )
+
+    return {
+        "success": True,
+        "message": f"System instructions queued for {len(recipients)} recipient(s).",
+        "recipients_count": len(recipients),
+        "recipients": [r["email"] for r in recipients],
+    }
 
 
 # ==============================================================================

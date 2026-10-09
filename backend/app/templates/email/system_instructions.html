@@ -1,0 +1,57 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px;">
+  {{ instruction_title | default('Standard Operating Instructions') }}
+</h1>
+
+<p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+  Hello <strong>{{ user.first_name }}</strong>,
+</p>
+
+<p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
+  {{ instruction_summary }}
+</p>
+
+<!-- Step-by-Step Card -->
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; margin: 0 0 28px 0;">
+  <tr>
+    <td style="padding: 20px 24px;">
+      <div style="font-size: 13px; font-weight: 700; color: #0F172A; margin-bottom: 14px; text-transform: uppercase;">
+        Required Steps:
+      </div>
+      
+      <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+        {% for step in steps %}
+        <tr>
+          <td valign="top" style="width: 28px; padding-bottom: 12px;">
+            <div style="width: 20px; height: 20px; background-color: #0F172A; color: #FFFFFF; border-radius: 50%; font-size: 11px; font-weight: 700; text-align: center; line-height: 20px;">
+              {{ loop.index }}
+            </div>
+          </td>
+          <td valign="top" style="padding-bottom: 12px; font-size: 14px; color: #334155; line-height: 1.5;">
+            <strong>{{ step.title }}:</strong> {{ step.description }}
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </td>
+  </tr>
+</table>
+
+{% if action_url %}
+<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 0 0 28px 0;">
+  <tr>
+    <td align="center">
+      <a href="{{ action_url }}" class="btn-primary" target="_blank">
+        {{ button_label | default('Open OxenGL Workspace') }}
+      </a>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<p style="font-size: 13px; line-height: 1.5; color: #64748B; margin: 0;">
+  If you have questions about these guidelines, reply directly to this email to reach your administrator.
+</p>
+{% endblock %}

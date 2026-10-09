@@ -217,20 +217,24 @@ def provision_tenant(
     db.refresh(company)
 
     # Dispatch onboarding invitation to the initial tenant owner
-    from backend.services.email import send_tenant_member_invite
+    from app.services.email_service import dispatch_user_invitation, resolve_tenant_branding
 
     owner_email = payload.owner_email or f"admin@{clean_slug}.oxengl.com"
     first_name = payload.name.split()[0] if payload.name else "Admin"
     activation_url = f"https://{clean_slug}.oxengl.me/tenant/login"
 
+    tenant_brand = resolve_tenant_branding(company)
+
     background_tasks.add_task(
-        send_tenant_member_invite,
-        to_email=owner_email,
-        user_first_name=first_name,
+        dispatch_user_invitation,
+        recipient_email=owner_email,
+        first_name=first_name,
+        role="Workspace Owner",
+        action_url=activation_url,
         inviter_name="OxenGL Platform Administration",
-        tenant_name=payload.name,
-        target_url=activation_url,
-        tenant_logo_url=None,
+        tenant=tenant_brand,
+        temp_password=None,
+        expiry_hours=48,
     )
 
     rls_schema = f"tenant_{clean_slug.replace('-', '_')}"

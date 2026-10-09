@@ -374,7 +374,7 @@ def deploy_register_new_tenant(
     db.commit()
 
     # Dispatch onboarding invitation to the initial tenant owner
-    from backend.services.email import send_tenant_member_invite
+    from app.services.email_service import dispatch_user_invitation, resolve_tenant_branding
 
     workspace_url = f"https://{slug_cleaned}.{os.getenv('DOMAIN', 'oxengl.me').strip()}/tenant/login"
     first_name = norm_email.split('@')[0].capitalize()
@@ -383,14 +383,21 @@ def deploy_register_new_tenant(
         if len(parts) > 1:
             first_name = parts[0]
 
+    tenant_brand = resolve_tenant_branding(new_company) if new_company else resolve_tenant_branding({
+        "name": company_name or slug_cleaned.capitalize(),
+        "slug": slug_cleaned,
+    })
+
     background_tasks.add_task(
-        send_tenant_member_invite,
-        to_email=norm_email,
-        user_first_name=first_name,
+        dispatch_user_invitation,
+        recipient_email=norm_email,
+        first_name=first_name,
+        role="Super Admin",
+        action_url=workspace_url,
         inviter_name="OxenGL Platform Administration",
-        tenant_name=company_name or slug_cleaned.capitalize(),
-        target_url=workspace_url,
-        tenant_logo_url=None,
+        tenant=tenant_brand,
+        temp_password=raw_password,
+        expiry_hours=48,
     )
 
     return {

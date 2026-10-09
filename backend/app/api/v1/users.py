@@ -1155,6 +1155,7 @@ def soft_delete_tenant_user(
 def update_tenant_user_role(
     user_id: str,
     payload: UpdateRoleRequest,
+    background_tasks: BackgroundTasks,
     actor: IamActor = Depends(require_iam_admin),
     db: Session = Depends(get_db),
 ):
@@ -1205,6 +1206,36 @@ def update_tenant_user_role(
     db.commit()
     _revoke_sessions(db, target_id, "role_changed")  # old tokens must not outlive the old privileges
     db.refresh(target)
+
+    if str(old_role) != str(new_role) and target.email:
+        try:
+            try:
+                from backend.app.services.email_service import dispatch_role_updated, resolve_tenant_branding
+            except ImportError:
+                from app.services.email_service import dispatch_role_updated, resolve_tenant_branding
+
+            company = db.query(ResCompany).filter(ResCompany.id == target.company_id).first()
+            tenant_brand = resolve_tenant_branding(company)
+            first_name = (str(target.full_name or "").strip().split()[0] if target.full_name else "Team Member")
+            modifier_name = str(getattr(actor.user, "full_name", None) or getattr(actor.user, "email", None) or actor.identifier or "Workspace Administrator")
+            domain = getattr(company, "workspace_domain", None) or getattr(tenant_brand, "workspace_domain", None) or "portal.oxengl.com"
+            workspace_url = f"https://{domain}" if not str(domain).startswith("http") else str(domain)
+            effective_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+            custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+
+            background_tasks.add_task(
+                dispatch_role_updated,
+                recipient_email=str(target.email),
+                first_name=first_name,
+                modifier_name=modifier_name,
+                new_role=str(new_role),
+                workspace_url=workspace_url,
+                tenant=tenant_brand,
+                effective_date=effective_date,
+                custom_smtp=custom_smtp,
+            )
+        except Exception as role_mail_err:
+            logger.warning("Failed to queue role update email: %s", role_mail_err)
 
     return {
         "status": "updated",

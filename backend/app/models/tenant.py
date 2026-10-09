@@ -8,6 +8,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 from backend.database import Base
 from backend.models import MasterTenant, Tenant
+from app.services.email_service import resolve_tenant_branding
 
 # Re-export for standard access
-__all__ = ["Tenant", "MasterTenant"]
+__all__ = ["Tenant", "MasterTenant", "resolve_tenant_branding"]
