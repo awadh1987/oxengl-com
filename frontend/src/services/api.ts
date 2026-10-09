@@ -2642,6 +2642,24 @@ export const erpApi = {
       method: 'POST',
       body: JSON.stringify({ ...payload, entity: 'tenants' }),
     }),
+  toggleTenantStatus: (tenantId: string, isActive: boolean, reason?: string) =>
+    request<{ status: string; tenant_id: string; is_active: boolean; tenant_status: string; message: string }>(
+      `/api/v1/super-admin/tenants/${tenantId}/toggle-status`,
+      undefined,
+      {
+        method: 'POST',
+        body: JSON.stringify({ is_active: isActive, reason }),
+      }
+    ),
+  offboardTenant: (tenantId: string, confirmationName: string, purgeUsers: boolean = true) =>
+    request<{ status: string; message: string }>(
+      `/api/v1/super-admin/tenants/${tenantId}/offboard`,
+      undefined,
+      {
+        method: 'POST',
+        body: JSON.stringify({ confirmation_name: confirmationName, purge_users: purgeUsers }),
+      }
+    ),
   bulkProcurementStatus: (payload: { ids: string[]; entity: 'procurement_bills' | 'purchase_orders'; status: string }, companyId?: string) =>
     request<{ success: boolean; affected_count: number; message: string }>('/api/v1/bulk/procurement/status', companyId, {
       method: 'POST',

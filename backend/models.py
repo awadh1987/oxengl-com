@@ -81,10 +81,10 @@ class ResCompany(TimestampMixin, Base):
     signature_title: Mapped[Optional[str]] = mapped_column(String(100), default="Operations Team", server_default=text("'Operations Team'"), nullable=True)
     support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     custom_smtp_settings = Column(JSONB, nullable=True, default=None)
-    is_active = Column(Boolean, default=True, server_default="true", nullable=False)
-    status = Column(String(20), default="ACTIVE", server_default="ACTIVE", nullable=False)
-    primary_color = Column(String(7), default="#0ea5e9", server_default="#0ea5e9", nullable=False)
-    secondary_color = Column(String(7), default="#0f172a", server_default="#0f172a", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE", server_default=text("'ACTIVE'"), nullable=False)
+    primary_color: Mapped[str] = mapped_column(String(7), default="#0ea5e9", server_default=text("'#0ea5e9'"), nullable=False)
+    secondary_color: Mapped[str] = mapped_column(String(7), default="#0f172a", server_default=text("'#0f172a'"), nullable=False)
     wallpaper_url: Mapped[Optional[str]] = mapped_column(Text)
     background_url: Mapped[Optional[str]] = mapped_column(Text)
     database_config: Mapped[Optional["TenantDatabaseConfig"]] = relationship(
@@ -2183,7 +2183,7 @@ class MasterTenant(TimestampMixin, Base):
     )
 
     __table_args__ = (
-        CheckConstraint("status IN ('provisioning', 'active', 'suspended', 'deprovisioned')", name="ck_master_tenant_status"),
+        CheckConstraint("status IN ('provisioning', 'active', 'suspended', 'deprovisioned', 'decommissioning')", name="ck_master_tenant_status"),
         CheckConstraint("subscription_tier IN ('starter', 'standard', 'growth', 'enterprise', 'free', 'professional')", name="ck_master_tenant_tier"),
     )
 

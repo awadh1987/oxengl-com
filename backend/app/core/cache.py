@@ -255,3 +255,8 @@ class IdempotencyManager:
 # Singleton instances
 enterprise_cache = EnterpriseCache()
 idempotency_manager = IdempotencyManager(enterprise_cache)
+
+
+def get_redis_client() -> Optional[redis.Redis]:
+    """Return the underlying Redis client instance, or None if unavailable."""
+    return enterprise_cache.client

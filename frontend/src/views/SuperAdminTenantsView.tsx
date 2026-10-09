@@ -8,9 +8,17 @@ import { useBulkSelection } from '../hooks/useBulkSelection';
 import { navigateSuperAdmin, SuperAdminNavLink, SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
 import { authFetch, erpApi } from '../services/api';
+import { superAdminService } from '../services/superAdminService';
 import { SuperAdminBackupMonitor } from '../components/platform/SuperAdminBackupMonitor';
 import { SuperAdminCommunicationsPanel } from '../components/platform/SuperAdminCommunicationsPanel';
 import { useApp } from '../context/AppContext';
+
+const ANCHOR_TENANT_ID = '65e675a7-17fe-47fa-993d-25cb57e40ea4';
+const ANCHOR_SLUG = 'oxengl-platform';
+const isAnchor = (t: TenantItem) =>
+  t.id === ANCHOR_TENANT_ID ||
+  t.slug === ANCHOR_SLUG ||
+  t.name?.toLowerCase().includes('oxengl system platform');
 
 interface TenantItem {
   id: string;
@@ -56,6 +64,13 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
   const [customAlertMsg, setCustomAlertMsg] = useState('Emergency platform security notice from SuperAdmin.');
   const [isUploading, setIsUploading] = useState(false);
   const [alertStatus, setAlertStatus] = useState<Record<string, 'idle' | 'sending' | 'sent' | 'error'>>({});
+
+  // Danger Zone Offboarding State
+  const [isOffboardModalOpen, setIsOffboardModalOpen] = useState(false);
+  const [offboardTarget, setOffboardTarget] = useState<TenantItem | null>(null);
+  const [confirmationNameInput, setConfirmationNameInput] = useState('');
+  const [purgeUsersCheckbox, setPurgeUsersCheckbox] = useState(true);
+  const [isOffboarding, setIsOffboarding] = useState(false);
 
   // Global Bulk Operations
   const bulk = useBulkSelection(tenants);
@@ -160,20 +175,68 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
   }, [search]);
 
   const toggleTenantStatus = async (tenant: TenantItem) => {
+    if (isAnchor(tenant)) {
+      alert(isAr ? 'لا يمكن تعليق أو تعطيل المنشأة المرجعية للنظام (oxengl-platform).' : 'The system anchor company (oxengl-platform) is protected and cannot be suspended.');
+      return;
+    }
     const nextActive = !tenant.is_active;
-    const nextStatus = nextActive ? 'ACTIVE' : 'SUSPENDED';
+    if (!nextActive) {
+      const confirmed = window.confirm(
+        isAr
+          ? `تعليق وصول المستأجر "${tenant.name}"؟ سيتم إلغاء جميع الجلسات النشطة لجميع مستخدمي هذه المنشأة فوراً.`
+          : `Suspend access for all users in tenant "${tenant.name}"? Active JWT sessions and access will be revoked immediately.`
+      );
+      if (!confirmed) return;
+    }
     try {
-      const res = await authFetch(`/api/v1/superadmin/tenants/${tenant.id}/status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: nextActive, status: nextStatus }),
-      });
-      if (res.ok) {
-        setActionMessage(`Tenant ${tenant.name} status updated to ${nextStatus}.`);
-        fetchTenants();
-      }
-    } catch (err) {
-      console.error(err);
+      const res = await superAdminService.toggleTenantStatus(
+        tenant.id,
+        nextActive,
+        nextActive ? 'Reactivated by Super Admin' : 'Suspended by Super Admin'
+      );
+      setActionMessage(res.message || `Tenant status updated successfully.`);
+      fetchTenants();
+    } catch (err: any) {
+      alert(err.message || 'Failed to toggle tenant status.');
+    }
+  };
+
+  const openOffboardModal = (tenant: TenantItem) => {
+    if (isAnchor(tenant)) {
+      alert(isAr ? 'لا يمكن إنهاء أو حذف المنشأة المرجعية للنظام (oxengl-platform).' : 'The system anchor company (oxengl-platform) is protected and cannot be offboarded.');
+      return;
+    }
+    setOffboardTarget(tenant);
+    setConfirmationNameInput('');
+    setPurgeUsersCheckbox(true);
+    setIsOffboardModalOpen(true);
+  };
+
+  const handleConfirmOffboard = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!offboardTarget) return;
+
+    if (confirmationNameInput.trim() !== offboardTarget.name.trim()) {
+      alert(isAr ? 'اسم المنشأة المدخل غير مطابق.' : 'Confirmation name does not match tenant name.');
+      return;
+    }
+
+    setIsOffboarding(true);
+    try {
+      const res = await superAdminService.offboardTenant(
+        offboardTarget.id,
+        confirmationNameInput.trim(),
+        purgeUsersCheckbox
+      );
+      setActionMessage(res.message || `Offboarding initiated for ${offboardTarget.name}.`);
+      setIsOffboardModalOpen(false);
+      setOffboardTarget(null);
+      setConfirmationNameInput('');
+      fetchTenants();
+    } catch (err: any) {
+      alert(err.message || 'Failed to initiate offboarding.');
+    } finally {
+      setIsOffboarding(false);
     }
   };
 
@@ -439,21 +502,64 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
                       </div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 ${
-                        t.is_active ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                      }`}>
-                        {t.is_active ? <CheckCircle2 className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
-                        {t.status || (t.is_active ? 'ACTIVE' : 'SUSPENDED')}
-                      </span>
+                      {(() => {
+                        const s = (t.status || '').toUpperCase();
+                        if (s === 'DECOMMISSIONING') {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 bg-orange-500/10 text-orange-400 border border-orange-500/30">
+                              <Activity className="h-3 w-3 shrink-0 animate-pulse" />
+                              Decommissioning
+                            </span>
+                          );
+                        }
+                        if (!t.is_active || s === 'SUSPENDED') {
+                          return (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                              <XCircle className="h-3 w-3 shrink-0" />
+                              Suspended
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold whitespace-nowrap shrink-0 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            Active
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <div className="flex flex-wrap items-center justify-end gap-2">
-                        <button
-                          onClick={() => toggleTenantStatus(t)}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-[11px] transition-colors whitespace-nowrap shrink-0"
-                        >
-                          {t.is_active ? 'Suspend' : 'Activate'}
-                        </button>
+                        {isAnchor(t) ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 text-[10px] font-mono">
+                            <Shield className="h-3 w-3" />
+                            Protected Anchor
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => toggleTenantStatus(t)}
+                              disabled={t.status?.toUpperCase() === 'DECOMMISSIONING'}
+                              className={`px-2.5 py-1 rounded-lg font-medium text-[11px] transition-colors whitespace-nowrap shrink-0 ${
+                                t.is_active
+                                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                                  : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                              }`}
+                              title={t.is_active ? 'Suspend Tenant access' : 'Reactivate Tenant access'}
+                            >
+                              {t.is_active ? 'Suspend Tenant' : 'Reactivate Tenant'}
+                            </button>
+                            <button
+                              onClick={() => openOffboardModal(t)}
+                              disabled={t.status?.toUpperCase() === 'DECOMMISSIONING'}
+                              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-medium text-[11px] transition-colors whitespace-nowrap shrink-0 inline-flex items-center gap-1"
+                              title="Offboard tenant and cascade purge data"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              <span>Offboard Tenant</span>
+                            </button>
+                          </>
+                        )}
                         <button
                           onClick={() => { setSelectedTenant(t); setIsAlertModalOpen(true); }}
                           className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-colors whitespace-nowrap shrink-0 ${
@@ -473,13 +579,6 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
                               ? 'Notice Sent'
                               : 'Trigger Notice'}
                           </span>
-                        </button>
-                        <button
-                          onClick={() => purgeTenant(t)}
-                          className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-colors"
-                          title="Purge and Encrypt Snapshot"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
@@ -550,6 +649,103 @@ export const SuperAdminTenantsView: React.FC<SuperAdminModuleNavProps> = ({ onNa
                 </span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Danger Zone: Destructive Offboarding Modal */}
+      {isOffboardModalOpen && offboardTarget && (
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl shadow-rose-950/40 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-4">
+              <div className="h-12 w-12 rounded-xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle className="h-6 w-6 text-rose-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="px-2 py-0.5 rounded-full bg-rose-500/20 border border-rose-500/30 text-[10px] font-mono font-bold text-rose-300 uppercase tracking-wider">
+                  Danger Zone • Decommissioning
+                </span>
+                <h3 className="text-lg font-bold text-white mt-1">
+                  {isAr ? `تأكيد إنهاء وتصفية المنشأة: ${offboardTarget.name}` : `Offboard Tenant: ${offboardTarget.name}`}
+                </h3>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300 space-y-2">
+              <p className="font-semibold">
+                {isAr
+                  ? 'تحذير حرج: هذه العملية لا يمكن التراجع عنها.'
+                  : 'Critical Warning: This action cannot be undone.'}
+              </p>
+              <p className="text-slate-300 leading-relaxed">
+                {isAr
+                  ? 'سيؤدي هذا الإجراء إلى إيقاف الوصول فوراً وحذف جميع القيود المحاسبية، ومخطط الحسابات، والمستخدمين، والإعدادات الخاصة بهذه المنشأة بشكل دائم.'
+                  : 'This permanently decommissions and purges all accounting ledgers, journal entries, Chart of Accounts, users, and workspace configuration for this tenant.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleConfirmOffboard} className="space-y-4">
+              <div>
+                <label className="text-xs text-slate-300 block mb-1.5 font-medium">
+                  {isAr ? (
+                    <>للتأكيد، يرجى كتابة <strong className="text-white font-mono bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">{offboardTarget.name}</strong> أدناه:</>
+                  ) : (
+                    <>To confirm, please type &quot;<strong className="text-white font-mono bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">{offboardTarget.name}</strong>&quot; below:</>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={confirmationNameInput}
+                  onChange={(e) => setConfirmationNameInput(e.target.value)}
+                  placeholder={offboardTarget.name}
+                  disabled={isOffboarding}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-rose-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-600 outline-none font-mono transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="purge-users-checkbox"
+                  checked={purgeUsersCheckbox}
+                  onChange={(e) => setPurgeUsersCheckbox(e.target.checked)}
+                  disabled={isOffboarding}
+                  className="h-4 w-4 rounded border-slate-700 bg-slate-950 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                />
+                <label htmlFor="purge-users-checkbox" className="text-xs text-slate-300 cursor-pointer">
+                  {isAr ? 'حذف حسابات مستخدمي هذه المنشأة (باستثناء مشرفي النظام العام)' : 'Purge tenant user accounts (excluding platform superadmins)'}
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => { setIsOffboardModalOpen(false); setOffboardTarget(null); setConfirmationNameInput(''); }}
+                  disabled={isOffboarding}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  {isAr ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button
+                  type="submit"
+                  disabled={confirmationNameInput.trim() !== offboardTarget.name.trim() || isOffboarding}
+                  className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold inline-flex items-center gap-2 transition-all shadow-md shadow-rose-950/50"
+                >
+                  {isOffboarding ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      <span>{isAr ? 'جارٍ بدء الحذف...' : 'Initiating Purge...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      <span>{isAr ? 'تأكيد الإلغاء والحذف' : 'Confirm Decommission & Delete'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

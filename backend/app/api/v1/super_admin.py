@@ -21,9 +21,11 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 
 from backend.database import get_db, get_platform_db
-from backend.models import MasterTenant, ResCompany, ResUser, Tenant, TenantAuditLog, TenantUser
+from backend.models import MasterAuditLog, MasterTenant, ResCompany, ResUser, Tenant, TenantAuditLog, TenantUser
 from backend.app.utils.crypto_vault import decrypt_bytes_aes256, encrypt_bytes_aes256
 from backend.app.domains.auth.onboard_tenant import generate_balanced_brand_palette
+from backend.app.schemas.tenant_admin import TenantStatusToggleRequest, TenantOffboardRequest
+from backend.app.core.guards import assert_not_protected_tenant, is_protected_tenant
 
 
 def get_current_super_admin(
@@ -581,6 +583,347 @@ def update_tenant_status(
     }
 
 
+def evict_tenant_sessions(db: Session, tenant_id: Any, slug: Optional[str] = None) -> int:
+    """
+    Revoke all active sessions and refresh tokens in PostgreSQL,
+    and evict all user/tenant session keys from Redis.
+    """
+    try:
+        tid_uuid = uuid.UUID(str(tenant_id)) if not isinstance(tenant_id, uuid.UUID) else tenant_id
+    except (ValueError, TypeError):
+        return 0
+
+    tid_str = str(tid_uuid)
+    revoked_count = 0
+
+    # 1. PostgreSQL session revocation
+    try:
+        with db.begin_nested():
+            r1 = db.execute(
+                text("UPDATE user_sessions SET is_active = FALSE WHERE tenant_id = :cid OR user_id IN (SELECT id FROM res_users WHERE company_id = :cid)"),
+                {"cid": tid_uuid},
+            )
+            r2 = db.execute(
+                text("UPDATE refresh_tokens SET revoked_at = NOW(), revoked_reason = 'TENANT_REVOKED' WHERE revoked_at IS NULL AND user_id IN (SELECT id FROM res_users WHERE company_id = :cid)"),
+                {"cid": tid_uuid},
+            )
+            revoked_count = (getattr(r1, "rowcount", 0) or 0) + (getattr(r2, "rowcount", 0) or 0)
+    except Exception as exc:
+        logging.getLogger("oxengl.super_admin").warning(f"Error revoking DB sessions for {tid_str}: {exc}")
+
+    # 2. Redis session eviction
+    try:
+        from backend.app.core.cache import get_redis_client
+        redis_client = get_redis_client()
+        if redis_client:
+            user_rows = db.execute(
+                text("SELECT id FROM res_users WHERE company_id = :cid"),
+                {"cid": tid_uuid},
+            ).fetchall()
+            user_ids = [str(r[0]) for r in user_rows]
+
+            keys_to_delete = [
+                f"tenant:id:{tid_str}",
+                f"tenant:company:{tid_str}",
+            ]
+            if slug:
+                keys_to_delete.append(f"tenant:slug:{slug}")
+
+            for uid in user_ids:
+                keys_to_delete.extend([
+                    f"user:session:{uid}",
+                    f"session:user:{uid}",
+                    f"auth:token:{uid}",
+                    f"user:{uid}",
+                ])
+
+            scan_patterns = [
+                f"oxengl:*:{tid_str}:*",
+                f"session:*{tid_str}*",
+            ]
+            for uid in user_ids:
+                scan_patterns.append(f"*{uid}*")
+
+            for pattern in scan_patterns:
+                try:
+                    for key in redis_client.scan_iter(match=pattern, count=100):
+                        keys_to_delete.append(key)
+                except Exception:
+                    pass
+
+            keys_to_delete = list(set(keys_to_delete))
+            if keys_to_delete:
+                redis_client.delete(*keys_to_delete)
+                logging.getLogger("oxengl.super_admin").info(f"Evicted {len(keys_to_delete)} Redis keys for tenant {tid_str}")
+    except Exception as exc:
+        logging.getLogger("oxengl.super_admin").warning(f"Redis session eviction skipped or failed: {exc}")
+
+    return revoked_count
+
+
+def execute_async_tenant_purge(
+    tenant_id: str,
+    tenant_name: str,
+    purge_users: bool = True,
+    actor_email: str = "SUPERADMIN_OPERATOR",
+) -> None:
+    """
+    Background worker executing asynchronous single-tenant offboarding purge.
+    Safely executes an atomic database cascade wipe, revoking sessions,
+    purging accounting/inventory/customs child entities, and deleting tenant records.
+    Excludes platform superadmins from user deletion.
+    """
+    logger = logging.getLogger("oxengl.purge_worker")
+    logger.info(f"[PurgeWorker] Starting async tenant purge for '{tenant_name}' ({tenant_id})")
+
+    assert_not_protected_tenant(tenant_id=tenant_id, name=tenant_name)
+
+    from backend.database import PlatformSessionLocal, SessionLocal
+    from backend.app.services.tenant_purger import purge_single_tenant_data
+
+    db: Session = PlatformSessionLocal() if PlatformSessionLocal else SessionLocal()
+    try:
+        tid_uuid = uuid.UUID(tenant_id)
+
+        # Evict sessions from Redis and DB first
+        evict_tenant_sessions(db, tid_uuid)
+
+        # Call comprehensive topological purge
+        purge_result = purge_single_tenant_data(
+            db=db,
+            tenant_id=tid_uuid,
+        )
+
+        # Record completion in master_audit_logs with target_tenant_id=None
+        audit_entry = MasterAuditLog(
+            id=uuid.uuid4(),
+            actor_id=None,
+            actor_identifier=actor_email,
+            action="TENANT_OFFBOARD_PURGE_COMPLETED",
+            target_tenant_id=None,
+            endpoint="/api/v1/super-admin/tenants/offboard/worker",
+            ip_address="127.0.0.1",
+            user_agent="OxenGL-AsyncPurgeWorker/1.0",
+            outcome="SUCCESS",
+            details={
+                "purged_tenant_id": tenant_id,
+                "tenant_name": tenant_name,
+                "purge_users": purge_users,
+                "records_purged": purge_result.get("total_records_purged", 0),
+            },
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(audit_entry)
+        db.commit()
+        logger.info(f"[PurgeWorker] Successfully purged tenant '{tenant_name}' ({tenant_id})")
+    except Exception as exc:
+        db.rollback()
+        logger.error(f"[PurgeWorker] Async purge failed for tenant '{tenant_name}' ({tenant_id}): {exc}", exc_info=True)
+    finally:
+        db.close()
+
+
+# POST /api/v1/super-admin/tenants/{tenant_id}/toggle-status
+@router.post("/tenants/{tenant_id}/toggle-status")
+@router.post("/api/v1/super-admin/tenants/{tenant_id}/toggle-status")
+@router.post("/api/v1/superadmin/tenants/{tenant_id}/toggle-status")
+def toggle_tenant_status(
+    tenant_id: str,
+    payload: TenantStatusToggleRequest,
+    request: Request,
+    admin: Any = Depends(get_current_super_admin),
+    db: Session = Depends(get_platform_db),
+):
+    """
+    Dedicated Toggle to Suspend or Reactivate a Tenant Workspace.
+    Soft suspension + active session revocation from DB and Redis.
+    Guards against modifying the protected anchor entity.
+    """
+    try:
+        tenant_uuid = uuid.UUID(tenant_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid tenant UUID format")
+
+    assert_not_protected_tenant(tenant_id=tenant_uuid)
+
+    master_tenant = db.execute(select(MasterTenant).where(MasterTenant.id == tenant_uuid)).scalar_one_or_none()
+    company = db.execute(select(ResCompany).where(ResCompany.id == tenant_uuid)).scalar_one_or_none()
+
+    if not master_tenant and not company:
+        raise HTTPException(status_code=404, detail="Tenant workspace not found")
+
+    target_name: str = str(master_tenant.name if master_tenant is not None else (company.name if company is not None else ""))
+    target_slug: str = str(master_tenant.slug if master_tenant is not None else (company.slug if company is not None else ""))
+
+    assert_not_protected_tenant(tenant_id=tenant_uuid, slug=target_slug, name=target_name)
+
+    target_status = "active" if payload.is_active else "suspended"
+
+    if master_tenant is not None:
+        master_tenant.is_active = payload.is_active
+        master_tenant.status = target_status
+
+    if company is not None:
+        company.is_active = payload.is_active
+        company.status = "ACTIVE" if payload.is_active else "SUSPENDED"
+
+    # Revoke sessions if suspending
+    if not payload.is_active:
+        evict_tenant_sessions(db, tenant_uuid, slug=target_slug)
+
+    # Log action to master_audit_logs
+    actor_id = getattr(admin, "id", None)
+    if actor_id and not isinstance(actor_id, uuid.UUID):
+        try:
+            actor_id = uuid.UUID(str(actor_id))
+        except ValueError:
+            actor_id = None
+
+    audit_entry = MasterAuditLog(
+        id=uuid.uuid4(),
+        actor_id=actor_id,
+        actor_identifier=getattr(admin, "email", "SUPERADMIN_OPERATOR"),
+        action="TENANT_STATUS_TOGGLED",
+        target_tenant_id=tenant_uuid if master_tenant else None,
+        endpoint=request.url.path,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        outcome="SUCCESS",
+        details={
+            "is_active": payload.is_active,
+            "status": target_status,
+            "reason": payload.reason,
+            "tenant_name": target_name,
+            "tenant_slug": target_slug,
+        },
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(audit_entry)
+
+    # Log action to tenant_audit_logs for tenant-visible trail
+    tenant_audit = TenantAuditLog(
+        id=str(uuid.uuid4()),
+        tenant_id=str(tenant_uuid),
+        action_type="TENANT_STATUS_TOGGLED",
+        actor=getattr(admin, "email", "SUPERADMIN_OPERATOR"),
+        details=f"Status toggled to {target_status} (is_active={payload.is_active}). Reason: {payload.reason or 'N/A'}",
+        created_at=datetime.utcnow(),
+    )
+    db.add(tenant_audit)
+
+    db.commit()
+    if master_tenant:
+        db.refresh(master_tenant)
+    if company:
+        db.refresh(company)
+
+    return {
+        "status": "success",
+        "tenant_id": str(tenant_uuid),
+        "name": target_name,
+        "slug": target_slug,
+        "is_active": payload.is_active,
+        "tenant_status": target_status,
+        "message": f"Tenant '{target_name}' is now {target_status}.",
+    }
+
+
+# POST /api/v1/super-admin/tenants/{tenant_id}/offboard
+@router.post("/tenants/{tenant_id}/offboard", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/api/v1/super-admin/tenants/{tenant_id}/offboard", status_code=status.HTTP_202_ACCEPTED)
+@router.post("/api/v1/superadmin/tenants/{tenant_id}/offboard", status_code=status.HTTP_202_ACCEPTED)
+def offboard_tenant(
+    tenant_id: str,
+    payload: TenantOffboardRequest,
+    background_tasks: BackgroundTasks,
+    request: Request,
+    admin: Any = Depends(get_current_super_admin),
+    db: Session = Depends(get_platform_db),
+):
+    """
+    Asynchronous Single-Tenant Offboarding Endpoint.
+    Validates exact tenant name confirmation, checks anchor entity protections,
+    immediately sets status='decommissioning' and is_active=False,
+    and enqueues background cascade purge worker.
+    """
+    try:
+        tenant_uuid = uuid.UUID(tenant_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid tenant UUID format")
+
+    assert_not_protected_tenant(tenant_id=tenant_uuid)
+
+    master_tenant = db.execute(select(MasterTenant).where(MasterTenant.id == tenant_uuid)).scalar_one_or_none()
+    company = db.execute(select(ResCompany).where(ResCompany.id == tenant_uuid)).scalar_one_or_none()
+
+    if not master_tenant and not company:
+        raise HTTPException(status_code=404, detail="Tenant workspace not found")
+
+    tenant_name: str = str(master_tenant.name if master_tenant is not None else (company.name if company is not None else ""))
+    tenant_slug: str = str(master_tenant.slug if master_tenant is not None else (company.slug if company is not None else ""))
+
+    assert_not_protected_tenant(tenant_id=tenant_uuid, slug=tenant_slug, name=tenant_name)
+
+    # Validation: Assert exact name confirmation
+    if payload.confirmation_name.strip() != tenant_name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Confirmation name does not match tenant name",
+        )
+
+    # Immediately set master_tenants.status = 'decommissioning' and master_tenants.is_active = False
+    if master_tenant is not None:
+        master_tenant.status = "decommissioning"
+        master_tenant.is_active = False
+    if company is not None:
+        company.status = "DECOMMISSIONING"
+        company.is_active = False
+
+    # Evict sessions immediately to prevent concurrent reads/writes
+    evict_tenant_sessions(db, tenant_uuid, slug=tenant_slug)
+
+    actor_id = getattr(admin, "id", None)
+    if actor_id and not isinstance(actor_id, uuid.UUID):
+        try:
+            actor_id = uuid.UUID(str(actor_id))
+        except ValueError:
+            actor_id = None
+
+    audit_entry = MasterAuditLog(
+        id=uuid.uuid4(),
+        actor_id=actor_id,
+        actor_identifier=getattr(admin, "email", "SUPERADMIN_OPERATOR"),
+        action="TENANT_OFFBOARDING_INITIATED",
+        target_tenant_id=tenant_uuid if master_tenant else None,
+        endpoint=request.url.path,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+        outcome="ACCEPTED",
+        details={
+            "tenant_name": tenant_name,
+            "tenant_slug": tenant_slug,
+            "purge_users": payload.purge_users,
+        },
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(audit_entry)
+    db.commit()
+
+    # Enqueue execute_async_tenant_purge via FastAPI BackgroundTasks
+    background_tasks.add_task(
+        execute_async_tenant_purge,
+        tenant_id=str(tenant_uuid),
+        tenant_name=tenant_name,
+        purge_users=payload.purge_users,
+        actor_email=getattr(admin, "email", "SUPERADMIN_OPERATOR"),
+    )
+
+    return {
+        "status": "accepted",
+        "message": f"Offboarding initiated for {tenant_name}. Data is being purged asynchronously.",
+    }
+
+
 class TenantOverrideSchema(BaseModel):
     allow_custom_domain: Optional[bool] = None
     allow_external_database: Optional[bool] = None
@@ -902,6 +1245,8 @@ def purge_tenant(
     company = db.execute(select(ResCompany).where(ResCompany.id == tenant_uuid)).scalar_one_or_none()
     if not company:
         raise HTTPException(status_code=404, detail="Tenant workspace not found")
+
+    assert_not_protected_tenant(tenant_id=tenant_uuid, slug=company.slug, name=company.name)
 
     # 1. Execute pre-purge financial infrastructure backup BEFORE wiping (.enc.tar.gz binary)
     enc_backup_path, snapshot_data = backup_tenant_financial_infrastructure(db, tenant_id, company)

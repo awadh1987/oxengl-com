@@ -44,6 +44,13 @@ def purge_single_tenant_data(
                 ).mappings().first()
                 if found:
                     comp_dict = dict(found)
+                else:
+                    found_m = db.execute(
+                        text("SELECT id, name, slug, custom_domain AS domain_slug FROM master_tenants WHERE id = :cid"),
+                        {"cid": tenant_uuid},
+                    ).mappings().first()
+                    if found_m:
+                        comp_dict = dict(found_m)
             if not comp_dict and isinstance(tenant_id, str):
                 found = db.execute(
                     text("SELECT id, name, slug, domain_slug FROM res_companies WHERE slug = :s OR domain_slug = :s"),
@@ -69,6 +76,9 @@ def purge_single_tenant_data(
     cid_uuid = uuid.UUID(cid_str)
     slug = (comp_dict.get("domain_slug") or comp_dict.get("slug")) if comp_dict else ""
     company_name = comp_dict.get("name") if comp_dict else "Unknown Workspace"
+
+    from backend.app.core.guards import assert_not_protected_tenant
+    assert_not_protected_tenant(tenant_id=cid_uuid, slug=slug, name=company_name)
 
     logger.info(f"Initiating top-down ordered purge for tenant {company_name} (ID: {cid_str}, Slug: {slug})")
 
@@ -177,7 +187,9 @@ def purge_single_tenant_data(
         # Partners and Users
         ("vendor_portal_users", "DELETE FROM vendor_portal_users WHERE company_id = :cid"),
         ("res_partners", "DELETE FROM res_partners WHERE company_id = :cid"),
-        ("res_users", "DELETE FROM res_users WHERE company_id = :cid"),
+        ("res_users_unlink_superadmins", "UPDATE res_users SET company_id = NULL WHERE company_id = :cid AND (is_superuser IS TRUE OR role IN ('Super_Admin', 'super_admin'))"),
+        ("res_users", "DELETE FROM res_users WHERE company_id = :cid AND (is_superuser IS FALSE OR is_superuser IS NULL) AND role NOT IN ('Super_Admin', 'super_admin')"),
+        ("tenant_users", "DELETE FROM tenant_users WHERE tenant_id = :cid OR tenant_id IN (SELECT id FROM master_tenants WHERE id = :cid OR slug = :slug)"),
 
         # Tenant Configuration & Audits
         ("tenant_audit_logs", "DELETE FROM tenant_audit_logs WHERE tenant_id = :cid"),
@@ -206,15 +218,15 @@ def purge_single_tenant_data(
         except Exception as exc:
             logger.debug(f"Table purge skip {table_label}: {exc}")
 
-    # Remove linked master_tenants record if slug matches
-    if slug:
-        try:
-            with db.begin_nested():
-                db.execute(text("DELETE FROM saas_invoices WHERE tenant_id IN (SELECT id FROM master_tenants WHERE slug = :slug)"), {"slug": slug})
-                db.execute(text("DELETE FROM tenant_databases WHERE tenant_id IN (SELECT id FROM master_tenants WHERE slug = :slug)"), {"slug": slug})
-                db.execute(text("DELETE FROM master_tenants WHERE slug = :slug"), {"slug": slug})
-        except Exception as exc:
-            logger.debug(f"Could not purge master_tenants for slug '{slug}': {exc}")
+    # Remove linked master_tenants record by id and slug
+    try:
+        with db.begin_nested():
+            db.execute(text("DELETE FROM saas_invoices WHERE tenant_id = :cid OR tenant_id IN (SELECT id FROM master_tenants WHERE slug = :slug)"), {"cid": cid_uuid, "slug": slug or ""})
+            db.execute(text("DELETE FROM tenant_databases WHERE tenant_id = :cid OR tenant_id IN (SELECT id FROM master_tenants WHERE slug = :slug)"), {"cid": cid_uuid, "slug": slug or ""})
+            db.execute(text("DELETE FROM tenant_subscriptions WHERE tenant_id = :cid OR tenant_id IN (SELECT id FROM master_tenants WHERE slug = :slug)"), {"cid": cid_uuid, "slug": slug or ""})
+            db.execute(text("DELETE FROM master_tenants WHERE id = :cid OR (slug = :slug AND :slug != '')"), {"cid": cid_uuid, "slug": slug or ""})
+    except Exception as exc:
+        logger.debug(f"Could not purge master_tenants for id '{cid_str}' / slug '{slug}': {exc}")
 
     # Unlink any child branches so foreign keys don't block
     try:

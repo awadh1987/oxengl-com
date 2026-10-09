@@ -519,6 +519,19 @@ app.add_api_route(
     methods=["PATCH"],
     tags=["Super Admin"],
 )
+app.add_api_route(
+    "/api/v1/super-admin/tenants/{tenant_id}/toggle-status",
+    super_admin.toggle_tenant_status,
+    methods=["POST"],
+    tags=["Super Admin"],
+)
+app.add_api_route(
+    "/api/v1/super-admin/tenants/{tenant_id}/offboard",
+    super_admin.offboard_tenant,
+    methods=["POST"],
+    tags=["Super Admin"],
+    status_code=status.HTTP_202_ACCEPTED,
+)
 from backend.app.api.v1 import users as users_api
 app.include_router(users_api.router)
 from backend.app.api.v1 import backup_destinations as backup_destinations_api
