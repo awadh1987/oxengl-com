@@ -2804,3 +2804,74 @@ class TenantBranding(Base):
         primaryjoin="Organization.company_id == foreign(TenantBranding.tenant_id)",
         back_populates="branding",
     )
+
+
+# ==============================================================================
+# Unified Platform Master Governance, Landing CMS & Broadcast Subsystems
+# ==============================================================================
+class PlatformMasterSetting(Base):
+    """Authoritative platform-wide master governance, branding & identity configuration."""
+    __tablename__ = "platform_master_settings"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    platform_name: Mapped[str] = mapped_column(String(128), default="OxenGL", server_default="OxenGL", nullable=False)
+    platform_tagline: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    logo_light_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    logo_dark_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    favicon_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    primary_color: Mapped[str] = mapped_column(String(32), default="#f97316", server_default="#f97316", nullable=False)
+    secondary_color: Mapped[str] = mapped_column(String(32), default="#0f172a", server_default="#0f172a", nullable=False)
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    legal_terms_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    privacy_policy_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    custom_css: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+
+
+class PlatformLandingSection(Base):
+    """Schema-driven Headless CMS section model for public landing pages."""
+    __tablename__ = "platform_landing_sections"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    section_key: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    locale: Mapped[str] = mapped_column(String(10), default="en", server_default="en", nullable=False)
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    subtitle: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    content_data: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+
+
+class SystemBroadcast(Base):
+    """System-wide real-time announcements & alerts across tenant workspaces."""
+    __tablename__ = "system_broadcasts"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    severity: Mapped[str] = mapped_column(String(32), default="info", server_default="info", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_dismissible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    target_scope: Mapped[str] = mapped_column(String(64), default="all", server_default="all", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+    )
+    created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+

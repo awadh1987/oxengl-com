@@ -8,6 +8,13 @@ interface LandingHeroProps {
   activeWindow: string;
   settings: Partial<SiteSettings>;
   loading: boolean;
+  cmsHero?: {
+    title: string;
+    subtitle: string;
+    badge: string;
+    ctaPrimary: { label: string; url: string };
+    ctaSecondary: { label: string; url: string };
+  };
 }
 
 export const LandingHero: React.FC<LandingHeroProps> = ({
@@ -16,29 +23,36 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
   activeWindow,
   settings,
   loading,
+  cmsHero,
 }) => {
+  const headline = cmsHero?.title || settings.landing_headline || 'Next-Generation Heavy Logistics & Industrial Accounting Platform';
+  const subheadline = cmsHero?.subtitle ?? settings.landing_subheadline ?? 'Unifying weighbridge automation, fleet dispatch, multi-branch general ledgers, and automated ZATCA Phase 2 compliance into one sovereign engine.';
+  const badgeText = cmsHero?.badge || 'PRODUCTION-PROVEN SAUDI ARABIA ERP BACKBONE';
+  const ctaPrimary = cmsHero?.ctaPrimary || { label: 'Provision Workspace', url: '#provision' };
+  const ctaSecondary = cmsHero?.ctaSecondary || { label: 'Inspect Architecture', url: '#modules' };
+
   return (
     <section className="hero-section">
       <div className="hero-content">
         <div className="hero-badge">
           <span className="badge-pulse" />
-          <span>PRODUCTION-PROVEN SAUDI ARABIA ERP BACKBONE</span>
+          <span>{badgeText}</span>
         </div>
         
         <h1 className="hero-title" aria-busy={loading}>
-          {settings.landing_headline ? renderHighlighted(settings.landing_headline) : (loading ? '\u00A0' : '')}
+          {renderHighlighted(headline)}
         </h1>
         
         <p className="hero-subtitle" aria-busy={loading}>
-          {settings.landing_subheadline ?? (loading ? '\u00A0' : '')}
+          {subheadline}
         </p>
 
         <div className="hero-cta-group">
-          <a href="#provision" className="btn-primary" style={{ padding: '12px 28px', fontSize: '15px' }}>
-            Provision Workspace
+          <a href={ctaPrimary.url} className="btn-primary" style={{ padding: '12px 28px', fontSize: '15px' }}>
+            {ctaPrimary.label}
           </a>
-          <a href="#modules" className="btn-secondary" style={{ padding: '12px 28px', fontSize: '15px' }}>
-            Inspect Architecture
+          <a href={ctaSecondary.url} className="btn-secondary" style={{ padding: '12px 28px', fontSize: '15px' }}>
+            {ctaSecondary.label}
           </a>
         </div>
       </div>

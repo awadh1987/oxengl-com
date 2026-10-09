@@ -3235,3 +3235,135 @@ class PlatformBrandingUpdate(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
+
+# ==============================================================================
+# Unified Master Settings, Landing CMS & Broadcast Subsystem Schemas
+# ==============================================================================
+class PlatformMasterSettingsRead(BaseModel):
+    id: str = "default"
+    platform_name: str = "OxenGL Enterprise"
+    platform_tagline: str | None = None
+    logo_light_url: str | None = None
+    logo_dark_url: str | None = None
+    favicon_url: str | None = None
+    primary_color: str = "#f97316"
+    secondary_color: str = "#0f172a"
+    support_email: str | None = None
+    legal_terms_url: str | None = None
+    privacy_policy_url: str | None = None
+    custom_css: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    updated_at: datetime | None = None
+    updated_by: str | None = None
+
+    model_config = ConfigDict(extra="allow", from_attributes=True, populate_by_name=True)
+
+
+class PlatformMasterSettingsUpdate(BaseModel):
+    platform_name: str | None = None
+    platform_tagline: str | None = None
+    logo_light_url: str | None = None
+    logo_dark_url: str | None = None
+    favicon_url: str | None = None
+    primary_color: str | None = None
+    secondary_color: str | None = None
+    support_email: str | None = None
+    legal_terms_url: str | None = None
+    privacy_policy_url: str | None = None
+    custom_css: str | None = None
+    metadata: dict[str, Any] | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class LandingSectionRead(BaseModel):
+    id: str
+    section_key: str
+    locale: str = "en"
+    title: str | None = None
+    subtitle: str | None = None
+    content_data: dict[str, Any] = Field(default_factory=dict)
+    sort_order: int = 0
+    is_visible: bool = True
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(extra="allow", from_attributes=True)
+
+
+class LandingSectionUpdate(BaseModel):
+    title: str | None = None
+    subtitle: str | None = None
+    content_data: dict[str, Any] | None = None
+    sort_order: int | None = None
+    is_visible: bool | None = None
+    locale: str | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class LandingSectionCreate(BaseModel):
+    id: str | None = None
+    section_key: str = Field(min_length=1, max_length=64)
+    locale: str = "en"
+    title: str | None = None
+    subtitle: str | None = None
+    content_data: dict[str, Any] = Field(default_factory=dict)
+    sort_order: int = 0
+    is_visible: bool = True
+
+    model_config = ConfigDict(extra="allow")
+
+
+class PublicLandingResponse(BaseModel):
+    platform_settings: dict[str, Any]
+    sections: list[LandingSectionRead]
+    sections_map: dict[str, LandingSectionRead]
+    cached_at: datetime | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SystemBroadcastRead(BaseModel):
+    id: str
+    title: str
+    message: str
+    severity: str = "info"
+    is_active: bool = True
+    starts_at: datetime
+    expires_at: datetime | None = None
+    is_dismissible: bool = True
+    target_scope: str = "all"
+    created_at: datetime | None = None
+    created_by: str | None = None
+
+    model_config = ConfigDict(extra="allow", from_attributes=True)
+
+
+class SystemBroadcastCreate(BaseModel):
+    id: str | None = None
+    title: str = Field(min_length=1, max_length=255)
+    message: str = Field(min_length=1)
+    severity: Literal["info", "warning", "critical", "maintenance"] = "info"
+    is_active: bool = True
+    starts_at: datetime | None = None
+    expires_at: datetime | None = None
+    is_dismissible: bool = True
+    target_scope: str = "all"
+
+    model_config = ConfigDict(extra="allow")
+
+
+class SystemBroadcastUpdate(BaseModel):
+    title: str | None = None
+    message: str | None = None
+    severity: Literal["info", "warning", "critical", "maintenance"] | None = None
+    is_active: bool | None = None
+    starts_at: datetime | None = None
+    expires_at: datetime | None = None
+    is_dismissible: bool | None = None
+    target_scope: str | None = None
+
+    model_config = ConfigDict(extra="allow")
+
+

@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # Stage 1: Build Environment
-FROM node:20-alpine AS builder
+FROM docker.io/library/node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ COPY . .
 RUN ulimit -n 65535 2>/dev/null || true; npm run build
 
 # Stage 2: Production Nginx Server
-FROM nginx:1.25-alpine AS production
+FROM docker.io/library/nginx:1.25-alpine AS production
 
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*

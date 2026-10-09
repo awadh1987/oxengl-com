@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Activity, ArrowRight, Building2, ChevronDown, CreditCard, ExternalLink, Globe2,
   KeyRound, LayoutDashboard, LogOut, Menu, Radio, Search, Settings, ShieldCheck, X, Server,
-  TrendingUp, BarChart3, FileCheck2
+  TrendingUp, BarChart3, FileCheck2, Sparkles, Sliders
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { BrandWordmark } from './landing/BrandWordmark';
@@ -15,8 +15,10 @@ import { SuperAdminAnalyticsView } from './SuperAdminAnalyticsView';
 import { SuperAdminLogsView } from './SuperAdminLogsView';
 import { SuperAdminNavTarget } from '../components/platform/SuperAdminNavLink';
 import { SuperAdminFinancialHubView } from './SuperAdminFinancialHubView';
+import { LandingCmsStudioView } from './admin/LandingCmsStudioView';
+import { UnifiedMasterSettingsView } from './admin/UnifiedMasterSettingsView';
 
-type PlatformTab = 'cockpit' | 'financial-hub' | 'tenants' | 'analytics' | 'logs' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
+type PlatformTab = 'cockpit' | 'financial-hub' | 'tenants' | 'landing-editor' | 'analytics' | 'logs' | 'licenses' | 'pricing' | 'health' | 'settings' | 'master-devops';
 
 interface SuperAdminCockpitViewProps {
   onOpenTenantOnboarding: () => void;
@@ -29,12 +31,13 @@ const navigation: { id: PlatformTab; label: string; description: string; badge?:
   { id: 'financial-hub', label: 'Financial Hub & Invoicing', description: 'MRR, ARR, PO wire verification & custom limits', badge: 'FINANCE', icon: CreditCard },
   { id: 'master-devops', label: 'DevOps & RLS HUD', description: 'Domain routing, RLS isolation & Cmd+K', badge: 'LIVE', icon: Server },
   { id: 'tenants', label: 'Tenants Registry', description: 'Client accounts & tenant entities', icon: Building2 },
+  { id: 'landing-editor', label: 'Landing CMS Studio', description: 'Dynamic schema-driven landing engine', badge: 'CMS', icon: Sparkles },
+  { id: 'settings', label: 'Platform Master Settings', description: 'Unified branding, broadcasts & policies', icon: Sliders },
   { id: 'analytics', label: 'Cross-Tenant Velocity', description: 'Transaction density & sparklines', badge: '7-DAY', icon: TrendingUp },
   { id: 'logs', label: 'Platform Audit Logs', description: 'Audit trail & capacity telemetry', icon: FileCheck2 },
   { id: 'licenses', label: 'License Provisioner', description: 'JWT license key issuer', badge: 'JWT', icon: KeyRound },
   { id: 'pricing', label: 'Pricing & Subscription Plans', description: 'Tiers, quotas & features', icon: CreditCard },
   { id: 'health', label: 'System Isolation & Health', description: 'Tenant table audit & engine metrics', badge: '100%', icon: Activity },
-  { id: 'settings', label: 'Platform Master Settings', description: 'Platform branding & announcement', icon: Settings },
 ];
 
 export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ onOpenTenantOnboarding, onLogout, onInspectTenantWorkspace }) => {
@@ -84,7 +87,8 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
       case 'licenses': return <LicenseProvisionerView />;
       case 'pricing': return <PricingPlansView />;
       case 'health': return <SystemAuditView />;
-      case 'settings': return <div className="h-full overflow-y-auto"><LandingSettingsPanel /><PlatformSettingsView /></div>;
+      case 'landing-editor': return <div className="h-full overflow-y-auto"><LandingCmsStudioView /></div>;
+      case 'settings': return <div className="h-full overflow-y-auto"><UnifiedMasterSettingsView /></div>;
       default: return <PanoramicCockpit onNavigate={setActiveTab} />;
     }
   };

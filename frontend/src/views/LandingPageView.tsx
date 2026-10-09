@@ -8,6 +8,8 @@ import { WorkflowMatrix } from './landing/WorkflowMatrix';
 import { PricingSection } from './landing/PricingSection';
 import { ProvisioningTerminal } from './landing/ProvisioningTerminal';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useLandingContent } from '../hooks/useLandingContent';
+import { SystemBroadcastBanner } from '../components/common/SystemBroadcastBanner';
 import { LandingFooter } from './landing/LandingFooter';
 
 export interface LandingPageViewProps {
@@ -16,6 +18,7 @@ export interface LandingPageViewProps {
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess }) => {
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
+  const { heroData, metricsData, platformSettings } = useLandingContent();
   const [openWindows, setOpenWindows] = useState<Record<string, boolean>>({
     'win-finance': true,
     'win-telemetry': true,
@@ -23,6 +26,14 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
   });
 
   const [activeWindow, setActiveWindow] = useState<string>('win-weighbridge');
+
+  // Augmented settings with platform master defaults
+  const effectiveSettings = {
+    ...siteSettings,
+    site_name: platformSettings.platform_name || siteSettings.site_name,
+    site_tagline: platformSettings.platform_tagline || siteSettings.site_tagline,
+    site_logo: platformSettings.logo_light_url || siteSettings.site_logo,
+  };
 
   // Global mouse tracking for background radial spotlight
   useEffect(() => {
@@ -66,34 +77,40 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
 
   return (
     <div className="platform-dark landing-page-root flex flex-col min-h-dvh w-full">
-      <LandingHeader settings={siteSettings} onLoginClick={onLoginSuccess} />
+      {/* Real-time Platform Broadcast Subsystem */}
+      <SystemBroadcastBanner />
+
+      <LandingHeader settings={effectiveSettings} onLoginClick={onLoginSuccess} />
 
       <main className="landing-main flex-1 w-full">
-      <LandingHero
-        settings={siteSettings}
-        loading={siteSettingsLoading}
-        onRestoreWindow={handleRestoreWindow}
-        openWindows={openWindows}
-        activeWindow={activeWindow}
-      />
+        {heroData.isVisible && (
+          <LandingHero
+            settings={effectiveSettings}
+            loading={siteSettingsLoading}
+            cmsHero={heroData}
+            onRestoreWindow={handleRestoreWindow}
+            openWindows={openWindows}
+            activeWindow={activeWindow}
+          />
+        )}
 
-      <LandingStage
-        openWindows={openWindows}
-        activeWindow={activeWindow}
-        onSelectWindow={handleSelectWindow}
-        onCloseWindow={handleCloseWindow}
-      />
+        <LandingStage
+          openWindows={openWindows}
+          activeWindow={activeWindow}
+          onSelectWindow={handleSelectWindow}
+          onCloseWindow={handleCloseWindow}
+        />
 
-      <ProofMetrics />
-      
-      <WorkflowMatrix />
-      
-      <PricingSection onSelectTier={handleTierSelect} />
-      
-      <ProvisioningTerminal />
+        {metricsData.isVisible && <ProofMetrics cmsMetrics={metricsData} />}
+        
+        <WorkflowMatrix />
+        
+        <PricingSection onSelectTier={handleTierSelect} />
+        
+        <ProvisioningTerminal />
       </main>
 
-      <LandingFooter settings={siteSettings} />
+      <LandingFooter settings={effectiveSettings} />
     </div>
   );
 };

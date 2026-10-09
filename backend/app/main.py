@@ -6531,6 +6531,15 @@ app.include_router(logo_upload_router)
 app.include_router(dynamic_branding_router)
 from backend.app.api.v1.site_settings import router as site_settings_router
 app.include_router(site_settings_router)
+from backend.app.api.v1.platform_governance import router as platform_governance_router
+app.include_router(platform_governance_router)
+
+# Mount static files for platform branding assets
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+_static_dir = Path(__file__).resolve().parents[2] / "backend" / "static"
+if _static_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=_static_dir), name="static")
 
 
 

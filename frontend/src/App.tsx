@@ -11,6 +11,8 @@ import { getSubdomain, isApexDomain, isCustomDomain, getCustomDomain, redirectTo
 import { resolveDomain } from './services/api';
 
 import { useNavigate } from './hooks/useNavigate';
+import { AdminLayout } from './components/admin/AdminLayout';
+import { SystemBroadcastBanner } from './components/common/SystemBroadcastBanner';
 
 // Code-split dynamic view imports
 const DashboardView = React.lazy(() => import('./views/DashboardView').then(m => ({ default: m.DashboardView })));
@@ -46,6 +48,8 @@ const FinanceReportsView = React.lazy(() => import('./views/FinanceReportsView')
 const SuperAdminTenantsView = React.lazy(() => import('./views/SuperAdminTenantsView').then(m => ({ default: m.SuperAdminTenantsView })));
 const SuperAdminLogsView = React.lazy(() => import('./views/SuperAdminLogsView').then(m => ({ default: m.SuperAdminLogsView })));
 const SuperAdminAnalyticsView = React.lazy(() => import('./views/SuperAdminAnalyticsView').then(m => ({ default: m.SuperAdminAnalyticsView })));
+const LandingCmsStudioView = React.lazy(() => import('./views/admin/LandingCmsStudioView').then(m => ({ default: m.LandingCmsStudioView })));
+const UnifiedMasterSettingsView = React.lazy(() => import('./views/admin/UnifiedMasterSettingsView').then(m => ({ default: m.UnifiedMasterSettingsView })));
 const ResetPasswordView = React.lazy(() => import('./views/ResetPasswordView').then(m => ({ default: m.ResetPasswordView })));
 const ForgotPasswordView = React.lazy(() => import('./views/auth/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ProcurementView = React.lazy(() => import('./views/ProcurementView').then(m => ({ default: m.ProcurementView })));
@@ -202,7 +206,7 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
 export const getTabFromPath = (path: string): ActiveTab => {
   const urlWithoutQuery = path.split('?')[0].split('#')[0];
   const cleanPath = urlWithoutQuery.replace(/\/$/, '');
-  if (cleanPath === '/admin' || cleanPath === '/admin/cockpit') return 'admin-hub';
+  if (cleanPath === '/admin' || cleanPath === '/admin/cockpit' || cleanPath.startsWith('/admin/')) return 'admin-hub';
   if (ROUTE_TAB_MAP[cleanPath]) return ROUTE_TAB_MAP[cleanPath];
   if (ROUTE_TAB_MAP[path]) return ROUTE_TAB_MAP[path];
 
@@ -533,13 +537,40 @@ function AppContent() {
         );
         break;
       case '/admin/tenants':
-        adminElement = <SuperAdminTenantsView />;
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <SuperAdminTenantsView />
+          </AdminLayout>
+        );
+        break;
+      case '/admin/landing-editor':
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <LandingCmsStudioView />
+          </AdminLayout>
+        );
+        break;
+      case '/admin/settings/master':
+      case '/admin/settings':
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <UnifiedMasterSettingsView />
+          </AdminLayout>
+        );
         break;
       case '/admin/logs':
-        adminElement = <SuperAdminLogsView />;
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <SuperAdminLogsView />
+          </AdminLayout>
+        );
         break;
       case '/admin/analytics':
-        adminElement = <SuperAdminAnalyticsView />;
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <SuperAdminAnalyticsView />
+          </AdminLayout>
+        );
         break;
     }
 
@@ -851,6 +882,9 @@ function AppContent() {
         themeMode === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-neutral-900'
       }`}
     >
+      {/* Platform Real-Time Broadcast Subsystem */}
+      <SystemBroadcastBanner />
+
       {activeTab !== 'hub' && <Navbar
         onOpenAIModal={() => setIsAIChatOpen(true)}
         onOpenExportPrintModal={() => setIsExportPrintModalOpen(true)}
