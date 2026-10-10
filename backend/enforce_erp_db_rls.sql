@@ -184,6 +184,23 @@ BEGIN
                     tenant_predicate := platform_predicate;
                 WHEN 'platform_settings' THEN
                     tenant_predicate := platform_predicate;
+                WHEN 'platform_master_settings' THEN
+                    tenant_predicate := platform_predicate;
+                WHEN 'site_settings' THEN
+                    tenant_predicate := platform_predicate;
+                WHEN 'oxengl_currencies' THEN
+                    tenant_predicate := 'is_active IS TRUE';
+                WHEN 'oxengl_exchange_rates' THEN
+                    tenant_predicate := 'is_active IS TRUE';
+                WHEN 'oxengl_engine_settings' THEN
+                    tenant_predicate := 'TRUE';
+                WHEN 'exchange_rates' THEN
+                    tenant_predicate := 'TRUE';
+                WHEN 'platform_landing_sections' THEN
+                    tenant_predicate := 'is_visible IS TRUE';
+                WHEN 'system_broadcasts' THEN
+                    tenant_predicate := 'is_active IS TRUE';
+
                 ELSE
                     RAISE EXCEPTION 'No tenant or control-plane policy mapping for public.%', table_row.relname;
             END CASE;
@@ -206,7 +223,7 @@ BEGIN
                            platform_predicate, tenant_predicate);
             EXECUTE format('CREATE POLICY oxengl_rls_delete ON public.%I FOR DELETE USING ((%s) OR %s)',
                            table_row.relname, platform_predicate, tenant_predicate);
-        ELSIF table_row.relname IN ('subscription_plans', 'sso_providers', 'platform_feature_flags') THEN
+        ELSIF table_row.relname IN ('subscription_plans', 'sso_providers', 'platform_feature_flags', 'oxengl_currencies', 'oxengl_exchange_rates', 'oxengl_engine_settings', 'exchange_rates', 'platform_landing_sections', 'system_broadcasts') THEN
             EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_row.relname);
             EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', table_row.relname);
             EXECUTE format('DROP POLICY IF EXISTS oxengl_rls_all ON public.%I', table_row.relname);

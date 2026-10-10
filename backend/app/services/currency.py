@@ -17,10 +17,17 @@ FRANKFURTER_FALLBACK_URL = "https://api.frankfurter.app/latest"
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "production")
 
+BASE_CURRENCY = "USD"
+SUPPORTED_CURRENCIES = ["USD", "SAR", "YER"]
+
 # Static fallback parity table for mission-critical offline resilience
 FALLBACK_RATES: Dict[str, float] = {
     "USD_SAR": 3.750000,
     "SAR_USD": 0.266667,
+    "USD_YER": 535.000000,
+    "YER_USD": 0.00186916,
+    "SAR_YER": 142.666667,
+    "YER_SAR": 0.00700935,
     "USD_EUR": 0.920000,
     "EUR_USD": 1.086957,
     "EUR_SAR": 4.076000,
@@ -30,6 +37,7 @@ FALLBACK_RATES: Dict[str, float] = {
     "SAR_AED": 0.979333,
     "AED_SAR": 1.021103,
 }
+
 
 
 class CurrencyService:
@@ -133,3 +141,20 @@ class CurrencyService:
         """Converts an amount from one currency to another."""
         rate = await self.get_exchange_rate(from_currency, to_currency, tenant_id)
         return round(amount * rate, 4)
+
+    async def flush_currency_cache(self, tenant_id: Optional[str] = None) -> int:
+        """Flushes cached exchange rates for a specific tenant or all tenants."""
+        try:
+            r = await self.get_redis()
+            if tenant_id:
+                pattern = f"oxengl:{ENVIRONMENT}:{tenant_id}:procurement:fx_rates:*"
+            else:
+                pattern = f"oxengl:{ENVIRONMENT}:*:procurement:fx_rates:*"
+            keys = await r.keys(pattern)
+            if keys:
+                return await r.delete(*keys)
+            return 0
+        except Exception as e:
+            logger.warning(f"Failed to flush currency cache: {e}")
+            return 0
+

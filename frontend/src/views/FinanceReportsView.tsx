@@ -857,6 +857,7 @@ export const FinanceReportsView: React.FC<FinanceReportsViewProps> = ({ initialM
                   >
                     <option value="SAR">SAR (ريال سعودي)</option>
                     <option value="USD">USD</option>
+                    <option value="YER">YER (ريال يمني)</option>
                   </select>
                 </div>
               </div>

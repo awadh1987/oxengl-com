@@ -242,9 +242,15 @@
   },
   "common": {
     "currency": "SAR",
+    "currencies": {
+      "USD": "US Dollar ($)",
+      "SAR": "Saudi Riyal (SR)",
+      "YER": "Yemeni Rial (﷼)"
+    },
     "cancel": "Cancel",
     "copied": "Copied!"
   },
+
   "workflows": {
     "title": "Cross-Departmental Workflow & Automation Canvas",
     "subtitle": "Interactive node sequences with live directional data pulses",

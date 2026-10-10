@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
-from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, event, func, inspect, text
+from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
@@ -2881,4 +2881,49 @@ class SystemBroadcast(Base):
         DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
     )
     created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+
+
+class OxenglCurrency(Base):
+    """Global Currency Registry master table."""
+    __tablename__ = "oxengl_currencies"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    currency_code: Mapped[str] = mapped_column(String(10), unique=True, index=True, nullable=False)
+    currency_symbol: Mapped[str] = mapped_column(String(10), nullable=False)
+    currency_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False)
+
+
+class OxenglExchangeRate(Base):
+    """Universal Multi-Currency Exchange Rates with effective date tracking."""
+    __tablename__ = "oxengl_exchange_rates"
+    __table_args__ = (
+        UniqueConstraint("from_currency", "to_currency", "effective_date", name="uq_oxengl_exchange_rates_pair_date"),
+        Index("idx_oxengl_exchange_rates_lookup", "from_currency", "to_currency", "effective_date"),
+        {"extend_existing": True},
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    from_currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    to_currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
+    effective_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+
+
+class OxenglEngineSetting(Base):
+    """Engine-specific supported currency and financial parameters configuration."""
+    __tablename__ = "oxengl_engine_settings"
+    __table_args__ = {"extend_existing": True}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    engine_name: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    supported_currencies: Mapped[list] = mapped_column(JSONB, default=lambda: ["USD", "SAR", "YER"], server_default=text("'[\"USD\", \"SAR\", \"YER\"]'::jsonb"), nullable=False)
+    settings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False)
+
 

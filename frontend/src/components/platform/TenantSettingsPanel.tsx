@@ -355,6 +355,7 @@ export const TenantSettingsPanel: React.FC<TenantSettingsPanelProps> = ({ tenant
               >
                 <option value="SAR">ريال سعودي (SAR)</option>
                 <option value="USD">دولار أمريكي (USD)</option>
+                <option value="YER">ريال يمني (YER)</option>
               </select>
             </div>
           </div>

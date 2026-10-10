@@ -1248,6 +1248,7 @@ export const OrganizationProfile: React.FC = () => {
                 >
                   <option value="SAR">SAR - Saudi Riyal (ريال سعودي)</option>
                   <option value="USD">USD - US Dollar</option>
+                  <option value="YER">YER - Yemeni Rial (ريال يمني)</option>
                   <option value="EUR">EUR - Euro</option>
                   <option value="AED">AED - UAE Dirham</option>
                 </select>
@@ -1586,6 +1587,7 @@ export const OrganizationProfile: React.FC = () => {
                 >
                   <option value="SAR">SAR - Saudi Riyal (ريال سعودي)</option>
                   <option value="USD">USD - US Dollar</option>
+                  <option value="YER">YER - Yemeni Rial (ريال يمني)</option>
                   <option value="EUR">EUR - Euro</option>
                   <option value="AED">AED - UAE Dirham</option>
                 </select>

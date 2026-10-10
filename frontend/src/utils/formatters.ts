@@ -1,11 +1,27 @@
-export function formatCurrency(amount: number, lang: 'ar' | 'en' = 'ar'): string {
+export type SupportedCurrency = 'USD' | 'SAR' | 'YER';
+
+export function formatCurrency(
+  amount: number,
+  lang: 'ar' | 'en' = 'ar',
+  currency: SupportedCurrency | string = 'SAR'
+): string {
   const formatted = new Intl.NumberFormat(lang === 'ar' ? 'ar-SA' : 'en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount || 0);
 
-  return lang === 'ar' ? `${formatted} ر.س` : `SAR ${formatted}`;
+  const cur = (currency || 'SAR').toUpperCase();
+  switch (cur) {
+    case 'USD':
+      return `$${formatted}`;
+    case 'YER':
+      return lang === 'ar' ? `${formatted} ﷼` : `${formatted} YER`;
+    case 'SAR':
+    default:
+      return lang === 'ar' ? `${formatted} ر.س` : `${formatted} SR`;
+  }
 }
+
 
 export function formatNumber(val: number, lang: 'ar' | 'en' = 'ar', decimals = 2): string {
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-SA' : 'en-US', {
