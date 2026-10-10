@@ -318,6 +318,7 @@ def invite_team_member(
         dispatch_user_invitation,
         construct_workspace_login_url,
         resolve_tenant_logo_url,
+        fetch_tenant_smtp_config,
     )
 
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
@@ -328,7 +329,9 @@ def invite_team_member(
     inviter_name = current_user.full_name or current_user.email or "Workspace Administrator"
 
     tenant_ctx = {
+        "id": str(company.id) if company else str(target_uuid),
         "name": company.name if company else "OxenGL Enterprise",
+        "slug": getattr(company, "slug", None),
         "logo_url": tenant_logo,
         "workspace_domain": (getattr(company, "workspace_domain", None) or "portal.oxengl.com"),
         "support_email": (getattr(company, "support_email", None) or "support@oxengl.com"),
@@ -336,7 +339,7 @@ def invite_team_member(
         "signature_title": (getattr(company, "signature_title", None) or "Workspace Operations"),
     }
 
-    custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+    tenant_smtp = fetch_tenant_smtp_config(company, db=db)
 
     background_tasks.add_task(
         dispatch_user_invitation,
@@ -348,7 +351,8 @@ def invite_team_member(
         tenant=tenant_ctx,
         temp_password=temp_pw,
         expiry_hours=48,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=tenant_smtp,
+        company=company,
     )
 
     member_data = {

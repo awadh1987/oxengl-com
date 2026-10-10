@@ -1,5 +1,7 @@
 import os
 import datetime
+import logging
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional, Union
@@ -7,6 +9,8 @@ from typing import Any, Dict, List, Optional, Union
 import aiosmtplib
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 import premailer
+
+logger = logging.getLogger("oxengl.email_service")
 
 try:
     from app.core.config import email_settings
@@ -50,10 +54,11 @@ class EmailService:
         template_context: Dict[str, Any],
         tenant: TenantBrandContext,
         custom_smtp: Optional[Dict[str, Any]] = None,
+        tenant_smtp_config: Optional[Dict[str, Any]] = None,
     ) -> bool:
         """
         Sends standardized transactional email via async SMTP.
-        Allows individual tenants to supply custom SMTP overrides or defaults to OxenGL.
+        Allows individual tenants to supply custom SMTP overrides (BYOSMTP) or defaults to OxenGL.
         """
         # Ensure tenant dictionary is serializable
         template_context["tenant"] = tenant.model_dump()
@@ -61,27 +66,60 @@ class EmailService:
 
         html_content = cls._render_template(template_name, template_context)
 
-        # Standardized Display Name: "[Tenant Name] via OxenGL"
-        sender_display_name = f"{tenant.name} via OxenGL"
-        system_from = f'"{sender_display_name}" <{email_settings.OXENGL_SYSTEM_EMAIL}>'
+        # Merge tenant_smtp_config and legacy custom_smtp overrides
+        smtp_cfg = tenant_smtp_config or custom_smtp or {}
+
+        # Determine SMTP configuration (tenant custom override vs OxenGL shared engine)
+        smtp_host = smtp_cfg.get("smtp_host") or smtp_cfg.get("host") or email_settings.SMTP_HOST
+        try:
+            smtp_port = int(smtp_cfg.get("smtp_port") or smtp_cfg.get("port") or email_settings.SMTP_PORT)
+        except (ValueError, TypeError):
+            smtp_port = email_settings.SMTP_PORT
+        smtp_user = smtp_cfg.get("smtp_user") or smtp_cfg.get("username") or smtp_cfg.get("user") or email_settings.SMTP_USER
+        smtp_pass = smtp_cfg.get("smtp_password") or smtp_cfg.get("password") or email_settings.SMTP_PASSWORD
+
+        # Determine SSL/TLS behavior
+        security = (str(smtp_cfg.get("security") or "")).strip().lower()
+        use_ssl = bool(
+            smtp_cfg.get("use_ssl", False)
+            or security == "ssl"
+            or smtp_port == 465
+        )
+        use_tls = bool(
+            smtp_cfg.get("use_tls", False)
+            or security == "starttls"
+            or (smtp_port == 587 and not use_ssl)
+            or (email_settings.SMTP_USE_TLS and not use_ssl)
+        )
+        # In aiosmtplib, start_tls and use_tls cannot both be True
+        start_tls = False if use_ssl else use_tls
+
+        # Determine "From" address: use tenant email if provided, else fallback to OxenGL
+        tenant_from_email = (
+            smtp_cfg.get("sender_email")
+            or smtp_cfg.get("from_email")
+            or (smtp_user if "@" in str(smtp_user or "") else None)
+        )
+        if tenant_from_email:
+            system_from = f'"{tenant.name}" <{tenant_from_email}>'
+        else:
+            sender_display_name = f"{tenant.name} via OxenGL"
+            system_from = f'"{sender_display_name}" <{email_settings.OXENGL_SYSTEM_EMAIL}>'
 
         message = MIMEMultipart("alternative")
         message["Subject"] = subject
         message["From"] = system_from
         message["To"] = recipient_email
 
-        # Route recipient replies directly to the tenant's support team
-        message["Reply-To"] = str(tenant.support_email) if tenant.support_email else str(email_settings.OXENGL_SYSTEM_EMAIL)
+        # Route recipient replies directly to tenant support team or tenant from email
+        reply_to = (
+            tenant_from_email
+            or tenant.support_email
+            or email_settings.OXENGL_SYSTEM_EMAIL
+        )
+        message["Reply-To"] = str(reply_to)
 
         message.attach(MIMEText(html_content, "html", "utf-8"))
-
-        # Determine SMTP configuration (tenant custom override vs OxenGL shared engine)
-        smtp_host = custom_smtp.get("host") if custom_smtp else email_settings.SMTP_HOST
-        smtp_port = int(custom_smtp.get("port") if custom_smtp else email_settings.SMTP_PORT)
-        smtp_user = custom_smtp.get("user") if custom_smtp else email_settings.SMTP_USER
-        smtp_pass = custom_smtp.get("password") if custom_smtp else email_settings.SMTP_PASSWORD
-        use_tls = custom_smtp.get("use_tls") if custom_smtp else email_settings.SMTP_USE_TLS
-        use_ssl = custom_smtp.get("use_ssl") if custom_smtp else email_settings.SMTP_USE_SSL
 
         try:
             await aiosmtplib.send(
@@ -90,13 +128,14 @@ class EmailService:
                 port=smtp_port,
                 username=smtp_user,
                 password=smtp_pass,
-                start_tls=use_tls,
+                start_tls=start_tls,
                 use_tls=use_ssl,
                 timeout=15,
             )
             return True
         except Exception as exc:
-            print(f"[EmailService Error] Dispatch failed for {recipient_email}: {str(exc)}")
+            logger.error(f"[EmailService Error] Dispatch failed for {recipient_email} via {smtp_host}:{smtp_port}: {str(exc)}")
+            print(f"[EmailService Error] Dispatch failed for {recipient_email} via {smtp_host}:{smtp_port}: {str(exc)}")
             return False
 
 
@@ -199,6 +238,115 @@ def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
 
 
 # ----------------------------------------------------------------------
+# Tenant SMTP Configuration Resolver (BYOSMTP)
+# ----------------------------------------------------------------------
+
+def fetch_tenant_smtp_config(
+    company_or_tenant: Any = None,
+    *,
+    tenant_id: Optional[Union[uuid.UUID, str]] = None,
+    db: Optional[Any] = None,
+) -> Optional[Dict[str, Any]]:
+    """
+    Retrieves tenant-specific SMTP configuration from:
+    1. Direct dictionary / custom_smtp_settings on company or tenant context.
+    2. CommunicationSetting table in PostgreSQL (decrypted via _cipher).
+    """
+    if company_or_tenant is None and tenant_id is None:
+        return None
+
+    # 1. Check if company_or_tenant is already an SMTP config dict
+    if isinstance(company_or_tenant, dict):
+        if any(k in company_or_tenant for k in ("smtp_host", "host", "smtp_user")):
+            return company_or_tenant
+        custom_sub = company_or_tenant.get("custom_smtp_settings")
+        if isinstance(custom_sub, dict) and any(k in custom_sub for k in ("smtp_host", "host")):
+            return custom_sub
+
+    # 2. Check custom_smtp_settings attribute on model
+    if company_or_tenant is not None:
+        custom_attr = getattr(company_or_tenant, "custom_smtp_settings", None)
+        if isinstance(custom_attr, dict) and any(k in custom_attr for k in ("smtp_host", "host")):
+            return custom_attr
+
+    # 3. Resolve tenant_id / company_id
+    resolved_tid = tenant_id
+    if not resolved_tid and company_or_tenant is not None:
+        if isinstance(company_or_tenant, dict):
+            resolved_tid = (
+                company_or_tenant.get("id")
+                or company_or_tenant.get("company_id")
+                or company_or_tenant.get("tenant_id")
+            )
+        else:
+            resolved_tid = getattr(company_or_tenant, "id", None) or getattr(company_or_tenant, "company_id", None)
+
+    if resolved_tid:
+        try:
+            if not isinstance(resolved_tid, uuid.UUID):
+                resolved_tid = uuid.UUID(str(resolved_tid))
+        except Exception:
+            resolved_tid = None
+
+    # Try resolving via slug if resolved_tid still None
+    slug = None
+    if company_or_tenant is not None:
+        if isinstance(company_or_tenant, dict):
+            slug = company_or_tenant.get("slug")
+        else:
+            slug = getattr(company_or_tenant, "slug", None)
+
+    # 4. Lookup from database (CommunicationSetting or ResCompany)
+    try:
+        from backend.database import SessionLocal
+        from backend.models import CommunicationSetting, ResCompany
+        from backend.app.services.communication_service import _cipher
+
+        session = db if hasattr(db, "query") else SessionLocal()
+        should_close = (session is not db)
+
+        try:
+            if not resolved_tid and slug:
+                comp = session.query(ResCompany).filter(ResCompany.slug == str(slug)).first()
+                if comp:
+                    resolved_tid = comp.id
+                    if comp.custom_smtp_settings and isinstance(comp.custom_smtp_settings, dict):
+                        return comp.custom_smtp_settings
+
+            if resolved_tid:
+                comp = session.query(ResCompany).filter(ResCompany.id == resolved_tid).first()
+                if comp and comp.custom_smtp_settings and isinstance(comp.custom_smtp_settings, dict):
+                    return comp.custom_smtp_settings
+
+                cs = session.query(CommunicationSetting).filter(
+                    CommunicationSetting.tenant_id == resolved_tid,
+                    CommunicationSetting.channel == "email",
+                    CommunicationSetting.is_active.is_(True),
+                ).first()
+                if cs and cs.provider == "smtp":
+                    cfg = cs.config or {}
+                    creds = _cipher.decrypt(cs.id, cs.tenant_id, cs.credentials_encrypted) if cs.credentials_encrypted else {}
+                    security = (cfg.get("security") or "").strip().lower()
+                    port = int(cfg.get("port") or (465 if security == "ssl" else 587))
+                    return {
+                        "smtp_host": cfg.get("host"),
+                        "smtp_port": port,
+                        "smtp_user": cfg.get("username") or cs.sender_identity,
+                        "smtp_password": creds.get("password"),
+                        "use_ssl": security == "ssl" or port == 465,
+                        "use_tls": security == "starttls" or (port == 587 and security != "ssl"),
+                        "sender_email": cs.sender_identity,
+                    }
+        finally:
+            if should_close:
+                session.close()
+    except Exception as exc:
+        logger.warning(f"Failed to fetch tenant SMTP config: {exc}")
+
+    return None
+
+
+# ----------------------------------------------------------------------
 # High-Level Specialized Dispatchers
 # ----------------------------------------------------------------------
 
@@ -214,10 +362,19 @@ async def dispatch_user_invitation(
     temp_password: Optional[str] = None,
     expiry_hours: int = 48,
     custom_smtp: Optional[Dict[str, Any]] = None,
+    tenant_smtp_config: Optional[Dict[str, Any]] = None,
+    company: Optional[Any] = None,
     **kwargs: Any,
 ) -> bool:
     assigned_role = user_role or role or "Team Member"
     tenant_brand = resolve_tenant_branding(tenant)
+
+    # Fetch tenant's SMTP credentials if not explicitly provided
+    resolved_smtp = tenant_smtp_config or custom_smtp
+    if not resolved_smtp:
+        target_company = company or kwargs.get("company_obj") or tenant
+        resolved_smtp = fetch_tenant_smtp_config(target_company)
+
     context = {
         "user": {
             "first_name": first_name,
@@ -235,7 +392,7 @@ async def dispatch_user_invitation(
         template_name="invite_user.html",
         template_context=context,
         tenant=tenant_brand,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=resolved_smtp,
     )
 
 
@@ -248,8 +405,16 @@ async def dispatch_password_reset(
     tenant: Union[TenantBrandContext, Any],
     expiry_minutes: int = 30,
     custom_smtp: Optional[Dict[str, Any]] = None,
+    tenant_smtp_config: Optional[Dict[str, Any]] = None,
+    company: Optional[Any] = None,
+    **kwargs: Any,
 ) -> bool:
     tenant_brand = resolve_tenant_branding(tenant)
+    resolved_smtp = tenant_smtp_config or custom_smtp
+    if not resolved_smtp:
+        target_company = company or kwargs.get("company_obj") or tenant
+        resolved_smtp = fetch_tenant_smtp_config(target_company)
+
     context = {
         "user": {"first_name": first_name, "email": recipient_email},
         "reset_url": reset_url,
@@ -263,7 +428,7 @@ async def dispatch_password_reset(
         template_name="password_reset.html",
         template_context=context,
         tenant=tenant_brand,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=resolved_smtp,
     )
 
 
@@ -278,8 +443,16 @@ async def dispatch_system_instructions(
     action_url: Optional[str] = None,
     button_label: Optional[str] = "Open Workspace",
     custom_smtp: Optional[Dict[str, Any]] = None,
+    tenant_smtp_config: Optional[Dict[str, Any]] = None,
+    company: Optional[Any] = None,
+    **kwargs: Any,
 ) -> bool:
     tenant_brand = resolve_tenant_branding(tenant)
+    resolved_smtp = tenant_smtp_config or custom_smtp
+    if not resolved_smtp:
+        target_company = company or kwargs.get("company_obj") or tenant
+        resolved_smtp = fetch_tenant_smtp_config(target_company)
+
     context = {
         "user": {"first_name": first_name, "email": recipient_email},
         "instruction_title": instruction_title,
@@ -294,7 +467,7 @@ async def dispatch_system_instructions(
         template_name="system_instructions.html",
         template_context=context,
         tenant=tenant_brand,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=resolved_smtp,
     )
 
 
@@ -305,8 +478,16 @@ async def dispatch_security_alert(
     secure_account_url: str,
     tenant: Union[TenantBrandContext, Any],
     custom_smtp: Optional[Dict[str, Any]] = None,
+    tenant_smtp_config: Optional[Dict[str, Any]] = None,
+    company: Optional[Any] = None,
+    **kwargs: Any,
 ) -> bool:
     tenant_brand = resolve_tenant_branding(tenant)
+    resolved_smtp = tenant_smtp_config or custom_smtp
+    if not resolved_smtp:
+        target_company = company or kwargs.get("company_obj") or tenant
+        resolved_smtp = fetch_tenant_smtp_config(target_company)
+
     context = {
         "session": session,
         "secure_account_url": secure_account_url,
@@ -317,7 +498,7 @@ async def dispatch_security_alert(
         template_name="security_alert.html",
         template_context=context,
         tenant=tenant_brand,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=resolved_smtp,
     )
 
 
@@ -331,8 +512,16 @@ async def dispatch_role_updated(
     tenant: Union[TenantBrandContext, Any],
     effective_date: Optional[str] = None,
     custom_smtp: Optional[Dict[str, Any]] = None,
+    tenant_smtp_config: Optional[Dict[str, Any]] = None,
+    company: Optional[Any] = None,
+    **kwargs: Any,
 ) -> bool:
     tenant_brand = resolve_tenant_branding(tenant)
+    resolved_smtp = tenant_smtp_config or custom_smtp
+    if not resolved_smtp:
+        target_company = company or kwargs.get("company_obj") or tenant
+        resolved_smtp = fetch_tenant_smtp_config(target_company)
+
     if not effective_date:
         effective_date = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     context = {
@@ -348,5 +537,5 @@ async def dispatch_role_updated(
         template_name="role_updated.html",
         template_context=context,
         tenant=tenant_brand,
-        custom_smtp=custom_smtp,
+        tenant_smtp_config=resolved_smtp,
     )

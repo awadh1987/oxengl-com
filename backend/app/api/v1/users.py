@@ -967,20 +967,23 @@ async def invite_tenant_user(
                 dispatch_user_invitation,
                 construct_workspace_login_url,
                 resolve_tenant_logo_url,
+                fetch_tenant_smtp_config,
             )
             tenant_logo = resolve_tenant_logo_url(company)
             action_url = construct_workspace_login_url(company)
             inviter_name = getattr(actor, "full_name", None) or getattr(actor, "email", None) or "Workspace Administrator"
             first_name = (full_name.strip().split()[0] if full_name else "Team Member")
             tenant_ctx = {
+                "id": str(company.id) if company else str(tenant_id),
                 "name": company.name if company else workspace_name,
+                "slug": getattr(company, "slug", None),
                 "logo_url": tenant_logo,
                 "workspace_domain": (getattr(company, "workspace_domain", None) or "portal.oxengl.com"),
                 "support_email": (getattr(company, "support_email", None) or "support@oxengl.com"),
                 "signature_name": (getattr(company, "signature_name", None) or f"{company.name if company else 'OxenGL'} Administration"),
                 "signature_title": (getattr(company, "signature_title", None) or "Workspace Operations"),
             }
-            custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+            tenant_smtp = fetch_tenant_smtp_config(company, db=db)
             background_tasks.add_task(
                 dispatch_user_invitation,
                 recipient_email=email_clean,
@@ -991,7 +994,8 @@ async def invite_tenant_user(
                 tenant=tenant_ctx,
                 temp_password=temporary_password,
                 expiry_hours=48,
-                custom_smtp=custom_smtp,
+                tenant_smtp_config=tenant_smtp,
+                company=company,
             )
         elif payload.channel != "manual":
             await dispatch_temporary_credentials(
