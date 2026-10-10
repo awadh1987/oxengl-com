@@ -85,6 +85,25 @@ def is_super_admin_authorized(user: Any, request: Optional[Request] = None) -> b
     return False
 
 
+def has_record_super_admin_authority(user: Any) -> bool:
+    """
+    STRICT variant for credential-bearing endpoints (e.g. payment gateway keys).
+    Honors ONLY authority persisted on the user's database record (checks 1, 2 and 4 above).
+    Deliberately ignores the development/provisioning fallback (check 5, which is active
+    whenever OXENGL_DEV_MODE is unset) and the X-Master-Admin-Key header.
+    """
+    if user is None:
+        return False
+    if getattr(user, "is_superuser", False) is True or getattr(user, "is_super_admin", False) is True:
+        return True
+    normalized_role = str(getattr(user, "role", "") or "").strip().upper().replace(" ", "_").replace("-", "_")
+    if normalized_role in {"SUPER_ADMIN", "SUPERADMIN", "ROOT", "MASTER"}:
+        return True
+    acl = str(getattr(user, "access_control_list", "") or "").upper()
+    role_ids = str(getattr(user, "role_ids", "") or "").upper()
+    return "SUPER_ADMIN" in acl or "SUPER_ADMIN" in role_ids
+
+
 def get_authenticated_user(request: Request, database: Session = Depends(get_db)) -> models.ResUser:
     """Delegates to primary get_authenticated_user in backend.app.main."""
     from backend.app.main import get_authenticated_user as _main_get_authenticated_user

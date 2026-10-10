@@ -27,7 +27,8 @@ import {
   Globe, 
   Sparkles,
   Server,
-  Calendar
+  Calendar,
+  CreditCard
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
@@ -39,9 +40,13 @@ import { GlobalSystemHealthCard } from '../components/analytics/GlobalSystemHeal
 import { TenantComparisonTable } from '../components/analytics/TenantComparisonTable';
 import { SkeletonCard, SkeletonTable } from '../components/common/Skeleton';
 import { getAuthToken, decodeJwtClaims } from '../services/api';
+import { BillingConfigurationPanel } from '../components/admin/BillingConfigurationPanel';
 
 export const PlatformAdminPortal: React.FC = () => {
   const { currentUser, authTier } = useApp();
+
+  // Navigation Tab State
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'billing'>('telemetry');
 
   // State Management
   const [data, setData] = useState<PlatformAdminOverviewResponse | null>(null);
@@ -162,57 +167,94 @@ export const PlatformAdminPortal: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => loadDashboardData(true)}
-              disabled={isLoading || isRefreshing}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-2xs disabled:opacity-60"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
-              {isRefreshing ? 'Refreshing Snapshot...' : 'Force Refresh'}
-            </button>
+            {activeTab === 'telemetry' && (
+              <button
+                onClick={() => loadDashboardData(true)}
+                disabled={isLoading || isRefreshing}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 transition-colors shadow-2xs disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-indigo-500' : ''}`} />
+                {isRefreshing ? 'Refreshing Snapshot...' : 'Force Refresh'}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Error State Banner */}
-        {error && (
-          <div className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
-              <div>
-                <h4 className="text-xs font-semibold text-rose-900 dark:text-rose-200">
-                  Telemetry Fetch Error
-                </h4>
-                <p className="text-xs text-rose-700 dark:text-rose-400 mt-0.5">
-                  {error}
-                </p>
+        {/* Navigation Tabs Bar */}
+        <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+          <button
+            onClick={() => setActiveTab('telemetry')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'telemetry'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            Global Telemetry & Tenants
+          </button>
+
+          <button
+            onClick={() => setActiveTab('billing')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'billing'
+                ? 'bg-emerald-600 text-white shadow-xs'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
+            }`}
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            Payment & Billing Gateways
+          </button>
+        </div>
+
+        {/* Tab 2: Billing & Payment Gateways Configuration */}
+        {activeTab === 'billing' && (
+          <BillingConfigurationPanel />
+        )}
+
+        {/* Tab 1: Global Telemetry & Observability View */}
+        {activeTab === 'telemetry' && (
+          <>
+            {/* Error State Banner */}
+            {error && (
+              <div className="p-5 rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/40 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0" />
+                  <div>
+                    <h4 className="text-xs font-semibold text-rose-900 dark:text-rose-200">
+                      Telemetry Fetch Error
+                    </h4>
+                    <p className="text-xs text-rose-700 dark:text-rose-400 mt-0.5">
+                      {error}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => loadDashboardData(true)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors shrink-0 shadow-2xs"
+                >
+                  Retry Pipeline
+                </button>
               </div>
-            </div>
-            <button
-              onClick={() => loadDashboardData(true)}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors shrink-0 shadow-2xs"
-            >
-              Retry Pipeline
-            </button>
-          </div>
-        )}
+            )}
 
-        {/* Loading State Skeleton Grid */}
-        {isLoading && !data && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-            <SkeletonTable rows={6} cols={7} />
-          </div>
-        )}
+            {/* Loading State Skeleton Grid */}
+            {isLoading && !data && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                  <SkeletonCard />
+                </div>
+                <SkeletonTable rows={6} cols={7} />
+              </div>
+            )}
 
-        {/* Loaded Telemetry Grid */}
-        {data && (
-          <div className="space-y-8">
-            {/* 1. Global System Health Cards */}
+            {/* Loaded Telemetry Grid */}
+            {data && (
+              <div className="space-y-8">
+                {/* 1. Global System Health Cards */}
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
@@ -329,6 +371,8 @@ export const PlatformAdminPortal: React.FC = () => {
             </section>
           </div>
         )}
+        </>
+      )}
 
         {/* Tenant Detail Modal (if selected) */}
         {selectedTenant && (

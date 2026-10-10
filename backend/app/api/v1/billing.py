@@ -49,6 +49,13 @@ from backend.app.services.billing_service import (
 )
 from backend.app.core.auth import get_authenticated_user, is_super_admin_authorized, require_super_admin
 from backend.app.domains.hr.audit import append_audit_from_context, build_audit_context
+from backend.app.services.billing.payment_strategy import (
+    GatewayConfigurationError,
+    GatewayDisabledError,
+    GatewayError,
+    PaymentMethod,
+    get_payment_gateway,
+)
 
 logger = logging.getLogger("oxengl.billing.api")
 
@@ -92,6 +99,16 @@ def get_billing_summary_db(
 
 class StripeCheckoutRequest(BaseModel):
     plan_name: str = Field(..., description="Target plan code, e.g. 'PROFESSIONAL' or 'ENTERPRISE'")
+    billing_cycle: str = Field("monthly", description="'monthly' or 'annual'")
+    success_url: Optional[str] = Field(None, description="Redirect URL after card checkout completion")
+    cancel_url: Optional[str] = Field(None, description="Redirect URL if checkout is canceled")
+
+
+class TenantSubscribeRequest(BaseModel):
+    plan_id: Optional[str] = Field(None, description="Target plan code name (e.g. 'PROFESSIONAL') or UUID")
+    plan_name: Optional[str] = Field(None, description="Target plan code name (e.g. 'PROFESSIONAL' or 'ENTERPRISE')")
+    company_id: Optional[str] = Field(None, description="Optional tenant purchasing company UUID")
+    payment_method: PaymentMethod = Field(PaymentMethod.OFFLINE, description="'stripe', 'moyasar', or 'offline'")
     billing_cycle: str = Field("monthly", description="'monthly' or 'annual'")
     success_url: Optional[str] = Field(None, description="Redirect URL after card checkout completion")
     cancel_url: Optional[str] = Field(None, description="Redirect URL if checkout is canceled")
@@ -274,6 +291,68 @@ def create_card_checkout_session(
     except Exception as exc:
         logger.error("Failed to generate Stripe checkout session: %s", exc)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Checkout session generation failed.")
+
+
+@tenant_billing_router.post("/subscribe", status_code=status.HTTP_200_OK)
+def subscribe_to_subscription_plan(
+    payload: TenantSubscribeRequest,
+    current_user: Any = Depends(get_authenticated_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Subscribes the authenticated tenant to a SaaS subscription plan using the configured Gateway Strategy:
+    - 'stripe': Dynamically generates Stripe Checkout session with decrypted platform API keys.
+    - 'moyasar': Dynamically generates Moyasar payment session for Mada, Apple Pay, and STC Pay.
+    - 'offline': Issues a pending invoice and returns receiving bank accounts & digital wallet instructions.
+    """
+    tenant = resolve_billing_tenant(db, current_user)
+
+    target_identifier = payload.plan_name or payload.plan_id
+    if not target_identifier:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Provide either plan_id or plan_name to subscribe.",
+        )
+
+    plan: Optional[SubscriptionPlan] = None
+    try:
+        plan_uuid = uuid.UUID(str(target_identifier))
+        plan = db.get(SubscriptionPlan, plan_uuid)
+    except (ValueError, AttributeError):
+        pass
+
+    if not plan:
+        plan = get_plan_by_name(db, str(target_identifier))
+
+    if not plan:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Subscription plan '{target_identifier}' not found in catalog.",
+        )
+
+    try:
+        gateway = get_payment_gateway(payload.payment_method, db)
+        session_info = gateway.create_subscription(
+            tenant=tenant,
+            plan=plan,
+            billing_cycle=payload.billing_cycle,
+            success_url=payload.success_url or "",
+            cancel_url=payload.cancel_url or "",
+        )
+        return session_info
+    except GatewayDisabledError as gde:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(gde))
+    except GatewayConfigurationError as gce:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(gce))
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as exc:
+        logger.error("Subscription gateway error: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Subscription gateway processing failed: {exc}",
+        )
+
 
 
 @tenant_billing_router.post("/enterprise-quote")

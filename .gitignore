@@ -92,6 +92,10 @@ dist
 backend/static/logos/*
 !backend/static/logos/.gitkeep
 frontend/public/assets/site_logo_*
+backend/static/uploads/wallets/*
+!backend/static/uploads/wallets/.gitkeep
+backend/app/static/uploads/wallets/*
+!backend/app/static/uploads/wallets/.gitkeep
 
 # Gatsby files
 .cache/

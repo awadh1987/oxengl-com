@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional, Any
-from sqlalchemy import String, ForeignKey, Boolean, Integer, Numeric, DateTime, Text, JSON, func, text
+from sqlalchemy import String, ForeignKey, Boolean, Integer, Numeric, DateTime, Text, JSON, CheckConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -187,3 +187,44 @@ class TenantSubscription(Base):
             "custom_limits": self.custom_limits,
             "notes": self.notes,
         }
+
+
+class PaymentGatewaySettings(Base):
+    """
+    Platform-wide (control-plane) configuration for collecting tenant subscription payments.
+
+    Singleton: exactly one row with ``id = 1`` (enforced by a CHECK constraint).
+    Every ``*_encrypted`` column holds a Fernet token produced by
+    ``backend.app.core.secret_vault`` -- plaintext credentials are NEVER persisted.
+    ``version`` is bumped on every write and used for optimistic concurrency on PUT.
+    """
+    __tablename__ = "platform_payment_gateway_settings"
+    __table_args__ = (CheckConstraint("id = 1", name="ck_platform_payment_gateway_settings_singleton"),)
+
+    SINGLETON_ID = 1
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=SINGLETON_ID)
+
+    # Global card processing (Stripe)
+    stripe_secret_key_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stripe_publishable_key_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    stripe_webhook_secret_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_stripe_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+
+    # Regional card & wallet processing (Moyasar: Mada, STC Pay, Apple Pay)
+    moyasar_api_key_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    moyasar_publishable_key_encrypted: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_moyasar_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+
+    # Offline channels (non-secret, shown to tenants at checkout)
+    # [{bank_name, account_name, account_number, iban, swift, branch, currency, is_active}]
+    local_bank_instructions: Mapped[list] = mapped_column(JSON, nullable=False, default=list, server_default=text("'[]'"))
+    # [{provider, wallet_number, account_name, qr_code_url, is_active}]
+    digital_wallet_instructions: Mapped[list] = mapped_column(JSON, nullable=False, default=list, server_default=text("'[]'"))
+
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
+    updated_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
