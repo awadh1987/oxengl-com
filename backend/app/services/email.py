@@ -21,6 +21,8 @@ try:
     from backend.app.services.email_service import (
         EmailService,
         resolve_tenant_branding,
+        resolve_tenant_logo_url,
+        construct_workspace_login_url,
         dispatch_user_invitation,
         dispatch_password_reset,
         dispatch_system_instructions,
@@ -31,6 +33,8 @@ except ImportError:
     from app.services.email_service import (
         EmailService,
         resolve_tenant_branding,
+        resolve_tenant_logo_url,
+        construct_workspace_login_url,
         dispatch_user_invitation,
         dispatch_password_reset,
         dispatch_system_instructions,
@@ -47,6 +51,8 @@ __all__ = [
     "send_password_reset_email",
     "EmailService",
     "resolve_tenant_branding",
+    "resolve_tenant_logo_url",
+    "construct_workspace_login_url",
     "dispatch_user_invitation",
     "dispatch_password_reset",
     "dispatch_system_instructions",

@@ -314,20 +314,27 @@ def invite_team_member(
         increment_tenant_seat_usage(db, target_uuid)
 
     # Resolve tenant details and dispatch invitation email asynchronously via BackgroundTasks
-    from app.services.email_service import dispatch_user_invitation, resolve_tenant_branding
+    from backend.app.services.email_service import (
+        dispatch_user_invitation,
+        construct_workspace_login_url,
+        resolve_tenant_logo_url,
+    )
 
     company = db.query(ResCompany).filter(ResCompany.id == target_uuid).first()
-    tenant_brand = resolve_tenant_branding(company)
+    tenant_logo = resolve_tenant_logo_url(company)
+    action_url = construct_workspace_login_url(company)
 
     first_name = (payload.full_name.strip().split()[0] if payload.full_name else "Team Member")
     inviter_name = current_user.full_name or current_user.email or "Workspace Administrator"
 
-    slug = getattr(company, "slug", "") or getattr(company, "domain_slug", "") if company else ""
-    base_url = "https://oxengl.me"
-    if slug:
-        target_url = f"https://{slug}.oxengl.me/tenant/login"
-    else:
-        target_url = f"{base_url}/tenant/login"
+    tenant_ctx = {
+        "name": company.name if company else "OxenGL Enterprise",
+        "logo_url": tenant_logo,
+        "workspace_domain": (getattr(company, "workspace_domain", None) or "portal.oxengl.com"),
+        "support_email": (getattr(company, "support_email", None) or "support@oxengl.com"),
+        "signature_name": (getattr(company, "signature_name", None) or f"{company.name if company else 'OxenGL'} Administration"),
+        "signature_title": (getattr(company, "signature_title", None) or "Workspace Operations"),
+    }
 
     custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
 
@@ -335,10 +342,10 @@ def invite_team_member(
         dispatch_user_invitation,
         recipient_email=norm_email,
         first_name=first_name,
-        role=assigned_role,
-        action_url=target_url,
+        user_role=assigned_role,
+        action_url=action_url,
         inviter_name=inviter_name,
-        tenant=tenant_brand,
+        tenant=tenant_ctx,
         temp_password=temp_pw,
         expiry_hours=48,
         custom_smtp=custom_smtp,

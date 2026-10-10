@@ -177,57 +177,40 @@ async def dispatch_employee_welcome_email(
     workspace_label = company_name or "Workspace"
     first_name = full_name.split()[0] if full_name else "there"
 
-    # 1. Render Jinja2 notification template if available
-    body_text = (
-        f"Your employee profile for '{job_title or 'Staff'}' ({role or 'Standard'}) has been created. "
-        f"Your initial credentials are:\n"
-        f"Login Email: {email}\n"
-        f"Temporary Password: {temporary_password}\n\n"
-        "Please sign in and set a secure permanent password."
+    from backend.app.services.email_service import (
+        dispatch_user_invitation,
+        construct_workspace_login_url,
+        resolve_tenant_logo_url,
     )
+    from backend.models import ResCompany
 
-    try:
-        template_dir = Path(__file__).resolve().parents[2] / "templates" / "emails"
-        env = Environment(loader=FileSystemLoader(str(template_dir)), autoescape=True)
-        template = env.get_template("base_notification.html")
-        html_content = template.render(
-            subject=subject,
-            header_title=f"Welcome to {workspace_label}",
-            tenant_name=workspace_label,
-            user_first_name=first_name,
-            message_body=body_text,
-            target_url="https://oxengl.me/login",
-            action_button_text="Sign In & Change Password",
-            is_platform=False,
-        )
-    except Exception as tmpl_err:
-        logger.info("Using plain body for welcome email (%s)", tmpl_err)
-        html_content = body_text
+    company = db.get(ResCompany, company_id) if (db and company_id) else None
+    tenant_logo = resolve_tenant_logo_url(company)
+    action_url = construct_workspace_login_url(company)
 
-    # 2. Dispatch credentials through standard notification service
-    dispatched = False
-    try:
-        from backend.app.services.notification_service import dispatch_temporary_credentials
-        await dispatch_temporary_credentials(
-            "email",
-            email,
-            temporary_password,
-            full_name=full_name,
-            workspace_name=workspace_label,
-            tenant_id=company_id,
-        )
-        dispatched = True
-        logger.info("Dispatched employee welcome credentials via notification_service to %s", email)
-    except Exception as notif_err:
-        logger.info("Notification provider fallback: %s; trying communication_service", notif_err)
-        try:
-            from backend.app.services.communication_service import send_message
-            await send_message("email", email, html_content, tenant_id=company_id, db=db)
-            dispatched = True
-            logger.info("Dispatched employee welcome email via communication_service to %s", email)
-        except Exception as comm_err:
-            logger.warning("SMTP dispatch warning for %s: %s", email, comm_err)
+    tenant_ctx = {
+        "name": company.name if company else workspace_label,
+        "logo_url": tenant_logo,
+        "workspace_domain": (getattr(company, "workspace_domain", None) or "portal.oxengl.com"),
+        "support_email": (getattr(company, "support_email", None) or "support@oxengl.com"),
+        "signature_name": (getattr(company, "signature_name", None) or f"{company.name if company else workspace_label} Administration"),
+        "signature_title": (getattr(company, "signature_title", None) or "Human Resources"),
+    }
+    custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
 
+    dispatched = await dispatch_user_invitation(
+        recipient_email=email,
+        first_name=first_name,
+        role=role or "Staff",
+        action_url=action_url,
+        inviter_name=f"{tenant_ctx['name']} HR Team",
+        tenant=tenant_ctx,
+        temp_password=temporary_password,
+        expiry_hours=48,
+        custom_smtp=custom_smtp,
+    )
+    if dispatched:
+        logger.info("Dispatched employee welcome credentials via dispatch_user_invitation to %s", email)
     return dispatched
 
 

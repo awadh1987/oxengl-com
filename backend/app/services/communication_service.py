@@ -299,7 +299,7 @@ def _smtp_send(setting: CommunicationSetting, destination: str, body: str, crede
     else:
         message["From"] = setting.sender_identity
     message["To"] = destination
-    message["Subject"] = "OxenGL notification"
+    message["Subject"] = "OxenGL Enterprise Notification"
     message.set_content(body)
     host = config.get("host")
     if not host:
@@ -441,7 +441,7 @@ async def deliver(setting: CommunicationSetting, destination: str, body: str) ->
                 "POST", "https://api.sendgrid.com/v3/mail/send",
                 headers={"Authorization": f"Bearer {credentials['api_key']}", "Content-Type": "application/json"},
                 json={"personalizations": [{"to": [{"email": destination}]}],
-                      "from": {"email": sender}, "subject": "OxenGL notification",
+                      "from": {"email": sender}, "subject": "OxenGL Enterprise Notification",
                       "content": [{"type": "text/plain", "value": body}]},
             )
             if response.status_code != 202:

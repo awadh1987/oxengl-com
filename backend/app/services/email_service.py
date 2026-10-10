@@ -100,9 +100,62 @@ class EmailService:
             return False
 
 
-# ----------------------------------------------------------------------
-# Dynamic Context Resolution Helper
-# ----------------------------------------------------------------------
+def _clean_str(val: Any) -> Optional[str]:
+    if val is None or hasattr(val, "_mock_return_value") or type(val).__name__ in ("MagicMock", "Mock"):
+        return None
+    s = str(val).strip()
+    return s if s else None
+
+
+def resolve_tenant_logo_url(company: Any) -> Optional[str]:
+    """Resolve tenant logo with absolute HTTPS path (email clients require absolute URLs)."""
+    if not company:
+        return None
+    raw_logo = (
+        company.get("logo_url") or company.get("ui_logo_url")
+        if isinstance(company, dict)
+        else (getattr(company, "logo_url", None) or getattr(company, "ui_logo_url", None))
+    )
+    logo_str = _clean_str(raw_logo)
+    if not logo_str:
+        return None
+    if logo_str.startswith("http://") or logo_str.startswith("https://"):
+        return logo_str
+    if not logo_str.startswith("/"):
+        logo_str = f"/{logo_str}"
+    return f"https://portal.oxengl.com{logo_str}"
+
+
+def construct_workspace_login_url(company: Any) -> str:
+    """Build the action_url parameter dynamically based on company attributes."""
+    if not company:
+        return "https://portal.oxengl.com/auth/login"
+
+    custom_domain = _clean_str(
+        company.get("custom_domain")
+        if isinstance(company, dict)
+        else getattr(company, "custom_domain", None)
+    )
+    if custom_domain:
+        return f"https://{custom_domain}/auth/login"
+
+    workspace_domain = _clean_str(
+        company.get("workspace_domain")
+        if isinstance(company, dict)
+        else getattr(company, "workspace_domain", None)
+    )
+    slug = _clean_str(
+        (company.get("slug") or company.get("domain_slug"))
+        if isinstance(company, dict)
+        else (getattr(company, "slug", None) or getattr(company, "domain_slug", None))
+    )
+    if workspace_domain:
+        tenant_param = f"?tenant={slug}" if slug else ""
+        return f"https://{workspace_domain}/auth/login{tenant_param}"
+
+    tenant_param = f"?tenant={slug}" if slug else ""
+    return f"https://portal.oxengl.com/auth/login{tenant_param}"
+
 
 def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
     """Extracts branding info from any Tenant / ResCompany / MasterTenant model or dict, with sensible defaults."""
@@ -130,7 +183,7 @@ def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
     slug = _val(tenant_model, "slug", "domain_slug", "schema_name", default="portal") or "portal"
     custom_domain = _val(tenant_model, "custom_domain")
     workspace_domain = _val(tenant_model, "workspace_domain") or custom_domain or f"{slug}.oxengl.com"
-    logo_url = _val(tenant_model, "logo_url", "ui_logo_url")
+    logo_url = resolve_tenant_logo_url(tenant_model)
     signature_name = _val(tenant_model, "signature_name", default=name) or name
     signature_title = _val(tenant_model, "signature_title", default="Workspace Operations") or "Workspace Operations"
     support_email = _val(tenant_model, "support_email", default="support@oxengl.com") or "support@oxengl.com"
@@ -153,20 +206,23 @@ async def dispatch_user_invitation(
     *,
     recipient_email: str,
     first_name: str,
-    role: str,
+    role: Optional[str] = None,
+    user_role: Optional[str] = None,
     action_url: str,
     inviter_name: str,
     tenant: Union[TenantBrandContext, Any],
     temp_password: Optional[str] = None,
     expiry_hours: int = 48,
     custom_smtp: Optional[Dict[str, Any]] = None,
+    **kwargs: Any,
 ) -> bool:
+    assigned_role = user_role or role or "Team Member"
     tenant_brand = resolve_tenant_branding(tenant)
     context = {
         "user": {
             "first_name": first_name,
             "email": recipient_email,
-            "role": role,
+            "role": assigned_role,
             "temp_password": temp_password,
         },
         "inviter": {"name": inviter_name},

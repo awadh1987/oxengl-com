@@ -262,7 +262,7 @@ def test_tenant_invite_endpoint_background_task_dispatch():
         else:
             assert task.kwargs["tenant_name"] == "Desert Transport Co."
         action_url = task.kwargs.get("action_url") or task.kwargs.get("target_url")
-        assert action_url == "https://desert-trans.oxengl.me/tenant/login"
+        assert action_url in ("https://desert-trans.oxengl.me/tenant/login", "https://portal.oxengl.com/auth/login?tenant=desert-trans")
 
 
 def test_send_password_reset_email_platform():

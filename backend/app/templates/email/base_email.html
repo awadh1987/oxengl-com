@@ -79,7 +79,8 @@
                       &copy; {{ current_year }} {{ tenant.name }}. All rights reserved.
                     </p>
                     <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
-                      <img src="{{ oxengl_assets_url }}/static/brand/oxengl-monochrome.png" alt="OxenGL" height="14" style="vertical-align: middle; opacity: 0.6;">
+                      <span style="display:none; font-size:0px; line-height:0px; max-height:0px; mso-hide:all;">Powered by OxenGL</span>
+                      <img src="{{ oxengl_assets_url | default('https://portal.oxengl.com') }}/static/brand/oxengl-logo.png" alt="OxenGL" height="14" style="vertical-align: middle; opacity: 0.6;">
                       <span style="font-size: 11px; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px;">Powered by <strong>OxenGL</strong></span>
                     </div>
                   </td>

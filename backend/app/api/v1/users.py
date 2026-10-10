@@ -873,6 +873,7 @@ async def invite_tenant_user(
     payload: InviteUserRequest,
     actor: IamActor = Depends(require_iam_admin),
     db: Session = Depends(get_db),
+    background_tasks: BackgroundTasks = None,
     response: Response = None,  # type: ignore[assignment]  # injected by FastAPI
 ):
     """
@@ -961,7 +962,38 @@ async def invite_tenant_user(
     destination = email_clean if payload.channel == "email" else phone_clean
 
     try:
-        if payload.channel != "manual":
+        if payload.channel == "email" and background_tasks is not None and email_clean:
+            from backend.app.services.email_service import (
+                dispatch_user_invitation,
+                construct_workspace_login_url,
+                resolve_tenant_logo_url,
+            )
+            tenant_logo = resolve_tenant_logo_url(company)
+            action_url = construct_workspace_login_url(company)
+            inviter_name = getattr(actor, "full_name", None) or getattr(actor, "email", None) or "Workspace Administrator"
+            first_name = (full_name.strip().split()[0] if full_name else "Team Member")
+            tenant_ctx = {
+                "name": company.name if company else workspace_name,
+                "logo_url": tenant_logo,
+                "workspace_domain": (getattr(company, "workspace_domain", None) or "portal.oxengl.com"),
+                "support_email": (getattr(company, "support_email", None) or "support@oxengl.com"),
+                "signature_name": (getattr(company, "signature_name", None) or f"{company.name if company else 'OxenGL'} Administration"),
+                "signature_title": (getattr(company, "signature_title", None) or "Workspace Operations"),
+            }
+            custom_smtp = getattr(company, "custom_smtp_settings", None) if company else None
+            background_tasks.add_task(
+                dispatch_user_invitation,
+                recipient_email=email_clean,
+                first_name=first_name,
+                user_role=spec["legacy_role"],
+                action_url=action_url,
+                inviter_name=inviter_name,
+                tenant=tenant_ctx,
+                temp_password=temporary_password,
+                expiry_hours=48,
+                custom_smtp=custom_smtp,
+            )
+        elif payload.channel != "manual":
             await dispatch_temporary_credentials(
                 payload.channel,
                 destination,
