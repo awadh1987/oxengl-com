@@ -503,12 +503,14 @@ except (ImportError, ModuleNotFoundError):
     except Exception:
         pass  # data_observability is optional
 try:
-    from backend.app.api.v1.analytics import router as analytics_router
+    from backend.app.api.v1.analytics import router as analytics_router, admin_analytics_router
     app.include_router(analytics_router)
+    app.include_router(admin_analytics_router)
 except (ImportError, ModuleNotFoundError):
     try:
-        from app.api.v1.analytics import router as analytics_router
+        from app.api.v1.analytics import router as analytics_router, admin_analytics_router
         app.include_router(analytics_router)
+        app.include_router(admin_analytics_router)
     except Exception:
         pass  # analytics is optional
 from backend.app.domains.finance import audit_export
