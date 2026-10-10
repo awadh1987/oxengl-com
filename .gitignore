@@ -96,6 +96,10 @@ backend/static/uploads/wallets/*
 !backend/static/uploads/wallets/.gitkeep
 backend/app/static/uploads/wallets/*
 !backend/app/static/uploads/wallets/.gitkeep
+backend/static/uploads/receipts/*
+!backend/static/uploads/receipts/.gitkeep
+backend/app/static/uploads/receipts/*
+!backend/app/static/uploads/receipts/.gitkeep
 
 # Gatsby files
 .cache/

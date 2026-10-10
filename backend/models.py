@@ -2451,6 +2451,7 @@ class SaaSInvoice(TimestampMixin, Base):
     due_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     pdf_url: Mapped[Optional[str]] = mapped_column(String(255))
+    payment_proof_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     tenant: Mapped["MasterTenant"] = relationship(back_populates="saas_invoices")
@@ -2458,7 +2459,10 @@ class SaaSInvoice(TimestampMixin, Base):
     plan: Mapped[Optional["SubscriptionPlan"]] = relationship("SubscriptionPlan")
 
     __table_args__ = (
-        CheckConstraint("status IN ('paid', 'pending', 'overdue', 'cancelled')", name="ck_saas_invoice_status"),
+        CheckConstraint(
+            "status IN ('paid', 'pending', 'pending_verification', 'overdue', 'cancelled', 'rejected', 'failed')",
+            name="ck_saas_invoice_status",
+        ),
         CheckConstraint("billing_cycle IN ('monthly', 'yearly', 'annual', 'quarterly', 'contract')", name="ck_saas_invoice_cycle"),
     )
 
@@ -2483,6 +2487,7 @@ class SaaSInvoice(TimestampMixin, Base):
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "paid_at": self.paid_at.isoformat() if self.paid_at else None,
             "pdf_url": self.pdf_url,
+            "payment_proof_url": getattr(self, "payment_proof_url", None) or self.pdf_url,
             "notes": self.notes,
         }
 

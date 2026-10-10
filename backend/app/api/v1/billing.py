@@ -15,9 +15,10 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Query, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc, func, select, update
 from sqlalchemy.orm import Session
@@ -433,6 +434,80 @@ def get_single_invoice_detail(
     if not inv:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
     return inv.to_dict()
+
+
+MAX_RECEIPT_BYTES = 5 * 1024 * 1024  # 5 MB
+
+_ALLOWED_RECEIPT_FORMATS = {
+    "image/png": (".png", lambda d: d.startswith(b"\x89PNG\r\n\x1a\n")),
+    "image/jpeg": (".jpg", lambda d: d.startswith(b"\xff\xd8\xff")),
+    "image/webp": (".webp", lambda d: len(d) >= 12 and d[:4] == b"RIFF" and d[8:12] == b"WEBP"),
+    "application/pdf": (".pdf", lambda d: d.startswith(b"%PDF")),
+}
+
+
+@tenant_billing_router.post("/invoices/{invoice_id}/receipt", status_code=status.HTTP_200_OK)
+async def upload_invoice_payment_receipt(
+    invoice_id: uuid.UUID,
+    file: UploadFile = File(...),
+    request: Request = None,
+    current_user: Any = Depends(get_authenticated_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Uploads a bank wire transfer or digital wallet transaction receipt for an offline invoice.
+    Marks invoice as 'pending_verification' and notifies the platform Super Admin.
+    """
+    company_id = getattr(current_user, "company_id", None)
+    if not company_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenant workspace is associated with this account.")
+
+    inv = db.get(SaaSInvoice, invoice_id)
+    if not inv or str(inv.tenant_id) != str(company_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invoice not found.")
+
+    if inv.status == "paid":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invoice is already settled.")
+
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded receipt file cannot be empty.")
+    if len(content) > MAX_RECEIPT_BYTES:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Receipt file exceeds 5 MB limit.")
+
+    content_type = (file.content_type or "").lower().split(";")[0].strip()
+    fmt = _ALLOWED_RECEIPT_FORMATS.get(content_type)
+    if not fmt or not fmt[1](content):
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported or spoofed file format. Allowed: PNG, JPEG, WebP, PDF.",
+        )
+
+    ext = fmt[0]
+    filename = f"{uuid.uuid4().hex}{ext}"
+
+    primary_dir = Path(__file__).resolve().parents[4] / "backend" / "static" / "uploads" / "receipts"
+    app_dir = Path(__file__).resolve().parents[4] / "backend" / "app" / "static" / "uploads" / "receipts"
+    primary_dir.mkdir(parents=True, exist_ok=True)
+    app_dir.mkdir(parents=True, exist_ok=True)
+
+    (primary_dir / filename).write_bytes(content)
+    (app_dir / filename).write_bytes(content)
+
+    receipt_url = f"/static/uploads/receipts/{filename}"
+    inv.payment_proof_url = receipt_url
+    inv.status = "pending_verification"
+    db.commit()
+    db.refresh(inv)
+
+    logger.info("Receipt uploaded for invoice %s by tenant %s: %s", inv.invoice_number, inv.tenant_id, receipt_url)
+    return {
+        "status": "pending_verification",
+        "invoice_id": str(inv.id),
+        "invoice_number": inv.invoice_number,
+        "payment_proof_url": receipt_url,
+        "message": "Payment receipt uploaded successfully. Awaiting Super Admin review and subscription activation.",
+    }
 
 
 # ==============================================================================

@@ -28,7 +28,8 @@ import {
   Sparkles,
   Server,
   Calendar,
-  CreditCard
+  CreditCard,
+  ClipboardCheck
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { 
@@ -41,12 +42,13 @@ import { TenantComparisonTable } from '../components/analytics/TenantComparisonT
 import { SkeletonCard, SkeletonTable } from '../components/common/Skeleton';
 import { getAuthToken, decodeJwtClaims } from '../services/api';
 import { BillingConfigurationPanel } from '../components/admin/BillingConfigurationPanel';
+import { PendingApprovalsQueue } from '../components/admin/PendingApprovalsQueue';
 
 export const PlatformAdminPortal: React.FC = () => {
   const { currentUser, authTier } = useApp();
 
   // Navigation Tab State
-  const [activeTab, setActiveTab] = useState<'telemetry' | 'billing'>('telemetry');
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'billing' | 'approvals'>('telemetry');
 
   // State Management
   const [data, setData] = useState<PlatformAdminOverviewResponse | null>(null);
@@ -205,7 +207,24 @@ export const PlatformAdminPortal: React.FC = () => {
             <CreditCard className="w-3.5 h-3.5" />
             Payment & Billing Gateways
           </button>
+
+          <button
+            onClick={() => setActiveTab('approvals')}
+            className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              activeTab === 'approvals'
+                ? 'bg-amber-600 text-white shadow-xs'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800/60'
+            }`}
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" />
+            Pending Approvals
+          </button>
         </div>
+
+        {/* Tab 3: Pending Subscriptions & Receipt Approvals Queue */}
+        {activeTab === 'approvals' && (
+          <PendingApprovalsQueue />
+        )}
 
         {/* Tab 2: Billing & Payment Gateways Configuration */}
         {activeTab === 'billing' && (

@@ -137,3 +137,117 @@ export async function uploadWalletQrCode(file: File): Promise<WalletQRUploadResp
 
   return res.json();
 }
+
+// ==============================================================================
+// Pending Offline Invoices & Approval Types
+// ==============================================================================
+
+export interface PendingInvoiceData {
+  id: string;
+  invoice_number: string;
+  tenant_id: string;
+  tenant_name: string;
+  tenant_slug: string;
+  tenant_email: string;
+  plan_id?: string | null;
+  plan_name: string;
+  plan_display_name: string;
+  amount: number;
+  subtotal: number;
+  tax: number;
+  currency: string;
+  billing_cycle: string;
+  status: string;
+  payment_method: string;
+  payment_reference?: string | null;
+  payment_proof_url?: string | null;
+  issued_date?: string | null;
+  notes?: string | null;
+}
+
+export interface InvoiceApprovalRequest {
+  payment_reference?: string | null;
+  notes?: string | null;
+}
+
+export interface InvoiceRejectionRequest {
+  reason?: string | null;
+}
+
+export interface InvoiceActionResponse {
+  status: string;
+  message: string;
+  invoice: Record<string, any>;
+  tenant_status?: string | null;
+}
+
+/**
+ * Fetch all offline invoices pending review and approval.
+ */
+export async function fetchPendingInvoices(): Promise<PendingInvoiceData[]> {
+  const res = await authFetch('/api/v1/admin/billing/pending-invoices', {
+    method: 'GET',
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    const detail = errorBody?.detail || `Failed to fetch pending invoices (${res.status})`;
+    throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+  }
+
+  return res.json();
+}
+
+/**
+ * Super Admin approval of a pending offline invoice.
+ * Activates the tenant subscription, extends period, and sets status to paid.
+ */
+export async function approvePendingInvoice(
+  invoiceId: string,
+  payload?: InvoiceApprovalRequest
+): Promise<InvoiceActionResponse> {
+  const res = await authFetch(`/api/v1/admin/billing/invoices/${invoiceId}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    const detail = errorBody?.detail || `Failed to approve invoice (${res.status})`;
+    const error = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    (error as any).status = res.status;
+    throw error;
+  }
+
+  return res.json();
+}
+
+/**
+ * Super Admin rejection of a pending offline invoice.
+ */
+export async function rejectPendingInvoice(
+  invoiceId: string,
+  payload?: InvoiceRejectionRequest
+): Promise<InvoiceActionResponse> {
+  const res = await authFetch(`/api/v1/admin/billing/invoices/${invoiceId}/reject`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload || {}),
+  });
+
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null);
+    const detail = errorBody?.detail || `Failed to reject invoice (${res.status})`;
+    const error = new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    (error as any).status = res.status;
+    throw error;
+  }
+
+  return res.json();
+}
+

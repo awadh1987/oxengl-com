@@ -579,9 +579,13 @@ for _hr_prefix in ("/api/v1/tenant/hr", "/api/tenant/hr"):
 	app.include_router(tenant_hr.router, prefix=_hr_prefix)
 app.include_router(master_platform.router, prefix="/api/master/platform")
 app.include_router(master_platform.router, prefix="/api/v1/master/platform")
-# Super Admin billing gateway configuration (registered before the generic /api/v1/admin router).
+# Super Admin billing gateway configuration & approvals (registered before the generic /api/v1/admin router).
 from backend.app.api.v1.admin_billing_settings import router as admin_billing_settings_router
+from backend.app.api.v1.admin_billing import router as admin_billing_router
 app.include_router(admin_billing_settings_router)
+app.include_router(admin_billing_router)
+app.include_router(admin_billing_router, prefix="/api/admin/billing")
+app.include_router(admin_billing_router, prefix="/api/v1/superadmin/billing")
 app.include_router(master_platform.admin_router, prefix="/api/admin")
 app.include_router(master_platform.admin_router, prefix="/api/v1/admin")
 from backend.app.api.v1 import system as system_api
