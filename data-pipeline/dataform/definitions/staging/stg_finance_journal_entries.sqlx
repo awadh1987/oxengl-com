@@ -45,10 +45,12 @@ SELECT
     SAFE.PARSE_DATE('%d/%m/%Y', CAST(entry_date AS STRING))
   ) AS entry_date,
 
-  -- Posting Date
+  -- Posting Date (fall back to entry_date or created_at)
   COALESCE(
-    SAFE.PARSE_DATE('%Y-%m-%d', CAST(posting_date AS STRING)),
-    SAFE.PARSE_DATE('%d/%m/%Y', CAST(posting_date AS STRING))
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(entry_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(entry_date AS STRING)),
+    DATE(SAFE_CAST(entry_date AS TIMESTAMP)),
+    DATE(SAFE_CAST(created_at AS TIMESTAMP))
   ) AS posting_date,
 
   -- Total Debit: 4-decimal precision, non-negative
@@ -71,7 +73,7 @@ SELECT
   END AS balance_flag,
 
   -- Currency
-  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+  'SAR' AS currency,
 
   -- Status: Normalize
   CASE
@@ -82,19 +84,21 @@ SELECT
   END AS status,
 
   -- Source Document Reference
-  NULLIF(TRIM(CAST(source_document AS STRING)), '') AS source_document,
+  CAST(NULL AS STRING) AS source_document,
 
   -- Timestamps
   COALESCE(
     SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
     SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
-    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING))
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING)),
+    SAFE_CAST(created_at AS TIMESTAMP)
   ) AS created_at,
 
   COALESCE(
-    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(updated_at AS STRING)),
-    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(updated_at AS STRING)),
-    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(updated_at AS STRING))
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING)),
+    SAFE_CAST(created_at AS TIMESTAMP)
   ) AS updated_at,
 
   -- Cleaning Metadata

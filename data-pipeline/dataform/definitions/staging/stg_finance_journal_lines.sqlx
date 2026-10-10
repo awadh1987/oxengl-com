@@ -27,14 +27,14 @@ SELECT
 
   -- Foreign Key: Journal Entry
   CASE
-    WHEN REGEXP_CONTAINS(CAST(lines.journal_entry_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-    THEN CAST(lines.journal_entry_id AS STRING)
+    WHEN REGEXP_CONTAINS(CAST(lines.entry_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(lines.entry_id AS STRING)
     ELSE NULL
   END AS journal_entry_id,
 
   -- Account Reference
   NULLIF(TRIM(CAST(lines.account_code AS STRING)), '') AS account_code,
-  NULLIF(TRIM(CAST(lines.account_name AS STRING)), '') AS account_name,
+  COALESCE(NULLIF(TRIM(CAST(lines.account_id AS STRING)), ''), CAST(lines.account_code AS STRING)) AS account_name,
 
   -- Amounts: 4-decimal precision, non-negative
   CASE
@@ -51,7 +51,7 @@ SELECT
   NULLIF(TRIM(CAST(lines.description AS STRING)), '') AS description,
 
   -- Currency
-  COALESCE(UPPER(TRIM(CAST(lines.currency AS STRING))), 'SAR') AS currency,
+  'SAR' AS currency,
 
   -- Orphan Detection (optimized via standard LEFT JOIN instead of correlated subquery)
   CASE
@@ -65,5 +65,5 @@ SELECT
 
 FROM ${ref("finance_journal_lines")} AS lines
 LEFT JOIN ${ref("finance_journal_entries")} AS parent
-  ON lines.journal_entry_id = parent.id
+  ON lines.entry_id = parent.id
 WHERE lines.id IS NOT NULL

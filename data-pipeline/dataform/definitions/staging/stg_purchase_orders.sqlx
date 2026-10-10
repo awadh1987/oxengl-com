@@ -3,7 +3,7 @@
 -- Applies autocleaning rules:
 -- 1. UUID validation on all ID/FK columns
 -- 2. Price/quantity validation (positive, non-zero)
--- 3. Vendor reference integrity
+-- 3. Vendor reference integrity (partner_id)
 -- 4. Amount precision (4-decimal SAR)
 -- 5. Status normalization
 -- 6. Duplicate PO number detection
@@ -34,18 +34,15 @@ SELECT
     ELSE NULL
   END AS company_id,
 
-  -- Vendor FK
+  -- Partner (Vendor) FK
   CASE
-    WHEN REGEXP_CONTAINS(CAST(vendor_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-    THEN CAST(vendor_id AS STRING)
+    WHEN REGEXP_CONTAINS(CAST(partner_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(partner_id AS STRING)
     ELSE NULL
-  END AS vendor_id,
+  END AS partner_id,
 
   -- PO Number
   NULLIF(TRIM(CAST(po_number AS STRING)), '') AS po_number,
-
-  -- Vendor Name: Trim whitespace only, preserve case
-  NULLIF(TRIM(CAST(vendor_name AS STRING)), '') AS vendor_name,
 
   -- Financial Amounts: 4-decimal precision
   ROUND(SAFE_CAST(subtotal AS NUMERIC), 4) AS subtotal,
@@ -82,19 +79,25 @@ SELECT
   -- Dates
   COALESCE(
     SAFE.PARSE_DATE('%Y-%m-%d', CAST(order_date AS STRING)),
-    SAFE.PARSE_DATE('%d/%m/%Y', CAST(order_date AS STRING))
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(order_date AS STRING)),
+    DATE(SAFE_CAST(order_date AS TIMESTAMP))
   ) AS order_date,
 
   COALESCE(
     SAFE.PARSE_DATE('%Y-%m-%d', CAST(expected_delivery_date AS STRING)),
-    SAFE.PARSE_DATE('%d/%m/%Y', CAST(expected_delivery_date AS STRING))
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(expected_delivery_date AS STRING)),
+    DATE(SAFE_CAST(expected_delivery_date AS TIMESTAMP))
   ) AS expected_delivery_date,
+
+  -- Notes
+  NULLIF(TRIM(CAST(notes AS STRING)), '') AS notes,
 
   -- Timestamps
   COALESCE(
     SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
     SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
-    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING))
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING)),
+    SAFE_CAST(created_at AS TIMESTAMP)
   ) AS created_at,
 
   -- Duplicate PO detection (window function)

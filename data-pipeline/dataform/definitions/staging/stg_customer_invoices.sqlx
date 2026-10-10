@@ -82,7 +82,7 @@ SELECT
   END AS vat_consistency_flag,
 
   -- Currency: Standardize
-  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+  'SAR' AS currency,
 
   -- Invoice Status: Normalize
   CASE
