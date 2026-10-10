@@ -95,15 +95,15 @@ SELECT
     ELSE UPPER(TRIM(CAST(status AS STRING)))
   END AS status,
 
-  -- Duplicate detection (row_number dedup)
+  -- Duplicate detection (row_number dedup optimized without excessive string casting)
   ROW_NUMBER() OVER (
     PARTITION BY
-      CAST(warehouse_id AS STRING),
-      CAST(product_id AS STRING),
-      CAST(movement_date AS STRING),
-      CAST(quantity AS STRING),
-      CAST(movement_type AS STRING)
-    ORDER BY CAST(created_at AS STRING) ASC
+      warehouse_id,
+      product_id,
+      movement_date,
+      quantity,
+      movement_type
+    ORDER BY created_at ASC
   ) AS dedup_rank,
 
   -- Timestamps

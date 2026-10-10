@@ -1,5 +1,5 @@
-defaultSchema: oxengl_staging
-defaultDatabase: project-587cf20f-74ef-484a-ba6
+defaultDataset: oxengl_staging
+defaultProject: project-587cf20f-74ef-484a-ba6
 defaultLocation: US
 dataformCoreVersion: 3.0.7
 

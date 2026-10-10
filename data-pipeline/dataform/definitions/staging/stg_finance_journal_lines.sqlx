@@ -1,0 +1,69 @@
+-- OxenGL ERP — Staging: Finance Journal Lines (Integrity Cleaning)
+-- =================================================================
+-- Applies autocleaning rules:
+-- 1. UUID validation for line and parent entry IDs
+-- 2. Account code and name sanitization
+-- 3. 4-decimal debit/credit normalization
+-- 4. Orphan detection optimized via standard LEFT JOIN
+
+config {
+  type: "table",
+  schema: "oxengl_staging",
+  name: "stg_finance_journal_lines",
+  description: "Autocleaned journal lines with amount validation and orphan detection",
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id", "journal_entry_id"]
+  }
+}
+
+SELECT
+  -- Primary Key
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(lines.id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(lines.id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  -- Foreign Key: Journal Entry
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(lines.journal_entry_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(lines.journal_entry_id AS STRING)
+    ELSE NULL
+  END AS journal_entry_id,
+
+  -- Account Reference
+  NULLIF(TRIM(CAST(lines.account_code AS STRING)), '') AS account_code,
+  NULLIF(TRIM(CAST(lines.account_name AS STRING)), '') AS account_name,
+
+  -- Amounts: 4-decimal precision, non-negative
+  CASE
+    WHEN SAFE_CAST(lines.debit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(lines.debit AS NUMERIC), 4)
+    ELSE CAST(0 AS NUMERIC)
+  END AS debit,
+
+  CASE
+    WHEN SAFE_CAST(lines.credit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(lines.credit AS NUMERIC), 4)
+    ELSE CAST(0 AS NUMERIC)
+  END AS credit,
+
+  -- Description
+  NULLIF(TRIM(CAST(lines.description AS STRING)), '') AS description,
+
+  -- Currency
+  COALESCE(UPPER(TRIM(CAST(lines.currency AS STRING))), 'SAR') AS currency,
+
+  -- Orphan Detection (optimized via standard LEFT JOIN instead of correlated subquery)
+  CASE
+    WHEN parent.id IS NULL THEN TRUE
+    ELSE FALSE
+  END AS is_orphaned,
+
+  -- Cleaning Metadata
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("finance_journal_lines")} AS lines
+LEFT JOIN ${ref("finance_journal_entries")} AS parent
+  ON lines.journal_entry_id = parent.id
+WHERE lines.id IS NOT NULL

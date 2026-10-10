@@ -4,9 +4,8 @@
 -- 1. UUID validation for all ID columns
 -- 2. Debit/Credit balance validation (must sum to zero per entry)
 -- 3. Amount precision normalization (4-decimal)
--- 4. Orphan detection (lines without parent entries)
--- 5. Fiscal year consistency checks
--- 6. Timestamp standardization
+-- 4. Fiscal year consistency checks
+-- 5. Timestamp standardization
 
 config {
   type: "table",
@@ -103,66 +102,4 @@ SELECT
   'dataform_autocleaning_v1' AS _cleaned_by
 
 FROM ${ref("finance_journal_entries")}
-WHERE id IS NOT NULL
-
----
-
--- OxenGL ERP — Staging: Finance Journal Lines
-config {
-  type: "table",
-  schema: "oxengl_staging",
-  name: "stg_finance_journal_lines",
-  description: "Autocleaned journal lines with amount validation and orphan detection",
-  assertions: {
-    uniqueKey: ["id"],
-    nonNull: ["id", "journal_entry_id"]
-  }
-}
-
-SELECT
-  CASE
-    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-    THEN CAST(id AS STRING)
-    ELSE NULL
-  END AS id,
-
-  CASE
-    WHEN REGEXP_CONTAINS(CAST(journal_entry_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
-    THEN CAST(journal_entry_id AS STRING)
-    ELSE NULL
-  END AS journal_entry_id,
-
-  -- Account reference
-  NULLIF(TRIM(CAST(account_code AS STRING)), '') AS account_code,
-  NULLIF(TRIM(CAST(account_name AS STRING)), '') AS account_name,
-
-  -- Amounts: 4-decimal precision, non-negative
-  CASE
-    WHEN SAFE_CAST(debit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(debit AS NUMERIC), 4)
-    ELSE CAST(0 AS NUMERIC)
-  END AS debit,
-
-  CASE
-    WHEN SAFE_CAST(credit AS NUMERIC) >= 0 THEN ROUND(SAFE_CAST(credit AS NUMERIC), 4)
-    ELSE CAST(0 AS NUMERIC)
-  END AS credit,
-
-  -- Description
-  NULLIF(TRIM(CAST(description AS STRING)), '') AS description,
-
-  -- Currency
-  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
-
-  -- Orphan Detection (checked in clean layer via LEFT JOIN)
-  CASE
-    WHEN CAST(journal_entry_id AS STRING) IN (
-      SELECT CAST(id AS STRING) FROM ${ref("finance_journal_entries")}
-    ) THEN FALSE
-    ELSE TRUE
-  END AS is_orphaned,
-
-  CURRENT_TIMESTAMP() AS _cleaned_at,
-  'dataform_autocleaning_v1' AS _cleaned_by
-
-FROM ${ref("finance_journal_lines")}
 WHERE id IS NOT NULL
