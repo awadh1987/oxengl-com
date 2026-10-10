@@ -64,7 +64,7 @@ export const EntityQuickAdd: React.FC<EntityQuickAddProps> = ({
             <span>{isAr ? quickAddMenuLabel.ar : quickAddMenuLabel.en}</span>
           </button>
           {isMenuOpen && (
-            <div role="menu" className="absolute end-0 top-full z-30 mt-1 min-w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+            <div role="menu" className="absolute end-0 top-full z-50 mt-1 min-w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-xl dark:border-slate-700 dark:bg-slate-900">
               {quickAddMenuActions.map((action) => (
                 <button
                   key={action.type}

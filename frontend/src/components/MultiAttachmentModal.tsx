@@ -151,7 +151,7 @@ export const MultiAttachmentModal: React.FC<MultiAttachmentModalProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="multi-attachment-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4"
     >
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-3xl bg-white dark:bg-slate-900 shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 transition-colors animate-in fade-in zoom-in-95 duration-150">
         {/* Header */}

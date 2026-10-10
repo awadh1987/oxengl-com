@@ -288,7 +288,7 @@ export const FleetMaintenanceView: React.FC = () => {
   return (
     <div className={`space-y-6 min-h-dvh erp-viewport-root px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto ${isDark ? 'text-slate-100' : 'text-slate-900'}`} dir={isAr ? 'rtl' : 'ltr'}>
       {/* Header Banner */}
-      <div className={`rounded-3xl border p-6 shadow-xl relative overflow-hidden ${
+      <div className={`rounded-3xl border p-6 shadow-xl relative overflow-visible ${
         isDark
           ? 'border-slate-800 bg-gradient-to-r from-slate-900 via-zinc-900 to-slate-900'
           : 'border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 text-white'

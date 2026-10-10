@@ -26,6 +26,7 @@ import {
 import { formatCurrency, formatTonnage, getMonthName } from '../utils/formatters';
 import { QuickAddEntityModal, QuickAddEntityType } from './QuickAddEntityModal';
 import { MultiAttachmentModal } from './MultiAttachmentModal';
+import { SearchableSelect } from './common/SearchableSelect';
 
 interface DailyOperationsModalProps {
   isOpen: boolean;
@@ -100,6 +101,46 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
     const nextSeq = 1001 + operations.length;
     return `TRP-${nextSeq}`;
   }, [initialData, operations.length]);
+
+  // Options for SearchableSelect dropdowns with high z-index portallization
+  const transporterOptions = useMemo(() => {
+    return transporters.map((t) => ({
+      value: t.transporterName,
+      label: t.transporterName,
+      subLabel: t.driverName ? `(${t.driverName})` : undefined,
+    }));
+  }, [transporters]);
+
+  const crusherOptions = useMemo(() => {
+    return crushers.map((c) => ({
+      value: c.crusherName,
+      label: c.crusherName,
+      subLabel: c.location || undefined,
+    }));
+  }, [crushers]);
+
+  const customerOptions = useMemo(() => {
+    return customers.map((c) => ({
+      value: c.customerName,
+      label: c.customerName,
+    }));
+  }, [customers]);
+
+  const materialOptions = useMemo(() => {
+    return materials.map((m) => ({
+      value: m.nameAr,
+      label: isAr ? m.nameAr : (m.nameEn || m.nameAr),
+      subLabel: isAr && m.nameEn && m.nameEn !== m.nameAr ? m.nameEn : undefined,
+      badge: m.category || undefined,
+    }));
+  }, [materials, isAr]);
+
+  const uomOptions = useMemo(() => {
+    return SUPPORTED_UOMS.map((u) => ({
+      value: u.value,
+      label: isAr ? u.labelAr : u.labelEn,
+    }));
+  }, [isAr]);
 
   // Pre-fill defaults or edit data
   useEffect(() => {
@@ -402,10 +443,10 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         </div>
 
         {/* Main Form Body */}
-        <form noValidate onSubmit={handleSubmit} className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
+        <form noValidate onSubmit={handleSubmit} className="mt-4 flex min-h-0 flex-1 flex-col overflow-visible">
           <div className="erp-modal-body space-y-4">
           {/* Group 1: Logistics & Identification */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3 relative">
             <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Truck className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'بيانات الشاحنة ومزود الخدمة وتاريخ التحميل' : 'Logistics, Service Supplier & Date'}</span>
@@ -414,10 +455,11 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {/* 1. تاريخ التحميل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="loading-date-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'تاريخ التحميل *' : 'Loading Date *'}
                 </label>
                 <input
+                  id="loading-date-input"
                   type="date"
                   value={loadingDate}
                   onChange={(e) => setLoadingDate(e.target.value)}
@@ -427,10 +469,11 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 2. رقم الشاحنة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="truck-no-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم الشاحنة *' : 'Truck Number *'}
                 </label>
                 <input
+                  id="truck-no-input"
                   type="text"
                   placeholder={isAr ? 'مثال: 7842-ق أ د' : 'e.g. 7842-RSB'}
                   value={truckNo}
@@ -442,7 +485,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               {/* 3. اسم الناقل - المقاول */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="transporter-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'اسم مزود الخدمة اللوجستية *' : 'Service Supplier Name *'}
                   </label>
                   <button
@@ -455,39 +498,38 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                     <span>{isAr ? 'جديد' : 'New'}</span>
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  id="transporter-select"
+                  name="transporterName"
                   value={transporterName}
-                  onChange={(e) => handleTransporterChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  {transporters.map((t) => (
-                    <option key={t.id} value={t.transporterName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                      {t.transporterName} ({t.driverName})
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleTransporterChange}
+                  options={transporterOptions}
+                  isAr={isAr}
+                  placeholder={isAr ? 'اختر مزود الخدمة اللوجستية...' : 'Select service supplier...'}
+                  searchPlaceholder={isAr ? 'بحث بالاسم أو السائق...' : 'Search supplier or driver...'}
+                />
               </div>
 
               {/* 4. رقم تذكرة الميزان */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="scale-ticket-no-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم تذكرة الميزان' : 'Scale Ticket Number'}
-                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
+                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'معبأ تلقائياً · قابل للتعديل' : 'Auto-filled · Editable'})</span>
                 </label>
                 <input
+                  id="scale-ticket-no-input"
                   type="text"
-                  disabled={true}
-                  placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
+                  placeholder={isAr ? 'مثال: ST-2026-102938' : 'e.g. ST-2026-102938'}
                   value={scaleTicketNo}
                   onChange={(e) => setScaleTicketNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono font-bold text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Group 2: Dispatch Origin, Invoices & Customer Consignee */}
-          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3">
+          <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3 relative">
             <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Building className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
               <span>{isAr ? 'أطراف العملية وفواتير التحميل والاستلام' : 'Parties & Commercial Invoices'}</span>
@@ -497,7 +539,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               {/* 5. مصدر التحميل - الكسارة */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="crusher-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'منشأة الإرسال / مصدر التحميل *' : 'Origin / Dispatch Facility *'}
                   </label>
                   <button
@@ -510,40 +552,39 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                     <span>{isAr ? 'جديد' : 'New'}</span>
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  id="crusher-select"
+                  name="loadingSource"
                   required
                   value={loadingSource}
-                  onChange={(e) => setLoadingSource(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  {crushers.map((c) => (
-                    <option key={c.id} value={c.crusherName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                      {c.crusherName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setLoadingSource}
+                  options={crusherOptions}
+                  isAr={isAr}
+                  placeholder={isAr ? 'منشأة الإرسال / الكسارة...' : 'Origin / Crusher...'}
+                  searchPlaceholder={isAr ? 'بحث باسم الكسارة أو الموقع...' : 'Search crusher or location...'}
+                />
               </div>
 
               {/* 6. رقم فاتورة التحميل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="loading-invoice-no-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم فاتورة التحميل' : 'Loading Invoice Number'}
-                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
+                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'معبأ تلقائياً · قابل للتعديل' : 'Auto-filled · Editable'})</span>
                 </label>
                 <input
+                  id="loading-invoice-no-input"
                   type="text"
-                  disabled={true}
-                  placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
+                  placeholder={isAr ? 'مثال: CR-2026-4821' : 'e.g. CR-2026-4821'}
                   value={loadingInvoiceNo}
                   onChange={(e) => setLoadingInvoiceNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none transition-colors"
                 />
               </div>
 
               {/* 7. العميل المستلم */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="customer-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'العميل المستلم *' : 'Receiving Customer *'}
                   </label>
                   <button
@@ -556,39 +597,38 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                     <span>{isAr ? 'جديد' : 'New'}</span>
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  id="customer-select"
+                  name="destinationCustomer"
                   value={destinationCustomer}
-                  onChange={(e) => setDestinationCustomer(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  {customers.map((cust) => (
-                    <option key={cust.id} value={cust.customerName} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                      {cust.customerName}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setDestinationCustomer}
+                  options={customerOptions}
+                  isAr={isAr}
+                  placeholder={isAr ? 'اختر العميل المستلم...' : 'Select receiving customer...'}
+                  searchPlaceholder={isAr ? 'بحث باسم العميل...' : 'Search customer...'}
+                />
               </div>
 
               {/* 8. رقم فاتورة الاستلام */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="receipt-invoice-no-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'رقم فاتورة الاستلام' : 'Receipt Invoice Number'}
-                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'توليد تلقائي' : 'Auto'})</span>
+                  <span className="text-[10px] font-normal text-slate-400 ms-1">({isAr ? 'معبأ تلقائياً · قابل للتعديل' : 'Auto-filled · Editable'})</span>
                 </label>
                 <input
+                  id="receipt-invoice-no-input"
                   type="text"
-                  disabled={true}
-                  placeholder={isAr ? 'يتم التوليد تلقائياً عند الحفظ' : 'Auto-generated upon save'}
+                  placeholder={isAr ? 'مثال: REC-2026-9214' : 'e.g. REC-2026-9214'}
                   value={receiptInvoiceNo}
                   onChange={(e) => setReceiptInvoiceNo(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/80 px-3 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
           </div>
 
           {/* Group 3: Material & Scale Weights */}
-          <div className="rounded-2xl border border-orange-200/60 dark:border-orange-900/40 bg-orange-50/40 dark:bg-orange-950/20 p-3.5 space-y-3">
+          <div className="rounded-2xl border border-orange-200/60 dark:border-orange-900/40 bg-orange-50/40 dark:bg-orange-950/20 p-3.5 space-y-3 relative">
             <div className="text-xs font-black text-orange-950 dark:text-orange-200 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <Package className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
@@ -603,7 +643,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
               {/* 9. نوع المادة */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <label htmlFor="material-select" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                     {isAr ? 'نوع المادة *' : 'Material Type *'}
                   </label>
                   <button
@@ -616,43 +656,41 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                     <span>{isAr ? 'جديد' : 'New'}</span>
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  id="material-select"
+                  name="materialType"
                   value={materialType}
-                  onChange={(e) => handleMaterialChange(e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
-                >
-                  {materials.map((m) => (
-                    <option key={m.id} value={m.nameAr} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                      {m.nameAr}
-                    </option>
-                  ))}
-                </select>
+                  onChange={handleMaterialChange}
+                  options={materialOptions}
+                  isAr={isAr}
+                  placeholder={isAr ? 'اختر نوع المادة...' : 'Select material...'}
+                  searchPlaceholder={isAr ? 'بحث بالاسم أو التصنيف...' : 'Search material...'}
+                />
               </div>
 
               {/* وحدة القياس (UOM) */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="uom-select" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'وحدة القياس (UOM) *' : 'Unit of Measure (UOM) *'}
                 </label>
-                <select
+                <SearchableSelect
+                  id="uom-select"
+                  name="uom"
                   value={uom}
-                  onChange={(e) => setUom(e.target.value as UOMType)}
-                  className="w-full rounded-xl border border-orange-300 dark:border-orange-900/50 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:outline-none"
-                >
-                  {SUPPORTED_UOMS.map((u) => (
-                    <option key={u.value} value={u.value} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
-                      {isAr ? u.labelAr : u.labelEn}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setUom(val as UOMType)}
+                  options={uomOptions}
+                  isAr={isAr}
+                  placeholder={isAr ? 'اختر وحدة القياس...' : 'Select UOM...'}
+                />
               </div>
 
               {/* 10. الوزن المحمل */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="qty-loaded-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? `الوزن المحمل (${uom}) *` : `Loaded Weight (${uom}) *`}
                 </label>
                 <input
+                  id="qty-loaded-input"
                   type="number"
                   step="0.01"
                   min="0.01"
@@ -670,10 +708,11 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 11. الوزن المستلم */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="qty-delivered-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? `الوزن المستلم (${uom}) *` : `Received Weight (${uom}) *`}
                 </label>
                 <input
+                  id="qty-delivered-input"
                   type="number"
                   step="0.01"
                   min="0.01"

@@ -64,6 +64,12 @@
   background-color: inherit;
 }
 
+/* High-priority stacking order for ERP floating dropdown panels */
+.erp-dropdown-menu-panel {
+  z-index: 9999 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
 :root {
   --color-primary: #f97316;
   --color-accent: #0f172a;
