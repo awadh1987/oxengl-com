@@ -15,6 +15,7 @@ celery_app = Celery(
     include=[
         "backend.app.core.tasks",
         "backend.app.core.notifications",
+        "backend.app.tasks.fx_sync",
     ],
 )
 
@@ -33,6 +34,10 @@ celery_app.conf.update(
 from celery.schedules import crontab
 
 celery_app.conf.beat_schedule = {
+    "sync-hourly-fx-rates": {
+        "task": "tasks.sync_exchange_rates",
+        "schedule": crontab(minute=0),  # Synchronize every hour
+    },
     "daily-platform-and-tenant-backups": {
         "task": "tasks.execute_scheduled_backups",
         "schedule": crontab(hour=2, minute=0),

@@ -158,3 +158,21 @@ class CurrencyService:
             logger.warning(f"Failed to flush currency cache: {e}")
             return 0
 
+    def flush_currency_cache_sync(self, tenant_id: Optional[str] = None) -> int:
+        """Synchronously flushes cached exchange rates via standard redis connection."""
+        try:
+            import redis
+            r = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+            if tenant_id:
+                pattern = f"oxengl:{ENVIRONMENT}:{tenant_id}:procurement:fx_rates:*"
+            else:
+                pattern = f"oxengl:{ENVIRONMENT}:*:procurement:fx_rates:*"
+            keys = r.keys(pattern)
+            if keys:
+                return r.delete(*keys)
+            return 0
+        except Exception as e:
+            logger.warning(f"Failed to synchronously flush currency cache: {e}")
+            return 0
+
+

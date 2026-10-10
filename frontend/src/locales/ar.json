@@ -247,6 +247,11 @@
       "SAR": "ريال سعودي (ر.س)",
       "YER": "ريال يمني (﷼)"
     },
+    "fxExposure": "إعادة التقييم ومخاطر الصرف",
+    "unrealizedFxGainLoss": "أرباح وخسائر الصرف غير المحققة",
+    "nativeCurrency": "العملة الأصلية",
+    "consolidatedBaseCurrency": "العملة الأساسية الموحدة",
+    "syncFxRates": "مزامنة أسعار الصرف",
     "cancel": "إلغاء",
     "copied": "تم النسخ!"
   },

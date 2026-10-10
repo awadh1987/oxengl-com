@@ -555,3 +555,44 @@ def get_balance_sheet(
         liability_accounts=liability_accounts,
         equity_accounts=equity_accounts,
     )
+
+
+@router.get("/fx-gain-loss")
+def get_analytics_fx_gain_loss(
+    company_id: Optional[str] = Query(None),
+    as_of_date: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    context: TenantContext = Depends(get_tenant_context),
+):
+    """Calculates Unrealized FX Gain/Loss for open AP and AR invoices."""
+    from backend.app.services.reports import FinancialReportService
+    cid = uuid.UUID(company_id) if company_id else (context.company_id if not context.is_super_admin else None)
+    a_date = datetime.fromisoformat(as_of_date) if as_of_date else None
+    return FinancialReportService.get_unrealized_fx_gain_loss(db, company_id=cid, as_of_date=a_date)
+
+
+@router.get("/multi-currency-trial-balance")
+def get_analytics_multi_currency_trial_balance(
+    company_id: Optional[str] = Query(None),
+    from_date: Optional[datetime] = Query(None),
+    to_date: Optional[datetime] = Query(None),
+    db: Session = Depends(get_db),
+    context: TenantContext = Depends(get_tenant_context),
+):
+    """Computes General Ledger Trial Balance with native currencies (USD, SAR, YER) and consolidated USD."""
+    from backend.app.services.reports import FinancialReportService
+    cid = uuid.UUID(company_id) if company_id else (context.company_id if not context.is_super_admin else None)
+    return FinancialReportService.get_multi_currency_trial_balance(
+        db, company_id=cid, from_date=from_date, to_date=to_date
+    )
+
+
+@router.post("/fx-sync")
+def post_analytics_fx_sync(
+    db: Session = Depends(get_db),
+    context: TenantContext = Depends(get_tenant_context),
+):
+    """Triggers on-demand synchronization of exchange rates and invalidates currency caches."""
+    from backend.app.tasks.fx_sync import sync_exchange_rates
+    return sync_exchange_rates(db=db)
+

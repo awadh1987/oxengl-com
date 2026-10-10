@@ -24,6 +24,8 @@ class CurrencySettings(BaseSettings):
     BASE_CURRENCY: str = "USD"
     SUPPORTED_CURRENCIES: str = "USD,SAR,YER"
     ENABLE_DYNAMIC_CONVERSION: bool = True
+    FX_API_KEY: Optional[str] = None
+    FX_API_URL: str = "https://api.frankfurter.dev/v1/latest"
 
     @property
     def supported_currencies_list(self) -> List[str]:
@@ -35,8 +37,6 @@ class CurrencySettings(BaseSettings):
             except Exception:
                 pass
         return [x.strip() for x in val.split(",") if x.strip()]
-
-
 
 
 email_settings = EmailSettings()

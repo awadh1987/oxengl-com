@@ -89,11 +89,17 @@ def get_hierarchical_chart_of_accounts_tree(
 
 @router.get("/trial-balance")
 def get_trial_balance(
+    view_mode: Optional[str] = None,
     db: Session = Depends(get_isolated_db_session),
 ):
     """
     Calculates the general ledger Trial Balance with total debits, credits, and net balances.
+    Supports view_mode='native' for multi-currency breakdown or 'consolidated' for base total.
     """
+    if view_mode == "native":
+        from backend.app.services.reports import FinancialReportService
+        return FinancialReportService.get_multi_currency_trial_balance(db)
+
     query = text("""
         SELECT 
             coa.account_code,
@@ -116,6 +122,7 @@ def get_trial_balance(
 
     return {
         "is_balanced": abs(total_dr - total_cr) < 0.01,
+        "base_currency": "USD",
         "total_debit": round(total_dr, 2),
         "total_credit": round(total_cr, 2),
         "discrepancy": round(abs(total_dr - total_cr), 2),
@@ -132,6 +139,59 @@ def get_trial_balance(
             for r in rows
         ],
     }
+
+
+@router.get("/multi-currency-trial-balance")
+def get_multi_currency_trial_balance(
+    company_id: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    db: Session = Depends(get_isolated_db_session),
+):
+    """
+    Computes Trial Balance grouped by account with native USD, SAR, and YER balances
+    alongside consolidated USD equivalents.
+    """
+    from backend.app.services.reports import FinancialReportService
+    import uuid
+    from datetime import datetime
+    cid = uuid.UUID(company_id) if company_id else None
+    f_date = datetime.fromisoformat(from_date) if from_date else None
+    t_date = datetime.fromisoformat(to_date) if to_date else None
+    return FinancialReportService.get_multi_currency_trial_balance(
+        db, company_id=cid, from_date=f_date, to_date=t_date
+    )
+
+
+@router.get("/fx-gain-loss")
+def get_fx_gain_loss(
+    company_id: Optional[str] = None,
+    as_of_date: Optional[str] = None,
+    db: Session = Depends(get_isolated_db_session),
+):
+    """
+    Calculates Unrealized FX Gain/Loss on open AP and AR invoices by comparing
+    original transaction date rates against current active rates.
+    """
+    from backend.app.services.reports import FinancialReportService
+    import uuid
+    from datetime import datetime
+    cid = uuid.UUID(company_id) if company_id else None
+    a_date = datetime.fromisoformat(as_of_date) if as_of_date else None
+    return FinancialReportService.get_unrealized_fx_gain_loss(
+        db, company_id=cid, as_of_date=a_date
+    )
+
+
+@router.post("/fx-sync")
+def trigger_fx_sync(
+    db: Session = Depends(get_isolated_db_session),
+):
+    """
+    Triggers on-demand synchronization of foreign exchange rates and flushes cache.
+    """
+    from backend.app.tasks.fx_sync import sync_exchange_rates
+    return sync_exchange_rates(db=db)
 
 
 @router.get("/balance-sheet")

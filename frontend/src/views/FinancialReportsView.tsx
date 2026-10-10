@@ -7,6 +7,10 @@ import {
   ApiBalanceSheetReport,
   ApiTrialBalanceAccount,
   ApiFinancialReportAccount,
+  ApiFxGainLossReport,
+  ApiMultiCurrencyTrialBalanceReport,
+  ApiFxGainLossItem,
+  ApiMultiCurrencyTrialBalanceAccount,
 } from '../services/api';
 import {
   Scale,
@@ -29,12 +33,14 @@ import {
   Layers,
   Search,
   BookOpen,
+  ArrowRightLeft,
+  Coins,
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
 import { Upload as BulkUploadIcon } from 'lucide-react';
 import { BulkImportModal } from '../components/BulkImportModal';
 
-export type FinancialReportType = 'trial-balance' | 'income-statement' | 'balance-sheet';
+export type FinancialReportType = 'trial-balance' | 'income-statement' | 'balance-sheet' | 'fx-exposure';
 
 interface FinancialReportsViewProps {
   initialReport?: FinancialReportType;
@@ -83,8 +89,15 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
 
   // Report Data States
   const [trialBalance, setTrialBalance] = useState<ApiTrialBalanceReport | null>(null);
+  const [multiCurrencyTb, setMultiCurrencyTb] = useState<ApiMultiCurrencyTrialBalanceReport | null>(null);
   const [incomeStatement, setIncomeStatement] = useState<ApiIncomeStatementReport | null>(null);
   const [balanceSheet, setBalanceSheet] = useState<ApiBalanceSheetReport | null>(null);
+  const [fxExposureReport, setFxExposureReport] = useState<ApiFxGainLossReport | null>(null);
+
+  // FX & Multi-Currency Controls
+  const [trialBalanceViewMode, setTrialBalanceViewMode] = useState<'consolidated' | 'native'>('consolidated');
+  const [isSyncingFx, setIsSyncingFx] = useState<boolean>(false);
+  const [revalSubTab, setRevalSubTab] = useState<'ar' | 'ap'>('ar');
 
   // Filters
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -101,14 +114,21 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
     setError(null);
     try {
       if (activeReport === 'trial-balance') {
-        const data = await erpApi.getAnalyticsTrialBalance({ companyId: effectiveCompanyId });
+        const [data, mcData] = await Promise.all([
+          erpApi.getAnalyticsTrialBalance({ companyId: effectiveCompanyId }),
+          erpApi.getMultiCurrencyTrialBalance({ companyId: effectiveCompanyId }).catch(() => null),
+        ]);
         setTrialBalance(data);
+        if (mcData) setMultiCurrencyTb(mcData);
       } else if (activeReport === 'income-statement') {
         const data = await erpApi.getAnalyticsIncomeStatement({ companyId: effectiveCompanyId });
         setIncomeStatement(data);
       } else if (activeReport === 'balance-sheet') {
         const data = await erpApi.getAnalyticsBalanceSheet({ companyId: effectiveCompanyId });
         setBalanceSheet(data);
+      } else if (activeReport === 'fx-exposure') {
+        const data = await erpApi.getFxGainLossReport({ companyId: effectiveCompanyId });
+        setFxExposureReport(data);
       }
     } catch (err: any) {
       console.error('Failed to fetch financial report:', err);
@@ -117,6 +137,24 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
       showToast?.(msg, 'error');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTriggerFxSync = async () => {
+    setIsSyncingFx(true);
+    try {
+      const res = await erpApi.triggerFxSync(effectiveCompanyId);
+      showToast?.(
+        isAr
+          ? `تم تحديث أسعار الصرف بنجاح وتطهير الذاكرة التخزينية (${res.synced_pairs} زوج عملات)`
+          : `FX rates updated & cache purged successfully (${res.synced_pairs} pairs)`,
+        'success'
+      );
+      await fetchReportData();
+    } catch (err: any) {
+      showToast?.(err?.message || (isAr ? 'فشل مزامنة أسعار الصرف' : 'Failed to sync FX rates'), 'error');
+    } finally {
+      setIsSyncingFx(false);
     }
   };
 
@@ -135,6 +173,14 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
         csvContent += `"${acc.account_code}","${acc.account_name}","${acc.account_type}",${acc.total_debit},${acc.total_credit},${acc.net_balance}\n`;
       });
       csvContent += `Total,,,${trialBalance.total_debit},${trialBalance.total_credit},${trialBalance.discrepancy}\n`;
+    } else if (activeReport === 'fx-exposure' && fxExposureReport) {
+      csvContent = 'Type,Invoice Number,Partner,Currency,Outstanding,Booking Rate,Spot Rate,Original USD,Revalued USD,Unrealized Gain/Loss (USD),Status\n';
+      fxExposureReport.ar_revaluation.forEach((item) => {
+        csvContent += `"AR","${item.invoice_number}","${item.partner_name}","${item.currency}",${item.outstanding_amount},${item.original_rate_to_usd},${item.current_rate_to_usd},${item.original_usd},${item.current_usd},${item.unrealized_gain_loss_usd},"${item.revaluation_status}"\n`;
+      });
+      fxExposureReport.ap_revaluation.forEach((item) => {
+        csvContent += `"AP","${item.invoice_number}","${item.partner_name}","${item.currency}",${item.outstanding_amount},${item.original_rate_to_usd},${item.current_rate_to_usd},${item.original_usd},${item.current_usd},${item.unrealized_gain_loss_usd},"${item.revaluation_status}"\n`;
+      });
     } else if (activeReport === 'income-statement' && incomeStatement) {
       csvContent = 'Category,Account Code,Account Name,Amount (SAR)\n';
       incomeStatement.revenue_accounts.forEach((acc) => {
@@ -188,6 +234,34 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
     });
   }, [trialBalance, searchQuery, selectedTypeFilter]);
 
+  // Filtered Accounts for Multi-Currency Trial Balance
+  const filteredMultiCurrencyAccounts = useMemo(() => {
+    if (!multiCurrencyTb?.accounts) return [];
+    return multiCurrencyTb.accounts.filter((acc) => {
+      const matchesSearch =
+        acc.account_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        acc.account_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (acc.account_name_ar && acc.account_name_ar.includes(searchQuery));
+      const matchesType =
+        selectedTypeFilter === 'ALL' || acc.account_type === selectedTypeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [multiCurrencyTb, searchQuery, selectedTypeFilter]);
+
+  // Filtered Items for FX Exposure & Revaluation
+  const filteredFxItems = useMemo(() => {
+    if (!fxExposureReport) return [];
+    const items = revalSubTab === 'ar' ? fxExposureReport.ar_revaluation : fxExposureReport.ap_revaluation;
+    if (!searchQuery) return items;
+    const q = searchQuery.toLowerCase();
+    return items.filter(
+      (item) =>
+        item.invoice_number.toLowerCase().includes(q) ||
+        item.partner_name.toLowerCase().includes(q) ||
+        item.currency.toLowerCase().includes(q)
+    );
+  }, [fxExposureReport, revalSubTab, searchQuery]);
+
   return (
     <div className="space-y-6 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" dir={isAr ? 'rtl' : 'ltr'}>
       {/* 1. Header Card & Controls */}
@@ -213,9 +287,13 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 ? isAr
                   ? 'قائمة الدخل والأرباح والخسائر (P&L)'
                   : 'Income Statement (Profit & Loss)'
+                : activeReport === 'balance-sheet'
+                ? isAr
+                  ? 'الميزانية العمومية وقائمة المركز المالي'
+                  : 'Balance Sheet (Financial Position)'
                 : isAr
-                ? 'الميزانية العمومية وقائمة المركز المالي'
-                : 'Balance Sheet (Financial Position)'}
+                ? 'فروقات العملة وإعادة تقييم الصرف (FX Exposure & Revaluation)'
+                : 'FX Exposure & Revaluation'}
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               {activeReport === 'trial-balance'
@@ -226,9 +304,13 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 ? isAr
                   ? 'احتساب صافي الدخل التشغيلي وهامش الربحية من إجمالي الإيرادات والمصروفات المسجلة'
                   : 'Calculates operational net income, revenue recognition, and profit margins from posted revenues and expenses.'
+                : activeReport === 'balance-sheet'
+                ? isAr
+                  ? 'بيان المركز المالي الشامل وتوازن معادلة المحاسبة: الأصول = الخصوم + حقوق الملكية + أرباح الفترة'
+                  : 'Statement of financial position verifying double-entry equilibrium: Assets = Liabilities + Equity + Net Income.'
                 : isAr
-                ? 'بيان المركز المالي الشامل وتوازن معادلة المحاسبة: الأصول = الخصوم + حقوق الملكية + أرباح الفترة'
-                : 'Statement of financial position verifying double-entry equilibrium: Assets = Liabilities + Equity + Net Income.'}
+                ? 'تقرير تقييم الأرباح والخسائر غير المحققة للفواتير المفتوحة (ذمم مدينة/دائنة) بأسعار الصرف الحية مقارنة بأسعار الحجز'
+                : 'Real-time unrealized FX gain and loss evaluation on open AP/AR invoices comparing booking spot rates vs live active market rates.'}
             </p>
           </div>
 
@@ -309,6 +391,18 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
           >
             <Layers className="h-4 w-4" />
             <span>{isAr ? 'الميزانية العمومية (Balance Sheet)' : 'Balance Sheet'}</span>
+          </button>
+
+          <button
+            onClick={() => setActiveReport('fx-exposure')}
+            className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-black transition cursor-pointer ${
+              activeReport === 'fx-exposure'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/30'
+                : 'bg-slate-900/60 text-slate-300 hover:bg-slate-800'
+            }`}
+          >
+            <ArrowRightLeft className="h-4 w-4" />
+            <span>{isAr ? 'إعادة التقييم ومخاطر الصرف (FX Exposure & Revaluation)' : 'FX Exposure & Revaluation'}</span>
           </button>
         </div>
       </div>
@@ -421,7 +515,7 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
             </div>
           </div>
 
-          {/* Filters Bar */}
+          {/* Filters Bar & View Mode Toggle */}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs no-print">
             <div className="flex items-center gap-2 flex-1 max-w-md">
               <Search className="h-4 w-4 text-slate-400" />
@@ -436,136 +530,296 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
               />
             </div>
 
-            <div className="flex items-center gap-1">
-              {['ALL', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].map((t) => (
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Currency View Mode Toggle */}
+              <div className="flex items-center rounded-xl bg-slate-100 dark:bg-slate-800 p-1 border border-slate-200 dark:border-slate-700">
                 <button
-                  key={t}
-                  onClick={() => setSelectedTypeFilter(t)}
-                  className={`rounded-xl px-3 py-1.5 text-xs font-bold transition cursor-pointer ${
-                    selectedTypeFilter === t
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  type="button"
+                  id="tb-toggle-consolidated"
+                  onClick={() => setTrialBalanceViewMode('consolidated')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    trialBalanceViewMode === 'consolidated'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
-                  {t === 'ALL'
-                    ? isAr
-                      ? 'الكل'
-                      : 'All'
-                    : t === 'ASSET'
-                    ? isAr
-                      ? 'أصول'
-                      : 'Assets'
-                    : t === 'LIABILITY'
-                    ? isAr
-                      ? 'خصوم'
-                      : 'Liabilities'
-                    : t === 'EQUITY'
-                    ? isAr
-                      ? 'حقوق ملكية'
-                      : 'Equity'
-                    : t === 'REVENUE'
-                    ? isAr
-                      ? 'إيرادات'
-                      : 'Revenue'
-                    : isAr
-                    ? 'مصروفات'
-                    : 'Expenses'}
+                  <Coins className="h-3.5 w-3.5" />
+                  <span>{isAr ? 'العملة الأساسية (USD)' : 'Consolidated Base (USD)'}</span>
                 </button>
-              ))}
+                <button
+                  type="button"
+                  id="tb-toggle-native"
+                  onClick={() => setTrialBalanceViewMode('native')}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                    trialBalanceViewMode === 'native'
+                      ? 'bg-indigo-600 text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  <span>{isAr ? 'العملات المتعددة الأصلية (USD/SAR/YER)' : 'Native Currency (USD, SAR, YER)'}</span>
+                </button>
+              </div>
+
+              {/* Classification filter */}
+              <div className="flex items-center gap-1">
+                {['ALL', 'ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setSelectedTypeFilter(t)}
+                    className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition cursor-pointer ${
+                      selectedTypeFilter === t
+                        ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300'
+                    }`}
+                  >
+                    {t === 'ALL'
+                      ? isAr
+                        ? 'الكل'
+                        : 'All'
+                      : t === 'ASSET'
+                      ? isAr
+                        ? 'أصول'
+                        : 'Assets'
+                      : t === 'LIABILITY'
+                      ? isAr
+                        ? 'خصوم'
+                        : 'Liabilities'
+                      : t === 'EQUITY'
+                      ? isAr
+                        ? 'حقوق ملكية'
+                        : 'Equity'
+                      : t === 'REVENUE'
+                      ? isAr
+                        ? 'إيرادات'
+                        : 'Revenue'
+                      : isAr
+                      ? 'مصروفات'
+                      : 'Expenses'}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Trial Balance Table */}
-          <div className="overflow-x-auto rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
-            <table className="w-full text-start text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 font-bold text-slate-600 dark:text-slate-300">
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'رمز الحساب' : 'Code'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'اسم الحساب' : 'Account Name'}</th>
-                  <th className="py-3.5 px-4 text-start">{isAr ? 'التصنيف' : 'Classification'}</th>
-                  <th className="py-3.5 px-4 text-end">{isAr ? 'إجمالي المدين' : 'Debit (SAR)'}</th>
-                  <th className="py-3.5 px-4 text-end">{isAr ? 'إجمالي الدائن' : 'Credit (SAR)'}</th>
-                  <th className="py-3.5 px-4 text-end">{isAr ? 'رصيد المدين' : 'Debit Balance'}</th>
-                  <th className="py-3.5 px-4 text-end">{isAr ? 'رصيد الدائن' : 'Credit Balance'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
-                {isLoading ? (
-                  <TableSkeletonRows rows={6} cols={7} />
-                ) : filteredTrialBalanceAccounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
-                      {isAr ? 'لا توجد حركات مالية مسجلة' : 'No general ledger entries found.'}
-                    </td>
+          {trialBalanceViewMode === 'consolidated' ? (
+            /* Consolidated Trial Balance Table */
+            <div className="overflow-x-auto rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+              <table className="w-full text-start text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/80 font-bold text-slate-600 dark:text-slate-300">
+                    <th className="py-3.5 px-4 text-start">{isAr ? 'رمز الحساب' : 'Code'}</th>
+                    <th className="py-3.5 px-4 text-start">{isAr ? 'اسم الحساب' : 'Account Name'}</th>
+                    <th className="py-3.5 px-4 text-start">{isAr ? 'التصنيف' : 'Classification'}</th>
+                    <th className="py-3.5 px-4 text-end">{isAr ? 'إجمالي المدين' : 'Debit (USD)'}</th>
+                    <th className="py-3.5 px-4 text-end">{isAr ? 'إجمالي الدائن' : 'Credit (USD)'}</th>
+                    <th className="py-3.5 px-4 text-end">{isAr ? 'رصيد المدين' : 'Debit Balance'}</th>
+                    <th className="py-3.5 px-4 text-end">{isAr ? 'رصيد الدائن' : 'Credit Balance'}</th>
                   </tr>
-                ) : (
-                  filteredTrialBalanceAccounts.map((acc) => (
-                    <tr key={acc.account_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
-                        {acc.account_code}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
-                        {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
-                            acc.account_type === 'ASSET'
-                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                              : acc.account_type === 'LIABILITY'
-                              ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                              : acc.account_type === 'EQUITY'
-                              ? 'bg-purple-50 text-purple-700 border border-purple-200'
-                              : acc.account_type === 'REVENUE'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {acc.account_type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
-                        {formatCurrency(Number(acc.total_debit), language)}
-                      </td>
-                      <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
-                        {formatCurrency(Number(acc.total_credit), language)}
-                      </td>
-                      <td className="py-3 px-4 text-end font-mono font-semibold text-blue-900">
-                        {Number(acc.debit_balance) > 0 ? formatCurrency(Number(acc.debit_balance), language) : '-'}
-                      </td>
-                      <td className="py-3 px-4 text-end font-mono font-semibold text-amber-900">
-                        {Number(acc.credit_balance) > 0 ? formatCurrency(Number(acc.credit_balance), language) : '-'}
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {isLoading ? (
+                    <TableSkeletonRows rows={6} cols={7} />
+                  ) : filteredTrialBalanceAccounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                        {isAr ? 'لا توجد حركات مالية مسجلة' : 'No general ledger entries found.'}
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-slate-900 dark:border-slate-200 bg-slate-100/80 dark:bg-slate-800/80 font-black text-slate-900 dark:text-slate-100">
-                  <td colSpan={3} className="py-4 px-4 text-start uppercase">
-                    {isAr ? 'الإجمالي العام لميزان المراجعة' : 'Grand Total'}
-                  </td>
-                  <td className="py-4 px-4 text-end font-mono text-sm">
-                    {formatCurrency(Number(trialBalance?.total_debit || 0), language)}
-                  </td>
-                  <td className="py-4 px-4 text-end font-mono text-sm">
-                    {formatCurrency(Number(trialBalance?.total_credit || 0), language)}
-                  </td>
-                  <td colSpan={2} className="py-4 px-4 text-end">
-                    {trialBalance?.is_balanced ? (
-                      <span className="text-emerald-700 font-bold">
-                        ✓ {isAr ? 'المدين = الدائن (متوازن)' : 'Debits = Credits (Balanced)'}
-                      </span>
-                    ) : (
-                      <span className="text-rose-700 font-bold">
-                        ✕ {isAr ? 'غير متوازن' : 'Out of Balance'}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                  ) : (
+                    filteredTrialBalanceAccounts.map((acc) => (
+                      <tr key={acc.account_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
+                          {acc.account_code}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
+                          {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`rounded-md px-2 py-0.5 text-[10px] font-bold ${
+                              acc.account_type === 'ASSET'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800'
+                                : acc.account_type === 'LIABILITY'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800'
+                                : acc.account_type === 'EQUITY'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/40 dark:text-purple-300 dark:border-purple-800'
+                                : acc.account_type === 'REVENUE'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800'
+                                : 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800'
+                            }`}
+                          >
+                            {acc.account_type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
+                          {formatCurrency(Number(acc.total_debit), language, 'USD')}
+                        </td>
+                        <td className="py-3 px-4 text-end font-mono text-slate-800 dark:text-slate-200">
+                          {formatCurrency(Number(acc.total_credit), language, 'USD')}
+                        </td>
+                        <td className="py-3 px-4 text-end font-mono font-semibold text-blue-900 dark:text-blue-300">
+                          {Number(acc.debit_balance) > 0 ? formatCurrency(Number(acc.debit_balance), language, 'USD') : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-end font-mono font-semibold text-amber-900 dark:text-amber-300">
+                          {Number(acc.credit_balance) > 0 ? formatCurrency(Number(acc.credit_balance), language, 'USD') : '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-900 dark:border-slate-200 bg-slate-100/80 dark:bg-slate-800/80 font-black text-slate-900 dark:text-slate-100">
+                    <td colSpan={3} className="py-4 px-4 text-start uppercase">
+                      {isAr ? 'الإجمالي العام لميزان المراجعة (USD)' : 'Grand Total (USD)'}
+                    </td>
+                    <td className="py-4 px-4 text-end font-mono text-sm">
+                      {formatCurrency(Number(trialBalance?.total_debit || 0), language, 'USD')}
+                    </td>
+                    <td className="py-4 px-4 text-end font-mono text-sm">
+                      {formatCurrency(Number(trialBalance?.total_credit || 0), language, 'USD')}
+                    </td>
+                    <td colSpan={2} className="py-4 px-4 text-end">
+                      {trialBalance?.is_balanced ? (
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold">
+                          ✓ {isAr ? 'المدين = الدائن (متوازن)' : 'Debits = Credits (Balanced)'}
+                        </span>
+                      ) : (
+                        <span className="text-rose-700 dark:text-rose-400 font-bold">
+                          ✕ {isAr ? 'غير متوازن' : 'Out of Balance'}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            /* Multi-Currency Native Trial Balance Table */
+            <div className="overflow-x-auto rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+              <div className="bg-slate-50/80 dark:bg-slate-800/50 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                  {isAr ? 'تفصيل الأرصدة بالعملات الأصلية لكل حركة (USD, SAR, YER) مع المعادلة الموحدة (USD)' : 'Native Currency Ledger Breakdowns (USD, SAR, YER) & Base USD Consolidated Total'}
+                </span>
+                <span className="font-mono text-[11px] bg-slate-200/70 dark:bg-slate-700/60 px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-300">
+                  {isAr ? 'أسعار الصرف النشطة:' : 'Active Spot Rates:'} USD/SAR: {multiCurrencyTb?.active_rates?.SAR || 3.75} | USD/YER: {multiCurrencyTb?.active_rates?.YER || 535.0}
+                </span>
+              </div>
+              <table className="w-full text-start text-xs">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300">
+                    <th className="py-3 px-3 text-start">{isAr ? 'رمز الحساب' : 'Code'}</th>
+                    <th className="py-3 px-3 text-start">{isAr ? 'اسم الحساب' : 'Account Name'}</th>
+                    <th className="py-3 px-2 text-start">{isAr ? 'النوع' : 'Type'}</th>
+                    <th className="py-3 px-3 text-end border-s border-slate-200 dark:border-slate-700 bg-blue-50/40 dark:bg-blue-950/20">USD (Dr / Cr)</th>
+                    <th className="py-3 px-3 text-end border-s border-slate-200 dark:border-slate-700 bg-emerald-50/40 dark:bg-emerald-950/20">SAR (Dr / Cr)</th>
+                    <th className="py-3 px-3 text-end border-s border-slate-200 dark:border-slate-700 bg-purple-50/40 dark:bg-purple-950/20">YER (Dr / Cr)</th>
+                    <th className="py-3 px-3 text-end border-s border-slate-200 dark:border-slate-700 bg-amber-50/40 dark:bg-amber-950/20">{isAr ? 'الموحد (USD)' : 'Consolidated (USD)'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                  {isLoading ? (
+                    <TableSkeletonRows rows={6} cols={7} />
+                  ) : filteredMultiCurrencyAccounts.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                        {isAr ? 'لا توجد حركات بالعملات المتعددة مسجلة' : 'No multi-currency ledger entries found.'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMultiCurrencyAccounts.map((acc) => {
+                      const usd = acc.native_balances?.USD || { debit: 0, credit: 0, net_balance: 0 };
+                      const sar = acc.native_balances?.SAR || { debit: 0, credit: 0, net_balance: 0 };
+                      const yer = acc.native_balances?.YER || { debit: 0, credit: 0, net_balance: 0 };
+                      const cons = acc.consolidated_usd || { total_debit: 0, total_credit: 0, net_balance: 0 };
+
+                      return (
+                        <tr key={acc.account_code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
+                            {acc.account_code}
+                          </td>
+                          <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">
+                            {isAr && acc.account_name_ar ? acc.account_name_ar : acc.account_name}
+                          </td>
+                          <td className="py-2.5 px-2">
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                              {acc.account_type}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-end font-mono border-s border-slate-100 dark:border-slate-800 bg-blue-50/20 dark:bg-blue-950/10">
+                            <div className="text-slate-900 dark:text-slate-100">
+                              {usd.debit > 0 || usd.credit > 0 ? (
+                                <>
+                                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(usd.debit, language, 'USD')}</span>
+                                  <span className="text-slate-400 mx-1">/</span>
+                                  <span className="text-rose-700 dark:text-rose-400 font-semibold">{formatCurrency(usd.credit, language, 'USD')}</span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-end font-mono border-s border-slate-100 dark:border-slate-800 bg-emerald-50/20 dark:bg-emerald-950/10">
+                            <div className="text-slate-900 dark:text-slate-100">
+                              {sar.debit > 0 || sar.credit > 0 ? (
+                                <>
+                                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(sar.debit, language, 'SAR')}</span>
+                                  <span className="text-slate-400 mx-1">/</span>
+                                  <span className="text-rose-700 dark:text-rose-400 font-semibold">{formatCurrency(sar.credit, language, 'SAR')}</span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-end font-mono border-s border-slate-100 dark:border-slate-800 bg-purple-50/20 dark:bg-purple-950/10">
+                            <div className="text-slate-900 dark:text-slate-100">
+                              {yer.debit > 0 || yer.credit > 0 ? (
+                                <>
+                                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold">{formatCurrency(yer.debit, language, 'YER')}</span>
+                                  <span className="text-slate-400 mx-1">/</span>
+                                  <span className="text-rose-700 dark:text-rose-400 font-semibold">{formatCurrency(yer.credit, language, 'YER')}</span>
+                                </>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 text-end font-mono font-bold border-s border-slate-100 dark:border-slate-800 bg-amber-50/20 dark:bg-amber-950/10">
+                            <div className="text-slate-900 dark:text-slate-100">
+                              {formatCurrency(cons.total_debit, language, 'USD')} / {formatCurrency(cons.total_credit, language, 'USD')}
+                            </div>
+                            <div className={`text-[10px] ${cons.net_balance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              Net: {formatCurrency(cons.net_balance, language, 'USD')}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-900 dark:border-slate-100 bg-slate-100/80 dark:bg-slate-800 font-black text-slate-900 dark:text-slate-100">
+                    <td colSpan={3} className="py-3.5 px-3 text-start uppercase">
+                      {isAr ? 'الإجمالي الموحد الكلي' : 'Grand Consolidated Totals'}
+                    </td>
+                    <td className="py-3.5 px-3 text-end font-mono border-s border-slate-200 dark:border-slate-700">
+                      {formatCurrency(multiCurrencyTb?.native_totals?.USD?.debit || 0, language, 'USD')} / {formatCurrency(multiCurrencyTb?.native_totals?.USD?.credit || 0, language, 'USD')}
+                    </td>
+                    <td className="py-3.5 px-3 text-end font-mono border-s border-slate-200 dark:border-slate-700">
+                      {formatCurrency(multiCurrencyTb?.native_totals?.SAR?.debit || 0, language, 'SAR')} / {formatCurrency(multiCurrencyTb?.native_totals?.SAR?.credit || 0, language, 'SAR')}
+                    </td>
+                    <td className="py-3.5 px-3 text-end font-mono border-s border-slate-200 dark:border-slate-700">
+                      {formatCurrency(multiCurrencyTb?.native_totals?.YER?.debit || 0, language, 'YER')} / {formatCurrency(multiCurrencyTb?.native_totals?.YER?.credit || 0, language, 'YER')}
+                    </td>
+                    <td className="py-3.5 px-3 text-end font-mono border-s border-slate-200 dark:border-slate-700 text-sm font-black text-emerald-700 dark:text-emerald-400">
+                      {formatCurrency(multiCurrencyTb?.consolidated_totals?.total_debit_usd || 0, language, 'USD')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -965,6 +1219,369 @@ export const FinancialReportsView: React.FC<FinancialReportsViewProps> = ({
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* REPORT 4: FX EXPOSURE & REVALUATION VIEW                            */}
+      {/* ==================================================================== */}
+      {activeReport === 'fx-exposure' && (
+        <div className="space-y-6">
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            {/* Card 1: Net Unrealized FX Gain / Loss */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {isAr ? 'صافي أرباح/(خسائر) الصرف غير المحققة' : 'Net Unrealized FX Gain/Loss'}
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                    (fxExposureReport?.summary?.net_unrealized_gain_loss_usd || 0) >= 0
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      : 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                  }`}
+                >
+                  {(fxExposureReport?.summary?.net_unrealized_gain_loss_usd || 0) >= 0
+                    ? isAr
+                      ? 'ربح صرف'
+                      : 'GAIN'
+                    : isAr
+                    ? 'خسارة صرف'
+                    : 'LOSS'}
+                </span>
+              </div>
+              <div
+                className={`mt-2 text-2xl font-black ${
+                  isLoading
+                    ? 'text-slate-300'
+                    : (fxExposureReport?.summary?.net_unrealized_gain_loss_usd || 0) >= 0
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : 'text-rose-600 dark:text-rose-400'
+                }`}
+              >
+                {isLoading ? (
+                  <div className="h-7 w-28 bg-slate-200 rounded animate-pulse my-0.5" />
+                ) : (
+                  formatCurrency(fxExposureReport?.summary?.net_unrealized_gain_loss_usd || 0, language, 'USD')
+                )}
+              </div>
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono block mt-1">
+                {isAr ? 'صافي فارق تقييم فواتير الذمم المدينة والدائنة' : 'Net variance between AR & AP revaluations'}
+              </span>
+            </div>
+
+            {/* Card 2: Open AR Exposure */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                {isAr ? 'إجمالي الذمم المدينة المكشوفة (AR)' : 'Open AR Exposure (Receivables)'}
+              </span>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
+                {isLoading ? (
+                  <div className="h-7 w-28 bg-slate-200 rounded animate-pulse my-0.5" />
+                ) : (
+                  formatCurrency(fxExposureReport?.summary?.total_open_ar_usd || 0, language, 'USD')
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1">
+                <span>
+                  {fxExposureReport?.summary?.ar_count || 0} {isAr ? 'فاتورة عميل مفتوحة' : 'open invoices'}
+                </span>
+                <span
+                  className={
+                    (fxExposureReport?.summary?.total_ar_gain_loss_usd || 0) >= 0
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-rose-600 font-bold'
+                  }
+                >
+                  FX: {formatCurrency(fxExposureReport?.summary?.total_ar_gain_loss_usd || 0, language, 'USD')}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 3: Open AP Exposure */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                {isAr ? 'إجمالي الذمم الدائنة المكشوفة (AP)' : 'Open AP Exposure (Payables)'}
+              </span>
+              <div className="mt-2 text-2xl font-black text-slate-900 dark:text-slate-100">
+                {isLoading ? (
+                  <div className="h-7 w-28 bg-slate-200 rounded animate-pulse my-0.5" />
+                ) : (
+                  formatCurrency(fxExposureReport?.summary?.total_open_ap_usd || 0, language, 'USD')
+                )}
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-1">
+                <span>
+                  {fxExposureReport?.summary?.ap_count || 0} {isAr ? 'فاتورة مورد مفتوحة' : 'open vendor bills'}
+                </span>
+                <span
+                  className={
+                    (fxExposureReport?.summary?.total_ap_gain_loss_usd || 0) >= 0
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-rose-600 font-bold'
+                  }
+                >
+                  FX: {formatCurrency(fxExposureReport?.summary?.total_ap_gain_loss_usd || 0, language, 'USD')}
+                </span>
+              </div>
+            </div>
+
+            {/* Card 4: Active Spot Rates & Sync Trigger */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-xs flex flex-col justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                  {isAr ? 'أسعار الصرف اللحظية الفعالة' : 'Active Spot Exchange Rates'}
+                </span>
+                <div className="mt-1 flex items-center gap-2 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5">
+                    USD/SAR: {fxExposureReport?.active_rates?.SAR || 3.75}
+                  </span>
+                  <span className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5">
+                    USD/YER: {fxExposureReport?.active_rates?.YER || 535.0}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-3">
+                <button
+                  type="button"
+                  id="sync-live-fx-btn"
+                  onClick={handleTriggerFxSync}
+                  disabled={isSyncingFx}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1.5 text-xs font-black shadow-xs transition cursor-pointer"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSyncingFx ? 'animate-spin' : ''}`} />
+                  <span>
+                    {isSyncingFx
+                      ? isAr
+                        ? 'جاري التحديث والتطهير...'
+                        : 'Syncing & Purging...'
+                      : isAr
+                      ? 'مزامنة أسعار الصرف الحية'
+                      : 'Sync Live FX Rates'}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sub-tabs & Search Filter */}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-xs no-print">
+            {/* AR vs AP Sub-Tabs */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-700/80">
+              <button
+                type="button"
+                id="tab-fx-ar"
+                onClick={() => setRevalSubTab('ar')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  revalSubTab === 'ar'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <ArrowUpRight className="h-4 w-4" />
+                <span>{isAr ? 'فواتير العملاء والذمم المدينة (AR)' : 'Accounts Receivable (AR)'}</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  revalSubTab === 'ar' ? 'bg-purple-800 text-purple-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {fxExposureReport?.ar_revaluation?.length || 0}
+                </span>
+              </button>
+              <button
+                type="button"
+                id="tab-fx-ap"
+                onClick={() => setRevalSubTab('ap')}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  revalSubTab === 'ap'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <ArrowDownRight className="h-4 w-4" />
+                <span>{isAr ? 'فواتير الموردين والذمم الدائنة (AP)' : 'Accounts Payable (AP)'}</span>
+                <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  revalSubTab === 'ap' ? 'bg-purple-800 text-purple-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                }`}>
+                  {fxExposureReport?.ap_revaluation?.length || 0}
+                </span>
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="flex items-center gap-2 flex-1 max-w-sm">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                id="fx-exposure-search"
+                name="fx_search"
+                type="text"
+                placeholder={isAr ? 'بحث برقم الفاتورة أو الطرف أو العملة...' : 'Search by invoice #, partner, currency...'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-purple-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Revaluation Table */}
+          <div className="overflow-x-auto rounded-3xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
+            <div className="bg-slate-50/80 dark:bg-slate-800/50 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {revalSubTab === 'ar'
+                  ? isAr
+                    ? 'إعادة تقييم الذمم المدينة (ارتفاع العملة الأجنبية يولد ربح صرف غير محقق)'
+                    : 'AR Revaluation: Appreciation of foreign currency against USD produces unrealized gain'
+                  : isAr
+                  ? 'إعادة تقييم الذمم الدائنة (انخفاض العملة الأجنبية يولد ربح صرف غير محقق)'
+                  : 'AP Revaluation: Depreciation of foreign currency against USD produces unrealized gain'}
+              </span>
+              <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                {isAr ? 'تاريخ التقييم:' : 'As of:'} {fxExposureReport?.as_of_date || new Date().toISOString().slice(0, 10)}
+              </span>
+            </div>
+            <table className="w-full text-start text-xs">
+              <thead>
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-800 font-bold text-slate-700 dark:text-slate-300">
+                  <th className="py-3 px-3 text-start">{isAr ? 'رقم الفاتورة' : 'Invoice #'}</th>
+                  <th className="py-3 px-3 text-start">{revalSubTab === 'ar' ? (isAr ? 'العميل' : 'Customer') : (isAr ? 'المورد' : 'Vendor')}</th>
+                  <th className="py-3 px-2 text-start">{isAr ? 'التاريخ' : 'Issue Date'}</th>
+                  <th className="py-3 px-3 text-end">{isAr ? 'الرصيد المستحق (العملة)' : 'Outstanding (Native)'}</th>
+                  <th className="py-3 px-2 text-end font-mono">{isAr ? 'سعر الحجز' : 'Booking Rate'}</th>
+                  <th className="py-3 px-2 text-end font-mono">{isAr ? 'السعر الحالي' : 'Spot Rate'}</th>
+                  <th className="py-3 px-3 text-end font-mono">{isAr ? 'القيمة الأصلية (USD)' : 'Original USD'}</th>
+                  <th className="py-3 px-3 text-end font-mono">{isAr ? 'القيمة المعاد تقييمها (USD)' : 'Revalued USD'}</th>
+                  <th className="py-3 px-3 text-end font-mono">{isAr ? 'الفارق غير المحقق (USD)' : 'Unrealized Gain/Loss'}</th>
+                  <th className="py-3 px-3 text-center">{isAr ? 'الحالة' : 'Status'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium">
+                {isLoading ? (
+                  <TableSkeletonRows rows={5} cols={10} />
+                ) : filteredFxItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-slate-400 dark:text-slate-500">
+                      {isAr
+                        ? 'لا توجد فواتير مكشوفة أو مطابقة لشروط البحث حالياً'
+                        : 'No open exposed invoices found matching the criteria.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredFxItems.map((item) => (
+                    <tr key={`${revalSubTab}-${item.invoice_number}`} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
+                        {item.invoice_number}
+                      </td>
+                      <td className="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">
+                        {item.partner_name}
+                      </td>
+                      <td className="py-2.5 px-2 font-mono text-[11px] text-slate-500">
+                        {item.issue_date}
+                      </td>
+                      <td className="py-2.5 px-3 text-end font-mono font-bold text-slate-900 dark:text-slate-100">
+                        {formatCurrency(item.outstanding_amount, language, item.currency)}
+                      </td>
+                      <td className="py-2.5 px-2 text-end font-mono text-slate-600 dark:text-slate-400">
+                        {Number(item.original_rate_to_usd).toFixed(4)}
+                      </td>
+                      <td className="py-2.5 px-2 text-end font-mono text-purple-700 dark:text-purple-400 font-semibold">
+                        {Number(item.current_rate_to_usd).toFixed(4)}
+                      </td>
+                      <td className="py-2.5 px-3 text-end font-mono text-slate-600 dark:text-slate-400">
+                        {formatCurrency(item.original_usd, language, 'USD')}
+                      </td>
+                      <td className="py-2.5 px-3 text-end font-mono font-bold text-slate-900 dark:text-slate-100">
+                        {formatCurrency(item.current_usd, language, 'USD')}
+                      </td>
+                      <td className="py-2.5 px-3 text-end font-mono font-black">
+                        <span
+                          className={
+                            item.unrealized_gain_loss_usd > 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : item.unrealized_gain_loss_usd < 0
+                              ? 'text-rose-600 dark:text-rose-400'
+                              : 'text-slate-500'
+                          }
+                        >
+                          {item.unrealized_gain_loss_usd > 0 ? '+' : ''}
+                          {formatCurrency(item.unrealized_gain_loss_usd, language, 'USD')}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-center">
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                            item.revaluation_status === 'GAIN'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : item.revaluation_status === 'LOSS'
+                              ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300'
+                              : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+                          }`}
+                        >
+                          {item.revaluation_status === 'GAIN' ? (
+                            <>
+                              <ArrowUpRight className="h-3 w-3" />
+                              <span>{isAr ? 'ربح' : 'GAIN'}</span>
+                            </>
+                          ) : item.revaluation_status === 'LOSS' ? (
+                            <>
+                              <ArrowDownRight className="h-3 w-3" />
+                              <span>{isAr ? 'خسارة' : 'LOSS'}</span>
+                            </>
+                          ) : (
+                            <span>{isAr ? 'حيادي' : 'NEUTRAL'}</span>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-900 dark:border-slate-100 bg-slate-100/80 dark:bg-slate-800 font-black text-slate-900 dark:text-slate-100">
+                  <td colSpan={6} className="py-3.5 px-3 text-start uppercase">
+                    {revalSubTab === 'ar'
+                      ? isAr
+                        ? 'إجمالي تقييم الذمم المدينة (AR Total)'
+                        : 'Total AR Revaluation'
+                      : isAr
+                      ? 'إجمالي تقييم الذمم الدائنة (AP Total)'
+                      : 'Total AP Revaluation'}
+                  </td>
+                  <td className="py-3.5 px-3 text-end font-mono">
+                    {formatCurrency(
+                      filteredFxItems.reduce((acc, curr) => acc + curr.original_usd, 0),
+                      language,
+                      'USD'
+                    )}
+                  </td>
+                  <td className="py-3.5 px-3 text-end font-mono">
+                    {formatCurrency(
+                      filteredFxItems.reduce((acc, curr) => acc + curr.current_usd, 0),
+                      language,
+                      'USD'
+                    )}
+                  </td>
+                  <td className="py-3.5 px-3 text-end font-mono text-sm font-black">
+                    {(() => {
+                      const totalDiff = filteredFxItems.reduce(
+                        (acc, curr) => acc + curr.unrealized_gain_loss_usd,
+                        0
+                      );
+                      return (
+                        <span className={totalDiff >= 0 ? 'text-emerald-600' : 'text-rose-600'}>
+                          {totalDiff >= 0 ? '+' : ''}
+                          {formatCurrency(totalDiff, language, 'USD')}
+                        </span>
+                      );
+                    })()}
+                  </td>
+                  <td className="py-3.5 px-3 text-center">
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {filteredFxItems.length} {isAr ? 'بند' : 'items'}
+                    </span>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
       )}

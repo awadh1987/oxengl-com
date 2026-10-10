@@ -226,7 +226,7 @@ export const getTabFromPath = (path: string): ActiveTab => {
   if (cleanPath.startsWith('/finance/sales-receivables')) return 'sales-receivables';
   if (cleanPath.startsWith('/finance/vouchers')) return 'vouchers';
   if (cleanPath.startsWith('/finance/chart')) return 'finance-chart';
-  if (cleanPath.startsWith('/finance/reports') || cleanPath.startsWith('/finance/trial-balance') || cleanPath.startsWith('/finance/income-statement') || cleanPath.startsWith('/finance/balance-sheet')) return 'financial-reports';
+  if (cleanPath.startsWith('/finance/reports') || cleanPath.startsWith('/finance/trial-balance') || cleanPath.startsWith('/finance/income-statement') || cleanPath.startsWith('/finance/balance-sheet') || cleanPath.startsWith('/finance/fx-exposure')) return 'financial-reports';
   if (cleanPath.startsWith('/finance/audit-closing')) return 'finance-audit-closing';
   if (cleanPath.startsWith('/finance/ai-auditor')) return 'ai-insights';
   if (cleanPath.startsWith('/analytics/data-observability') || cleanPath.startsWith('/data-observability')) return 'data-observability';

@@ -726,6 +726,78 @@ export interface ApiBalanceSheetReport {
   equity_accounts: ApiFinancialReportAccount[];
 }
 
+export interface ApiFxGainLossItem {
+  invoice_id: string;
+  invoice_number: string;
+  partner_name: string;
+  document_type: string;
+  issue_date: string | null;
+  currency: string;
+  outstanding_amount: number;
+  original_rate_to_usd: number;
+  current_rate_to_usd: number;
+  original_usd: number;
+  current_usd: number;
+  unrealized_gain_loss_usd: number;
+  revaluation_status: 'GAIN' | 'LOSS' | 'NEUTRAL';
+}
+
+export interface ApiFxGainLossReport {
+  report_name: string;
+  as_of_date: string;
+  base_currency: string;
+  active_rates: Record<string, number>;
+  summary: {
+    net_unrealized_gain_loss_usd: number;
+    total_ar_gain_loss_usd: number;
+    total_ap_gain_loss_usd: number;
+    total_open_ar_usd: number;
+    total_open_ap_usd: number;
+    net_exposure_usd: number;
+    ar_count: number;
+    ap_count: number;
+  };
+  ar_revaluation: ApiFxGainLossItem[];
+  ap_revaluation: ApiFxGainLossItem[];
+}
+
+export interface ApiMultiCurrencyTrialBalanceAccount {
+  account_code: string;
+  account_name: string;
+  account_name_ar?: string | null;
+  account_type: string;
+  native_balances: {
+    USD: { debit: number; credit: number; net_balance: number; converted_debit_usd?: number; converted_credit_usd?: number };
+    SAR: { debit: number; credit: number; net_balance: number; converted_debit_usd?: number; converted_credit_usd?: number };
+    YER: { debit: number; credit: number; net_balance: number; converted_debit_usd?: number; converted_credit_usd?: number };
+    [key: string]: any;
+  };
+  consolidated_usd: {
+    total_debit: number;
+    total_credit: number;
+    net_balance: number;
+  };
+}
+
+export interface ApiMultiCurrencyTrialBalanceReport {
+  report_name: string;
+  base_currency: string;
+  supported_currencies: string[];
+  is_balanced: boolean;
+  discrepancy_usd: number;
+  consolidated_totals: {
+    total_debit_usd: number;
+    total_credit_usd: number;
+  };
+  native_totals: {
+    USD: { debit: number; credit: number };
+    SAR: { debit: number; credit: number };
+    YER: { debit: number; credit: number };
+  };
+  active_rates: Record<string, number>;
+  accounts: ApiMultiCurrencyTrialBalanceAccount[];
+}
+
 export interface CustomerInvoiceCreatePayload {
   partner_id?: string | null;
   invoice_number?: string | null;
@@ -2498,6 +2570,29 @@ export const erpApi = {
     if (params?.asOfDate) sp.append('as_of_date', params.asOfDate);
     const qs = sp.toString() ? `?${sp.toString()}` : '';
     return request<ApiBalanceSheetReport>(`/api/analytics/balance-sheet${qs}`, params?.companyId);
+  },
+
+  getFxGainLossReport: (params?: { companyId?: string; asOfDate?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.companyId) sp.append('company_id', params.companyId);
+    if (params?.asOfDate) sp.append('as_of_date', params.asOfDate);
+    const qs = sp.toString() ? `?${sp.toString()}` : '';
+    return request<ApiFxGainLossReport>(`/api/v1/reports/fx-gain-loss${qs}`, params?.companyId);
+  },
+
+  getMultiCurrencyTrialBalance: (params?: { companyId?: string; fromDate?: string; toDate?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.companyId) sp.append('company_id', params.companyId);
+    if (params?.fromDate) sp.append('from_date', params.fromDate);
+    if (params?.toDate) sp.append('to_date', params.toDate);
+    const qs = sp.toString() ? `?${sp.toString()}` : '';
+    return request<ApiMultiCurrencyTrialBalanceReport>(`/api/v1/reports/multi-currency-trial-balance${qs}`, params?.companyId);
+  },
+
+  triggerFxSync: (companyId?: string) => {
+    return request<{ status: string; synced_pairs: number; rates: Record<string, number>; flushed_cache_keys: number }>('/api/v1/reports/fx-sync', companyId, {
+      method: 'POST',
+    });
   },
 
   // Legacy System Resource Excel Import

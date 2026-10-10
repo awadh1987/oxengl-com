@@ -240,13 +240,18 @@
     "creatingBlock": "Creating Block...",
     "postDeclaration": "Post Declaration"
   },
-  "common": {
+    "common": {
     "currency": "SAR",
     "currencies": {
       "USD": "US Dollar ($)",
       "SAR": "Saudi Riyal (SR)",
       "YER": "Yemeni Rial (﷼)"
     },
+    "fxExposure": "FX Exposure & Revaluation",
+    "unrealizedFxGainLoss": "Unrealized FX Gain/Loss",
+    "nativeCurrency": "Native Currency",
+    "consolidatedBaseCurrency": "Consolidated Base Currency",
+    "syncFxRates": "Sync FX Rates",
     "cancel": "Cancel",
     "copied": "Copied!"
   },
