@@ -22,6 +22,7 @@ import {
   Truck,
   Users,
   Landmark,
+  CreditCard,
 } from 'lucide-react';
 import { AdminPageContainer } from '../../components/admin/AdminPageContainer';
 import {
@@ -33,7 +34,11 @@ import {
 
 type SectionKey = 'hero' | 'features' | 'metrics' | 'pricing_matrix' | 'testimonials' | 'faq' | 'footer';
 
-export const LandingCmsStudioView: React.FC = () => {
+export interface LandingCmsStudioViewProps {
+  onNavigate?: (tab: any) => void;
+}
+
+export const LandingCmsStudioView: React.FC<LandingCmsStudioViewProps> = ({ onNavigate }) => {
   const [sections, setSections] = useState<LandingSection[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -155,47 +160,172 @@ export const LandingCmsStudioView: React.FC = () => {
     const content = currentSection?.content_data || {};
     const stats: Array<{ label: string; value: string }> = content.stats || [];
 
+    const headlineVal = content.headline !== undefined ? content.headline : (currentSection?.title || '');
+    const subheadlineVal = content.subheadline !== undefined ? content.subheadline : (currentSection?.subtitle || '');
+    const badgeVal = content.badge_text !== undefined ? content.badge_text : (content.badge || '');
+    const priLabelVal = content.primary_cta_label !== undefined ? content.primary_cta_label : (content.cta_primary?.label || '');
+    const priUrlVal = content.primary_cta_url !== undefined ? content.primary_cta_url : (content.cta_primary?.url || '');
+    const secLabelVal = content.secondary_cta_label !== undefined ? content.secondary_cta_label : (content.cta_secondary?.label || '');
+    const secUrlVal = content.secondary_cta_url !== undefined ? content.secondary_cta_url : (content.cta_secondary?.url || '');
+    const nodeLabelVal = content.telemetry_node_label || '';
+    const dbLabelVal = content.telemetry_db_label || '';
+
+    const handleHeadlineChange = (val: string) => {
+      setEditMap((prev) => {
+        const cur = { ...(prev[activeTab] || {}) };
+        const curContent = { ...(cur.content_data || {}) };
+        curContent.headline = val;
+        return {
+          ...prev,
+          [activeTab]: {
+            ...cur,
+            title: val,
+            content_data: curContent,
+          },
+        };
+      });
+    };
+
+    const handleSubheadlineChange = (val: string) => {
+      setEditMap((prev) => {
+        const cur = { ...(prev[activeTab] || {}) };
+        const curContent = { ...(cur.content_data || {}) };
+        curContent.subheadline = val;
+        return {
+          ...prev,
+          [activeTab]: {
+            ...cur,
+            subtitle: val,
+            content_data: curContent,
+          },
+        };
+      });
+    };
+
+    const handleBadgeChange = (val: string) => {
+      setEditMap((prev) => {
+        const cur = { ...(prev[activeTab] || {}) };
+        const curContent = { ...(cur.content_data || {}) };
+        curContent.badge_text = val;
+        curContent.badge = val;
+        return {
+          ...prev,
+          [activeTab]: {
+            ...cur,
+            content_data: curContent,
+          },
+        };
+      });
+    };
+
+    const handlePrimaryCtaChange = (labelVal: string, urlVal: string) => {
+      setEditMap((prev) => {
+        const cur = { ...(prev[activeTab] || {}) };
+        const curContent = { ...(cur.content_data || {}) };
+        curContent.primary_cta_label = labelVal;
+        curContent.primary_cta_url = urlVal;
+        curContent.cta_primary = { label: labelVal, url: urlVal };
+        return {
+          ...prev,
+          [activeTab]: {
+            ...cur,
+            content_data: curContent,
+          },
+        };
+      });
+    };
+
+    const handleSecondaryCtaChange = (labelVal: string, urlVal: string) => {
+      setEditMap((prev) => {
+        const cur = { ...(prev[activeTab] || {}) };
+        const curContent = { ...(cur.content_data || {}) };
+        curContent.secondary_cta_label = labelVal;
+        curContent.secondary_cta_url = urlVal;
+        curContent.cta_secondary = { label: labelVal, url: urlVal };
+        return {
+          ...prev,
+          [activeTab]: {
+            ...cur,
+            content_data: curContent,
+          },
+        };
+      });
+    };
+
     return (
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Hero Headline / Title
-            </label>
-            <input
-              type="text"
-              value={currentSection?.title || ''}
-              onChange={(e) => updateCurrentField('title', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
-              placeholder="Sovereign Multi-Tenant ERP Architecture"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-              Badge Pill Text
-            </label>
-            <input
-              type="text"
-              value={content.badge || ''}
-              onChange={(e) => updateCurrentContentData('badge', e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none"
-              placeholder="v4.8 ENTERPRISE CONTROL PLANE"
-            />
+        {/* Top Badges & Telemetry Node Row */}
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+            Badge &amp; Telemetry Status Labels
+          </span>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                Hero Badge Pill Text
+              </label>
+              <input
+                type="text"
+                value={badgeVal}
+                onChange={(e) => handleBadgeChange(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none"
+                placeholder="v4.8 ENTERPRISE CONTROL PLANE"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                Telemetry Node Label
+              </label>
+              <input
+                type="text"
+                value={nodeLabelVal}
+                onChange={(e) => updateCurrentContentData('telemetry_node_label', e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono text-emerald-500 focus:border-orange-500 focus:outline-none"
+                placeholder="YEM-SANAA-01 [ONLINE]"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                Telemetry Database / Uptime Label
+              </label>
+              <input
+                type="text"
+                value={dbLabelVal}
+                onChange={(e) => updateCurrentContentData('telemetry_db_label', e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono text-slate-700 dark:text-slate-300 focus:border-orange-500 focus:outline-none"
+                placeholder="PostgreSQL 16.4 • Uptime: 99.984%"
+              />
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
-            Hero Subheadline / Subtitle
-          </label>
-          <textarea
-            rows={3}
-            value={currentSection?.subtitle || ''}
-            onChange={(e) => updateCurrentField('subtitle', e.target.value)}
-            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none"
-            placeholder="Sub-millisecond query isolation, cryptographic ZATCA Phase 2 compliance..."
-          />
+        {/* Main Headline & Subheadline */}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              Main Headline (Full Custom Sovereignty Text)
+            </label>
+            <input
+              type="text"
+              value={headlineVal}
+              onChange={(e) => handleHeadlineChange(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-bold text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              placeholder="Sovereign Multi-Tenant ERP Architecture for the Republic of Yemen"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              Hero Subheadline Copy
+            </label>
+            <textarea
+              rows={3}
+              value={subheadlineVal}
+              onChange={(e) => handleSubheadlineChange(e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3.5 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none leading-relaxed"
+              placeholder="Sub-millisecond query isolation, cryptographic compliance, and heavy industrial logistics orchestration..."
+            />
+          </div>
         </div>
 
         {/* Call to action buttons */}
@@ -206,28 +336,20 @@ export const LandingCmsStudioView: React.FC = () => {
               <label className="block text-[11px] text-slate-500 mb-1">Button Label</label>
               <input
                 type="text"
-                value={content.cta_primary?.label || ''}
-                onChange={(e) =>
-                  updateCurrentContentData('cta_primary', {
-                    ...(content.cta_primary || {}),
-                    label: e.target.value,
-                  })
-                }
+                value={priLabelVal}
+                onChange={(e) => handlePrimaryCtaChange(e.target.value, priUrlVal)}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs"
+                placeholder="Deploy Workspace"
               />
             </div>
             <div>
               <label className="block text-[11px] text-slate-500 mb-1">Target URL</label>
               <input
                 type="text"
-                value={content.cta_primary?.url || ''}
-                onChange={(e) =>
-                  updateCurrentContentData('cta_primary', {
-                    ...(content.cta_primary || {}),
-                    url: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs"
+                value={priUrlVal}
+                onChange={(e) => handlePrimaryCtaChange(priLabelVal, e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-mono"
+                placeholder="/register"
               />
             </div>
           </div>
@@ -238,28 +360,20 @@ export const LandingCmsStudioView: React.FC = () => {
               <label className="block text-[11px] text-slate-500 mb-1">Button Label</label>
               <input
                 type="text"
-                value={content.cta_secondary?.label || ''}
-                onChange={(e) =>
-                  updateCurrentContentData('cta_secondary', {
-                    ...(content.cta_secondary || {}),
-                    label: e.target.value,
-                  })
-                }
+                value={secLabelVal}
+                onChange={(e) => handleSecondaryCtaChange(e.target.value, secUrlVal)}
                 className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs"
+                placeholder="Console Sign In"
               />
             </div>
             <div>
               <label className="block text-[11px] text-slate-500 mb-1">Target URL</label>
               <input
                 type="text"
-                value={content.cta_secondary?.url || ''}
-                onChange={(e) =>
-                  updateCurrentContentData('cta_secondary', {
-                    ...(content.cta_secondary || {}),
-                    url: e.target.value,
-                  })
-                }
-                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs"
+                value={secUrlVal}
+                onChange={(e) => handleSecondaryCtaChange(secLabelVal, e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-mono"
+                placeholder="/login"
               />
             </div>
           </div>
@@ -507,123 +621,133 @@ export const LandingCmsStudioView: React.FC = () => {
           </div>
         </div>
 
+        {/* Unified Catalog Notice & Direct Action */}
+        <div className="p-5 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-bold text-orange-400 uppercase tracking-wider">
+                Unified Pricing & Subscription Catalog
+              </span>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Subscription plans, SAR pricing, quotas, and feature bullet points are synchronized across the entire platform from the <strong>Pricing & Subscription Plans</strong> hub. Changes publish immediately to the public landing page.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onNavigate) {
+                onNavigate('pricing');
+              } else {
+                window.location.hash = '#pricing';
+              }
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold transition-all shadow-lg shadow-orange-500/20 shrink-0 cursor-pointer"
+          >
+            <CreditCard className="h-4 w-4" />
+            Edit in Pricing & Subscription Plans
+          </button>
+        </div>
+
+        {/* Synchronized Plans Preview Grid */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Subscription Tiers ({tiers.length})
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Active Catalog Tiers ({tiers.length})
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Live Synchronized
+              </span>
+            </div>
             <button
+              type="button"
               onClick={() => {
-                const nextTiers = [
-                  ...tiers,
-                  {
-                    id: `tier-${Date.now()}`,
-                    name: 'Custom Tier',
-                    tagline: 'Customized scale option',
-                    price_monthly: 'SAR 4,999',
-                    price_annual: 'SAR 49,990',
-                    badge: 'Special',
-                    features: ['Feature 1', 'Feature 2'],
-                    cta: { label: 'Subscribe', url: '/register' },
-                  },
-                ];
-                updateCurrentContentData('tiers', nextTiers);
+                if (onNavigate) onNavigate('pricing');
+                else window.location.hash = '#pricing';
               }}
-              className="flex items-center gap-1 text-xs font-semibold text-orange-500 hover:text-orange-600 cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-semibold text-orange-500 hover:text-orange-600 cursor-pointer"
             >
-              <Plus className="h-3.5 w-3.5" /> Add Tier
+              <CreditCard className="h-3.5 w-3.5" /> Manage Tiers in Pricing Hub
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {tiers.map((t, idx) => (
-              <div
-                key={idx}
-                className={`relative p-5 rounded-2xl border ${
-                  t.highlighted
-                    ? 'border-orange-500 bg-orange-500/5 shadow-md shadow-orange-500/10'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
-                } space-y-4`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-orange-500">{t.name}</span>
-                  <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(t.highlighted)}
-                      onChange={(e) => {
-                        const nextTiers = [...tiers];
-                        nextTiers[idx] = { ...nextTiers[idx], highlighted: e.target.checked };
-                        updateCurrentContentData('tiers', nextTiers);
-                      }}
-                      className="rounded text-orange-500"
-                    />
-                    Featured
-                  </label>
+            {tiers.map((t, idx) => {
+              const name = t.name || t.plan_name || t.title;
+              const isFeatured = Boolean(t.is_featured ?? t.highlighted ?? t.featured);
+              const monthly = t.price_monthly || (t.monthly_price != null ? `SAR ${Number(t.monthly_price).toLocaleString('en-US')}` : 'Custom Quote');
+              const annual = t.price_annual || (t.annual_price != null ? `SAR ${Number(t.annual_price).toLocaleString('en-US')}` : 'Custom Quote');
+              const rawFeatures = t.features ?? t.display_features ?? [];
+              const featuresList = Array.isArray(rawFeatures) ? rawFeatures : String(rawFeatures).split('\n').filter(Boolean);
+
+              return (
+                <div
+                  key={idx}
+                  className={`relative p-5 rounded-2xl border ${
+                    isFeatured
+                      ? 'border-orange-500 bg-orange-500/5 shadow-md shadow-orange-500/10'
+                      : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'
+                  } space-y-4 flex flex-col justify-between`}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black uppercase text-orange-500 tracking-wider">
+                        {name}
+                      </span>
+                      {isFeatured && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-500 text-white uppercase">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="text-lg font-black text-slate-900 dark:text-white font-mono">
+                        {monthly}
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Annual: <span className="font-mono text-slate-300">{annual}</span>
+                      </div>
+                      {t.tagline && (
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{t.tagline}</p>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-1.5">
+                        Features ({featuresList.length})
+                      </span>
+                      <ul className="space-y-1 text-xs text-slate-400">
+                        {featuresList.slice(0, 4).map((f: string, fIdx: number) => (
+                          <li key={fIdx} className="flex items-center gap-1.5 text-[11px] truncate">
+                            <span className="text-emerald-500 font-bold">✓</span> {f}
+                          </li>
+                        ))}
+                        {featuresList.length > 4 && (
+                          <li className="text-[10px] text-slate-500 italic">
+                            +{featuresList.length - 4} more features in catalog
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onNavigate) onNavigate('pricing');
+                      else window.location.hash = '#pricing';
+                    }}
+                    className="w-full mt-3 py-2 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 hover:bg-orange-500 hover:text-white hover:border-orange-500 text-slate-700 dark:text-slate-300 text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    Edit Plan & Limits
+                  </button>
                 </div>
-
-                <div className="space-y-2">
-                  <div>
-                    <label className="block text-[10px] text-slate-400">Plan Name</label>
-                    <input
-                      type="text"
-                      value={t.name}
-                      onChange={(e) => {
-                        const nextTiers = [...tiers];
-                        nextTiers[idx] = { ...nextTiers[idx], name: e.target.value };
-                        updateCurrentContentData('tiers', nextTiers);
-                      }}
-                      className="w-full rounded border border-slate-200 dark:border-slate-800 bg-transparent px-2.5 py-1.5 text-xs font-bold"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-slate-400">Monthly Price</label>
-                    <input
-                      type="text"
-                      value={t.price_monthly}
-                      onChange={(e) => {
-                        const nextTiers = [...tiers];
-                        nextTiers[idx] = { ...nextTiers[idx], price_monthly: e.target.value };
-                        updateCurrentContentData('tiers', nextTiers);
-                      }}
-                      className="w-full rounded border border-slate-200 dark:border-slate-800 bg-transparent px-2.5 py-1.5 text-xs font-black"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-slate-400">Tagline</label>
-                    <input
-                      type="text"
-                      value={t.tagline || ''}
-                      onChange={(e) => {
-                        const nextTiers = [...tiers];
-                        nextTiers[idx] = { ...nextTiers[idx], tagline: e.target.value };
-                        updateCurrentContentData('tiers', nextTiers);
-                      }}
-                      className="w-full rounded border border-slate-200 dark:border-slate-800 bg-transparent px-2.5 py-1.5 text-xs"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] text-slate-400">Features (one per line)</label>
-                    <textarea
-                      rows={4}
-                      value={(t.features || []).join('\n')}
-                      onChange={(e) => {
-                        const nextTiers = [...tiers];
-                        nextTiers[idx] = {
-                          ...nextTiers[idx],
-                          features: e.target.value.split('\n').filter((l) => l.trim().length > 0),
-                        };
-                        updateCurrentContentData('tiers', nextTiers);
-                      }}
-                      className="w-full rounded border border-slate-200 dark:border-slate-800 bg-transparent p-2.5 text-xs font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -699,6 +823,123 @@ export const LandingCmsStudioView: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderFooterEditor = () => {
+    const content = currentSection?.content_data || {};
+    const contactEmail = content.contact_email || content.email || '';
+    const contactPhone = content.contact_phone || content.phone || '';
+    const contactLocation = content.contact_location || content.contact_address || content.location_text || '';
+    const copyright = content.copyright || '';
+
+    const handlePhoneChange = (val: string) => {
+      updateCurrentContentData('contact_phone', val);
+      updateCurrentContentData('phone', val);
+    };
+
+    const handleLocationChange = (val: string) => {
+      updateCurrentContentData('contact_location', val);
+      updateCurrentContentData('contact_address', val);
+      updateCurrentContentData('location_text', val);
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              Footer Brand Title
+            </label>
+            <input
+              type="text"
+              value={currentSection?.title || ''}
+              onChange={(e) => updateCurrentField('title', e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs font-semibold"
+              placeholder="OxenGL"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+              Footer Brand Tagline / Subtitle
+            </label>
+            <input
+              type="text"
+              value={currentSection?.subtitle || ''}
+              onChange={(e) => updateCurrentField('subtitle', e.target.value)}
+              className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs"
+              placeholder="Sovereign Enterprise Resource Planning platform."
+            />
+          </div>
+        </div>
+
+        {/* Dedicated Contact & WhatsApp Bindings */}
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-4">
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
+            Official Contact Channels &amp; WhatsApp Integration
+          </span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                WhatsApp &amp; Direct Contact Phone Number
+              </label>
+              <input
+                type="text"
+                value={contactPhone}
+                onChange={(e) => handlePhoneChange(e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono text-amber-500 font-bold focus:border-orange-500 focus:outline-none"
+                placeholder="+967 736735733"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Rendered on public landing footer as a direct WhatsApp conversation link (wa.me).
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 mb-1">
+                Support &amp; Operations Email
+              </label>
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => updateCurrentContentData('contact_email', e.target.value)}
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none"
+                placeholder="ops@oxengl.me"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">
+                Direct mailto destination for enterprise inquiries and cluster support.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold text-slate-500 mb-1">
+              Headquarters / Regional Operations Location
+            </label>
+            <input
+              type="text"
+              value={contactLocation}
+              onChange={(e) => handleLocationChange(e.target.value)}
+              className="w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-orange-500 focus:outline-none"
+              placeholder="Sana'a, Yemen"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 mb-1.5">
+            Copyright &amp; Sovereign Legal Line
+          </label>
+          <input
+            type="text"
+            value={copyright}
+            onChange={(e) => updateCurrentContentData('copyright', e.target.value)}
+            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
+            placeholder="© 2026 OxenGL Enterprise. All rights reserved."
+          />
         </div>
       </div>
     );
@@ -904,10 +1145,12 @@ export const LandingCmsStudioView: React.FC = () => {
             {activeTab === 'features' && renderFeaturesEditor()}
             {activeTab === 'pricing_matrix' && renderPricingEditor()}
             {activeTab === 'faq' && renderFaqEditor()}
+            {activeTab === 'footer' && renderFooterEditor()}
             {activeTab !== 'hero' &&
               activeTab !== 'features' &&
               activeTab !== 'pricing_matrix' &&
               activeTab !== 'faq' &&
+              activeTab !== 'footer' &&
               renderGenericJsonEditor()}
           </div>
         </div>
@@ -934,19 +1177,51 @@ export const LandingCmsStudioView: React.FC = () => {
               )}
 
               {/* Title & Subtitle Preview */}
-              <div className="text-center space-y-2">
-                {currentSection?.content_data?.badge && (
-                  <span className="inline-block rounded-full bg-orange-500/20 border border-orange-500/30 px-3 py-1 text-[10px] font-black text-orange-400 tracking-wider">
-                    {currentSection.content_data.badge}
-                  </span>
-                )}
-                <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
-                  {currentSection?.title || 'Section Heading'}
-                </h2>
-                <p className="text-xs text-slate-400 max-w-lg mx-auto">
-                  {currentSection?.subtitle || 'Section subtitle copy'}
-                </p>
-              </div>
+              {activeTab === 'hero' ? (
+                <div className="text-center space-y-4 py-4">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <span className="inline-block rounded-full bg-orange-500/20 border border-orange-500/30 px-3 py-1 text-[10px] font-black text-orange-400 tracking-wider">
+                      {currentSection?.content_data?.badge_text || currentSection?.content_data?.badge || 'ENTERPRISE CONTROL PLANE'}
+                    </span>
+                    {(currentSection?.content_data?.telemetry_node_label || currentSection?.content_data?.telemetry_db_label) && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 border border-slate-800 px-3 py-1 text-[10px] font-mono text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>{currentSection?.content_data?.telemetry_node_label || 'NODE [ONLINE]'}</span>
+                        <span className="text-slate-600">•</span>
+                        <span className="text-slate-300">{currentSection?.content_data?.telemetry_db_label || 'PostgreSQL 16'}</span>
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-tight max-w-xl mx-auto">
+                    {currentSection?.content_data?.headline || currentSection?.title || 'Sovereign Multi-Tenant ERP Architecture'}
+                  </h2>
+                  <p className="text-xs text-slate-300 max-w-lg mx-auto leading-relaxed">
+                    {currentSection?.content_data?.subheadline || currentSection?.subtitle || 'Sub-millisecond query isolation, cryptographic compliance, and heavy industrial logistics orchestration.'}
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                    <span className="rounded-xl bg-orange-500 text-white font-bold text-xs px-4 py-2 shadow-lg shadow-orange-500/20">
+                      {currentSection?.content_data?.primary_cta_label || currentSection?.content_data?.cta_primary?.label || 'Deploy Workspace'}
+                    </span>
+                    <span className="rounded-xl border border-slate-700 bg-slate-900 text-slate-200 font-bold text-xs px-4 py-2">
+                      {currentSection?.content_data?.secondary_cta_label || currentSection?.content_data?.cta_secondary?.label || 'Console Sign In'}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center space-y-2">
+                  {currentSection?.content_data?.badge && (
+                    <span className="inline-block rounded-full bg-orange-500/20 border border-orange-500/30 px-3 py-1 text-[10px] font-black text-orange-400 tracking-wider">
+                      {currentSection.content_data.badge}
+                    </span>
+                  )}
+                  <h2 className="text-xl sm:text-2xl font-black text-white leading-tight">
+                    {currentSection?.title || 'Section Heading'}
+                  </h2>
+                  <p className="text-xs text-slate-400 max-w-lg mx-auto">
+                    {currentSection?.subtitle || 'Section subtitle copy'}
+                  </p>
+                </div>
+              )}
 
               {/* Dynamic Feature Cards Preview */}
               {activeTab === 'features' && currentSection?.content_data?.items && (
@@ -1006,6 +1281,35 @@ export const LandingCmsStudioView: React.FC = () => {
                       {currentSection.content_data.cta_secondary.label}
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Footer Contacts Preview */}
+              {activeTab === 'footer' && (
+                <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/60 space-y-3">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Footer Live Contacts
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">Email:</span>
+                      <span className="text-slate-200">
+                        {currentSection?.content_data?.contact_email || 'ops@oxengl.me'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">WhatsApp:</span>
+                      <span className="text-amber-400 font-mono font-bold">
+                        {currentSection?.content_data?.contact_phone || '+967 736735733'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-500">Location:</span>
+                      <span className="text-slate-300">
+                        {currentSection?.content_data?.contact_location || "Sana'a, Yemen"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

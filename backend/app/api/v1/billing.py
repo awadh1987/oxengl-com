@@ -483,6 +483,13 @@ def update_superadmin_subscription_plan(
     db.commit()
     db.refresh(plan)
 
+    # Synchronize platform landing sections (pricing_matrix / pricing) and invalidate cache
+    try:
+        from backend.app.api.v1.platform_governance import sync_pricing_sections_with_catalog
+        sync_pricing_sections_with_catalog(db)
+    except Exception as exc:
+        logger.warning("Could not sync landing pricing section with catalog: %s", exc)
+
     actor = getattr(current_user, "email", "unknown")
     logger.info("Pricing plan %s updated by %s: %s", plan.name, actor, sorted(changes))
     try:

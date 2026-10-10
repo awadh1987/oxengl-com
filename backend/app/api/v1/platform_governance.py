@@ -186,16 +186,25 @@ DEFAULT_LANDING_SECTIONS_PAYLOAD = [
         "id": "sec-hero",
         "section_key": "hero",
         "locale": "en",
-        "title": "Sovereign Multi-Tenant ERP Architecture for the Kingdom of Saudi Arabia",
-        "subtitle": "Sub-millisecond query isolation, cryptographic ZATCA Phase 2 compliance, and raw quarry logistics orchestration—engineered on bare-metal PostgreSQL 16 and FastAPI.",
+        "title": "Sovereign Multi-Tenant ERP Architecture",
+        "subtitle": "Sub-millisecond query isolation, cryptographic compliance, and heavy industrial logistics orchestration—engineered on bare-metal PostgreSQL 16 and FastAPI.",
         "content_data": {
+            "badge_text": "v4.8 ENTERPRISE CONTROL PLANE",
+            "headline": "Sovereign Multi-Tenant ERP Architecture",
+            "subheadline": "Sub-millisecond query isolation, cryptographic compliance, and heavy industrial logistics orchestration—engineered on bare-metal PostgreSQL 16 and FastAPI.",
+            "primary_cta_label": "Deploy Workspace",
+            "primary_cta_url": "/register",
+            "secondary_cta_label": "Console Sign In",
+            "secondary_cta_url": "/login",
+            "telemetry_node_label": "YEM-SANAA-01 [ONLINE]",
+            "telemetry_db_label": "PostgreSQL 16.4 • Uptime: 99.984%",
             "badge": "v4.8 ENTERPRISE CONTROL PLANE",
             "cta_primary": {"label": "Deploy Workspace", "url": "/register"},
-            "cta_secondary": {"label": "Console Sign In", "url": "/tenant/login"},
+            "cta_secondary": {"label": "Console Sign In", "url": "/login"},
             "hero_graphic": "/hero-mesh.png",
             "stats": [
                 {"label": "Query Latency", "value": "< 1.2ms"},
-                {"label": "ZATCA Clearance", "value": "100% Phase 2"},
+                {"label": "Clearance", "value": "100% Phase 2"},
                 {"label": "Fleet Live Tracking", "value": "Real-time GPS"},
                 {"label": "Data Isolation", "value": "RLS + Schema"}
             ]
@@ -395,12 +404,15 @@ DEFAULT_LANDING_SECTIONS_PAYLOAD = [
         "section_key": "footer",
         "locale": "en",
         "title": "OxenGL",
-        "subtitle": "Sovereign Saudi-first Enterprise Resource Planning platform.",
+        "subtitle": "Sovereign Multi-Tenant ERP Architecture.",
         "content_data": {
-            "copyright": "© 2026 OxenGL Enterprise. All rights reserved. Sovereign infrastructure in KSA.",
+            "copyright": "© 2026 OxenGL Enterprise. All rights reserved. Sovereign multi-tenant architecture.",
             "contact_email": "ops@oxengl.me",
-            "contact_phone": "+966 11 000 0000",
-            "contact_address": "Riyadh, Saudi Arabia",
+            "contact_phone": "+967 736735733",
+            "phone": "+967 736735733",
+            "contact_location": "Sana'a, Yemen",
+            "contact_address": "Sana'a, Yemen",
+            "location_text": "Sana'a, Yemen",
             "links": [
                 {"label": "Platform Console", "url": "/tenant/login"},
                 {"label": "Register Workspace", "url": "/register"},
@@ -416,18 +428,29 @@ DEFAULT_LANDING_SECTIONS_PAYLOAD = [
 
 
 def _get_or_create_master_settings(db: Session) -> PlatformMasterSetting:
+    try:
+        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS enable_sovereignty_badge BOOLEAN DEFAULT TRUE NOT NULL;"))
+        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS sovereignty_badge_title VARCHAR(255) DEFAULT 'Data Sovereignty & Infrastructure Policy' NOT NULL;"))
+        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS sovereignty_badge_text TEXT DEFAULT 'All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.' NOT NULL;"))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     setting = db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
     if not setting:
         setting = PlatformMasterSetting(
             id="default",
             platform_name="OxenGL Enterprise",
-            platform_tagline="Sovereign Saudi-first Enterprise Resource Planning platform. Engineering high-density quarry, heavy contracting, and multi-tenant financial infrastructure.",
+            platform_tagline="Sovereign Enterprise Resource Planning platform. Engineering high-density quarry, heavy contracting, and multi-tenant financial infrastructure.",
             logo_light_url="/oxengl-wordmark.svg",
             logo_dark_url="/oxengl-wordmark.svg",
             favicon_url="/favicon.ico",
             primary_color="#f97316",
             secondary_color="#0f172a",
             support_email="contact@oxengl.me",
+            enable_sovereignty_badge=True,
+            sovereignty_badge_title="Data Sovereignty & Infrastructure Policy",
+            sovereignty_badge_text="All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.",
             metadata_json={
                 "company_name_ar": "منظومة أوكسن السحابية",
                 "company_name_en": "OxenGL Enterprise Cloud",
@@ -443,6 +466,131 @@ def _get_or_create_master_settings(db: Session) -> PlatformMasterSetting:
             db.rollback()
             setting = db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
     return setting
+
+
+def _format_price_sar(val: Any, fallback: str) -> str:
+    if val is None:
+        return fallback
+    try:
+        num = float(val)
+        if num <= 0:
+            return fallback
+        if num == int(num):
+            return f"SAR {int(num):,}"
+        return f"SAR {num:,.2f}"
+    except (ValueError, TypeError):
+        return str(val)
+
+
+def _get_catalog_pricing_tiers(db: Session) -> list[dict[str, Any]]:
+    """
+    Builds dynamic landing tier payloads from the active SubscriptionPlan catalog (subscription_plans table).
+    Ensures a unified single source of truth between tenant subscription plans and the public landing page.
+    """
+    try:
+        from backend.app.domains.saas.models import SubscriptionPlan
+        plans = (
+            db.query(SubscriptionPlan)
+            .filter(SubscriptionPlan.is_active.is_(True))
+            .order_by(SubscriptionPlan.sort_order.asc(), SubscriptionPlan.monthly_price.asc())
+            .all()
+        )
+        if not plans:
+            return []
+
+        tiers: list[dict[str, Any]] = []
+        for p in plans:
+            monthly_val = float(p.monthly_price or 0.0)
+            annual_val = float(p.annual_price or 0.0)
+            is_free = monthly_val == 0.0
+            is_enterprise = "ENTERPRISE" in p.name.upper()
+
+            features = list(p.display_features or p.features or [])
+
+            badge = (
+                "Most Popular"
+                if p.is_featured
+                else ("Essential" if is_free else ("Sovereign" if is_enterprise else None))
+            )
+
+            cta_label = (
+                "Start Free Evaluation"
+                if is_free
+                else (
+                    "Start Enterprise Pilot"
+                    if p.is_featured
+                    else ("Contact Executive Sales" if is_enterprise and annual_val == 0 else f"Select {p.display_name}")
+                )
+            )
+            cta_url = (
+                "mailto:sales@oxengl.me"
+                if is_enterprise and annual_val == 0
+                else f"/register?plan={p.name.lower()}"
+            )
+
+            tier = {
+                "id": str(p.id),
+                "plan_id": str(p.id),
+                "name": p.display_name,
+                "plan_name": p.display_name,
+                "title": p.display_name,
+                "code": p.name.lower(),
+                "tagline": p.description or "",
+                "description": p.description or "",
+                "price_monthly": _format_price_sar(p.monthly_price, "Free" if is_free else "Custom Quote"),
+                "price_annual": _format_price_sar(
+                    p.annual_price,
+                    "Free" if is_free else ("Contact Sales" if is_enterprise and annual_val == 0 else "Custom Quote"),
+                ),
+                "monthly_price": monthly_val,
+                "annual_price": annual_val,
+                "currency": p.currency or "SAR",
+                "badge": badge,
+                "is_featured": bool(p.is_featured),
+                "highlighted": bool(p.is_featured),
+                "featured": bool(p.is_featured),
+                "features": features,
+                "display_features": features,
+                "cta": {"label": cta_label, "url": cta_url},
+                "max_seats": p.max_seats,
+                "max_vehicles": p.max_vehicles,
+                "max_storage_gb": p.max_storage_gb,
+                "max_monthly_transactions": p.max_monthly_transactions,
+            }
+            tiers.append(tier)
+        return tiers
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Could not build catalog pricing tiers: %s", exc)
+        return []
+
+
+def sync_pricing_sections_with_catalog(db: Session) -> None:
+    """
+    Synchronizes the pricing_matrix and pricing rows in platform_landing_sections
+    with the current active SubscriptionPlan catalog.
+    """
+    catalog_tiers = _get_catalog_pricing_tiers(db)
+    if not catalog_tiers:
+        return
+
+    sections = (
+        db.query(PlatformLandingSection)
+        .filter(PlatformLandingSection.section_key.in_(["pricing_matrix", "pricing"]))
+        .all()
+    )
+    for s in sections:
+        c = dict(s.content_data or {})
+        c["tiers"] = catalog_tiers
+        s.content_data = c
+        s.updated_at = datetime.now(timezone.utc)
+
+    try:
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        logging.getLogger(__name__).warning("Failed to commit synced pricing landing sections: %s", exc)
+
+    invalidate_landing_cache()
 
 
 # ==============================================================================
@@ -482,16 +630,86 @@ def get_public_landing_tree(db: Session = Depends(get_db)):
         try:
             db.commit()
             sections = (
-                db.query(PlatformLandingSection)
-                .filter(PlatformLandingSection.is_visible.is_(True))
-                .order_by(PlatformLandingSection.sort_order.asc())
-                .all()
+        db.query(PlatformLandingSection)
+        .filter(PlatformLandingSection.is_visible.is_(True))
+        .order_by(PlatformLandingSection.sort_order.asc())
+        .all()
             )
         except Exception:
             db.rollback()
 
     sections_read = [LandingSectionRead.model_validate(s) for s in sections]
+
+    # Normalize hero section content_data with safe non-crashing fallbacks
+    for s in sections_read:
+        if s.section_key == "hero":
+            c = dict(s.content_data or {})
+            cta_pri = c.get("cta_primary") if isinstance(c.get("cta_primary"), dict) else {}
+            cta_sec = c.get("cta_secondary") if isinstance(c.get("cta_secondary"), dict) else {}
+
+            badge_text = str(c.get("badge_text") or c.get("badge") or "v4.8 ENTERPRISE CONTROL PLANE")
+            headline = str(c.get("headline") or s.title or "Sovereign Multi-Tenant ERP Architecture")
+            subheadline = str(c.get("subheadline") or s.subtitle or "Sub-millisecond query isolation, cryptographic compliance, and heavy industrial logistics orchestration.")
+            primary_cta_label = str(c.get("primary_cta_label") or cta_pri.get("label") or "Deploy Workspace")
+            primary_cta_url = str(c.get("primary_cta_url") or cta_pri.get("url") or "/register")
+            secondary_cta_label = str(c.get("secondary_cta_label") or cta_sec.get("label") or "Console Sign In")
+            secondary_cta_url = str(c.get("secondary_cta_url") or cta_sec.get("url") or "/login")
+            telemetry_node_label = str(c.get("telemetry_node_label") or "NODE-01 [ONLINE]")
+            telemetry_db_label = str(c.get("telemetry_db_label") or "PostgreSQL 16.4 • Uptime: 99.984%")
+
+            c["badge_text"] = badge_text
+            c["badge"] = badge_text
+            c["headline"] = headline
+            c["subheadline"] = subheadline
+            c["primary_cta_label"] = primary_cta_label
+            c["primary_cta_url"] = primary_cta_url
+            c["secondary_cta_label"] = secondary_cta_label
+            c["secondary_cta_url"] = secondary_cta_url
+            c["telemetry_node_label"] = telemetry_node_label
+            c["telemetry_db_label"] = telemetry_db_label
+            c["cta_primary"] = {"label": primary_cta_label, "url": primary_cta_url}
+            c["cta_secondary"] = {"label": secondary_cta_label, "url": secondary_cta_url}
+
+            s.content_data = c
+            s.title = headline
+            s.subtitle = subheadline
+        elif s.section_key == "footer":
+            c = dict(s.content_data or {})
+            c["contact_email"] = str(c.get("contact_email") or c.get("email") or master.support_email or "ops@oxengl.me")
+            c["contact_phone"] = str(c.get("contact_phone") or c.get("phone") or "+967 736735733")
+            c["phone"] = c["contact_phone"]
+            c["contact_location"] = str(c.get("contact_location") or c.get("location_text") or c.get("contact_address") or "Sana'a, Yemen")
+            c["contact_address"] = c["contact_location"]
+            c["location_text"] = c["contact_location"]
+            c["copyright"] = str(c.get("copyright") or f"© {datetime.now(timezone.utc).year} {master.platform_name}. All rights reserved.")
+        elif s.section_key in ("pricing_matrix", "pricing"):
+            c = dict(s.content_data or {})
+            cat_tiers = _get_catalog_pricing_tiers(db)
+            if cat_tiers:
+                c["tiers"] = cat_tiers
+            s.content_data = c
+
     sections_map = {s.section_key: s for s in sections_read}
+    cat_tiers = _get_catalog_pricing_tiers(db)
+    if "pricing_matrix" not in sections_map and cat_tiers:
+        pm_section = LandingSectionRead(
+            id="sec-pricing",
+            section_key="pricing_matrix",
+            locale="en",
+            title="Transparent Enterprise Licensing",
+            subtitle="Predictable SaaS and sovereign infrastructure tiers for Saudi contracting, logistics, and enterprise syndicates. All prices in SAR, excluding 15% VAT.",
+            content_data={"tiers": cat_tiers},
+            sort_order=4,
+            is_visible=True,
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        sections_map["pricing_matrix"] = pm_section
+
+    if "pricing_matrix" in sections_map and "pricing" not in sections_map:
+        sections_map["pricing"] = sections_map["pricing_matrix"]
+    elif "pricing" in sections_map and "pricing_matrix" not in sections_map:
+        sections_map["pricing_matrix"] = sections_map["pricing"]
 
     platform_settings_dict = {
         "platform_name": master.platform_name,
@@ -505,6 +723,9 @@ def get_public_landing_tree(db: Session = Depends(get_db)):
         "legal_terms_url": master.legal_terms_url,
         "privacy_policy_url": master.privacy_policy_url,
         "custom_css": master.custom_css,
+        "enable_sovereignty_badge": bool(getattr(master, "enable_sovereignty_badge", True)),
+        "sovereignty_badge_title": str(getattr(master, "sovereignty_badge_title", "Data Sovereignty & Infrastructure Policy") or "Data Sovereignty & Infrastructure Policy"),
+        "sovereignty_badge_text": str(getattr(master, "sovereignty_badge_text", "All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.") or "All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure."),
         "metadata": master.metadata_json or {},
     }
 
@@ -555,6 +776,8 @@ def get_admin_landing_sections(
 
 
 @router.put("/api/v1/admin/landing/sections/{section_key}", response_model=LandingSectionRead)
+@router.put("/api/v1/platform/landing/sections/{section_key}", response_model=LandingSectionRead)
+@router.patch("/api/v1/platform/landing/sections/{section_key}", response_model=LandingSectionRead)
 def update_admin_landing_section(
     section_key: str,
     payload: LandingSectionUpdate,
@@ -563,6 +786,57 @@ def update_admin_landing_section(
     db: Session = Depends(get_db),
 ):
     """Update section copy, badges, CTA URLs, icons, and matrices."""
+    # If section is hero, keep content_data and top-level fields bi-directionally aligned
+    if section_key == "hero" and payload.content_data is not None:
+        c = dict(payload.content_data)
+        if c.get("headline") and not payload.title:
+            payload.title = str(c["headline"])
+        elif payload.title and not c.get("headline"):
+            c["headline"] = payload.title
+
+        if c.get("subheadline") and not payload.subtitle:
+            payload.subtitle = str(c["subheadline"])
+        elif payload.subtitle and not c.get("subheadline"):
+            c["subheadline"] = payload.subtitle
+
+        if c.get("badge_text") and not c.get("badge"):
+            c["badge"] = c["badge_text"]
+        elif c.get("badge") and not c.get("badge_text"):
+            c["badge_text"] = c["badge"]
+
+        if c.get("primary_cta_label") or c.get("primary_cta_url"):
+            pri = c.get("cta_primary") if isinstance(c.get("cta_primary"), dict) else {}
+            c["cta_primary"] = {
+                "label": c.get("primary_cta_label") or pri.get("label") or "Deploy Workspace",
+                "url": c.get("primary_cta_url") or pri.get("url") or "/register",
+            }
+        if c.get("secondary_cta_label") or c.get("secondary_cta_url"):
+            sec = c.get("cta_secondary") if isinstance(c.get("cta_secondary"), dict) else {}
+            c["cta_secondary"] = {
+                "label": c.get("secondary_cta_label") or sec.get("label") or "Console Sign In",
+                "url": c.get("secondary_cta_url") or sec.get("url") or "/login",
+            }
+        payload.content_data = c
+    elif section_key == "footer" and payload.content_data is not None:
+        c = dict(payload.content_data)
+        if c.get("contact_phone") and not c.get("phone"):
+            c["phone"] = c["contact_phone"]
+        elif c.get("phone") and not c.get("contact_phone"):
+            c["contact_phone"] = c["phone"]
+
+        loc = c.get("contact_location") or c.get("contact_address") or c.get("location_text")
+        if loc:
+            c["contact_location"] = loc
+            c["contact_address"] = loc
+            c["location_text"] = loc
+        payload.content_data = c
+    elif section_key in ("pricing_matrix", "pricing") and payload.content_data is not None:
+        c = dict(payload.content_data)
+        cat_tiers = _get_catalog_pricing_tiers(db)
+        if cat_tiers:
+            c["tiers"] = cat_tiers
+        payload.content_data = c
+
     section = (
         db.query(PlatformLandingSection)
         .filter(PlatformLandingSection.section_key == section_key)
@@ -706,6 +980,9 @@ def _serialize_master_settings(setting: PlatformMasterSetting) -> PlatformMaster
         legal_terms_url=str(setting.legal_terms_url) if setting.legal_terms_url else None,
         privacy_policy_url=str(setting.privacy_policy_url) if setting.privacy_policy_url else None,
         custom_css=str(setting.custom_css) if setting.custom_css else None,
+        enable_sovereignty_badge=bool(getattr(setting, "enable_sovereignty_badge", True)),
+        sovereignty_badge_title=str(getattr(setting, "sovereignty_badge_title", "Data Sovereignty & Infrastructure Policy") or "Data Sovereignty & Infrastructure Policy"),
+        sovereignty_badge_text=str(getattr(setting, "sovereignty_badge_text", "All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.") or "All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure."),
         metadata=dict(setting.metadata_json) if setting.metadata_json else {},
         updated_at=setting.updated_at,
         updated_by=str(setting.updated_by) if setting.updated_by else None,
@@ -713,6 +990,7 @@ def _serialize_master_settings(setting: PlatformMasterSetting) -> PlatformMaster
 
 
 @router.get("/api/v1/admin/platform/settings", response_model=PlatformMasterSettingsRead)
+@router.get("/api/v1/platform/master-settings", response_model=PlatformMasterSettingsRead)
 def get_unified_platform_settings(
     admin: Dict[str, Any] = Depends(require_super_admin_principal),
     db: Session = Depends(get_db),
@@ -724,6 +1002,8 @@ def get_unified_platform_settings(
 
 @router.patch("/api/v1/admin/platform/settings", response_model=PlatformMasterSettingsRead)
 @router.put("/api/v1/admin/platform/settings", response_model=PlatformMasterSettingsRead)
+@router.put("/api/v1/platform/master-settings", response_model=PlatformMasterSettingsRead)
+@router.patch("/api/v1/platform/master-settings", response_model=PlatformMasterSettingsRead)
 def update_unified_platform_settings(
     payload: PlatformMasterSettingsUpdate,
     request: Request,
@@ -755,6 +1035,12 @@ def update_unified_platform_settings(
         setting.privacy_policy_url = payload.privacy_policy_url.strip()
     if payload.custom_css is not None:
         setting.custom_css = payload.custom_css
+    if payload.enable_sovereignty_badge is not None:
+        setting.enable_sovereignty_badge = payload.enable_sovereignty_badge
+    if payload.sovereignty_badge_title is not None:
+        setting.sovereignty_badge_title = payload.sovereignty_badge_title.strip()
+    if payload.sovereignty_badge_text is not None:
+        setting.sovereignty_badge_text = payload.sovereignty_badge_text.strip()
     if payload.metadata is not None:
         current_meta = dict(setting.metadata_json or {})
         current_meta.update(payload.metadata)

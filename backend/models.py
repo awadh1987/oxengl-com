@@ -2826,11 +2826,18 @@ class PlatformMasterSetting(Base):
     legal_terms_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     privacy_policy_url: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
     custom_css: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    enable_sovereignty_badge: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    sovereignty_badge_title: Mapped[str] = mapped_column(String(255), default="Data Sovereignty & Infrastructure Policy", server_default="Data Sovereignty & Infrastructure Policy", nullable=False)
+    sovereignty_badge_text: Mapped[str] = mapped_column(Text, default="All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.", server_default="All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.", nullable=False)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
     )
     updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+
+
+# Semantic model alias
+PlatformMasterSettings = PlatformMasterSetting
 
 
 class PlatformLandingSection(Base):

@@ -1,19 +1,16 @@
 import React from 'react';
-import { renderHighlighted } from '../../utils/highlightText';
 import { SiteSettings } from '../../hooks/useSiteSettings';
+import { HeroCmsContent } from '../../hooks/useLandingContent';
 
-interface LandingHeroProps {
+export interface LandingHeroProps {
   onRestoreWindow: (winId: string) => void;
   openWindows: Record<string, boolean>;
   activeWindow: string;
-  settings: Partial<SiteSettings>;
-  loading: boolean;
-  cmsHero?: {
-    title: string;
-    subtitle: string;
-    badge: string;
-    ctaPrimary: { label: string; url: string };
-    ctaSecondary: { label: string; url: string };
+  settings?: Partial<SiteSettings>;
+  loading?: boolean;
+  cmsHero?: Partial<HeroCmsContent>;
+  cmsContent?: {
+    hero?: Partial<HeroCmsContent>;
   };
 }
 
@@ -22,37 +19,53 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
   openWindows,
   activeWindow,
   settings,
-  loading,
+  loading = false,
   cmsHero,
+  cmsContent,
 }) => {
-  const headline = cmsHero?.title || settings.landing_headline || 'Next-Generation Heavy Logistics & Industrial Accounting Platform';
-  const subheadline = cmsHero?.subtitle ?? settings.landing_subheadline ?? 'Unifying weighbridge automation, fleet dispatch, multi-branch general ledgers, and automated ZATCA Phase 2 compliance into one sovereign engine.';
-  const badgeText = cmsHero?.badge || 'PRODUCTION-PROVEN SAUDI ARABIA ERP BACKBONE';
-  const ctaPrimary = cmsHero?.ctaPrimary || { label: 'Provision Workspace', url: '#provision' };
-  const ctaSecondary = cmsHero?.ctaSecondary || { label: 'Inspect Architecture', url: '#modules' };
+  const content = cmsContent?.hero || cmsHero;
 
   return (
     <section className="hero-section">
       <div className="hero-content">
-        <div className="hero-badge">
-          <span className="badge-pulse" />
-          <span>{badgeText}</span>
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-6">
+          <div className="hero-badge">
+            <span className="badge-pulse" />
+            <span>{content?.badge_text || "ENTERPRISE CONTROL PLANE"}</span>
+          </div>
+
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-slate-700/60 bg-slate-900/90 text-[11px] font-mono text-emerald-400 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>{content?.telemetry_node_label || "NODE [ONLINE]"}</span>
+            <span className="text-slate-500">•</span>
+            <span className="text-slate-300">{content?.telemetry_db_label || "PostgreSQL 16"}</span>
+          </div>
         </div>
         
-        <h1 className="hero-title" aria-busy={loading}>
-          {renderHighlighted(headline)}
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white max-w-5xl mx-auto leading-tight" aria-busy={loading}>
+          {content?.headline || "Sovereign Multi-Tenant ERP Architecture"}
         </h1>
         
-        <p className="hero-subtitle" aria-busy={loading}>
-          {subheadline}
-        </p>
+        {content?.subheadline && (
+          <p className="hero-subtitle text-slate-300 max-w-3xl mx-auto mt-4 text-base md:text-lg leading-relaxed" aria-busy={loading}>
+            {content.subheadline}
+          </p>
+        )}
 
         <div className="hero-cta-group">
-          <a href={ctaPrimary.url} className="btn-primary" style={{ padding: '12px 28px', fontSize: '15px' }}>
-            {ctaPrimary.label}
+          <a
+            href={content?.primary_cta_url || "/register"}
+            className="btn-primary"
+            style={{ padding: '12px 28px', fontSize: '15px' }}
+          >
+            {content?.primary_cta_label || "Deploy Workspace"}
           </a>
-          <a href={ctaSecondary.url} className="btn-secondary" style={{ padding: '12px 28px', fontSize: '15px' }}>
-            {ctaSecondary.label}
+          <a
+            href={content?.secondary_cta_url || "/login"}
+            className="btn-secondary"
+            style={{ padding: '12px 28px', fontSize: '15px' }}
+          >
+            {content?.secondary_cta_label || "Console Sign In"}
           </a>
         </div>
       </div>
@@ -68,7 +81,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             onClick={() => onRestoreWindow('win-finance')}
           >
             <span className="dock-dot" style={{ backgroundColor: '#10b981' }} />
-            <span>GL Voucher &amp; ZATCA Phase 2</span>
+            <span>GL Voucher &amp; Cryptographic Clearance</span>
           </button>
           
           <button
@@ -78,7 +91,7 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
             onClick={() => onRestoreWindow('win-telemetry')}
           >
             <span className="dock-dot" style={{ backgroundColor: '#38bdf8' }} />
-            <span>PostgreSQL 16 Telemetry Radar</span>
+            <span>Cluster Telemetry Radar</span>
           </button>
           
           <button
@@ -95,3 +108,5 @@ export const LandingHero: React.FC<LandingHeroProps> = ({
     </section>
   );
 };
+
+export default LandingHero;

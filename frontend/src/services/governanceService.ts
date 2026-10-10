@@ -31,6 +31,9 @@ export interface PlatformMasterSettings {
   legal_terms_url?: string | null;
   privacy_policy_url?: string | null;
   custom_css?: string | null;
+  enable_sovereignty_badge?: boolean;
+  sovereignty_badge_title?: string;
+  sovereignty_badge_text?: string;
   metadata?: Record<string, any>;
   updated_at?: string;
   updated_by?: string | null;
@@ -99,11 +102,20 @@ export async function updateAdminLandingSection(
   sectionKey: string,
   payload: Partial<LandingSection>
 ): Promise<LandingSection> {
-  const res = await authFetch(`/api/v1/admin/landing/sections/${encodeURIComponent(sectionKey)}`, {
+  const url = `/api/v1/platform/landing/sections/${encodeURIComponent(sectionKey)}`;
+  let res = await authFetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    // Fallback to legacy path
+    res = await authFetch(`/api/v1/admin/landing/sections/${encodeURIComponent(sectionKey)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
   if (!res.ok) {
     throw new Error(`Failed to update landing section ${sectionKey} (${res.status})`);
   }
@@ -126,7 +138,10 @@ export async function resetLandingSectionsDefault(): Promise<LandingSection[]> {
 // ==============================================================================
 
 export async function getPlatformMasterSettings(): Promise<PlatformMasterSettings> {
-  const res = await authFetch('/api/v1/admin/platform/settings', { method: 'GET' });
+  let res = await authFetch('/api/v1/platform/master-settings', { method: 'GET' });
+  if (!res.ok) {
+    res = await authFetch('/api/v1/admin/platform/settings', { method: 'GET' });
+  }
   if (!res.ok) {
     throw new Error(`Failed to load platform master settings (${res.status})`);
   }
@@ -136,11 +151,18 @@ export async function getPlatformMasterSettings(): Promise<PlatformMasterSetting
 export async function updatePlatformMasterSettings(
   payload: Partial<PlatformMasterSettings>
 ): Promise<PlatformMasterSettings> {
-  const res = await authFetch('/api/v1/admin/platform/settings', {
-    method: 'PATCH',
+  let res = await authFetch('/api/v1/platform/master-settings', {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+  if (!res.ok) {
+    res = await authFetch('/api/v1/admin/platform/settings', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  }
   if (!res.ok) {
     throw new Error(`Failed to update platform master settings (${res.status})`);
   }

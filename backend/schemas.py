@@ -3252,11 +3252,18 @@ class PlatformMasterSettingsRead(BaseModel):
     legal_terms_url: str | None = None
     privacy_policy_url: str | None = None
     custom_css: str | None = None
+    enable_sovereignty_badge: bool = True
+    sovereignty_badge_title: str = "Data Sovereignty & Infrastructure Policy"
+    sovereignty_badge_text: str = "All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure."
     metadata: dict[str, Any] = Field(default_factory=dict)
     updated_at: datetime | None = None
     updated_by: str | None = None
 
     model_config = ConfigDict(extra="allow", from_attributes=True, populate_by_name=True)
+
+
+# Semantic alias
+PlatformMasterSettings = PlatformMasterSettingsRead
 
 
 class PlatformMasterSettingsUpdate(BaseModel):
@@ -3271,6 +3278,9 @@ class PlatformMasterSettingsUpdate(BaseModel):
     legal_terms_url: str | None = None
     privacy_policy_url: str | None = None
     custom_css: str | None = None
+    enable_sovereignty_badge: bool | None = None
+    sovereignty_badge_title: str | None = None
+    sovereignty_badge_text: str | None = None
     metadata: dict[str, Any] | None = None
 
     model_config = ConfigDict(extra="allow")

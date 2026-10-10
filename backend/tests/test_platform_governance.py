@@ -194,7 +194,7 @@ def test_admin_landing_crud(superadmin_auth):
     # 5. Verify public endpoint reflects factory default
     pub_reset = client.get("/api/v1/public/landing")
     assert pub_reset.json()["sections_map"]["hero"]["title"] == (
-        "Sovereign Multi-Tenant ERP Architecture for the Kingdom of Saudi Arabia"
+        "Sovereign Multi-Tenant ERP Architecture"
     )
 
 
@@ -309,3 +309,104 @@ def test_system_broadcast_lifecycle(superadmin_auth):
     del_res = client.delete(f"/api/v1/admin/broadcasts/{broadcast_id}", headers=superadmin_auth)
     assert del_res.status_code == 200
     assert del_res.json()["success"] is True
+
+
+def test_sovereignty_compliance_policy_endpoints(superadmin_auth):
+    """Test GET and PUT /api/v1/platform/master-settings with configurable compliance policy."""
+    # 1. Fetch current settings via /api/v1/platform/master-settings
+    res = client.get("/api/v1/platform/master-settings", headers=superadmin_auth)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert "enable_sovereignty_badge" in data
+    assert "sovereignty_badge_title" in data
+    assert "sovereignty_badge_text" in data
+
+    # 2. Update compliance policy
+    update_payload = {
+        "enable_sovereignty_badge": True,
+        "sovereignty_badge_title": "Republic of Yemen Sovereign Control & Data Residency",
+        "sovereignty_badge_text": "All tenant schemas, cryptographic keys, and fleet telemetry logs are strictly persisted on sovereign infrastructure inside Yemen.",
+    }
+    put_res = client.put("/api/v1/platform/master-settings", headers=superadmin_auth, json=update_payload)
+    assert put_res.status_code == 200, put_res.text
+    put_data = put_res.json()
+    assert put_data["enable_sovereignty_badge"] is True
+    assert put_data["sovereignty_badge_title"] == "Republic of Yemen Sovereign Control & Data Residency"
+    assert "Yemen" in put_data["sovereignty_badge_text"]
+
+    # 3. Verify in public landing endpoint
+    pub_res = client.get("/api/v1/public/landing")
+    assert pub_res.status_code == 200
+    pub_settings = pub_res.json()["platform_settings"]
+    assert pub_settings["enable_sovereignty_badge"] is True
+    assert pub_settings["sovereignty_badge_title"] == "Republic of Yemen Sovereign Control & Data Residency"
+
+
+def test_dynamic_landing_hero_cms_full_schema(superadmin_auth):
+    """Test PUT /api/v1/platform/landing/sections/hero with all 9 attributes."""
+    hero_payload = {
+        "title": "Sovereign Multi-Tenant ERP Architecture for the Republic of Yemen",
+        "subtitle": "National heavy industry, quarry logistics, and sovereign enterprise resource planning.",
+        "content_data": {
+            "badge_text": "v5.0 SOVEREIGN ARCHITECTURE",
+            "headline": "Sovereign Multi-Tenant ERP Architecture for the Republic of Yemen",
+            "subheadline": "National heavy industry, quarry logistics, and sovereign enterprise resource planning.",
+            "primary_cta_label": "Deploy Sovereign Workspace",
+            "primary_cta_url": "/register?region=yem",
+            "secondary_cta_label": "Direct Console Access",
+            "secondary_cta_url": "/login",
+            "telemetry_node_label": "YEM-SANAA-01 [ONLINE]",
+            "telemetry_db_label": "PostgreSQL 16.4 • Uptime: 99.999%",
+        },
+        "is_visible": True,
+    }
+
+    put_res = client.put("/api/v1/platform/landing/sections/hero", headers=superadmin_auth, json=hero_payload)
+    assert put_res.status_code == 200, put_res.text
+    section = put_res.json()
+    assert section["section_key"] == "hero"
+    assert section["content_data"]["badge_text"] == "v5.0 SOVEREIGN ARCHITECTURE"
+    assert section["content_data"]["telemetry_node_label"] == "YEM-SANAA-01 [ONLINE]"
+    assert section["content_data"]["primary_cta_label"] == "Deploy Sovereign Workspace"
+
+    # Verify public landing tree reflects this immediately (cache invalidated)
+    pub_res = client.get("/api/v1/public/landing")
+    assert pub_res.status_code == 200
+    hero_public = pub_res.json()["sections_map"]["hero"]
+    assert hero_public["content_data"]["headline"] == "Sovereign Multi-Tenant ERP Architecture for the Republic of Yemen"
+    assert hero_public["content_data"]["telemetry_node_label"] == "YEM-SANAA-01 [ONLINE]"
+    assert hero_public["content_data"]["telemetry_db_label"] == "PostgreSQL 16.4 • Uptime: 99.999%"
+
+
+def test_dynamic_landing_footer_contacts_and_whatsapp(superadmin_auth):
+    """Test updating footer section with dynamic contact info & phone."""
+    footer_payload = {
+        "title": "OxenGL Sovereign Platform",
+        "subtitle": "Sovereign Multi-Tenant ERP Architecture.",
+        "content_data": {
+            "contact_email": "admin@oxengl.me",
+            "contact_phone": "+967 736735733",
+            "contact_location": "Sana'a, Yemen",
+            "copyright": "© 2026 OxenGL Sovereign Enterprise. All rights reserved.",
+        },
+        "is_visible": True,
+    }
+
+    put_res = client.put("/api/v1/platform/landing/sections/footer", headers=superadmin_auth, json=footer_payload)
+    assert put_res.status_code == 200, put_res.text
+    section = put_res.json()
+    assert section["section_key"] == "footer"
+    assert section["content_data"]["contact_phone"] == "+967 736735733"
+    assert section["content_data"]["phone"] == "+967 736735733"
+    assert section["content_data"]["contact_email"] == "admin@oxengl.me"
+    assert section["content_data"]["contact_location"] == "Sana'a, Yemen"
+
+    # Verify public landing endpoint returns normalized footer
+    pub_res = client.get("/api/v1/public/landing")
+    assert pub_res.status_code == 200
+    footer_public = pub_res.json()["sections_map"]["footer"]
+    assert footer_public["content_data"]["contact_phone"] == "+967 736735733"
+    assert footer_public["content_data"]["contact_email"] == "admin@oxengl.me"
+    assert footer_public["content_data"]["contact_location"] == "Sana'a, Yemen"
+
+

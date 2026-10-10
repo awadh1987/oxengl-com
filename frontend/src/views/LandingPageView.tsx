@@ -18,7 +18,7 @@ export interface LandingPageViewProps {
 
 export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess }) => {
   const { settings: siteSettings, loading: siteSettingsLoading } = useSiteSettings();
-  const { heroData, metricsData, platformSettings } = useLandingContent();
+  const { heroData, footerData, pricingData, cmsContent, metricsData, platformSettings } = useLandingContent();
   const [openWindows, setOpenWindows] = useState<Record<string, boolean>>({
     'win-finance': true,
     'win-telemetry': true,
@@ -27,12 +27,18 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
 
   const [activeWindow, setActiveWindow] = useState<string>('win-weighbridge');
 
-  // Augmented settings with platform master defaults
+  // Augmented settings with platform master defaults & compliance policy
   const effectiveSettings = {
     ...siteSettings,
     site_name: platformSettings.platform_name || siteSettings.site_name,
     site_tagline: platformSettings.platform_tagline || siteSettings.site_tagline,
     site_logo: platformSettings.logo_light_url || siteSettings.site_logo,
+    contact_email: footerData.contact_email || platformSettings.support_email || siteSettings.contact_email,
+    contact_phone: footerData.contact_phone || siteSettings.contact_phone,
+    contact_address: footerData.contact_address || siteSettings.contact_address,
+    enable_sovereignty_badge: platformSettings.enable_sovereignty_badge,
+    sovereignty_badge_title: platformSettings.sovereignty_badge_title,
+    sovereignty_badge_text: platformSettings.sovereignty_badge_text,
   };
 
   // Global mouse tracking for background radial spotlight
@@ -88,6 +94,7 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
             settings={effectiveSettings}
             loading={siteSettingsLoading}
             cmsHero={heroData}
+            cmsContent={cmsContent}
             onRestoreWindow={handleRestoreWindow}
             openWindows={openWindows}
             activeWindow={activeWindow}
@@ -105,12 +112,20 @@ export const LandingPageView: React.FC<LandingPageViewProps> = ({ onLoginSuccess
         
         <WorkflowMatrix />
         
-        <PricingSection onSelectTier={handleTierSelect} />
+        <PricingSection
+          cmsPricing={pricingData}
+          cmsContent={cmsContent}
+          onSelectTier={handleTierSelect}
+        />
         
         <ProvisioningTerminal />
       </main>
 
-      <LandingFooter settings={effectiveSettings} />
+      <LandingFooter
+        settings={effectiveSettings}
+        cmsFooter={footerData}
+        cmsContent={cmsContent}
+      />
     </div>
   );
 };

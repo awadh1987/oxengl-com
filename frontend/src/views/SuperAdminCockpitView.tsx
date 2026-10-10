@@ -87,7 +87,7 @@ export const SuperAdminCockpitView: React.FC<SuperAdminCockpitViewProps> = ({ on
       case 'licenses': return <LicenseProvisionerView />;
       case 'pricing': return <PricingPlansView />;
       case 'health': return <SystemAuditView />;
-      case 'landing-editor': return <div className="h-full overflow-y-auto"><LandingCmsStudioView /></div>;
+      case 'landing-editor': return <div className="h-full overflow-y-auto"><LandingCmsStudioView onNavigate={setActiveTab} /></div>;
       case 'settings': return <div className="h-full overflow-y-auto"><UnifiedMasterSettingsView /></div>;
       default: return <PanoramicCockpit onNavigate={setActiveTab} />;
     }

@@ -610,14 +610,83 @@ export const UnifiedMasterSettingsView: React.FC = () => {
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 space-y-1.5">
-              <div className="flex items-center gap-2 text-emerald-500 font-bold text-xs">
-                <ShieldCheck className="h-4 w-4" />
-                <span>Saudi Data Sovereignty Enforced</span>
+            {/* Sovereignty / Compliance Policy Card Configuration */}
+            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                    Sovereignty &amp; Compliance Policy Card
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Display an authoritative governance declaration on platform landing pages and public portals.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.enable_sovereignty_badge !== false}
+                    onChange={(e) =>
+                      setSettings({ ...settings, enable_sovereignty_badge: e.target.checked })
+                    }
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500" />
+                </label>
               </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                All tenant customer schemas, cryptographic ZATCA keys, and GPS telemetry logs are strictly persisted on bare-metal PostgreSQL 16 infrastructure inside the Kingdom of Saudi Arabia under NDMA governance.
-              </p>
+
+              {settings.enable_sovereignty_badge !== false && (
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      Policy Card Title
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.sovereignty_badge_title ?? 'Data Sovereignty & Infrastructure Policy'}
+                      onChange={(e) =>
+                        setSettings({ ...settings, sovereignty_badge_title: e.target.value })
+                      }
+                      placeholder="e.g. Data Sovereignty & Infrastructure Policy"
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">
+                      Policy Statement &amp; Regulatory Standard Details
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={
+                        settings.sovereignty_badge_text ??
+                        'All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.'
+                      }
+                      onChange={(e) =>
+                        setSettings({ ...settings, sovereignty_badge_text: e.target.value })
+                      }
+                      placeholder="Explain your jurisdiction, storage standards, encryption, or regulatory compliance..."
+                      className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-xs text-slate-900 dark:text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Real-time Live Preview Callout */}
+                  <div className="space-y-1.5 pt-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Live Preview
+                    </span>
+                    <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-500/5 space-y-1.5 transition-all">
+                      <div className="flex items-center gap-2 text-emerald-500 font-bold text-xs">
+                        <ShieldCheck className="h-4 w-4 shrink-0" />
+                        <span>{settings.sovereignty_badge_title || 'Data Sovereignty & Infrastructure Policy'}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {settings.sovereignty_badge_text ||
+                          'All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
