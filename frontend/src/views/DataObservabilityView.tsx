@@ -336,10 +336,13 @@ export const DataObservabilityView: React.FC = () => {
   }, [summary]);
 
   // Derived KPI metrics extracted from API payload with cross-state synchronization
-  const totalTablesMonitored = summary?.total_tables ?? summary?.total_tables_in_db ?? (tables.length > 0 ? tables.length : 135);
+  const totalTablesMonitored = summary?.total_tables ?? summary?.total_tables_in_db ?? (tables.length > 0 ? tables.length : 136);
   const tablesWithDataMonitored = summary?.tables_with_data ?? summary?.tables_evaluated ?? tables.filter((t) => t.row_count > 0).length ?? 0;
   const emptyTablesMonitored = summary?.empty_tables ?? (totalTablesMonitored > tablesWithDataMonitored ? totalTablesMonitored - tablesWithDataMonitored : 0);
   const totalRowsMonitored = summary?.total_rows ?? tables.reduce((acc, t) => acc + (t.row_count || 0), 0);
+  const totalGates = summary?.compliance_checks?.length ?? 4;
+  const passedGates = summary?.compliance_checks?.filter((c) => c.ready_for_production).length ?? 0;
+  const allGatesPassed = totalGates > 0 && passedGates === totalGates;
 
   return (
     <div className="min-h-dvh-safe bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50 p-4 lg:p-8 space-y-6">
@@ -485,16 +488,29 @@ export const DataObservabilityView: React.FC = () => {
               </div>
             </div>
             <div className="mt-3 flex items-baseline gap-2">
-              <span className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50">
-                3 of 4 Gates
+              <span className="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 font-mono">
+                {passedGates} of {totalGates} Gates
               </span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">
-                Passed
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                allGatesPassed
+                  ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-500 dark:text-amber-400 border border-amber-500/20'
+              }`}>
+                {allGatesPassed ? 'All Compliant' : 'Passed'}
               </span>
             </div>
             <div className="mt-3 text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span>ZATCA partner_id NULL cleanup required</span>
+              {allGatesPassed ? (
+                <>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">All 4 compliance gates verified and production ready</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                  <span>ZATCA partner_id NULL cleanup required</span>
+                </>
+              )}
             </div>
           </div>
         </div>

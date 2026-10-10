@@ -1,6 +1,6 @@
 {
   "table": "chart_of_accounts",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/chart_of_accounts.csv",
+  "file": "data-pipeline/profiles/pg_export/chart_of_accounts.csv",
   "row_count": 107,
   "columns": {
     "id": {

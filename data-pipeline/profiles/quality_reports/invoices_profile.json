@@ -1,6 +1,6 @@
 {
   "table": "invoices",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/invoices.csv",
+  "file": "data-pipeline/profiles/pg_export/invoices.csv",
   "row_count": 6,
   "columns": {
     "id": {

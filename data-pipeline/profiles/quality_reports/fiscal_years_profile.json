@@ -1,6 +1,6 @@
 {
   "table": "fiscal_years",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/fiscal_years.csv",
+  "file": "data-pipeline/profiles/pg_export/fiscal_years.csv",
   "row_count": 2,
   "columns": {
     "id": {

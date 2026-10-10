@@ -1,6 +1,6 @@
 {
   "table": "res_partners",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/res_partners.csv",
+  "file": "data-pipeline/profiles/pg_export/res_partners.csv",
   "row_count": 2,
   "columns": {
     "id": {

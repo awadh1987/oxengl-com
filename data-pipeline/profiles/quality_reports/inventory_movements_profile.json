@@ -1,6 +1,6 @@
 {
   "table": "inventory_movements",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/inventory_movements.csv",
+  "file": "data-pipeline/profiles/pg_export/inventory_movements.csv",
   "row_count": 12,
   "columns": {
     "id": {

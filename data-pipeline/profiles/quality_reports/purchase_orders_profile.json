@@ -1,6 +1,6 @@
 {
   "table": "purchase_orders",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/purchase_orders.csv",
+  "file": "data-pipeline/profiles/pg_export/purchase_orders.csv",
   "row_count": 3,
   "columns": {
     "id": {

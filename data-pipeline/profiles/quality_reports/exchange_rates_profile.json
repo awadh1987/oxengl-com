@@ -1,6 +1,6 @@
 {
   "table": "exchange_rates",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/exchange_rates.csv",
+  "file": "data-pipeline/profiles/pg_export/exchange_rates.csv",
   "row_count": 1,
   "columns": {
     "id": {

@@ -1,6 +1,6 @@
 {
   "table": "product_products",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/product_products.csv",
+  "file": "data-pipeline/profiles/pg_export/product_products.csv",
   "row_count": 3,
   "columns": {
     "id": {

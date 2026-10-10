@@ -1,6 +1,6 @@
 {
   "table": "tenant_audit_logs",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/tenant_audit_logs.csv",
+  "file": "data-pipeline/profiles/pg_export/tenant_audit_logs.csv",
   "row_count": 14,
   "columns": {
     "id": {

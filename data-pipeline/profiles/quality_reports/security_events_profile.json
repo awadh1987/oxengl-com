@@ -1,6 +1,6 @@
 {
   "table": "security_events",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/security_events.csv",
+  "file": "data-pipeline/profiles/pg_export/security_events.csv",
   "row_count": 4,
   "columns": {
     "id": {

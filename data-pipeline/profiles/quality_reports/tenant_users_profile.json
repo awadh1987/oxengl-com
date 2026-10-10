@@ -1,6 +1,6 @@
 {
   "table": "tenant_users",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/tenant_users.csv",
+  "file": "data-pipeline/profiles/pg_export/tenant_users.csv",
   "row_count": 49,
   "columns": {
     "id": {

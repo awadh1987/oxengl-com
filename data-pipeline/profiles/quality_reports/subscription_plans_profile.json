@@ -1,6 +1,6 @@
 {
   "table": "subscription_plans",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/subscription_plans.csv",
+  "file": "data-pipeline/profiles/pg_export/subscription_plans.csv",
   "row_count": 3,
   "columns": {
     "id": {

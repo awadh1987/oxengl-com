@@ -1,6 +1,6 @@
 {
   "table": "res_users",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/res_users.csv",
+  "file": "data-pipeline/profiles/pg_export/res_users.csv",
   "row_count": 24,
   "columns": {
     "id": {

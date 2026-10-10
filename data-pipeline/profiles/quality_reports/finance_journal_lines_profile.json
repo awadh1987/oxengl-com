@@ -1,6 +1,6 @@
 {
   "table": "finance_journal_lines",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/finance_journal_lines.csv",
+  "file": "data-pipeline/profiles/pg_export/finance_journal_lines.csv",
   "row_count": 22,
   "columns": {
     "id": {

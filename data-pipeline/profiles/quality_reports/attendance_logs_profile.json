@@ -1,6 +1,6 @@
 {
   "table": "attendance_logs",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/attendance_logs.csv",
+  "file": "data-pipeline/profiles/pg_export/attendance_logs.csv",
   "row_count": 3,
   "columns": {
     "id": {

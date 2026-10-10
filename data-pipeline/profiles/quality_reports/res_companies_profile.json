@@ -1,6 +1,6 @@
 {
   "table": "res_companies",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/res_companies.csv",
+  "file": "data-pipeline/profiles/pg_export/res_companies.csv",
   "row_count": 5,
   "columns": {
     "id": {

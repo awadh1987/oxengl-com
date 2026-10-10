@@ -1,6 +1,6 @@
 {
   "table": "employees",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/employees.csv",
+  "file": "data-pipeline/profiles/pg_export/employees.csv",
   "row_count": 3,
   "columns": {
     "id": {

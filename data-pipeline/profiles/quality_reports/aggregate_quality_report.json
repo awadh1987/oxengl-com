@@ -1,25 +1,16 @@
 {
-  "profiled_at": "2026-09-29T05:43:08.799999",
+  "profiled_at": "2026-10-10T15:59:47.958437",
   "total_tables": 86,
   "tables_with_data": 31,
   "empty_tables": 55,
-  "total_rows": 610,
-  "avg_quality_score": 61.5,
+  "total_rows": 611,
+  "avg_quality_score": 64.7,
   "total_flags": {
-    "CRITICAL": 69,
-    "WARNING": 82,
-    "INFO": 91
+    "CRITICAL": 62,
+    "WARNING": 75,
+    "INFO": 90
   },
   "tables_needing_attention": [
-    {
-      "table": "customer_invoices",
-      "score": 0,
-      "flags": {
-        "critical": 7,
-        "warning": 7,
-        "info": 3
-      }
-    },
     {
       "table": "employees",
       "score": 75,

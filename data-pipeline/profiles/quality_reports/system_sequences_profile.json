@@ -1,6 +1,6 @@
 {
   "table": "system_sequences",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/system_sequences.csv",
+  "file": "data-pipeline/profiles/pg_export/system_sequences.csv",
   "row_count": 25,
   "columns": {
     "id": {

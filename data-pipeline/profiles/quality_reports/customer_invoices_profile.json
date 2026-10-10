@@ -1,20 +1,20 @@
 {
   "table": "customer_invoices",
-  "file": "/root/oxen-gl/data-pipeline/profiles/pg_export/customer_invoices.csv",
-  "row_count": 9,
+  "file": "data-pipeline/profiles/pg_export/customer_invoices.csv",
+  "row_count": 10,
   "columns": {
     "id": {
       "name": "id",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 9,
+      "distinct_count": 10,
       "distinct_rate_pct": 100.0,
       "max_length": 36,
       "min_length": 36,
       "inferred_type": "uuid",
       "type_distribution": {
-        "uuid": 9
+        "uuid": 10
       },
       "sample_values": [
         "673a9fba-6fa3-4ec5-bcfb-70b6a4583b3d",
@@ -26,16 +26,16 @@
     },
     "company_id": {
       "name": "company_id",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 1,
-      "distinct_rate_pct": 11.1,
+      "distinct_count": 2,
+      "distinct_rate_pct": 20.0,
       "max_length": 36,
       "min_length": 36,
       "inferred_type": "uuid",
       "type_distribution": {
-        "uuid": 9
+        "uuid": 10
       },
       "sample_values": [
         "df5dc940-2f26-4620-86fa-1012735b7ee5",
@@ -47,42 +47,58 @@
     },
     "partner_id": {
       "name": "partner_id",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 8,
+      "distinct_rate_pct": 80.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 10
+      },
+      "sample_values": [
+        "bc5a92c6-7631-5a39-8867-e07df9546827",
+        "9154dd82-0c12-5a86-a0c4-1595a0d3566a",
+        "fe20c21f-fad8-5274-8401-9d6d3a55b682",
+        "5861d836-5143-5622-8709-79dd3217f1c9",
+        "f1f030ae-8b3d-5989-8a8c-08f9ae927c9b"
+      ]
     },
     "move_id": {
       "name": "move_id",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 10
+      },
+      "sample_values": [
+        "17707b4d-a5d5-5249-a3d6-92cd322f6318",
+        "37b60bef-dde5-56a9-8386-becd86f142ae",
+        "80d5c7c2-9244-508a-930b-82b724d7029d",
+        "6340eed4-af78-594d-a8bb-6ea707b37103",
+        "321321c1-dc2a-57dd-a930-5026be60cb72"
+      ]
     },
     "invoice_number": {
       "name": "invoice_number",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 9,
+      "distinct_count": 10,
       "distinct_rate_pct": 100.0,
       "max_length": 10,
       "min_length": 10,
       "inferred_type": "string",
       "type_distribution": {
-        "string": 9
+        "string": 10
       },
       "sample_values": [
         "INV-B8E861",
@@ -94,16 +110,16 @@
     },
     "customer_name": {
       "name": "customer_name",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 7,
-      "distinct_rate_pct": 77.8,
+      "distinct_count": 8,
+      "distinct_rate_pct": 80.0,
       "max_length": 26,
       "min_length": 13,
       "inferred_type": "string",
       "type_distribution": {
-        "string": 9
+        "string": 10
       },
       "sample_values": [
         "Al-Amal Logistics LLC",
@@ -115,37 +131,37 @@
     },
     "customer_tax_number": {
       "name": "customer_tax_number",
-      "total_values": 9,
-      "null_count": 4,
-      "null_rate_pct": 44.4,
-      "distinct_count": 4,
-      "distinct_rate_pct": 80.0,
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 50.0,
       "max_length": 15,
       "min_length": 15,
       "inferred_type": "integer",
       "type_distribution": {
-        "integer": 5
+        "integer": 10
       },
       "sample_values": [
         "310999888700003",
-        "310555444300003",
-        "310999999900003",
-        "310999999900003",
-        "300000000000003"
+        "310999888700003",
+        "310999888700003",
+        "310999888700003",
+        "310555444300003"
       ]
     },
     "issue_date": {
       "name": "issue_date",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 9,
+      "distinct_count": 10,
       "distinct_rate_pct": 100.0,
       "max_length": 29,
-      "min_length": 28,
+      "min_length": 27,
       "inferred_type": "date",
       "type_distribution": {
-        "date": 9
+        "date": 10
       },
       "sample_values": [
         "2026-09-29 00:56:20.169934+00",
@@ -157,29 +173,37 @@
     },
     "due_date": {
       "name": "due_date",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 10
+      },
+      "sample_values": [
+        "2026-09-29 00:56:20.169934+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:06:10.833344+00",
+        "2026-09-29 01:24:49.51263+00",
+        "2026-09-29 01:24:49.538664+00"
+      ]
     },
     "status": {
       "name": "status",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
       "distinct_count": 1,
-      "distinct_rate_pct": 11.1,
+      "distinct_rate_pct": 10.0,
       "max_length": 6,
       "min_length": 6,
       "inferred_type": "string",
       "type_distribution": {
-        "string": 9
+        "string": 10
       },
       "sample_values": [
         "Issued",
@@ -191,16 +215,16 @@
     },
     "subtotal": {
       "name": "subtotal",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 6,
-      "distinct_rate_pct": 66.7,
+      "distinct_count": 7,
+      "distinct_rate_pct": 70.0,
       "max_length": 11,
       "min_length": 9,
       "inferred_type": "decimal",
       "type_distribution": {
-        "decimal": 9
+        "decimal": 10
       },
       "sample_values": [
         "10000.0000",
@@ -212,16 +236,16 @@
     },
     "vat_amount": {
       "name": "vat_amount",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 6,
-      "distinct_rate_pct": 66.7,
+      "distinct_count": 7,
+      "distinct_rate_pct": 70.0,
       "max_length": 10,
       "min_length": 8,
       "inferred_type": "decimal",
       "type_distribution": {
-        "decimal": 9
+        "decimal": 10
       },
       "sample_values": [
         "1500.0000",
@@ -233,16 +257,16 @@
     },
     "grand_total": {
       "name": "grand_total",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 6,
-      "distinct_rate_pct": 66.7,
+      "distinct_count": 7,
+      "distinct_rate_pct": 70.0,
       "max_length": 11,
       "min_length": 9,
       "inferred_type": "decimal",
       "type_distribution": {
-        "decimal": 9
+        "decimal": 10
       },
       "sample_values": [
         "11500.0000",
@@ -254,55 +278,79 @@
     },
     "approved_by": {
       "name": "approved_by",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 10.0,
+      "max_length": 16,
+      "min_length": 16,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 10
+      },
+      "sample_values": [
+        "admin@oxengl.com",
+        "admin@oxengl.com",
+        "admin@oxengl.com",
+        "admin@oxengl.com",
+        "admin@oxengl.com"
+      ]
     },
     "approved_at": {
       "name": "approved_at",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 10
+      },
+      "sample_values": [
+        "2026-09-29 00:56:20.169934+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:06:10.833344+00",
+        "2026-09-29 01:24:49.51263+00",
+        "2026-09-29 01:24:49.538664+00"
+      ]
     },
     "issued_at": {
       "name": "issued_at",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 10
+      },
+      "sample_values": [
+        "2026-09-29 00:56:20.169934+00",
+        "2026-09-29 00:59:51.419458+00",
+        "2026-09-29 01:06:10.833344+00",
+        "2026-09-29 01:24:49.51263+00",
+        "2026-09-29 01:24:49.538664+00"
+      ]
     },
     "created_at": {
       "name": "created_at",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 9,
+      "distinct_count": 10,
       "distinct_rate_pct": 100.0,
       "max_length": 29,
-      "min_length": 28,
+      "min_length": 27,
       "inferred_type": "date",
       "type_distribution": {
-        "date": 9
+        "date": 10
       },
       "sample_values": [
         "2026-09-29 00:56:20.169934+00",
@@ -314,16 +362,16 @@
     },
     "updated_at": {
       "name": "updated_at",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 9,
+      "distinct_count": 10,
       "distinct_rate_pct": 100.0,
       "max_length": 29,
-      "min_length": 28,
+      "min_length": 27,
       "inferred_type": "date",
       "type_distribution": {
-        "date": 9
+        "date": 10
       },
       "sample_values": [
         "2026-09-29 00:56:20.169934+00",
@@ -335,29 +383,37 @@
     },
     "journal_entry_id": {
       "name": "journal_entry_id",
-      "total_values": 9,
-      "null_count": 9,
-      "null_rate_pct": 100.0,
-      "distinct_count": 0,
-      "distinct_rate_pct": 0.0,
-      "max_length": 0,
-      "min_length": 0,
-      "inferred_type": "unknown",
-      "type_distribution": {},
-      "sample_values": []
+      "total_values": 10,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 10
+      },
+      "sample_values": [
+        "c6c8d44d-892d-568e-b46c-01da17b94ac4",
+        "88b59b6a-410a-5708-8ce3-2d04061aae75",
+        "f4ad3a18-0aa3-592c-a814-2dcc56277edd",
+        "91fdb870-1106-573a-a9c3-a203db38dac9",
+        "c97417c4-1d40-550d-afb8-a2905bd1e53d"
+      ]
     },
     "is_posted": {
       "name": "is_posted",
-      "total_values": 9,
+      "total_values": 10,
       "null_count": 0,
       "null_rate_pct": 0.0,
-      "distinct_count": 1,
-      "distinct_rate_pct": 11.1,
+      "distinct_count": 2,
+      "distinct_rate_pct": 20.0,
       "max_length": 1,
       "min_length": 1,
       "inferred_type": "boolean",
       "type_distribution": {
-        "boolean": 9
+        "boolean": 10
       },
       "sample_values": [
         "f",
@@ -371,111 +427,21 @@
   "quality_flags": [
     {
       "severity": "INFO",
-      "column": "company_id",
-      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
-      "recommendation": "Column may be a constant \u2014 verify if meaningful"
-    },
-    {
-      "severity": "WARNING",
-      "column": "partner_id",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "partner_id",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "WARNING",
-      "column": "move_id",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "move_id",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "WARNING",
-      "column": "due_date",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "due_date",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "INFO",
       "column": "status",
       "issue": "Single distinct value: Issued",
       "recommendation": "Column may be a constant \u2014 verify if meaningful"
     },
     {
-      "severity": "WARNING",
-      "column": "approved_by",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "approved_by",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "WARNING",
-      "column": "approved_at",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "approved_at",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "WARNING",
-      "column": "issued_at",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "issued_at",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
-      "severity": "WARNING",
-      "column": "journal_entry_id",
-      "issue": "High null rate: 100.0%",
-      "recommendation": "Investigate if column is truly optional or data is missing"
-    },
-    {
-      "severity": "CRITICAL",
-      "column": "journal_entry_id",
-      "issue": "Column is 100% NULL",
-      "recommendation": "Consider dropping column or investigating data source"
-    },
-    {
       "severity": "INFO",
-      "column": "is_posted",
-      "issue": "Single distinct value: f",
+      "column": "approved_by",
+      "issue": "Single distinct value: admin@oxengl.com",
       "recommendation": "Column may be a constant \u2014 verify if meaningful"
     }
   ],
-  "quality_score": 0,
+  "quality_score": 100,
   "flag_summary": {
-    "critical": 7,
-    "warning": 7,
-    "info": 3
+    "critical": 0,
+    "warning": 0,
+    "info": 2
   }
 }
