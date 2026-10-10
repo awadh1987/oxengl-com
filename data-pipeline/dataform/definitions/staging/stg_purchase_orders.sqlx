@@ -13,6 +13,10 @@ config {
   schema: "oxengl_staging",
   name: "stg_purchase_orders",
   description: "Autocleaned purchase orders with price/qty validation and vendor reference checks",
+  bigquery: {
+    partitionBy: "order_date",
+    clusterBy: ["company_id", "partner_id"]
+  },
   assertions: {
     uniqueKey: ["id"],
     nonNull: ["id", "company_id", "po_number"]

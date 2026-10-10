@@ -7,10 +7,15 @@
 -- 4. Orphan detection optimized via standard LEFT JOIN
 
 config {
-  type: "table",
+  type: "incremental",
   schema: "oxengl_staging",
   name: "stg_finance_journal_lines",
   description: "Autocleaned journal lines with amount validation and orphan detection",
+  uniqueKey: ["id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["company_id"]
+  },
   assertions: {
     uniqueKey: ["id"],
     nonNull: ["id", "journal_entry_id"]
@@ -24,6 +29,13 @@ SELECT
     THEN CAST(lines.id AS STRING)
     ELSE NULL
   END AS id,
+
+  -- Foreign Key: Company ID (from parent journal entry)
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(parent.company_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(parent.company_id AS STRING)
+    ELSE NULL
+  END AS company_id,
 
   -- Foreign Key: Journal Entry
   CASE
@@ -59,6 +71,15 @@ SELECT
     ELSE FALSE
   END AS is_orphaned,
 
+  -- Timestamps (inherited from parent journal entry)
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(parent.created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(parent.created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(parent.created_at AS STRING)),
+    SAFE_CAST(parent.created_at AS TIMESTAMP),
+    CURRENT_TIMESTAMP()
+  ) AS created_at,
+
   -- Cleaning Metadata
   CURRENT_TIMESTAMP() AS _cleaned_at,
   'dataform_autocleaning_v1' AS _cleaned_by
@@ -67,3 +88,4 @@ FROM ${ref("finance_journal_lines")} AS lines
 LEFT JOIN ${ref("finance_journal_entries")} AS parent
   ON lines.entry_id = parent.id
 WHERE lines.id IS NOT NULL
+${when(incremental(), `  AND COALESCE(SAFE_CAST(parent.created_at AS TIMESTAMP), CURRENT_TIMESTAMP()) > (SELECT MAX(created_at) FROM ${self()})`)}

@@ -12,6 +12,10 @@ config {
   schema: "oxengl_staging",
   name: "stg_finance_journal_entries",
   description: "Autocleaned journal entries with debit/credit integrity validation",
+  bigquery: {
+    partitionBy: "entry_date",
+    clusterBy: ["company_id"]
+  },
   assertions: {
     uniqueKey: ["id"],
     nonNull: ["id", "company_id"]

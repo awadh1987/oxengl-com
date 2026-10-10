@@ -8,10 +8,15 @@
 -- 5. Unit and total cost precision normalization
 
 config {
-  type: "table",
+  type: "incremental",
   schema: "oxengl_staging",
   name: "stg_inventory_movements",
   description: "Autocleaned inventory movements with stock validation and dedup",
+  uniqueKey: ["id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["company_id"]
+  },
   assertions: {
     uniqueKey: ["id"],
     nonNull: ["id"]
@@ -120,3 +125,4 @@ SELECT
 
 FROM ${ref("inventory_movements")}
 WHERE id IS NOT NULL
+${when(incremental(), `  AND created_at > (SELECT MAX(created_at) FROM ${self()})`)}

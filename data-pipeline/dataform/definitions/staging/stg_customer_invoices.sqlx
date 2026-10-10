@@ -12,6 +12,10 @@ config {
   schema: "oxengl_staging",
   name: "stg_customer_invoices",
   description: "Autocleaned customer invoices with ZATCA compliance validation and partner linkage",
+  bigquery: {
+    partitionBy: "issue_date",
+    clusterBy: ["company_id", "partner_id"]
+  },
   assertions: {
     uniqueKey: ["id"],
     nonNull: ["id", "company_id", "invoice_number", "partner_id", "customer_tax_number"]

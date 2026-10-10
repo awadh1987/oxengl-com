@@ -106,6 +106,13 @@ try:
 			from app.api.v1.data_observability import router as data_observability_router
 		except (ImportError, ModuleNotFoundError):
 			from .api.v1.data_observability import router as data_observability_router
+	try:
+		from backend.app.api.v1.analytics import router as analytics_router
+	except (ImportError, ModuleNotFoundError):
+		try:
+			from app.api.v1.analytics import router as analytics_router
+		except (ImportError, ModuleNotFoundError):
+			from .api.v1.analytics import router as analytics_router
 	from backend.app.services.fleet_service import router as logistics_router
 	from backend.app.api.v1.customs import router as customs_router
 	from backend.app.api.v1.hr import router as hr_router
@@ -495,6 +502,15 @@ except (ImportError, ModuleNotFoundError):
         app.include_router(data_observability_router)
     except Exception:
         pass  # data_observability is optional
+try:
+    from backend.app.api.v1.analytics import router as analytics_router
+    app.include_router(analytics_router)
+except (ImportError, ModuleNotFoundError):
+    try:
+        from app.api.v1.analytics import router as analytics_router
+        app.include_router(analytics_router)
+    except Exception:
+        pass  # analytics is optional
 from backend.app.domains.finance import audit_export
 app.include_router(audit_export.router)
 app.include_router(logistics_router)

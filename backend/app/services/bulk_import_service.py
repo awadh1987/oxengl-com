@@ -17,8 +17,10 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, Generator, Iterable, List, Optional, Tuple
-
-import openpyxl
+try:
+    import openpyxl
+except ImportError:
+    openpyxl = None
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
