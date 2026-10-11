@@ -458,6 +458,7 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
 
         # 2. Allocate core enterprise company registry entry
         company_uuid = uuid.uuid4()
+        db.info["tenant_id"] = str(company_uuid)
         db.execute(
             text(
                 "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
@@ -581,6 +582,7 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
             with db.begin_nested():
                 # 1. Create the tenant schema dynamically using safe identifier quotation
                 db.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{sanitized_slug}";'))
+                db.execute(text(f'GRANT ALL PRIVILEGES ON SCHEMA "{sanitized_slug}" TO oxengl_app, oxengl_platform;'))
         except Exception as e:
             logger.warning(f"Error creating schema {sanitized_slug}: {e}")
 
@@ -902,7 +904,7 @@ async def verify_and_provision_tenant(req: RegisterVerifyRequest):
             detail="Missing required workspace registration metadata. Please restart registration."
         )
 
-    db = SessionLocal()
+    db = PlatformSessionLocal() if PlatformSessionLocal is not None else SessionLocal()
     try:
         result = execute_tenant_provisioning(db, merged_data)
         # Invalidate cached payload upon successful provision
@@ -918,7 +920,7 @@ async def register_new_enterprise_tenant(payload: TenantRegistrationPayload):
     Synchronized multi-tenant tenant onboarding pipeline (direct registration).
     Maintained for automated integrations and test backward-compatibility.
     """
-    db = SessionLocal()
+    db = PlatformSessionLocal() if PlatformSessionLocal is not None else SessionLocal()
     try:
         return execute_tenant_provisioning(db, payload.model_dump())
     finally:

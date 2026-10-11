@@ -29,7 +29,7 @@ from backend.api.dependencies import (
 )
 
 try:
-    from backend.database import get_db
+    from backend.database import PlatformSessionLocal, get_db
     from backend.models import (
         Warehouse,
         ProductProduct,
@@ -381,6 +381,11 @@ def get_inventory_movement(
     """Retrieve details for a single inventory movement."""
     movement = db.query(InventoryMovement).filter(InventoryMovement.id == movement_id).first()
     if not movement:
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as p_db:
+                unscoped = p_db.query(InventoryMovement).filter(InventoryMovement.id == movement_id).first()
+                if unscoped is not None:
+                    context.check_access(unscoped.tenant_id, unscoped.company_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Inventory movement not found.")
     context.check_access(movement.tenant_id, movement.company_id)
     return _format_movement_response(movement, db)
@@ -403,6 +408,11 @@ def create_inventory_movement(
     # Ensure warehouse exists and belongs to authorized scope
     wh = db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
     if not wh:
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as p_db:
+                unscoped_wh = p_db.query(Warehouse).filter(Warehouse.id == payload.warehouse_id).first()
+                if unscoped_wh is not None:
+                    context.check_access(unscoped_wh.tenant_id, unscoped_wh.company_id)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Warehouse '{payload.warehouse_id}' not found.")
     context.check_access(wh.tenant_id, wh.company_id)
 
@@ -460,6 +470,11 @@ def post_inventory_movement_to_ledger(
     """
     movement = db.query(InventoryMovement).filter(InventoryMovement.id == movement_id).first()
     if not movement:
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as p_db:
+                unscoped = p_db.query(InventoryMovement).filter(InventoryMovement.id == movement_id).first()
+                if unscoped is not None:
+                    context.check_access(unscoped.tenant_id, unscoped.company_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Inventory movement '{movement_id}' not found.",

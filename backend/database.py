@@ -11,7 +11,7 @@ from typing import Any, Generator, Optional
 
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
-from sqlalchemy import URL, Engine, create_engine, select, text
+from sqlalchemy import URL, Engine, create_engine, select, text, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 
@@ -116,6 +116,38 @@ PlatformSessionLocal = (
     if platform_engine is not None
     else None
 )
+
+
+@event.listens_for(Session, "after_begin")
+def _set_rls_tenant_context(session, transaction, connection):
+    tenant_id = session.info.get("tenant_id")
+    if tenant_id:
+        connection.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tid, true), "
+                "set_config('app.current_company_id', :tid, true)"
+            ),
+            {"tid": str(tenant_id)},
+        )
+
+
+@event.listens_for(Engine, "checkin")
+def _reset_tenant_context_on_checkin(dbapi_connection, connection_record):
+    try:
+        if getattr(dbapi_connection, "autocommit", False):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("RESET app.current_tenant_id; RESET app.current_company_id;")
+            cursor.close()
+        else:
+            dbapi_connection.rollback()
+            prev_autocommit = dbapi_connection.autocommit
+            dbapi_connection.autocommit = True
+            cursor = dbapi_connection.cursor()
+            cursor.execute("RESET app.current_tenant_id; RESET app.current_company_id;")
+            cursor.close()
+            dbapi_connection.autocommit = prev_autocommit
+    except Exception:
+        pass
 
 
 from starlette.requests import Request
@@ -267,6 +299,9 @@ def get_db(request: Request = None):
     else:
         db = SessionLocal()
 
+    if tenant_id:
+        db.info["tenant_id"] = str(tenant_id)
+
     # Apply transaction-local context after discarding all caller-selected scope.
     try:
         db.execute(
@@ -337,10 +372,12 @@ def tenant_rls_scope(db, tenant_id: str, is_master: bool = False):
     """
     try:
         if tenant_id:
+            db.info["tenant_id"] = str(tenant_id)
             db.execute(text("SET LOCAL app.current_tenant_id = :tid"), {"tid": str(tenant_id)})
             db.execute(text("SET LOCAL app.current_company_id = :tid"), {"tid": str(tenant_id)})
         yield db
     finally:
+        db.info.pop("tenant_id", None)
         try:
             db.execute(text("RESET app.current_tenant_id;"))
             db.execute(text("RESET app.current_company_id;"))
@@ -394,7 +431,9 @@ class TenantConnectionManager:
 
     def __init__(self, default_engine: Engine | None = None):
         self._default_engine = default_engine or engine
-        self._default_sessionmaker = SessionLocal
+        self._default_sessionmaker = sessionmaker(
+            bind=self._default_engine, class_=AsyncCompatibleSession, autoflush=False, autocommit=False
+        )
         self._engine_cache: dict[uuid.UUID, Engine] = {}
         self._sessionmaker_cache: dict[uuid.UUID, sessionmaker] = {}
         self._no_dedicated_cache: set[uuid.UUID] = set()
@@ -459,7 +498,20 @@ class TenantConnectionManager:
     def get_session(self, company_id: uuid.UUID | None = None, db: Session | None = None) -> Session:
         """Creates and returns a new SQLAlchemy Session connected to the tenant's physical database."""
         sm = self.get_sessionmaker(company_id, db=db)
-        return sm()
+        session = sm()
+        if company_id is not None:
+            session.info["tenant_id"] = str(company_id)
+            try:
+                session.execute(
+                    text(
+                        "SELECT set_config('app.current_tenant_id', :tid, true), "
+                        "set_config('app.current_company_id', :tid, true)"
+                    ),
+                    {"tid": str(company_id)},
+                )
+            except Exception:
+                pass
+        return session
 
     @contextmanager
     def session_scope(self, company_id: uuid.UUID | None = None, db: Session | None = None) -> Generator[Session, None, None]:
@@ -472,6 +524,11 @@ class TenantConnectionManager:
             session.rollback()
             raise
         finally:
+            if company_id is not None:
+                try:
+                    session.execute(text("RESET app.current_tenant_id; RESET app.current_company_id;"))
+                except Exception:
+                    pass
             session.close()
 
     def _resolve_dedicated_url(self, company_id: uuid.UUID, db: Session | None = None) -> str | None:
@@ -480,6 +537,16 @@ class TenantConnectionManager:
         from backend import models
 
         def _lookup(sess: Session) -> str | None:
+            try:
+                sess.execute(
+                    text(
+                        "SELECT set_config('app.current_tenant_id', :tid, true), "
+                        "set_config('app.current_company_id', :tid, true)"
+                    ),
+                    {"tid": str(company_id)},
+                )
+            except Exception:
+                pass
             config = sess.scalar(
                 select(models.TenantDatabaseConfig).where(
                     models.TenantDatabaseConfig.company_id == company_id,
@@ -499,6 +566,9 @@ class TenantConnectionManager:
 
         if db is not None:
             return _lookup(db)
+        elif PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as lookup_sess:
+                return _lookup(lookup_sess)
         else:
             with self._default_sessionmaker() as lookup_sess:
                 return _lookup(lookup_sess)

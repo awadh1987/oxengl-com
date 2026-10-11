@@ -60,6 +60,7 @@ class ForgotPasswordRequest(BaseModel):
     channel: Optional[Literal["auto", "email", "sms"]] = Field(
         "auto", description="OTP delivery channel; sms falls back to email when no phone is on file"
     )
+    otp_only: bool = Field(False, description="Whether to only dispatch OTP notification and skip redundant link email")
 
     @property
     def resolved_identifier(self) -> str:
@@ -464,16 +465,17 @@ async def request_password_reset(
     client_ip = request.client.host if (request and request.client) else "Undisclosed"
     custom_smtp = getattr(tenant_obj, "custom_smtp_settings", None) if tenant_obj else None
 
-    background_tasks.add_task(
-        dispatch_password_reset,
-        recipient_email=norm_email,
-        first_name=first_name,
-        reset_url=recovery_link,
-        request_ip=client_ip,
-        tenant=tenant_brand,
-        expiry_minutes=30,
-        custom_smtp=custom_smtp,
-    )
+    if not getattr(payload, "otp_only", False):
+        background_tasks.add_task(
+            dispatch_password_reset,
+            recipient_email=norm_email,
+            first_name=first_name,
+            reset_url=recovery_link,
+            request_ip=client_ip,
+            tenant=tenant_brand,
+            expiry_minutes=30,
+            custom_smtp=custom_smtp,
+        )
 
     # Compile HTML recovery email template via Jinja2 (legacy fallback)
     try:

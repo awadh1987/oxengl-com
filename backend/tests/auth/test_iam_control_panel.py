@@ -43,7 +43,7 @@ def _jsonb_sqlite(type_, compiler, **kw):  # test-only DDL shim
     return "JSON"
 
 
-RES_COMPANY_STUB_COLUMNS = ['parent_id', 'name', 'slug', 'domain_slug', 'custom_domain', 'tax_id', 'commercial_registration', 'currency', 'fiscal_calendar', 'fiscal_year_start_month', 'tax_regime', 'subscription_tier', 'license_key', 'license_expires_at', 'max_cost_centers', 'theme_mode', 'ui_primary_color', 'ui_logo_url', 'features_override', 'logo_url', 'is_active', 'status', 'primary_color', 'secondary_color', 'wallpaper_url', 'background_url', 'created_at', 'updated_at']
+RES_COMPANY_STUB_COLUMNS = [c.name for c in models.ResCompany.__table__.columns if c.name != "id"]
 
 
 @pytest.fixture()

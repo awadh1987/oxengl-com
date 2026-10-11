@@ -40,7 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from backend.database import get_db
+from backend.database import PlatformSessionLocal, get_db
 from backend.models import ResCompany, ResUser, TenantUser, User
 from backend.api.dependencies import (
     TenantContext,
@@ -415,6 +415,15 @@ def _load_target(
 
     target = db.query(ResUser).filter(ResUser.id == target_uuid).first()
     if not target:
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as p_db:
+                unscoped = p_db.query(ResUser).filter(ResUser.id == target_uuid).first()
+                if unscoped is not None:
+                    _commit_audit(db, actor.audit, f"IAM_TENANT_ACCESS_DENIED:{action}", "DENIED", actor.company_id, target_uuid)
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Cross-tenant violation: You do not have permission to modify users from another tenant.",
+                    )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
 
     scope = _tenant_scope(db, actor)
@@ -481,7 +490,7 @@ async def _dispatch_existing_reset_flow(
         company = db.get(ResCompany, company_id) if company_id else None
         slug = (company.domain_slug or company.slug) if company else "master"
         await request_password_reset(
-            ForgotPasswordRequest(email=email, workspace_slug=slug, tenant_id=company_id),
+            ForgotPasswordRequest(email=email, workspace_slug=slug, tenant_id=company_id, otp_only=True),
             background_tasks,
             db,
         )

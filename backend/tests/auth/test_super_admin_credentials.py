@@ -4,7 +4,7 @@ Test suite validating authentication and credential verification for platform su
 import pytest
 from fastapi import status
 from sqlalchemy import text
-from backend.database import engine
+from backend.database import engine, platform_engine
 from backend.two_tier_auth import verify_password, hash_password, verify_two_tier_jwt
 
 
@@ -54,15 +54,17 @@ async def test_superadmin_oxengl_me_invalid_password_rejected(async_client):
     assert "Invalid credentials" in response.json().get("detail", "")
 
     # Reset failed attempts after test so DB state remains pristine
-    with engine.begin() as conn:
+    inspect_engine = platform_engine if platform_engine is not None else engine
+    with inspect_engine.begin() as conn:
         conn.execute(
-            text("UPDATE master_users SET failed_login_attempts = 0, locked_until = NULL WHERE email = 'superadmin@oxengl.com'")
+            text("UPDATE master_users SET failed_login_attempts = 0, locked_until = NULL WHERE LOWER(email) = 'superadmin@oxengl.com'")
         )
 
 
 def test_superadmin_db_state_and_flags():
     """Directly inspects the database to ensure active, superuser flags and cleared locks."""
-    with engine.connect() as conn:
+    inspect_engine = platform_engine if platform_engine is not None else engine
+    with inspect_engine.connect() as conn:
         master_row = conn.execute(
             text("""
                 SELECT email, role, is_active, is_superuser, failed_login_attempts, locked_until, password_hash

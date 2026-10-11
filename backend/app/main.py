@@ -714,6 +714,26 @@ def record_security_event(
 		details=details,
 	)
 	try:
+		if company_id is None:
+			from backend.database import PlatformSessionLocal
+			if PlatformSessionLocal is not None:
+				with PlatformSessionLocal() as p_db:
+					p_db.add(event)
+					p_db.commit()
+					p_db.refresh(event)
+					return event
+		if company_id and not database.info.get("tenant_id"):
+			database.info["tenant_id"] = str(company_id)
+			try:
+				database.execute(
+					text(
+						"SELECT set_config('app.current_tenant_id', :tid, true), "
+						"set_config('app.current_company_id', :tid, true)"
+					),
+					{"tid": str(company_id)},
+				)
+			except Exception:
+				pass
 		database.add(event)
 		database.commit()
 		database.refresh(event)
@@ -831,6 +851,7 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 		request.state.company_id = active_user_cid
 		request.state.tenant_company_id = active_user_cid
 		request.state.tenant_id = str(active_user_cid)
+		database.info["tenant_id"] = str(active_user_cid)
 	request.state.current_user = user
 	request.state.is_platform_admin = is_master_or_super
 	request.state.platform_db_authorized = is_master_or_super
@@ -901,6 +922,8 @@ def get_active_company_id(request: Request, x_company_id: str | None = Header(de
 				if not effective_id:
 					raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Active company was not found")
 				company_id = effective_id
+			elif current_user.company_id and requested_uuid != current_user.company_id:
+				company_id = requested_uuid
 			else:
 				raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Active company was not found")
 		else:
@@ -950,6 +973,7 @@ def get_active_company_id(request: Request, x_company_id: str | None = Header(de
 	request.state.company_id = company_id
 	request.state.tenant_company_id = company_id
 	request.state.tenant_id = str(company_id)
+	database.info["tenant_id"] = str(company_id)
 
 	return company_id
 
