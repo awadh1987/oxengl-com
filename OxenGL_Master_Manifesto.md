@@ -65,7 +65,7 @@ flowchart TB
 OxenGL is engineered as a lean, containerized micro-service stack designed to deliver sub-second response times and continuous operational availability on commodity VPS infrastructure (e.g., 2GB RAM Vultr, Hostinger, or AWS EC2 instances).
 
 | Component | Technology | Implementation Detail | Repository Evidence |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **Frontend SPA** | React 19, TypeScript 5.8, Vite 6 | Lucide icons, TailwindCSS, Recharts, i18next bilingual (Arabic RTL / English LTR) | `frontend/package.json`, `frontend/src/` |
 | **API Application Server** | FastAPI, Uvicorn ASGI | Multi-worker concurrency (`--workers 3`), Starlette middleware pipeline | `docker-compose.yml`, `backend/Dockerfile` |
 | **Persistence Layer** | SQLAlchemy 2.0 (psycopg2) | Synchronous transactional connection pools, dynamic GUC context injection | `backend/database.py`, `backend/models.py` |
@@ -88,10 +88,12 @@ Every transaction inside OxenGL traverses a strictly guarded 5-stage pipeline:
 3. **Cryptographic Identity Validation:** The request passes through the `two_tier_auth` guard. Authorization headers and session cookies are decrypted. Inbound JWTs are strictly validated against their target tier secret (`JWT_SECRET_MASTER` vs `JWT_SECRET_TENANT`) and audience claim (`oxengl-master-portal` vs `oxengl-erp-app`). Callers attempting to spoof tenant IDs via HTTP headers (`X-Tenant-ID`, `X-Company-ID`) are stripped and overridden by the verified token claims.
 4. **Cache-Aside & Concurrency Serialization:** Before executing expensive queries, the application queries Redis using namespaced keys (`oxengl:{env}:{tenant_id}:{domain}:{resource}:{identifier}:{version}`). Cache TTLs are jittered by ±10–20% to prevent cache stampedes. State-mutating operations acquire a 30-second in-flight distributed lock with a 24-hour idempotency key, preventing duplicate invoice postings or double-spend journal entries.
 5. **Database Context Injection & RLS Filtering:** The database session generator (`backend/database.py:get_db`) initializes the connection. It executes:
+
    ```sql
    SELECT set_config('app.current_tenant_id', :tenant_id, true),
           set_config('app.current_company_id', :company_id, true);
    ```
+
    The third parameter (`is_local = true`) scopes the Grand Unified Configuration (GUC) parameter strictly to the active transaction. When the connection returns to the connection pool, the context is automatically dropped. PostgreSQL's RLS engine uses this setting to filter all read, insert, update, and delete queries.
 
 ### 1.3 Containerized Concurrency & Zero-Downtime Staged Reloads
@@ -100,6 +102,7 @@ OxenGL resolves the traditional 502 Bad Gateway deployment bottleneck through a 
 
 - **Uvicorn Concurrency Scaling:** Rather than running as a single-threaded process, the backend container boots with `--workers 3` and `--limit-concurrency 100` (`docker-compose.yml:89`). This worker pool provides optimal parallel request handling for multi-core VPS deployments while staying strictly within a 512MB memory boundary.
 - **Python Built-in Health Checks:** Containers do not depend on external utilities like `curl` that may be stripped from hardened minimal Alpine/Debian base images. The backend defines an in-process health probe:
+
   ```yaml
   healthcheck:
     test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
@@ -107,8 +110,10 @@ OxenGL resolves the traditional 502 Bad Gateway deployment bottleneck through a 
     timeout: 10s
     retries: 3
   ```
+
 - **Staged Zero-Downtime Reload Execution (`deploy.sh`):**
   Redeployments do not take down the entire network stack simultaneously. Instead, the deployment script executes a phased handoff:
+
   ```bash
   # 1. Rebuild new images in the background
   docker-compose build backend frontend
@@ -119,6 +124,7 @@ OxenGL resolves the traditional 502 Bad Gateway deployment bottleneck through a 
   # 4. Gracefully reload Nginx configuration to flush upstream socket caches
   docker exec oxengl_nginx_container nginx -s reload
   ```
+
   Coupled with Nginx's internal dynamic resolver (`valid=10s`), existing client TCP connections remain uninterrupted, and new requests are seamlessly routed to the freshly initialized backend workers.
 
 ---
@@ -128,50 +134,80 @@ OxenGL resolves the traditional 502 Bad Gateway deployment bottleneck through a 
 Every module documented below is extracted directly from the verified SQLAlchemy data models (`backend/models.py`, `backend/app/domains/*`) and FastAPI API routers (`backend/app/api/v1/*`):
 
 #### 1. Procurement & Competitive E-Tendering (`domains/procurement`)
+
 - **End-to-End Purchase-to-Pay:** Covers Purchase Requisitions (`purchase_requisitions`, `purchase_requisition_lines`), Request for Quotations (RFQs), Purchase Orders (`purchase_orders`, `purchase_order_lines`), Goods Receipts with batch inspection logs (`goods_receipts`, `goods_receipt_batch_logs`), and 3-Way Match Vendor Invoices (`vendor_bills`).
 - **Configurable Multi-Tier Approval Matrix:** Workflows are orchestrated via `approval_rules`, `workflow_instances`, and `workflow_steps`. Requisitions route through sequential approval hierarchies based on total value, departmental budgets, and user authority levels.
 - **Cryptographic Sealed-Bid E-Tendering:** The tendering engine (`procurement_tenders`, `tender_rfq_lines`, `procurement_bids`, `procurement_bid_lines`) allows enterprises to publish public or private tenders. Bids submitted by vendors remain cryptographically locked and sealed until the official closing date. The system provides an automated unsealing ceremony endpoint (`/approvals/tenders/{id}/unseal`) that unlocks bid prices simultaneously, preventing insider price leaking.
 - **Dedicated Supplier Vendor Portal:** External suppliers access a quarantined vendor workspace (`vendor_portal_users`) allowing them to register, review active RFQs, submit sealed bids, upload compliance documentation, and track payment disbursements without accessing internal ERP records.
-- **Weighbridge & Bulk Ingestion Ticketing:** Dedicated support for bulk agricultural and raw materials logistics via `weighbridge_tickets`. Captures gross vehicle weight, tare weight, net material weight, and automatically calculates quality deductions (moisture %, impurities %, foreign matter) before generating inventory goods receipts.
+- **Weighbridge & Industrial Bulk Ticketing (`weighbridge_tickets`):** Industrial-grade bulk haulage and scale ticketing integrated natively with double-entry stock operations (`POST /api/operations/weighbridge` and `/api/v1/operations/weighbridge`).
+  - **Relational Integrity & Check Constraints:** Enforces kernel-level database constraints `gross_weight >= tare_weight` (`ck_ticket_gross_weight`) and `net_weight = gross_weight - tare_weight` (`ck_ticket_net_weight`) with high-precision Decimal(18, 4) arithmetic. Supports dynamic units of measure (defaulting to `"MT"` / `"MT طن"`, with dynamic runtime support for `kg`, `truck`, and `CBM`).
+  - **Synchronous Stock Picking & Inventory Movement:** Scale ticket creation atomically initializes and completes an associated `StockPicking` (`picking_type="outgoing"` or incoming, `state="done"`) and `StockMove` (`quantity_planned = net_weight`, `quantity_done = net_weight`), directly updating source and destination `StockQuant` balances with pessimistic row locking (`SELECT ... FOR UPDATE`).
+  - **Quarry & Comprehensive Ledger Superset Fields (REM-P7):** Natively accommodates legacy industrial operations and crusher registers ("قاعدة البيانات الشاملة") by tracking `crusher_payment`, `sales_amount`, `purchases_cost`, `total_sales`, `vat_amount`, `net_profit`, `qty_loaded`, `qty_delivered`, `qty_wastage`, `wastage_percentage`, `operation_month`, `operation_year`, `loading_invoice_no`, `receipt_invoice_no`, `material_supplier_name`, `service_supplier_name`, `destination_customer_name`, `scale_ticket_attachment`, and JSONB `attachments`.
 
 #### 2. Global Inventory, Landed Cost & Valuation (`domains/inventory`)
+
 - **Multi-Warehouse & Stock Movements:** Multi-facility tracking across central warehouses, transit hubs, and retail outlets (`materials`, `warehouses`, `stock_moves`, `stock_balances`).
 - **Automated Landed Cost Allocation Engine:** Solves the primary accounting challenge of global supply chains via `landed_cost_allocations` and `landed_cost_items`, processed by a background worker (`services/landed_cost_worker.py`). Customs duties, international ocean freight, port handling charges, and transit insurance are amortized and capitalized directly into inventory unit costs using FIFO or weighted apportionment.
 - **Real-Time Valuation Engine:** `services/valuation_agent.py` provides automated inventory valuation recalculations supporting FIFO, Moving Average, and Standard Costing conventions.
 - **Multi-Currency Engine:** Handles international procurement with base currency conversion (USD, SAR, YER), dynamic exchange rate synchronization (`oxengl_exchange_rates`), and transactional realized/unrealized FX gain and loss calculations.
 
 #### 3. Logistics, Fleet Telematics & Customs Compliance (`domains/logistics`)
+
 - **Fleet Asset Tracking & Telematics:** Comprehensive driver management (`drivers`), vehicle tracking (`vehicles`), scheduled preventative maintenance, fuel consumption logs, and digital waybills (`waybills`).
 - **Multi-Drop Delivery Manifests:** Supports complex multi-stop distribution logistics via `delivery_manifests` and ordered `manifest_stops`, tracking delivery sequences, recipient signatures, and delivery status timestamps.
-- **IoT Sensor Telematics & Live WebSockets:** Integrates hardware GPS telematics via Teltonika device listeners. Ingests real-time IoT telemetry events (refrigerated cold-chain cargo temperatures, shock sensors, door-open alerts, route deviations) and broadcasts live vehicle positions via WebSockets (`/api/v1/logistics/ws` and `/ws/fleet-stream`).
-- **Saudi TGA WASL API Compliance:** Native client and queue worker integrated with the Saudi Transport General Authority (WASL platform). Automatically validates driver identity, vehicle registration, and pushes mandatory trip tracking events to national transport databases.
+- **Teltonika Binary Telematics Streamer (`backend/services/teltonikaListener.js`):** High-throughput TCP daemon listening on port 13000 (exposed via edge stream port 15000):
+  - **Strict Handshake & IMEI Authorization:** Inspects the initial 15-digit ASCII IMEI packet against active records in `vehicles` (`is_active = true` matched against VIN chassis, license plate, or traffic sequence numbers). Devices with unrecognized IMEIs are immediately rejected with byte `0x00` and socket teardown, preventing untrusted IoT injection. Verified devices receive acknowledgment byte `0x01`.
+  - **Codec 8 & Codec 8 Extended AVL Decoding:** Decodes binary AVL packets across both standard Codec 8 (`0x08`) and Extended Codec 8 (`0x8E`), extracting epoch timestamps, priority, GPS coordinates (latitude, longitude with 7 decimal precision, altitude, angle/heading, satellite count, speed), and multi-byte I/O element telemetry (temperature sensors, door triggers, battery levels).
+  - **Database Persistence & Acknowledgment:** Confirms ingested AVL records via 4-byte big-endian response packets (`recordsCount`), inserting telemetry points directly into `gps_events` bound to the vehicle's company context.
+  - **Real-Time Dispatch Broadcasting:** Dispatches live coordinates over WebSockets (`/api/v1/logistics/ws` and `/ws/fleet-stream`) to dispatch dashboards with zero buffering.
+- **Saudi TGA WASL Integration (`services/waslClient.js`, `workers/waslQueueWorker.js`):** Production-grade integration with the Saudi Transport General Authority (WASL platform) via Elm:
+  - **Enterprise Client Configuration:** Authenticates via `client-id`, `app-id`, and `app-key` headers against `https://wasl.elm.sa/api`, with automated mock mode fallback for local sandbox testing.
+  - **Core Compliance Operations:** Implements vehicle registration (`POST /vehicles` with sequence number and Arabic plate letters/digits), driver legal eligibility verification (`POST /drivers/validate` against Iqama or National ID), and real-time transit telemetry pings (`POST /tracking`).
+  - **Resilient BullMQ Redis Queue & Dead-Letter Isolation:** Asynchronous queue processing via BullMQ on `wasl-compliance-queue` with 5 concurrent workers, 3 automatic retry attempts with exponential backoff (2,000ms delay), and automatic failover routing to `wasl-compliance-dlq` (`dead-letter-telemetry`) for terminal audit preservation.
 - **Customs Manifest Workflow:** Customs clearance tracking (`customs_manifests`, `customs_declarations`), HS code categorization, tariff calculations, and port authority clearance stage verification.
 
 #### 4. Finance, Double-Entry General Ledger & ZATCA Phase 2 (`domains/finance`)
+
 - **Immutable Double-Entry Bookkeeping:** Chart of Accounts (`accounts`), Journal Vouchers (`journal_entries`), and debit/credit ledger lines (`journal_lines`). System-level database triggers and API constraints strictly enforce the accounting invariant: $\sum \text{Debits} = \sum \text{Credits}$ before posting.
-- **ZATCA Phase 2 E-Invoicing Engine:** Complete native Saudi tax authority compliance via `zatca_adapter.py`:
-  - Generates Universal Business Language (UBL 2.1) compliant XML invoices.
-  - Generates cryptographic ECDSA signatures using the `secp256k1` curve.
-  - Implements SHA-256 invoice hashing and invoice counter value chaining.
-  - Encodes mandatory Tag-Length-Value (TLV) base64 QR codes containing seller name, VAT registration number, invoice timestamp, total amount, and VAT tax sum.
+- **Native ZATCA Phase 2 E-Invoicing Engine (`backend/zatca_adapter.py`):** Enterprise-grade e-invoicing complying with the Kingdom of Saudi Arabia ZATCA (Zakat, Tax and Customs Authority) Phase 2 specifications:
+  - **Canonical UBL 2.1 XML Architecture:** Generates schema-compliant Universal Business Language (UBL 2.1) XML documents (`urn:oasis:names:specification:ubl:schema:xsd:Invoice-2`) for both Standard B2B Tax Invoices (`InvoiceTypeCode name="0100000"`) and Simplified B2C Tax Invoices (`InvoiceTypeCode name="0200000"`). Embeds `UBLExtensions` with XAdES enveloped signatures (`urn:oasis:names:specification:ubl:dsig:enveloped:xades`) and base64-encoded X.509 Cryptographic Stamp Identifiers (CSID).
+  - **Authentic ECDSA secp256k1 Digital Signatures:** Implements authentic Elliptic Curve cryptography (`cryptography.hazmat.primitives.asymmetric.ec.SECP256K1`). Inbound canonical bodies are digested via SHA-256 (persisted as 64-character hex in `ZATCALog.invoice_hash`). The prehashed digest is signed via ECDSA, and the resulting DER signature is decoded and converted to IEEE P1363 raw 64-byte binary format (`r || s`, 32 bytes big-endian each) for official ZATCA validation.
+  - **Cryptographic Hash Chaining & Sequential Invariant:**
+    - **Previous Invoice Hash (PIH):** Enforces an unbroken cryptographic blockchain per company. Each invoice embeds the SHA-256 hash of its predecessor, initialized with the ZATCA standard Genesis Hash (`NWZlMWMwMmRhMjA3ZjBhMmQ1MTUzYTM4MGQ2NTY1M2MwODFjMzg4OTdhNzg2N2VlYzA4OWI5Mjc4NjVkZDJjNA==`).
+    - **Invoice Counter Value (ICV):** Monotonically increasing sequential integer counter computed per company across all historical `ZATCALog` records.
+  - **Comprehensive 9-Tag TLV Base64 QR Code Engine:** Generates compliant Tag-Length-Value QR representations supporting ASN.1 multi-byte length boundaries:
+    - **Tag 1:** Seller Legal Business Name (UTF-8).
+    - **Tag 2:** Seller 15-digit VAT Registration Number.
+    - **Tag 3:** Invoice Timestamp in UTC ISO 8601 (`YYYY-MM-DDTHH:MM:SSZ`).
+    - **Tag 4:** Grand Total (tax-inclusive) quantized to 2 decimal places (`ROUND_HALF_UP`).
+    - **Tag 5:** Total VAT Amount quantized to 2 decimal places.
+    - **Tag 6:** Raw 32-byte SHA-256 Invoice Digest.
+    - **Tag 7:** Raw 64-byte ECDSA Digital Signature (`r || s` binary bytes).
+    - **Tag 8:** Uncompressed SEC1 65-byte ECDSA Public Key (`0x04 || X || Y`).
+    - **Tag 9:** Authentic X.509 Certificate DER Signature bytes (`cert.signature`).
+  - **B2B Clearance vs. B2C Reporting Lifecycles:** Distinct execution paths for Standard Tax Invoices (real-time ZATCA Clearance API with immediate `CLEARED` status) versus Simplified Tax Invoices (asynchronous 24-hour ZATCA Reporting API with `REPORTED` status), backed by comprehensive transmission logging, simulation toggles, and idempotency-safe retries (`ZATCAAdapter.retry_submission`).
 - **Customer Billing & Payment Orchestration:** Invoicing, credit memos, shared public invoice verification links (`/shared/invoice/:token`), and integration with regional and international payment gateways (Moyasar for Mada/Visa/Mastercard, Stripe, and Paddle webhooks).
 
 #### 5. Planning Department & Cryptographic Ledger (`domains/planning`)
+
 - **Project Charters & Work Breakdown Structure (WBS):** Formal governance framework managing enterprise programs via `project_charters`.
 - **Execution Matrix Table:** Granular task decomposition (`execution_tasks`) with dependency tracking, milestone deadlines, batch task generation, and completion velocity metrics.
 - **Strategic Hazard & Risk Tracker:** Integrated operational risk management via `strategic_hazards`. Hazards attach directly to execution tasks, scoring probability and business impact, and providing formal mitigation sign-off workflows (`/hazards/{id}/mitigate`). Charters dynamically calculate and report `active_hazards_count` to prevent project closeout while critical risks remain unmitigated.
 - **Cryptographic Electronic Ledger Blocks:** Tamper-evident tracking for mission-critical supply-chain milestones via `electronic_ledger_blocks`. Blocks are sequentially linked using SHA-256 cryptographic hashes, guaranteeing an immutable audit trail of major project state changes.
 
 #### 6. Human Resources & Automated IAM Provisioning (`domains/hr`)
+
 - **Comprehensive HRMS Core:** Employee lifecycle management (`employees`), document storage with automated expiry notifications (Iqamas, passports, commercial registrations), biometric attendance logs, leave management, and payroll processing runs.
 - **HR-to-IAM Automated Provisioning:** `iam/provisioning.py` bridges human resources with identity access management. Creating or updating an employee record automatically provisions or modifies their system user account (`res_users`), binding them to predefined role templates (`role_catalog.py`).
 - **Append-Only Audit Trail:** Dedicated immutable logging (`hr/audit.py`) tracking all salary revisions, contract modifications, and disciplinary actions.
 
 #### 7. AI Knowledge Retrieval & Predictive Analytics (`domains/ai`, `app/agent`)
+
 - **Tenant-Isolated Vector RAG:** Leverages PostgreSQL's `pgvector` extension to store and search document chunks and enterprise knowledge bases (`knowledge_documents`, `knowledge_chunks`). Every vector similarity search query enforces tenant boundaries, preventing proprietary corporate knowledge from leaking across tenants.
 - **Predictive Analytics:** Forecasting services calculate inventory stockout probabilities, demand spikes, and logistics transit delays based on historical operational time-series data.
 
 #### 8. Dynamic Metadata-Driven Forms & UI Engine
+
 - **Zero-Migration Field Customization:** Tenant administrators configure custom business fields via `/api/v1/tenant/form-schemas` across 11 core entity types (text, numbers, dates, booleans, and dropdown options).
 - **Storage in JSONB:** Custom attributes are persisted in a native PostgreSQL JSONB column (`custom_attributes`), eliminating the need for dynamic schema migrations (`ALTER TABLE`) that cause database locks.
 - **Dynamic Frontend Rendering:** The frontend component `DynamicFieldRenderer.tsx` dynamically consumes the tenant's schema and renders localized, validated form controls inside shared CRUD modals (`EntityCRUDModal.tsx`, `DailyOperationsModal.tsx`).
@@ -184,6 +220,7 @@ Every module documented below is extracted directly from the verified SQLAlchemy
 ### 2.1 The Architectural Isolation Imperative
 
 Multi-tenant enterprise SaaS applications historically adopt one of three isolation models:
+
 1. **Database-per-Tenant:** Maximum physical isolation, but suffers from unsustainable operational overhead, connection pool exhaustion, and complex schema migration sprawl when scaling past hundreds of tenants.
 2. **Application-Layer Filtering (The Standard Approach):** Tenants share a database and schema. Every developer query must manually append `WHERE tenant_id = current_tenant`. This model is notoriously fragile. A single junior developer writing a raw SQL query, an unvetted ORM relationship join, or an unauthenticated report endpoint exposes all enterprise tenants to catastrophic cross-tenant data leaks (OWASP Top 10 A01: Broken Access Control).
 3. **OxenGL's Kernel-Level Enforcement (PostgreSQL RLS):** Tenants share a high-performance database and schema, but data isolation is enforced **inside the database engine itself** using PostgreSQL Row-Level Security.
@@ -218,7 +255,9 @@ flowchart TD
 Database security in OxenGL is governed by `backend/enforce_erp_db_rls.sql`, an industrial-grade PL/pgSQL orchestration script executed during database provisioning and post-migration hardening:
 
 #### 1. Dynamic Table Discovery and 100% Coverage
+
 The script iterates across all user tables and partitioned tables in the `public` schema:
+
 ```sql
 FOR table_row IN
     SELECT c.oid, c.relname,
@@ -236,11 +275,14 @@ LOOP
 ```
 
 #### 2. Automatic Predicate Generation
+
 - **Dual-Scoped Tables:** Tables carrying both `tenant_id` and `company_id` enforce:
+
   ```sql
   tenant_id::text = NULLIF(current_setting('app.current_tenant_id', true), '') 
   AND (company_id IS NULL OR company_id::text = NULLIF(current_setting('app.current_tenant_id', true), ''))
   ```
+
 - **Single-Scoped Tables:** Tables carrying either `tenant_id` or `company_id` match directly against the transaction GUC.
 - **Relational Child Tables:** Tables lacking direct scoping columns enforce isolation through parent table `EXISTS` subqueries:
   - `journal_lines`: Validates parent `journal_entries` **and** linked `accounts`.
@@ -254,29 +296,38 @@ LOOP
   - `refresh_tokens`, `security_tokens`: Validate parent user sessions and users.
 - **Shared Reference Tables:** Tables such as `subscription_plans`, `oxengl_currencies`, `oxengl_exchange_rates`, and `sso_providers` grant read access to active rows (`is_active IS TRUE`), while restricting write operations (`INSERT`, `UPDATE`, `DELETE`) exclusively to the platform control plane.
 - **Platform Control Plane Tables:** Control-plane entities (`master_users`, `master_tenants`, `master_audit_logs`, `platform_settings`, `site_settings`, `alembic_version`) enforce:
+
   ```sql
   current_user = 'oxengl_platform'
   ```
 
 #### 3. Fail-Closed Safety Valve
+
 If a migration creates a new table that lacks `tenant_id` or `company_id` and has not been explicitly mapped in the `CASE` statement, the script terminates immediately:
+
 ```sql
 ELSE
     RAISE EXCEPTION 'No tenant or control-plane policy mapping for public.%', table_row.relname;
 END CASE;
 ```
+
 It is impossible to deploy a database change that accidentally exposes unscoped data.
 
 #### 4. Mandatory Table-Level Enforcement
+
 For every single table, the script executes:
+
 ```sql
 EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', table_row.relname);
 EXECUTE format('ALTER TABLE public.%I FORCE ROW LEVEL SECURITY', table_row.relname);
 ```
+
 `FORCE ROW LEVEL SECURITY` is critical: in standard PostgreSQL, table owners bypass RLS policies by default. `FORCE` strips this exemption, ensuring that even backend background jobs or migrations executing as table owners are strictly contained within tenant boundaries.
 
 #### 5. Verification Assertion
+
 At completion, the script counts all enabled, forced, and policied tables against total public tables:
+
 ```sql
 SELECT count(DISTINCT c.oid) INTO covered_count
 FROM pg_class c
@@ -335,12 +386,14 @@ For regulated enterprise customers (government logistics, pharmaceutical supply 
 - **Dynamic Connection Router (`TenantConnectionManager`):** Located in `backend/database.py:387`. When an incoming request resolves an enterprise tenant, the connection manager checks its internal engine cache.
 - **Dedicated Physical Instances:** If a dedicated database is configured for that `company_id`, `TenantConnectionManager` dynamically provisions a dedicated SQLAlchemy engine and session pool routed to an isolated physical database server.
 - **At-Rest Connection String Encryption:** Dedicated database URLs are never stored in plaintext. They are encrypted using Fernet AES-256 symmetric encryption, derived from a mandatory environment secret (`DATA_RESIDENCY_KEY`):
+
   ```python
   def _get_encryption_fernet(secret_key: str | None = None) -> Fernet:
       raw_key = secret_key or DATA_RESIDENCY_KEY
       derived_32 = hashlib.sha256(raw_key.encode("utf-8")).digest()
       return Fernet(base64.urlsafe_b64encode(derived_32))
   ```
+
   The system refuses to boot if `DATA_RESIDENCY_KEY` is missing or insecure.
 
 ### 2.5 Two-Tier Cryptographic Identity Separation
@@ -376,8 +429,8 @@ Enterprise buyers evaluating ERP replacements in 2026 must weigh architectural a
 | **Year 1 Implementation Cost** | **$0 Vendor License** (Self-hosted or managed container fee) | $45,000 – $200,000+ (Licensing + Mandatory Implementation) | $250,000 – $1,500,000+ (Elite Systems Integrators) | $25,000 – $100,000+ (App bundles + Implementation) |
 | **Per-User Licensing Tax** | **$0 / Unlimited Users** | $99 – $250 / user / month + base module fees | $150 – $400+ / user / month + FUE licensing | $9 – $24 / user / month (Scales aggressively with apps) |
 | **Infrastructure Envelope** | **Runs in 2GB RAM** (5 lightweight containers) | Multi-tenant SaaS only (Hosted exclusively by Oracle) | Enterprise servers (128GB+ RAM, HANA certified VMs) | 4GB – 16GB+ RAM (Postgres + Python multi-workers) |
-| **Logistics & Supply Chain Depth** | **Built-in:** GPS/IoT Telematics, Waybills, Manifests, Sealed Tendering, Landed Cost | Requires 3rd-party SuiteApps (RF-SMART, ShipStation) | Deep, industry-grade (requires heavy modular configuration) | Modular apps (Inventory, Fleet, Purchase) with scale ceilings |
-| **GCC / Saudi Localization** | **Native Built-in:** ZATCA Phase 2 (UBL 2.1, ECDSA), TGA WASL API, Arabic RTL | Partner localization bundles ($15,000 – $40,000 add-on) | Localization add-ons requiring extensive consulting | Community / Enterprise localization modules |
+| **Logistics & Supply Chain Depth** | **Built-in:** Weighbridge Scale Ticketing, Codec 8 IoT Telematics, Waybills, Manifests, Sealed Tendering, Landed Cost | Requires 3rd-party SuiteApps (RF-SMART, ShipStation) | Deep, industry-grade (requires heavy modular configuration) | Modular apps (Inventory, Fleet, Purchase) with scale ceilings |
+| **GCC / Saudi Localization** | **Native Built-in:** ZATCA Phase 2 (UBL 2.1, ECDSA secp256k1, 9-Tag TLV), TGA WASL BullMQ, Arabic RTL | Partner localization bundles ($15,000 – $40,000 add-on) | Localization add-ons requiring extensive consulting | Community / Enterprise localization modules |
 | **Disaster Recovery & Portability** | **100% Docker/Podman Portable**, Encrypted `.enc.tar.gz` | Complete vendor lock-in (Data export via CSV / SuiteTalk) | Complex SAP landscape recovery / hyperscaler dependencies | Self-hosted or Odoo.sh portable |
 
 ---
@@ -413,7 +466,7 @@ graph LR
 
 - **The Implementation Chasm:** An SAP S/4HANA implementation is a multi-million-dollar corporate restructuring involving teams of external consultants (Big 4 / Global System Integrators) spanning 1 to 2 years. OxenGL is packaged as a lightweight, 5-container topology that can be deployed, configured, and operational within 1 to 3 weeks.
 - **Logistics-Native Focus:** S/4HANA covers everything from discrete chemical manufacturing to aerospace defense, requiring months of configuration just to execute basic transport workflows. OxenGL is purpose-built for supply chain execution: sealed-bid tendering, weighbridge ticketing, landed-cost allocation, and live IoT telematics are pre-wired out of the box.
-- **Regional Regulatory Agility:** Integrating SAP S/4HANA with local GCC mandates (Saudi ZATCA Phase 2 cryptographic e-invoicing and TGA WASL transport tracking) requires expensive custom SAP BTP integration middleware. OxenGL includes native ZATCA UBL 2.1 XML generation, `secp256k1` ECDSA cryptographic signing, and automated WASL dispatch queues directly in the core engine.
+- **Regional Regulatory Agility:** Integrating SAP S/4HANA with local GCC mandates (Saudi ZATCA Phase 2 cryptographic e-invoicing and TGA WASL transport tracking) requires expensive custom SAP BTP integration middleware. OxenGL includes native ZATCA UBL 2.1 XML generation, `secp256k1` ECDSA cryptographic signing (IEEE P1363 raw 64-byte `r||s`), 9-tag TLV QR encoding, and automated BullMQ WASL dispatch queues directly in the core engine.
 
 #### 3. OxenGL vs. Odoo Enterprise: Kernel Security vs. Modular Fragility
 
@@ -430,19 +483,25 @@ graph LR
 OxenGL is deployed using Podman or Docker Compose. The configuration enforces strict environment validation; containers will refuse to boot if required security secrets are missing.
 
 #### Step 1: Environment Provisioning
+
 Copy `.env.example` to `.env` and configure all required security variables:
+
 ```bash
 cp .env.example .env
 chmod 600 .env
 ```
+
 Ensure the following cryptographic and database variables are securely generated:
+
 - `DB_PASSWORD`, `APP_DB_PASSWORD`, `PLATFORM_DB_PASSWORD`
 - `JWT_SECRET_MASTER` (Minimum 64-char random hex string)
 - `JWT_SECRET_TENANT` (Minimum 64-char random hex string)
 - `DATA_RESIDENCY_KEY` (Required for ADR-005 encrypted dedicated database routing)
 
 #### Step 2: Ingress Network Setup
+
 Initialize the external bridge network matching the gateway in `nginx.conf`:
+
 ```bash
 podman network create oxengl_net
 # Verify network gateway IP (defaults to 10.89.0.1 on Podman)
@@ -450,7 +509,9 @@ podman network inspect oxengl_net --format '{{(index .Subnets 0).Gateway}}'
 ```
 
 #### Step 3: Zero-Downtime Staged Deployment Execution
+
 To update a production deployment without causing 502 Bad Gateway errors for active users, execute `deploy.sh`:
+
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
@@ -479,7 +540,9 @@ echo "Deployment successfully completed with zero downtime!"
 ```
 
 #### Step 4: Health Verification
+
 Verify service availability directly and through the reverse proxy:
+
 ```bash
 # Verify PostgreSQL connectivity
 podman exec oxengl_postgres_container pg_isready -U postgres -d erp_db
@@ -496,17 +559,21 @@ curl -fsS http://127.0.0.1:8080/api/v1/health
 ### 4.2 System Administration & User Management
 
 #### Platform Super-Admin Bootstrapping
+
 To bootstrap or recover the initial platform super-administrator, execute the seed utility inside the running backend container:
+
 ```bash
 podman exec -it oxengl_backend_container python backend/scripts/seed_super_admin.py
 ```
+
 This provisions the root operator in the `master_users` table with Argon2id password hashing and emits initial 2FA seed keys. Super-admins access the platform control plane at `/admin`.
 
 #### Tenant User Management
+
 Tenant administrators manage their workforce via `/api/v1/users` or the UI `UserLifecycleModal`:
 
 | Action | HTTP Method & Endpoint | Description |
-|---|---|---|
+| --- | --- | --- |
 | **List Users** | `GET /api/v1/users` | Lists all users strictly within the authenticated tenant |
 | **Fetch Role Catalog** | `GET /api/v1/users/roles` | Retrieves RBAC roles guarded by DB check constraint |
 | **Invite / Create User** | `POST /api/v1/users` | Provisions a new tenant user with temporary credentials |
@@ -520,17 +587,29 @@ Tenant administrators manage their workforce via `/api/v1/users` or the UI `User
 ### 4.3 Logistics, Telematics & Weighbridge Operational Workflows
 
 1. **Master Entity Ingestion:** Register warehouses (`POST /api/v1/inventory/warehouses`), materials, fleet vehicles, and drivers. Bulk data imports can be processed using `POST /api/v1/hr/employees/bulk-import` or the frontend `CsvImportModal`.
-2. **Weighbridge Ticket Processing:**
-   When bulk transport vehicles arrive at an intake facility:
-   - Log gross weight: `POST /api/v1/logistics/weighbridge/inbound` with vehicle plate, driver ID, and initial gross scale reading.
-   - Vehicle offloads bulk cargo.
-   - Log tare weight: `POST /api/v1/logistics/weighbridge/outbound` with empty vehicle scale reading, moisture deduction percentage, and impurity percentage.
-   - The system automatically calculates net weight, logs a `weighbridge_tickets` record, and generates a corresponding `goods_receipts` entry.
-3. **Multi-Drop Dispatch & Real-Time Tracking:**
-   - Create Delivery Manifest: `POST /api/v1/logistics/manifests` with assigned driver and vehicle ID.
-   - Attach Ordered Stops: Append delivery waybills to `manifest_stops` defining the delivery sequence.
-   - Telematics Streaming: Vehicles equipped with Teltonika hardware stream GPS packets to the ingestion listener. Real-time fleet coordinates broadcast to dispatchers over WebSocket `/api/v1/logistics/ws`.
-   - Dispatch logs are automatically pushed to the Saudi TGA WASL platform queue worker.
+2. **Weighbridge Ticket & Stock Operations Execution:**
+   When industrial bulk transport arrives at a weighing facility:
+   - Weighbridge operators post ticket payloads via `POST /api/operations/weighbridge` (or alias `POST /api/v1/operations/weighbridge`).
+   - The payload specifies `ticket_number`, `plate_number`, `driver_name`, `material_id`, `source_location_id`, `dest_location_id`, `gross_weight`, `tare_weight`, and `unit_of_measure` (defaults to `"MT"`, supporting dynamic units including `kg`, `truck`, and `CBM`), along with optional financial and operational fields (`crusher_payment`, `sales_amount`, `purchases_cost`, `total_sales`, `vat_amount`, `net_profit`, `qty_loaded`, `qty_delivered`, `qty_wastage`, `wastage_percentage`, and scale ticket attachments).
+   - Database check constraints strictly enforce physical reality: `ck_weighbridge_weights` (`gross_weight >= tare_weight`) and `ck_weighbridge_net_calc` (`net_weight = gross_weight - tare_weight`).
+   - In a single atomic database transaction:
+     - The `weighbridge_tickets` record is persisted with the verified `net_weight`.
+     - A `StockPicking` operation is generated in `'done'` state (default type `'incoming'` or `'internal'`).
+     - A linked `StockMove` is created with `quantity_done = net_weight`.
+     - Location balances in `StockQuant` are updated with pessimistic row-level locking (`with_for_update()`) to eliminate race conditions.
+   - Operations supervisors inspect active or historical operations via `GET /api/operations`, query specific ticket details via `GET /api/operations/{picking_id}`, or perform cancellations/reversals via `DELETE /api/operations/{picking_id}`.
+3. **Multi-Drop Dispatch, Teltonika Streaming & WASL Ingestion:**
+   - **Teltonika Telematics Listener (`backend/services/teltonikaListener.js`):**
+     - Ingestion server listens on TCP port 13000 (proxied via container port 15000).
+     - Devices initiate a connection with a 15-digit ASCII IMEI handshake header.
+     - The server validates the IMEI against active vehicles in PostgreSQL (`SELECT id FROM vehicles WHERE imei = $1 AND is_active = true`). Authorized devices receive acknowledgment byte `0x01`; unauthorized devices receive `0x00` and are immediately disconnected.
+     - Devices stream binary AVL packets formatted as Codec 8 (`0x08`) or Codec 8 Extended (`0x8E`). The listener parses GPS timestamps, coordinates (latitude/longitude), altitude, heading angle, satellite counts, speed, and I/O event descriptors.
+     - The listener acknowledges accepted packets with a 4-byte integer record count.
+     - Parsed telemetry points are bulk-inserted into the `gps_events` table and broadcast in real time to dispatch consoles via WebSockets (`/api/v1/logistics/ws` and `/ws/fleet-stream`).
+   - **Saudi TGA WASL Compliance Worker (`backend/workers/waslQueueWorker.js`):**
+     - Telematics records and dispatch events are pushed to the Redis-backed BullMQ `wasl-compliance-queue`.
+     - The BullMQ worker processes up to 5 concurrent jobs with 3 retry attempts and exponential backoff (initial delay 2000ms), posting telemetry to Elm WASL endpoints (`/vehicles`, `/drivers/validate`, `/tracking`) using authenticated headers (`X-WASL-API-KEY`, `X-WASL-CLIENT-ID`, `X-WASL-APP-ID`).
+     - Unrecoverable payloads are safely routed to the Dead Letter Queue (`wasl-compliance-dlq` / `dead-letter-telemetry`) for audit inspection without halting pipeline throughput.
 4. **Landed Cost Capitalization:**
    Upon completing international inbound shipments:
    - Post all customs duty, freight, and insurance invoices in Finance.
@@ -544,12 +623,15 @@ Tenant administrators manage their workforce via `/api/v1/users` or the UI `User
 To guarantee that 100% of database tables are strictly protected by Row-Level Security, system administrators must execute the forensic verification workflow:
 
 #### Step 1: Run RLS Hardening (Database Owner)
+
 ```bash
 podman exec -i oxengl_postgres_container psql -U postgres -d erp_db < backend/enforce_erp_db_rls.sql
 ```
 
 #### Step 2: Catalog Verification Query (Zero-Drift Check)
+
 Execute the following verification query. It must return **exactly zero rows**. If any row is returned, a table exists in the database without active, forced RLS policies:
+
 ```sql
 SELECT 
     c.relname AS unhardened_table,
@@ -569,18 +651,24 @@ ORDER BY c.relname;
 ```
 
 #### Step 3: Verify Role Least-Privilege Separation
+
 Execute the role privilege audit:
+
 ```sql
 SELECT rolname, rolsuper, rolbypassrls, rolinherit 
 FROM pg_roles 
 WHERE rolname IN ('oxengl_app', 'oxengl_platform');
 ```
+
 **Mandatory Expected Output:**
+
 - `oxengl_app`: `rolsuper = false`, `rolbypassrls = false` (Strictly enforced).
 - `oxengl_platform`: `rolsuper = false`, `rolbypassrls = true` (Controlled bypass).
 
 #### Step 4: Programmatic Breach Test (Verification of Isolation)
+
 To verify that the application role cannot read cross-tenant rows even when attempting manual SQL queries or spoofing legacy flags, execute this test inside the backend container:
+
 ```python
 from sqlalchemy import text
 from backend.database import SessionLocal
@@ -607,20 +695,26 @@ db.close()
 
 1. **Full Database Logical Backup:**
    Execute automated logical backups via `backend/scripts/backup_postgres.sh`:
+
    ```bash
    podman exec oxengl_postgres_container pg_dump -U postgres -Fc erp_db > /var/backups/oxengl/erp_db_$(date +%F_%H%M%S).dump
    ```
+
 2. **Per-Tenant Encrypted Archive Export:**
    Export an isolated, portable archive for a single tenant:
+
    ```bash
    python backend/scripts/backup_tenant.py --company-id <TENANT_UUID> --encrypt
    ```
+
    Generates a symmetric Fernet-encrypted `.enc.tar.gz` archive containing the tenant's relational SQL data, custom form schemas, uploaded documents, and avatars.
 3. **Tenant Restoration:**
    Restore a tenant into any existing or new OxenGL cluster:
+
    ```bash
    python backend/scripts/restore_tenant_backup.py --file /path/to/tenant_archive.enc.tar.gz --slug restored-company
    ```
+
 4. **Cryptographic Key Rotation:**
    Master keys and data residency keys can be rotated without service interruption using:
    - `backend/scripts/rotate_master_keys.py`
