@@ -344,11 +344,21 @@ def require_iam_admin(
     )
     company_id = row.company_id if row is not None else None
     if level == LEVEL_NONE:
-        _commit_audit(db, audit, "IAM_ACCESS_DENIED:insufficient_role", "DENIED", company_id)
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access forbidden: only workspace administrators may manage users.",
+        is_master = (
+            getattr(current_user, "_tier", None) == "master"
+            or getattr(current_user, "is_superuser", False) is True
+            or getattr(current_user, "is_super_admin", False) is True
+            or str(getattr(current_user, "role", "")).lower() in ("super_admin", "superadmin")
         )
+        if is_master and getattr(current_user, "is_active", True):
+            level = LEVEL_PLATFORM
+            company_id = getattr(current_user, "company_id", None)
+        else:
+            _commit_audit(db, audit, "IAM_ACCESS_DENIED:insufficient_role", "DENIED", company_id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access forbidden: only workspace administrators may manage users.",
+            )
     return IamActor(
         user=current_user, user_id=user_id, identifier=identifier, company_id=company_id, level=level, audit=audit
     )

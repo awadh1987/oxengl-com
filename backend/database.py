@@ -213,6 +213,8 @@ def get_db(request: Request = None):
             is_master = bool(getattr(request.state, "is_platform_admin", False))
         elif claims:
             tenant_id = claims.get("tenant_id") or claims.get("company_id")
+            if claims.get("tier") == "master" or str(claims.get("role", "")).lower() in ("super_admin", "superadmin"):
+                is_master = True
         elif request.url.path.startswith(("/api/v1/auth", "/api/v1/iam", "/api/v1/tenant/auth")):
             tenant_id = (
                 request.headers.get("X-Tenant-ID")
@@ -258,7 +260,9 @@ def get_db(request: Request = None):
         )):
             is_control_plane = True
 
-    if company_uuid and not is_control_plane:
+    if (is_master or is_control_plane) and PlatformSessionLocal is not None:
+        db = PlatformSessionLocal()
+    elif company_uuid and not is_control_plane and not is_master:
         db = tenant_connection_manager.get_session(company_uuid)
     else:
         db = SessionLocal()

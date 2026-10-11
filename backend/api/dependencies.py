@@ -436,6 +436,12 @@ async def get_current_user(
         or request.headers.get("x-company-id")
     )
 
+    is_master_tier = (
+        payload.get("tier") == "master"
+        or str(payload.get("iss", "")).endswith("control-plane")
+        or str(payload.get("role", "")).lower() in ("super_admin", "superadmin")
+    )
+
     user: Optional[User] = None
 
     if sub:
@@ -461,6 +467,49 @@ async def get_current_user(
         if t_user is not None and t_user.email:
             user = db.query(ResUser).filter(ResUser.email.ilike(t_user.email.strip())).first()
 
+    # Master Tier / Platform Control Plane resolution
+    if not user and is_master_tier:
+        try:
+            from backend.models import MasterUser
+            # 1. Query master_users via active db
+            if sub:
+                try:
+                    user = db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
+                except (ValueError, TypeError):
+                    pass
+            if not user and email:
+                user = db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
+
+            # 2. If not found in active session, query via PlatformSessionLocal
+            if not user:
+                from backend.database import PlatformSessionLocal
+                if PlatformSessionLocal is not None:
+                    with PlatformSessionLocal() as p_db:
+                        if sub:
+                            try:
+                                user = p_db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
+                            except (ValueError, TypeError):
+                                pass
+                        if not user and email:
+                            user = p_db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
+                        if user:
+                            p_db.expunge(user)
+        except Exception as e:
+            logger.warning(f"Error resolving master user: {e}")
+
+    # Fallback for valid master tier token whose subject is verified by cryptographically signed JWT
+    if not user and is_master_tier and (sub or email):
+        from backend.models import MasterUser
+        user = MasterUser(
+            id=uuid.UUID(str(sub)) if sub and len(str(sub)) == 36 else uuid.uuid4(),
+            email=str(email or "superadmin@oxengl.com").strip().lower(),
+            full_name=payload.get("fullName") or payload.get("full_name") or "Super Administrator",
+            password_hash="",
+            role="super_admin",
+            is_active=True,
+            is_superuser=True,
+        )
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -468,8 +517,15 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Honor token's normalized role if specified
-    if normalized_role and normalized_role in STANDARD_ROLES:
+    # Honor token's normalized role if specified, or enforce super admin for master tier
+    if is_master_tier:
+        setattr(user, "_tier", "master")
+        setattr(user, "is_superuser", True)
+        setattr(user, "is_super_admin", True)
+        if not hasattr(user, "company_id") or getattr(user, "company_id", None) is None:
+            setattr(user, "company_id", None)
+        user.role = SUPER_ADMIN
+    elif normalized_role and normalized_role in STANDARD_ROLES:
         user.role = normalized_role
     else:
         user.role = normalize_role(getattr(user, "role", READ_ONLY))
@@ -481,8 +537,10 @@ async def get_current_user(
         )
 
     request.state.current_user = user
-    request.state.tenant_id = str(user.company_id)
+    request.state.tenant_id = str(getattr(user, "company_id", "") or "")
     request.state.role = user.role
+    if is_master_tier:
+        request.state.is_platform_admin = True
 
     return user
 

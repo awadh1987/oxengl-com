@@ -2258,6 +2258,14 @@ class MasterUser(TimestampMixin, Base):
         if val:
             self.is_superuser = True
 
+    @property
+    def company_id(self) -> Optional[uuid.UUID]:
+        return getattr(self, "_company_id", None)
+
+    @company_id.setter
+    def company_id(self, val: Optional[uuid.UUID]):
+        self._company_id = val
+
 
 class MasterPasswordReset(Base):
     """Level 1: Control Plane self-service OTP and password reset requests."""

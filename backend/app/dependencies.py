@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -179,12 +179,67 @@ async def get_current_user(
         if t_user is not None and t_user.email:
             user = db.query(ResUser).filter(ResUser.email.ilike(t_user.email.strip())).first()
 
+    is_master_tier = (
+        payload.get("tier") == "master"
+        or str(payload.get("iss", "")).endswith("control-plane")
+        or str(payload.get("role", "")).lower() in ("super_admin", "superadmin")
+    )
+
+    # Master Tier / Platform Control Plane resolution
+    if not user and is_master_tier:
+        try:
+            from backend.models import MasterUser
+            if sub:
+                try:
+                    user = db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
+                except (ValueError, TypeError):
+                    pass
+            if not user and email:
+                user = db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
+
+            if not user:
+                from backend.database import PlatformSessionLocal
+                if PlatformSessionLocal is not None:
+                    with PlatformSessionLocal() as p_db:
+                        if sub:
+                            try:
+                                user = p_db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
+                            except (ValueError, TypeError):
+                                pass
+                        if not user and email:
+                            user = p_db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
+                        if user:
+                            p_db.expunge(user)
+        except Exception:
+            pass
+
+    # Fallback for valid master tier token whose subject is verified by cryptographically signed JWT
+    if not user and is_master_tier and (sub or email):
+        from backend.models import MasterUser
+        user = MasterUser(
+            id=uuid.UUID(str(sub)) if sub and len(str(sub)) == 36 else uuid.uuid4(),
+            email=str(email or "superadmin@oxengl.com").strip().lower(),
+            full_name=payload.get("fullName") or payload.get("full_name") or "Super Administrator",
+            password_hash="",
+            role="super_admin",
+            is_active=True,
+            is_superuser=True,
+        )
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authenticated subject is not a registered user.",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if is_master_tier:
+        setattr(user, "_tier", "master")
+        setattr(user, "is_superuser", True)
+        setattr(user, "is_super_admin", True)
+        if not hasattr(user, "company_id") or getattr(user, "company_id", None) is None:
+            setattr(user, "company_id", None)
+        user.role = "Super_Admin"
 
     # Validate active status
     if not getattr(user, "is_active", True):
@@ -193,7 +248,7 @@ async def get_current_user(
             detail="User account has been deactivated.",
         )
 
-    if token_tenant_id:
+    if token_tenant_id and not getattr(user, "is_superuser", False):
         try:
             claimed_company_id = uuid.UUID(str(token_tenant_id))
         except (ValueError, TypeError) as error:
@@ -201,7 +256,7 @@ async def get_current_user(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Session company claim is invalid.",
             ) from error
-        if user.company_id != claimed_company_id:
+        if getattr(user, "company_id", None) != claimed_company_id:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Session company does not match the authenticated user's membership.",
@@ -209,9 +264,9 @@ async def get_current_user(
 
     # Attach contextual metadata to request state
     request.state.current_user = user
-    request.state.tenant_id = str(user.company_id)
+    request.state.tenant_id = str(getattr(user, "company_id", "") or "")
     request.state.role = user.role
-    request.state.is_platform_admin = False
+    request.state.is_platform_admin = bool(is_master_tier or getattr(user, "is_superuser", False))
     db.execute(
         text(
             "SELECT set_config('app.current_tenant_id', :tenant_id, true), "
