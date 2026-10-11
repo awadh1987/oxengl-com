@@ -86,7 +86,7 @@ services:
     image: localhost/oxen-gl_backend:latest
     container_name: oxengl_backend_container
     restart: always
-    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--limit-concurrency", "100"]
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
     # .env supplies DB_*, REDIS_*, WASL_*, TCP_INGESTION_PORT, NGINX_STREAM_PORT,
     # JWT_SECRET (and should supply JWT_SECRET_MASTER / JWT_SECRET_TENANT).
     env_file:
@@ -115,11 +115,10 @@ services:
       redis_cache:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/v1/health >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - oxengl_internal_network
       - oxengl_net

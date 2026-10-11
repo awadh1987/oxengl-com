@@ -15,9 +15,12 @@ echo "=========================================="
 echo "[1/4] Pulling latest code from origin/main..."
 git pull origin main
 
-# 2. Build and restart services in detached mode
-echo "[2/4] Building and launching containers via Docker Compose..."
-docker compose up -d --build
+# 2. Build images, restart backend without affecting edge proxies, and gracefully reload Nginx
+echo "[2/4] Performing staged reload of backend and edge proxy..."
+docker-compose build backend frontend
+docker-compose up -d --no-deps backend
+sleep 5
+docker exec oxengl_nginx_container nginx -s reload
 
 # 3. Aggressive cleanup of unused images to preserve VPS disk space
 echo "[3/4] Pruning unused Docker images..."

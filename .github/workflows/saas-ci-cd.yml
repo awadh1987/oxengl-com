@@ -99,7 +99,7 @@ jobs:
         run: |
           source .venv/bin/activate
           if [ -f "test_two_tier_auth.py" ]; then
-            python3 test_two_tier_auth.py || true
+            python3 test_two_tier_auth.py
           fi
 
   deploy-production:
