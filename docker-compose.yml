@@ -25,7 +25,7 @@ services:
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
-      POSTGRES_DB: ${DB_NAME:-erp_db}
+      POSTGRES_DB: erp_db
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -107,6 +107,7 @@ services:
       - "127.0.0.1:8000:8000"
     volumes:
       - avatar_files_volume:/app/backend/static/avatars
+      - uploads_files_volume:/app/backend/static/uploads
       - crypto_keys_volume:/var/crypto/oxengl
     depends_on:
       postgres_db:
@@ -169,6 +170,8 @@ volumes:
     name: oxengl_redis_data_volume
   avatar_files_volume:
     name: oxengl_avatar_files_volume
+  uploads_files_volume:
+    name: oxengl_uploads_files_volume
   crypto_keys_volume:
     name: oxengl_crypto_keys_volume
 
