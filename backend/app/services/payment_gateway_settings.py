@@ -186,7 +186,7 @@ class PaymentGatewaySettingsUpdate(BaseModel):
     local_bank_instructions: Optional[list[BankAccountInstruction]] = Field(None, max_length=MAX_BANK_ACCOUNTS)
     digital_wallet_instructions: Optional[list[DigitalWalletInstruction]] = Field(None, max_length=MAX_WALLETS)
 
-    expected_version: Optional[int] = Field(None, ge=1, description="Optimistic-concurrency guard (409 on mismatch)")
+    expected_version: Optional[int] = Field(None, ge=0, description="Optimistic-concurrency guard (409 on mismatch)")
 
     @field_validator(*SECRET_FIELDS.keys(), mode="before")
     @classmethod
@@ -335,8 +335,8 @@ def apply_settings_update(db: Session, payload: PaymentGatewaySettingsUpdate, *,
                 )
             final_plain[api_field] = value
 
-    stripe_on = payload.is_stripe_enabled if payload.is_stripe_enabled is not None else bool(row.is_stripe_enabled)
-    moyasar_on = payload.is_moyasar_enabled if payload.is_moyasar_enabled is not None else bool(row.is_moyasar_enabled)
+    stripe_on = payload.is_stripe_enabled if payload.is_stripe_enabled is not None else (row.is_stripe_enabled or False)
+    moyasar_on = payload.is_moyasar_enabled if payload.is_moyasar_enabled is not None else (row.is_moyasar_enabled or False)
 
     # 2. Business rules on the resulting state.
     errors: list[str] = []

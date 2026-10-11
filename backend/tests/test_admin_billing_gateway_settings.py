@@ -182,6 +182,12 @@ def test_optimistic_concurrency_conflict(session_factory):
     assert client.put(URL, json={"is_stripe_enabled": False, "expected_version": 99}).status_code == 409
 
 
+def test_uninitialized_expected_version_zero_allowed(session_factory):
+    client = _client(session_factory, _user("Super_Admin"))
+    res = client.put(URL, json={"is_stripe_enabled": False, "expected_version": 0})
+    assert res.status_code == 200
+
+
 @pytest.mark.parametrize("payload", [
     {"is_stripe_enabled": True},                                              # no keys
     {"stripe_secret_key": STRIPE_SK, "stripe_publishable_key": "pk_live_" + "x" * 20},  # live/test mismatch
