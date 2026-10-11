@@ -173,3 +173,4 @@ logs/
 .artifact/
 47ab1b2d12df22a979d2a029f0785ac581e4ac48
 frontend/dist/
+backend/.env
