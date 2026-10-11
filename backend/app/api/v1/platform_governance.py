@@ -737,7 +737,7 @@ def get_public_landing_tree(db: Session = Depends(get_db)):
     )
 
     _landing_cache["data"] = response_payload
-    _landing_cache["expires_at"] = now + 60.0  # 60s cache TTL
+    _landing_cache["expires_at"] = now + 5.0  # short TTL: invalidation is per-process, so keep workers near-consistent
     return response_payload
 
 

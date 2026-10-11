@@ -52,7 +52,7 @@ export function notifySiteSettingsUpdated(updated: Partial<SiteSettings>) {
 }
 
 export async function fetchPublicSiteSettings(): Promise<SiteSettings> {
-  const res = await fetch('/api/settings/public', { credentials: 'include' });
+  const res = await fetch('/api/settings/public', { credentials: 'include', cache: 'no-store' });
   if (!res.ok) throw new Error(`Failed to load site settings (${res.status})`);
   const data = await res.json();
   const merged: SiteSettings = {

@@ -67,6 +67,7 @@ export interface SystemBroadcast {
 export async function getPublicLanding(): Promise<PublicLandingData> {
   const res = await fetch('/api/v1/public/landing', {
     method: 'GET',
+    cache: 'no-store',
     headers: { 'Accept': 'application/json' },
   });
   if (!res.ok) {
