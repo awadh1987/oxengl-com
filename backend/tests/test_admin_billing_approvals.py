@@ -9,6 +9,7 @@ import io
 import uuid
 from decimal import Decimal
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -283,3 +284,70 @@ def test_tenant_upload_receipt_updates_invoice_to_pending_verification(session_f
     assert updated_inv.status == "pending_verification"
     assert updated_inv.payment_proof_url is not None
     db.close()
+
+
+def test_approve_pending_invoice_enqueues_background_receipt_email(session_factory):
+    """Verifies that approving a pending invoice enqueues _dispatch_receipt_email with correct ORM models."""
+    client = _admin_client(session_factory)
+    db = session_factory()
+    inv = db.query(SaaSInvoice).first()
+    invoice_id = str(inv.id)
+    tenant_id = inv.tenant_id
+    db.close()
+
+    payload = {
+        "payment_reference": "WIRE-SAR-11223344",
+        "notes": "Verified receipt with Bank Albilad wire transfer.",
+    }
+
+    with patch("backend.app.api.v1.admin_billing._dispatch_receipt_email", new_callable=AsyncMock) as mock_dispatch:
+        res = client.post(f"/api/v1/admin/billing/invoices/{invoice_id}/approve", json=payload)
+        assert res.status_code == 200, res.text
+        assert res.json()["status"] == "paid"
+
+        # Starlette/FastAPI TestClient automatically runs enqueued background tasks synchronously
+        mock_dispatch.assert_called_once()
+        called_args = mock_dispatch.call_args[0]
+        called_tenant = called_args[0]
+        called_invoice = called_args[1]
+        called_period_end = called_args[2]
+
+        assert called_tenant.id == tenant_id
+        assert called_tenant.name == "Al-Saad Logistics Group"
+        assert called_invoice.id == uuid.UUID(invoice_id)
+        assert called_invoice.invoice_number == "SAAS-INV-202610-0010-TEST"
+        assert called_invoice.status == "paid"
+        assert called_period_end is not None
+
+
+@pytest.mark.asyncio
+async def test_dispatch_receipt_email_helper_execution(session_factory):
+    """Verifies that _dispatch_receipt_email compiles PDF receipt and dispatches welcome email."""
+    from backend.app.api.v1.admin_billing import _dispatch_receipt_email
+
+    db = session_factory()
+    tenant = db.query(MasterTenant).first()
+    inv = db.query(SaaSInvoice).first()
+    inv.status = "paid"
+    db.close()
+
+    mock_pdf_bytes = b"%PDF-1.4 Mock Receipt Byte Stream"
+
+    with patch("backend.app.api.v1.admin_billing.generate_invoice_pdf", return_value=mock_pdf_bytes) as mock_pdf_gen, \
+         patch("backend.app.api.v1.admin_billing.send_subscription_approved_email", new_callable=AsyncMock) as mock_email_send:
+
+        await _dispatch_receipt_email(
+            tenant=tenant,
+            invoice=inv,
+            current_period_end="2027-10-11",
+        )
+
+        mock_pdf_gen.assert_called_once_with(invoice=inv, tenant=tenant)
+        mock_email_send.assert_called_once_with(
+            tenant_email="faisal@alsaad.sa",
+            tenant_name="Al-Saad Logistics Group",
+            invoice=inv,
+            pdf_attachment_bytes=mock_pdf_bytes,
+            current_period_end="2027-10-11",
+        )
+

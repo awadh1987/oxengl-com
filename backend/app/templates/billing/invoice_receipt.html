@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Receipt {{ invoice.invoice_number }} - OxenGL</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 15mm 18mm 20mm 18mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #94A3B8;
+      }
+      @bottom-left {
+        content: "OxenGL Cloud Platform • Automated Fiscal Receipt";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #94A3B8;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 9.5pt;
+      line-height: 1.5;
+      color: #1E293B;
+      background-color: #FFFFFF;
+    }
+
+    /* Container */
+    .receipt-container {
+      width: 100%;
+      position: relative;
+    }
+
+    /* Header Section */
+    .header-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #0F172A;
+    }
+
+    .brand-logo-cell {
+      vertical-align: top;
+      width: 55%;
+    }
+
+    .brand-title-group {
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .brand-name {
+      font-size: 20pt;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #0F172A;
+      margin: 0;
+      line-height: 1.1;
+    }
+
+    .brand-tagline {
+      font-size: 8pt;
+      font-weight: 500;
+      color: #64748B;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-top: 3px;
+    }
+
+    .receipt-title-cell {
+      vertical-align: top;
+      text-align: right;
+      width: 45%;
+    }
+
+    .receipt-heading {
+      font-size: 16pt;
+      font-weight: 700;
+      color: #0F172A;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .receipt-subheading {
+      font-size: 9pt;
+      color: #64748B;
+      margin-top: 2px;
+    }
+
+    /* Meta Badges and Numbers */
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .meta-table td {
+      padding: 2px 0;
+      font-size: 9pt;
+    }
+
+    .meta-label {
+      color: #64748B;
+      font-weight: 500;
+      width: 45%;
+      text-align: right;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      color: #0F172A;
+      text-align: right;
+      padding-left: 8px;
+    }
+
+    /* Stamp Banner Area */
+    .stamp-container {
+      position: absolute;
+      top: 100px;
+      right: 30px;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .paid-stamp {
+      display: inline-block;
+      padding: 6px 18px;
+      border: 3px double #059669;
+      border-radius: 6px;
+      color: #059669;
+      font-size: 14pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transform: rotate(-10deg);
+      opacity: 0.88;
+      background: rgba(240, 253, 244, 0.85);
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(5, 150, 105, 0.15);
+    }
+
+    .stamp-subtext {
+      display: block;
+      font-size: 6.5pt;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: #047857;
+      margin-top: 2px;
+    }
+
+    /* Billing & Client Info Block */
+    .info-grid-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+      background-color: #F8FAFC;
+      border-radius: 6px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .info-col {
+      width: 50%;
+      padding: 14px 18px;
+      vertical-align: top;
+    }
+
+    .info-col:first-child {
+      border-right: 1px solid #E2E8F0;
+    }
+
+    .section-title {
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #475569;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #CBD5E1;
+      padding-bottom: 4px;
+    }
+
+    .client-name {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #0F172A;
+      margin-bottom: 4px;
+    }
+
+    .client-detail-row {
+      font-size: 8.5pt;
+      color: #334155;
+      margin-bottom: 2px;
+    }
+
+    .client-detail-label {
+      color: #64748B;
+      font-weight: 500;
+      display: inline-block;
+      width: 90px;
+    }
+
+    /* Line Items Table */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    .items-table th {
+      background-color: #0F172A;
+      color: #FFFFFF;
+      font-size: 8.5pt;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 9px 12px;
+      text-align: left;
+    }
+
+    .items-table th.amount-col {
+      text-align: right;
+    }
+
+    .items-table td {
+      padding: 12px 12px;
+      border-bottom: 1px solid #E2E8F0;
+      font-size: 9pt;
+      vertical-align: middle;
+    }
+
+    .items-table td.amount-col {
+      text-align: right;
+      font-weight: 600;
+      color: #0F172A;
+    }
+
+    .item-title {
+      font-weight: 600;
+      color: #0F172A;
+      font-size: 9.5pt;
+    }
+
+    .item-desc {
+      font-size: 8pt;
+      color: #64748B;
+      margin-top: 3px;
+    }
+
+    .plan-badge {
+      display: inline-block;
+      background-color: #EEF2F6;
+      color: #0F172A;
+      font-size: 7.5pt;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-left: 6px;
+    }
+
+    /* Totals & Breakdown Section */
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    .summary-left-cell {
+      width: 55%;
+      vertical-align: top;
+      padding-right: 20px;
+    }
+
+    .summary-right-cell {
+      width: 45%;
+      vertical-align: top;
+    }
+
+    .payment-note-box {
+      background-color: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 8.5pt;
+      color: #166534;
+    }
+
+    .payment-note-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .totals-box {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #E2E8F0;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .totals-box td {
+      padding: 7px 12px;
+      font-size: 9pt;
+    }
+
+    .totals-box .totals-label {
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .totals-box .totals-val {
+      text-align: right;
+      font-weight: 600;
+      color: #0F172A;
+    }
+
+    .totals-box tr.grand-total-row {
+      background-color: #F8FAFC;
+      border-top: 2px solid #CBD5E1;
+    }
+
+    .totals-box tr.grand-total-row td {
+      padding: 10px 12px;
+    }
+
+    .grand-total-label {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .grand-total-val {
+      font-size: 12pt;
+      font-weight: 800;
+      color: #059669;
+      text-align: right;
+    }
+
+    .status-highlight-row {
+      background-color: #ECFDF5;
+      border-top: 1px solid #A7F3D0;
+    }
+
+    .status-highlight-row td {
+      font-weight: 600;
+      color: #065F46;
+      font-size: 8.5pt;
+    }
+
+    /* Verification & Audit Footer */
+    .footer-divider {
+      border-top: 1px solid #E2E8F0;
+      margin: 20px 0 12px 0;
+    }
+
+    .legal-notice {
+      font-size: 7.5pt;
+      color: #94A3B8;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .contact-bar {
+      margin-top: 6px;
+      text-align: center;
+      font-size: 8pt;
+      color: #64748B;
+    }
+
+    .contact-bar span {
+      margin: 0 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="receipt-container">
+  
+  <!-- Stamp Overlay -->
+  <div class="stamp-container">
+    <div class="paid-stamp">
+      PAID
+      <span class="stamp-subtext">VERIFIED BY SUPER ADMIN</span>
+    </div>
+  </div>
+
+  <!-- Header Section -->
+  <table class="header-table">
+    <tr>
+      <td class="brand-logo-cell">
+        <!-- OxenGL Vector SVG Mark -->
+        <table style="border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: middle; padding-right: 10px;">
+              <svg width="38" height="38" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="20" fill="#0F172A"/>
+                <path d="M25 35L50 20L75 35V65L50 80L25 65V35Z" stroke="#38BDF8" stroke-width="6" stroke-linejoin="round"/>
+                <path d="M50 20V50M50 50L75 65M50 50L25 65" stroke="#38BDF8" stroke-width="6" stroke-linejoin="round"/>
+                <circle cx="50" cy="50" r="8" fill="#10B981"/>
+              </svg>
+            </td>
+            <td style="vertical-align: middle;">
+              <div class="brand-name">OxenGL</div>
+              <div class="brand-tagline">Enterprise Logistics & Cloud ERP</div>
+            </td>
+          </tr>
+        </table>
+      </td>
+      <td class="receipt-title-cell">
+        <div class="receipt-heading">Payment Receipt</div>
+        <div class="receipt-subheading">Subscription Payment Confirmation</div>
+        <table class="meta-table" align="right">
+          <tr>
+            <td class="meta-label">Receipt / Inv #:</td>
+            <td class="meta-value">{{ invoice.invoice_number }}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Date Issued:</td>
+            <td class="meta-value">{{ invoice.issued_date | format_date }}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Date Paid:</td>
+            <td class="meta-value">{{ (invoice.paid_at or invoice.issued_date) | format_date }}</td>
+          </tr>
+          <tr>
+            <td class="meta-label">Status:</td>
+            <td class="meta-value" style="color: #059669; text-transform: uppercase;">PAID / APPROVED</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Billing & Tenant Grid -->
+  <table class="info-grid-table">
+    <tr>
+      <td class="info-col">
+        <div class="section-title">Billed To (Tenant Account)</div>
+        <div class="client-name">{{ tenant.name }}</div>
+        <div class="client-detail-row">
+          <span class="client-detail-label">Account Owner:</span>
+          <strong>{{ tenant.owner_full_name | default('Authorized Representative') }}</strong>
+        </div>
+        <div class="client-detail-row">
+          <span class="client-detail-label">Email:</span>
+          {{ tenant.owner_email }}
+        </div>
+        {% if tenant.owner_mobile %}
+        <div class="client-detail-row">
+          <span class="client-detail-label">Phone:</span>
+          {{ tenant.owner_mobile }}
+        </div>
+        {% endif %}
+        <div class="client-detail-row">
+          <span class="client-detail-label">Tenant Slug:</span>
+          <code>{{ tenant.slug }}</code>
+        </div>
+      </td>
+      <td class="info-col">
+        <div class="section-title">Payment & Settlement Information</div>
+        <div class="client-detail-row">
+          <span class="client-detail-label">Method:</span>
+          <strong>{{ invoice.payment_method | default('Manual Bank Transfer') | replace('_', ' ') | title }}</strong>
+        </div>
+        {% if invoice.payment_reference %}
+        <div class="client-detail-row">
+          <span class="client-detail-label">Reference #:</span>
+          <strong>{{ invoice.payment_reference }}</strong>
+        </div>
+        {% endif %}
+        <div class="client-detail-row">
+          <span class="client-detail-label">Billing Cycle:</span>
+          {{ (invoice.billing_cycle or 'monthly') | capitalize }}
+        </div>
+        <div class="client-detail-row">
+          <span class="client-detail-label">Currency:</span>
+          {{ invoice.currency | default('SAR') }}
+        </div>
+        <div class="client-detail-row">
+          <span class="client-detail-label">Verification:</span>
+          <span style="color: #059669; font-weight: 600;">Manual Proof Verified & Settled</span>
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Line Items -->
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th style="width: 55%;">Item & Service Description</th>
+        <th style="width: 15%; text-align: center;">Billing Cycle</th>
+        <th style="width: 15%; text-align: center;">Status</th>
+        <th style="width: 15%;" class="amount-col">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="item-title">
+            OxenGL {{ invoice.tier | default('Professional') | upper }} Subscription Plan
+            <span class="plan-badge">{{ invoice.tier | default('Professional') | upper }}</span>
+          </div>
+          <div class="item-desc">
+            Full enterprise access to OxenGL multi-tenant cloud platform, operations, accounting, inventory, and governance modules.
+          </div>
+        </td>
+        <td style="text-align: center; color: #475569; font-weight: 500;">
+          {{ (invoice.billing_cycle or 'monthly') | capitalize }}
+        </td>
+        <td style="text-align: center;">
+          <span style="color: #059669; font-weight: 700; font-size: 8pt; background: #DCFCE7; padding: 2px 8px; border-radius: 9999px;">
+            SETTLED
+          </span>
+        </td>
+        <td class="amount-col">
+          {{ invoice.subtotal | format_currency(invoice.currency) }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Summary and Totals -->
+  <table class="summary-table">
+    <tr>
+      <td class="summary-left-cell">
+        <div class="payment-note-box">
+          <div class="payment-note-title">
+            ✓ Subscription Activated
+          </div>
+          <div>
+            Your manual bank transfer payment has been reviewed and approved by OxenGL Administration.
+            Your tenant workspace is active with full access to all enrolled modules.
+          </div>
+          {% if invoice.notes %}
+          <div style="margin-top: 8px; font-size: 8pt; color: #14532D; border-top: 1px dashed #86EFAC; padding-top: 6px;">
+            <strong>Audit Note:</strong> {{ invoice.notes }}
+          </div>
+          {% endif %}
+        </div>
+      </td>
+      <td class="summary-right-cell">
+        <table class="totals-box">
+          <tr>
+            <td class="totals-label">Subtotal</td>
+            <td class="totals-val">{{ invoice.subtotal | format_currency(invoice.currency) }}</td>
+          </tr>
+          <tr>
+            <td class="totals-label">Tax / VAT</td>
+            <td class="totals-val">{{ invoice.tax | format_currency(invoice.currency) }}</td>
+          </tr>
+          <tr class="grand-total-row">
+            <td class="grand-total-label">Total Paid</td>
+            <td class="grand-total-val">{{ invoice.amount | format_currency(invoice.currency) }}</td>
+          </tr>
+          <tr class="status-highlight-row">
+            <td class="totals-label" style="color: #065F46;">Balance Due</td>
+            <td class="totals-val" style="color: #065F46;">{{ 0.0 | format_currency(invoice.currency) }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Official Legal Footer -->
+  <div class="footer-divider"></div>
+  <div class="legal-notice">
+    This document serves as an official proof of payment and electronic receipt issued by OxenGL Cloud ERP Platform.<br>
+    Generated automatically upon Super Admin approval of offline bank wire/wallet transfer. No physical signature is required.
+  </div>
+  <div class="contact-bar">
+    <span><strong>OxenGL Global Cloud Services</strong></span>
+    •
+    <span>Billing Inquiries: billing@oxengl.com</span>
+    •
+    <span>Support: support@oxengl.com</span>
+  </div>
+
+</div>
+
+</body>
+</html>

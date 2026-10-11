@@ -17,7 +17,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -25,6 +25,8 @@ from sqlalchemy.orm import Session
 from backend.app.core.auth import has_record_super_admin_authority, require_super_admin
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import activate_tenant_subscription
+from backend.app.services.email_service import send_subscription_approved_email
+from backend.app.services.pdf_service import generate_invoice_pdf
 from backend.database import get_platform_db
 from backend.models import MasterTenant, SaaSInvoice
 
@@ -35,6 +37,51 @@ router = APIRouter(
     tags=["Admin Billing Approvals"],
     dependencies=[Depends(require_super_admin)],
 )
+
+
+# ==============================================================================
+# Async Background Dispatcher
+# ==============================================================================
+
+async def _dispatch_receipt_email(
+    tenant: Any,
+    invoice: Any,
+    current_period_end: Optional[str] = None,
+) -> None:
+    """
+    Background worker that compiles the PDF receipt using WeasyPrint and Jinja2,
+    then dispatches the subscription approval notification email with the PDF attached.
+    """
+    try:
+        tenant_email = getattr(tenant, "owner_email", None) or (tenant.get("owner_email") if isinstance(tenant, dict) else None)
+        tenant_name = getattr(tenant, "name", None) or (tenant.get("name") if isinstance(tenant, dict) else "Valued Tenant")
+        if not tenant_email:
+            logger.warning("Cannot dispatch receipt email: missing tenant owner_email (tenant=%s)", tenant)
+            return
+
+        # 1. Compile PDF Receipt bytes via WeasyPrint
+        pdf_bytes = generate_invoice_pdf(invoice=invoice, tenant=tenant)
+
+        # 2. Dispatch welcome notification with attached PDF
+        await send_subscription_approved_email(
+            tenant_email=tenant_email,
+            tenant_name=tenant_name,
+            invoice=invoice,
+            pdf_attachment_bytes=pdf_bytes,
+            current_period_end=current_period_end,
+        )
+        logger.info(
+            "Successfully generated PDF and dispatched subscription welcome email to %s (Invoice: %s)",
+            tenant_email,
+            getattr(invoice, "invoice_number", "UNKNOWN"),
+        )
+    except Exception as exc:
+        logger.error(
+            "Failed background execution of _dispatch_receipt_email for invoice %s: %s",
+            getattr(invoice, "invoice_number", "UNKNOWN"),
+            exc,
+            exc_info=True,
+        )
 
 
 # ==============================================================================
@@ -170,6 +217,7 @@ def get_pending_invoices(
 def approve_pending_invoice(
     invoice_id: uuid.UUID,
     request: Request,
+    background_tasks: BackgroundTasks,
     payload: Optional[InvoiceApproveRequest] = None,
     current_user: Any = Depends(require_super_admin),
     db: Session = Depends(get_platform_db),
@@ -181,6 +229,7 @@ def approve_pending_invoice(
     3. Updates the associated MasterTenant record status to 'ACTIVE' and activates capabilities.
     4. Extends the subscription current_period_end based on monthly or annual billing cycle.
     5. Writes an immutable audit trail entry.
+    6. Enqueues background task for WeasyPrint PDF receipt generation and welcome email dispatch.
     """
     invoice = db.get(SaaSInvoice, invoice_id)
     if not invoice:
@@ -212,7 +261,7 @@ def approve_pending_invoice(
     plan_name = plan.name if plan else (invoice.tier or "PROFESSIONAL").upper()
 
     # Activate tenant subscription contract (extends current_period_end & enables capabilities)
-    activate_tenant_subscription(
+    sub = activate_tenant_subscription(
         db=db,
         tenant_id=invoice.tenant_id,
         plan_name=plan_name,
@@ -230,6 +279,8 @@ def approve_pending_invoice(
 
     db.commit()
     db.refresh(invoice)
+    if tenant:
+        db.refresh(tenant)
 
     # Write platform audit log
     _audit(
@@ -239,6 +290,30 @@ def approve_pending_invoice(
         action="INVOICE_SUBSCRIPTION_APPROVED",
         company_id=invoice.tenant_id,
         outcome="SUCCESS",
+    )
+
+    # Format subscription end date for notification
+    current_period_end = None
+    if sub and getattr(sub, "current_period_end", None):
+        c_end = sub.current_period_end
+        current_period_end = c_end.strftime("%Y-%m-%d") if hasattr(c_end, "strftime") else str(c_end)[:10]
+
+    # Ensure instances are refreshed and expunged so background workers can access attributes detached
+    try:
+        db.refresh(invoice)
+        db.expunge(invoice)
+        if tenant:
+            db.refresh(tenant)
+            db.expunge(tenant)
+    except Exception:
+        pass
+
+    # Enqueue background task for PDF receipt rendering and email dispatch
+    background_tasks.add_task(
+        _dispatch_receipt_email,
+        tenant,
+        invoice,
+        current_period_end,
     )
 
     logger.info(

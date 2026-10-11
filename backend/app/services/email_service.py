@@ -1,14 +1,27 @@
-import os
+import asyncio
 import datetime
 import logging
+import os
+import smtplib
+import ssl
 import uuid
+from email.message import EmailMessage
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional, Union
 
-import aiosmtplib
+try:
+    import aiosmtplib
+except ImportError:
+    aiosmtplib = None
+
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-import premailer
+
+try:
+    import premailer
+except ImportError:
+    premailer = None
 
 logger = logging.getLogger("oxengl.email_service")
 
@@ -19,15 +32,47 @@ except ImportError:
     from backend.app.core.config import email_settings
     from backend.app.schemas.email import TenantBrandContext
 
-# Initialize Jinja2 Loader
-TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates", "email")
+# Initialize Jinja2 Loader with fallback across email/emails directories
+_BASE_TEMPLATES_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "templates")
+TEMPLATE_DIRS = [
+    os.path.join(_BASE_TEMPLATES_DIR, "emails"),
+    os.path.join(_BASE_TEMPLATES_DIR, "email"),
+    _BASE_TEMPLATES_DIR,
+]
 
 jinja_env = Environment(
-    loader=FileSystemLoader(TEMPLATE_DIR),
+    loader=FileSystemLoader(TEMPLATE_DIRS),
     autoescape=select_autoescape(["html", "xml"]),
     trim_blocks=True,
     lstrip_blocks=True,
 )
+
+
+def _dispatch_smtp_sync_raw(
+    message: Union[MIMEMultipart, EmailMessage],
+    hostname: str,
+    port: int,
+    username: Optional[str] = None,
+    password: Optional[str] = None,
+    start_tls: bool = True,
+    use_ssl: bool = False,
+    timeout: int = 15,
+) -> None:
+    """Standard library smtplib dispatcher for environments without aiosmtplib or worker threads."""
+    if use_ssl or port == 465:
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(hostname, port, context=context, timeout=timeout) as server:
+            if username and password:
+                server.login(username, password)
+            server.send_message(message)
+    else:
+        with smtplib.SMTP(hostname, port, timeout=timeout) as server:
+            if start_tls or port == 587:
+                context = ssl.create_default_context()
+                server.starttls(context=context)
+            if username and password:
+                server.login(username, password)
+            server.send_message(message)
 
 
 class EmailService:
@@ -38,11 +83,16 @@ class EmailService:
 
         # Inject standard global parameters
         context.setdefault("current_year", datetime.datetime.now(datetime.timezone.utc).year)
-        context.setdefault("oxengl_assets_url", email_settings.OXENGL_ASSETS_BASE_URL)
+        context.setdefault("oxengl_assets_url", getattr(email_settings, "OXENGL_ASSETS_BASE_URL", "https://assets.oxengl.com"))
 
         raw_html = template.render(context)
         # Inline CSS for broad email client support (Outlook, Gmail, etc.)
-        return premailer.transform(raw_html)
+        if premailer is not None:
+            try:
+                return premailer.transform(raw_html)
+            except Exception as pe:
+                logger.debug("Premailer transform bypassed: %s", pe)
+        return raw_html
 
     @classmethod
     async def send_email(
@@ -122,16 +172,28 @@ class EmailService:
         message.attach(MIMEText(html_content, "html", "utf-8"))
 
         try:
-            await aiosmtplib.send(
-                message,
-                hostname=smtp_host,
-                port=smtp_port,
-                username=smtp_user,
-                password=smtp_pass,
-                start_tls=start_tls,
-                use_tls=use_ssl,
-                timeout=15,
-            )
+            if aiosmtplib is not None:
+                await aiosmtplib.send(
+                    message,
+                    hostname=smtp_host,
+                    port=smtp_port,
+                    username=smtp_user,
+                    password=smtp_pass,
+                    start_tls=start_tls,
+                    use_tls=use_ssl,
+                    timeout=15,
+                )
+            else:
+                await asyncio.to_thread(
+                    _dispatch_smtp_sync_raw,
+                    message,
+                    smtp_host,
+                    smtp_port,
+                    smtp_user,
+                    smtp_pass,
+                    start_tls,
+                    use_ssl,
+                )
             return True
         except Exception as exc:
             logger.error(f"[EmailService Error] Dispatch failed for {recipient_email} via {smtp_host}:{smtp_port}: {str(exc)}")
@@ -539,3 +601,257 @@ async def dispatch_role_updated(
         tenant=tenant_brand,
         tenant_smtp_config=resolved_smtp,
     )
+
+
+# ==============================================================================
+# Subscription Approved Email Notification & PDF Receipt Delivery
+# ==============================================================================
+
+def _get_model_field(obj: Any, *keys: str, default: Any = None) -> Any:
+    """Helper to safely extract an attribute or dictionary key from heterogeneous objects."""
+    for key in keys:
+        if isinstance(obj, dict):
+            if key in obj and obj[key] is not None:
+                return obj[key]
+        elif hasattr(obj, key):
+            val = getattr(obj, key)
+            if val is not None:
+                return val
+    return default
+
+
+def build_subscription_approved_message(
+    tenant_email: str,
+    tenant_name: str,
+    invoice: Any,
+    pdf_attachment_bytes: bytes,
+    workspace_url: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+    from_email: Optional[str] = None,
+) -> tuple[MIMEMultipart, str]:
+    """
+    Constructs a multipart/mixed email message containing the HTML welcome notice
+    and the compiled PDF receipt as application/pdf attachment.
+
+    Returns:
+        tuple[MIMEMultipart, str]: (message, invoice_number)
+    """
+    invoice_number = str(_get_model_field(invoice, "invoice_number", default="INV-UNKNOWN"))
+    tier = str(_get_model_field(invoice, "tier", "subscription_tier", default="PROFESSIONAL")).upper()
+    billing_cycle = str(_get_model_field(invoice, "billing_cycle", default="monthly"))
+    currency = str(_get_model_field(invoice, "currency", default="SAR"))
+
+    amount = float(_get_model_field(invoice, "amount_sar", "amount", default=0.0) or 0.0)
+    subtotal = float(_get_model_field(invoice, "subtotal_sar", "subtotal", default=0.0) or 0.0)
+    tax = float(_get_model_field(invoice, "tax_sar", "tax", default=0.0) or 0.0)
+    if amount == 0.0 and (subtotal > 0 or tax > 0):
+        amount = subtotal + tax
+
+    # Determine period end string
+    if not current_period_end:
+        sub_obj = getattr(invoice, "subscription", None)
+        sub_end = getattr(sub_obj, "current_period_end", None) if sub_obj else None
+        if sub_end:
+            current_period_end = sub_end.strftime("%Y-%m-%d") if hasattr(sub_end, "strftime") else str(sub_end)[:10]
+        else:
+            days = 365 if billing_cycle.lower() in ("yearly", "annual") else 30
+            dt = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=days)
+            current_period_end = dt.strftime("%Y-%m-%d")
+
+    context = {
+        "tenant_name": tenant_name,
+        "invoice_number": invoice_number,
+        "plan_tier": tier,
+        "amount_formatted": f"{amount:,.2f} {currency}",
+        "billing_cycle": billing_cycle,
+        "current_period_end": current_period_end,
+        "workspace_url": workspace_url or "https://portal.oxengl.com",
+        "current_year": datetime.datetime.now(datetime.timezone.utc).year,
+    }
+
+    try:
+        template = jinja_env.get_template("subscription_approved.html")
+        html_content = template.render(context)
+        if premailer is not None:
+            try:
+                html_content = premailer.transform(html_content)
+            except Exception as pe:
+                logger.debug("Premailer inlining bypassed: %s", pe)
+    except Exception as exc:
+        logger.warning("Could not load subscription_approved.html template: %s. Using standard HTML fallback.", exc)
+        html_content = f"""
+        <html><body>
+        <h2>Welcome to OxenGL / Subscription Activated</h2>
+        <p>Dear {tenant_name},</p>
+        <p>Your offline payment for invoice <strong>{invoice_number}</strong> has been approved.</p>
+        <p>Plan Tier: <strong>{tier}</strong><br>Amount Settled: <strong>{amount:,.2f} {currency}</strong><br>Active Until: <strong>{current_period_end}</strong></p>
+        <p>Please find your official PDF receipt attached.</p>
+        </body></html>
+        """
+
+    sender_email = (
+        from_email
+        or os.getenv("SMTP_FROM_EMAIL")
+        or getattr(email_settings, "OXENGL_SYSTEM_EMAIL", "notifications@oxengl.com")
+    )
+
+    # Root MIME container: multipart/mixed (holds body + attachment)
+    msg = MIMEMultipart("mixed")
+    msg["Subject"] = f"Welcome to OxenGL / Subscription Activated - {invoice_number}"
+    msg["From"] = f'"OxenGL Platform" <{sender_email}>'
+    msg["To"] = tenant_email
+
+    # Alternative container for text and HTML bodies
+    alt_part = MIMEMultipart("alternative")
+    plain_text = (
+        f"Welcome to OxenGL / Subscription Activated\n\n"
+        f"Dear {tenant_name},\n\n"
+        f"Your manual payment for invoice {invoice_number} has been verified and approved.\n"
+        f"Plan Tier: {tier}\n"
+        f"Amount: {amount:,.2f} {currency}\n"
+        f"Active Until: {current_period_end}\n\n"
+        f"Your official payment receipt (OxenGL_Receipt_{invoice_number}.pdf) is attached to this email.\n\n"
+        f"Best regards,\nOxenGL Operations Team"
+    )
+    alt_part.attach(MIMEText(plain_text, "plain", "utf-8"))
+    alt_part.attach(MIMEText(html_content, "html", "utf-8"))
+    msg.attach(alt_part)
+
+    # Attach PDF receipt
+    attachment_filename = f"OxenGL_Receipt_{invoice_number}.pdf"
+    pdf_part = MIMEApplication(pdf_attachment_bytes, _subtype="pdf")
+    pdf_part.add_header("Content-Disposition", "attachment", filename=attachment_filename)
+    msg.attach(pdf_part)
+
+    return msg, invoice_number
+
+
+def send_subscription_approved_email_sync(
+    tenant_email: str,
+    tenant_name: str,
+    invoice: Any,
+    pdf_attachment_bytes: bytes,
+    workspace_url: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+) -> bool:
+    """Synchronous version using standard smtplib, safe for threadpool execution."""
+    msg, invoice_number = build_subscription_approved_message(
+        tenant_email=tenant_email,
+        tenant_name=tenant_name,
+        invoice=invoice,
+        pdf_attachment_bytes=pdf_attachment_bytes,
+        workspace_url=workspace_url,
+        current_period_end=current_period_end,
+    )
+    attachment_filename = f"OxenGL_Receipt_{invoice_number}.pdf"
+
+    smtp_host = os.getenv("SMTP_HOST")
+    if not smtp_host or smtp_host.strip().lower() in ("", "none", "mock", "disabled"):
+        logger.info(
+            "[SMTP Mock Mode] SMTP_HOST not configured. Mocking subscription email to %s (Invoice: %s, Attachment: %s, %d bytes).",
+            tenant_email,
+            invoice_number,
+            attachment_filename,
+            len(pdf_attachment_bytes),
+        )
+        return True
+
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT") or 587)
+    except (ValueError, TypeError):
+        smtp_port = 587
+
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASSWORD")
+    use_ssl = (smtp_port == 465)
+    use_tls = (smtp_port == 587 and not use_ssl)
+
+    try:
+        _dispatch_smtp_sync_raw(
+            message=msg,
+            hostname=smtp_host,
+            port=smtp_port,
+            username=smtp_user,
+            password=smtp_pass,
+            start_tls=use_tls,
+            use_ssl=use_ssl,
+        )
+        logger.info("Successfully dispatched subscription email to %s via SMTP %s:%s", tenant_email, smtp_host, smtp_port)
+        return True
+    except Exception as exc:
+        logger.error("Failed to send subscription approved email to %s via %s: %s", tenant_email, smtp_host, exc)
+        return False
+
+
+async def send_subscription_approved_email(
+    tenant_email: str,
+    tenant_name: str,
+    invoice: Any,
+    pdf_attachment_bytes: bytes,
+    workspace_url: Optional[str] = None,
+    current_period_end: Optional[str] = None,
+) -> bool:
+    """
+    Sends the welcome / subscription activated email with the compiled PDF receipt attached.
+    Works asynchronously and falls back to standard smtplib in a worker thread if aiosmtplib is not installed.
+    Falls back to mock/logger output if SMTP_HOST is not configured in environment variables.
+    """
+    msg, invoice_number = build_subscription_approved_message(
+        tenant_email=tenant_email,
+        tenant_name=tenant_name,
+        invoice=invoice,
+        pdf_attachment_bytes=pdf_attachment_bytes,
+        workspace_url=workspace_url,
+        current_period_end=current_period_end,
+    )
+    attachment_filename = f"OxenGL_Receipt_{invoice_number}.pdf"
+
+    smtp_host = os.getenv("SMTP_HOST")
+    if not smtp_host or smtp_host.strip().lower() in ("", "none", "mock", "disabled"):
+        logger.info(
+            "[SMTP Mock Mode] SMTP_HOST not configured. Mocking subscription email to %s (Invoice: %s, Attachment: %s, %d bytes).",
+            tenant_email,
+            invoice_number,
+            attachment_filename,
+            len(pdf_attachment_bytes),
+        )
+        return True
+
+    try:
+        smtp_port = int(os.getenv("SMTP_PORT") or 587)
+    except (ValueError, TypeError):
+        smtp_port = 587
+
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASSWORD")
+    use_ssl = (smtp_port == 465)
+    use_tls = (smtp_port == 587 and not use_ssl)
+
+    try:
+        if aiosmtplib is not None:
+            await aiosmtplib.send(
+                msg,
+                hostname=smtp_host,
+                port=smtp_port,
+                username=smtp_user or None,
+                password=smtp_pass or None,
+                start_tls=use_tls,
+                use_tls=use_ssl,
+                timeout=15,
+            )
+        else:
+            await asyncio.to_thread(
+                _dispatch_smtp_sync_raw,
+                msg,
+                smtp_host,
+                smtp_port,
+                smtp_user,
+                smtp_pass,
+                use_tls,
+                use_ssl,
+            )
+        logger.info("Successfully dispatched subscription email to %s via SMTP %s:%s", tenant_email, smtp_host, smtp_port)
+        return True
+    except Exception as exc:
+        logger.error("Failed to send subscription approved email to %s via %s: %s", tenant_email, smtp_host, exc)
+        return False
