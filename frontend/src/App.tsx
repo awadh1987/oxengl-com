@@ -63,6 +63,8 @@ const VendorPortalView = React.lazy(() => import('./views/VendorPortalView').the
 const SalesReceivablesDashboard = React.lazy(() => import('./views/SalesReceivablesDashboard').then(m => ({ default: m.SalesReceivablesDashboard })));
 const DataObservabilityView = React.lazy(() => import('./views/DataObservabilityView').then(m => ({ default: m.DataObservabilityView })));
 const FinancialAnalyticsHubView = React.lazy(() => import('./views/FinancialAnalyticsHubView').then(m => ({ default: m.FinancialAnalyticsHubView })));
+const BillingConfigurationPanel = React.lazy(() => import('./components/admin/BillingConfigurationPanel').then(m => ({ default: m.BillingConfigurationPanel })));
+const PlatformAdminPortal = React.lazy(() => import('./views/PlatformAdminPortal').then(m => ({ default: m.PlatformAdminPortal })));
 
 const ViewLoadingFallback = () => (
   <div className="flex min-h-[400px] w-full flex-col items-center justify-center p-12 text-center">
@@ -132,6 +134,10 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   // Governance & Admin (Navbar Settings / Sidebar Governance)
   '/settings/approvals': 'executive-admin',
   '/settings/billing': 'billing',
+  '/admin/billing-gateways': 'billing-gateways',
+  '/admin/billing': 'billing-gateways',
+  '/admin/platform': 'platform-portal',
+  '/admin/platform-portal': 'platform-portal',
   '/settings/master-data': 'master-data',
   '/settings/tenant': 'tenant-settings',
   '/settings/workflows': 'workflow-builder',
@@ -188,6 +194,8 @@ export const TAB_ROUTE_MAP: Record<ActiveTab, string> = {
 
   'executive-admin': '/settings/approvals',
   billing: '/settings/billing',
+  'billing-gateways': '/admin/billing-gateways',
+  'platform-portal': '/admin/platform',
   'master-data': '/settings/master-data',
   'tenant-settings': '/settings/tenant',
   'workflow-builder': '/settings/workflows',
@@ -543,6 +551,23 @@ function AppContent() {
           </AdminLayout>
         );
         break;
+      case '/admin/billing-gateways':
+      case '/admin/billing':
+      case '/admin/settings/billing':
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <BillingConfigurationPanel />
+          </AdminLayout>
+        );
+        break;
+      case '/admin/platform':
+      case '/admin/platform-portal':
+        adminElement = (
+          <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
+            <PlatformAdminPortal />
+          </AdminLayout>
+        );
+        break;
       case '/admin/landing-editor':
         adminElement = (
           <AdminLayout currentPath={adminPath} onNavigate={navigate} onLogout={leaveWorkspace}>
@@ -783,6 +808,8 @@ function AppContent() {
     mfa: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     customs: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Read_Only', 'Guest'],
     'admin-hub': ['Super_Admin'],
+    'billing-gateways': ['Super_Admin'],
+    'platform-portal': ['Super_Admin'],
   };
 
   const renderActiveViewContent = () => {
@@ -830,6 +857,10 @@ function AppContent() {
         return <FinanceReportsView initialMode="audit-closing" />;
       case 'billing':
         return <TenantBillingView />;
+      case 'billing-gateways':
+        return <BillingConfigurationPanel />;
+      case 'platform-portal':
+        return <PlatformAdminPortal />;
       case 'crushers':
         return <CrusherLedgerView />;
       case 'transporters':

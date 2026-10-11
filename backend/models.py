@@ -3,22 +3,41 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING, cast
 
 from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
 
+def utc_now() -> datetime:
+    """Return timezone-aware current UTC datetime."""
+    return datetime.now(timezone.utc)
+
+if TYPE_CHECKING:
+    from backend.database import Base
+else:
+    try:
+        from backend.database import Base
+    except ImportError:
+        try:
+            from .database import Base
+        except ImportError:
+            from database import Base
+
 try:
-    from .database import Base
+    from backend.app.domains.inventory.models import Material
 except ImportError:
-    from database import Base
-from backend.app.domains.inventory.models import Material
-from backend.app.domains.iam.role_catalog import ALLOWED_RES_USER_ROLES_SQL
+    from app.domains.inventory.models import Material
+
+try:
+    from backend.app.domains.iam.role_catalog import ALLOWED_RES_USER_ROLES_SQL
+except ImportError:
+    from app.domains.iam.role_catalog import ALLOWED_RES_USER_ROLES_SQL
+
 
 
 class UserRole(str, Enum):
@@ -278,7 +297,7 @@ class TenantAuditLog(Base):
     action_type = Column(String(50), nullable=False, index=True)
     actor = Column(String(100), default="CRON_SYSTEM_DAEMON")
     details = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=utc_now, index=True)
 
 
 class Tenant(Base):
@@ -290,7 +309,7 @@ class Tenant(Base):
     company_name: Mapped[str] = mapped_column(String(150), nullable=False)
     schema_name: Mapped[str] = mapped_column(String(64), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=utc_now)
     logo_url = Column(Text, nullable=True, default=None)
     workspace_domain: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     signature_name: Mapped[Optional[str]] = mapped_column(String(100), default="Executive Administration", server_default=text("'Executive Administration'"), nullable=True)
@@ -306,7 +325,7 @@ class Tenant(Base):
 
     @property
     def name(self) -> str:
-        return self.company_name
+        return str(self.company_name or "")
 
     @name.setter
     def name(self, value: str):
@@ -355,18 +374,18 @@ class ResUser(TimestampMixin, Base):
     @property
     def is_super_admin(self) -> bool:
         if getattr(self, "_is_super_admin_override", None) is not None:
-            return bool(self._is_super_admin_override)
+            return self._is_super_admin_override
         return self.role in ("Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN")
 
     @is_super_admin.setter
     def is_super_admin(self, val: bool):
-        self._is_super_admin_override = bool(val)
+        self._is_super_admin_override = val
         if val:
             self.is_superuser = True
 
     @property
     def tenant_id(self) -> Optional[uuid.UUID]:
-        return self.company_id
+        return cast(Optional[uuid.UUID], self.company_id)
 
     @tenant_id.setter
     def tenant_id(self, val: Optional[uuid.UUID]):
@@ -374,7 +393,7 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def hashed_password(self) -> str:
-        return self.password_hash
+        return str(self.password_hash or "")
 
     @hashed_password.setter
     def hashed_password(self, val: str):
@@ -382,11 +401,14 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def password(self) -> str:
-        return self.password_hash
+        return str(self.password_hash or "")
 
     @password.setter
     def password(self, val: str):
-        from backend.two_tier_auth import hash_password
+        try:
+            from backend.two_tier_auth import hash_password
+        except ImportError:
+            from two_tier_auth import hash_password
         self.password_hash = hash_password(val)
 
     def __init__(self, *args, **kwargs):
@@ -397,7 +419,10 @@ class ResUser(TimestampMixin, Base):
 
         if "password" in kwargs and "password_hash" not in kwargs:
             raw_pwd = kwargs.pop("password")
-            from backend.two_tier_auth import hash_password
+            try:
+                from backend.two_tier_auth import hash_password
+            except ImportError:
+                from two_tier_auth import hash_password
             kwargs["password_hash"] = hash_password(raw_pwd)
 
         if "hashed_password" in kwargs and "password_hash" not in kwargs:
@@ -2242,7 +2267,7 @@ class MasterUser(TimestampMixin, Base):
 
     @property
     def hashed_password(self) -> str:
-        return self.password_hash
+        return str(self.password_hash or "")
 
     @hashed_password.setter
     def hashed_password(self, val: str):
@@ -2250,11 +2275,11 @@ class MasterUser(TimestampMixin, Base):
 
     @property
     def is_super_admin(self) -> bool:
-        return self.role == "super_admin"
+        return str(self.role or "") == "super_admin"
 
     @is_super_admin.setter
     def is_super_admin(self, val: bool):
-        self._is_super_admin_override = bool(val)
+        self._is_super_admin_override = val
         if val:
             self.is_superuser = True
 
@@ -2355,7 +2380,7 @@ class TenantUserRole(TimestampMixin, Base):
 
     @property
     def tenant_id(self) -> uuid.UUID:
-        return self.company_id
+        return cast(uuid.UUID, self.company_id)
 
     @tenant_id.setter
     def tenant_id(self, val: uuid.UUID):
@@ -2387,7 +2412,7 @@ class HrEmployee(TimestampMixin, Base):
 
     @property
     def tenant_id(self) -> uuid.UUID:
-        return self.company_id
+        return cast(uuid.UUID, self.company_id)
 
     @tenant_id.setter
     def tenant_id(self, val: uuid.UUID):
@@ -2483,9 +2508,9 @@ class SaaSInvoice(TimestampMixin, Base):
             "invoice_number": self.invoice_number,
             "billing_cycle": self.billing_cycle,
             "tier": self.tier,
-            "amount_sar": float(self.amount_sar) if self.amount_sar is not None else 0.0,
-            "subtotal_sar": float(self.subtotal_sar) if self.subtotal_sar is not None else 0.0,
-            "tax_sar": float(self.tax_sar) if self.tax_sar is not None else 0.0,
+            "amount_sar": float(str(self.amount_sar)) if self.amount_sar is not None else 0.0,
+            "subtotal_sar": float(str(self.subtotal_sar)) if self.subtotal_sar is not None else 0.0,
+            "tax_sar": float(str(self.tax_sar)) if self.tax_sar is not None else 0.0,
             "currency": self.currency,
             "status": self.status,
             "payment_method": self.payment_method,
@@ -2589,20 +2614,34 @@ class TripInspectionLog(TimestampMixin, Base):
 # ==============================================================================
 # Enterprise IAM & Security Models
 # ==============================================================================
-from backend.app.domains.iam.models import (  # noqa: E402
-    UserSession,
-    RefreshToken,
-    LoginAttempt,
-    SecurityToken,
-)
+try:
+    from backend.app.domains.iam.models import (  # noqa: E402
+        UserSession,
+        RefreshToken,
+        LoginAttempt,
+        SecurityToken,
+    )
+except ImportError:
+    from app.domains.iam.models import (  # noqa: E402
+        UserSession,
+        RefreshToken,
+        LoginAttempt,
+        SecurityToken,
+    )
 
 # ==============================================================================
 # Cross-Border Logistics & Customs Models (REM-P2-03)
 # ==============================================================================
-from backend.app.domains.logistics.customs_models import (  # noqa: E402
-    CustomsManifest,
-    CustomsDeclaration,
-)
+try:
+    from backend.app.domains.logistics.customs_models import (  # noqa: E402
+        CustomsManifest,
+        CustomsDeclaration,
+    )
+except ImportError:
+    from app.domains.logistics.customs_models import (  # noqa: E402
+        CustomsManifest,
+        CustomsDeclaration,
+    )
 
 
 # ==============================================================================
@@ -2651,21 +2690,41 @@ class Invoice(Base):
 # ==============================================================================
 # Phase 2: Biometric HRMS & Double-Entry Financial Ledgers
 # ==============================================================================
-from backend.app.domains.hr.models import (  # noqa: E402
-    Employee,
-    EmployeeDocument,
-    AttendanceLog,
-    PayrollRun,
-    HrmsAttendanceLog,
-)
-from backend.app.domains.finance.models import (  # noqa: E402
-    FinanceJournalEntry,
-    FinanceJournalLine,
-    Account,
-    AccountChart,
-    JournalEntry,
-    JournalLine,
-)
+try:
+    from backend.app.domains.hr.models import (  # noqa: E402
+        Employee,
+        EmployeeDocument,
+        AttendanceLog,
+        PayrollRun,
+        HrmsAttendanceLog,
+    )
+except ImportError:
+    from app.domains.hr.models import (  # noqa: E402
+        Employee,
+        EmployeeDocument,
+        AttendanceLog,
+        PayrollRun,
+        HrmsAttendanceLog,
+    )
+
+try:
+    from backend.app.domains.finance.models import (  # noqa: E402
+        FinanceJournalEntry,
+        FinanceJournalLine,
+        Account,
+        AccountChart,
+        JournalEntry,
+        JournalLine,
+    )
+except ImportError:
+    from app.domains.finance.models import (  # noqa: E402
+        FinanceJournalEntry,
+        FinanceJournalLine,
+        Account,
+        AccountChart,
+        JournalEntry,
+        JournalLine,
+    )
 
 # Semantic domain aliases for HRMS & General Ledger integration
 Payroll = PayrollRun
@@ -2676,31 +2735,55 @@ LedgerLine = FinanceJournalLine
 # ==============================================================================
 # Phase 7: Procurement & Double-Entry Ledger Integration
 # ==============================================================================
-from backend.app.domains.procurement.models import (  # noqa: E402
-    Vendor,
-    VendorBill,
-    ProcurementBill,
-    ProcurementVendor,
-    PurchaseRequisition,
-    PurchaseRequisitionLine,
-    PurchaseOrderLine,
-    GoodsReceiptBatchLog,
-    ApprovalRule,
-    WorkflowInstance,
-    WorkflowStep,
-)
+try:
+    from backend.app.domains.procurement.models import (  # noqa: E402
+        Vendor,
+        VendorBill,
+        ProcurementBill,
+        ProcurementVendor,
+        PurchaseRequisition,
+        PurchaseRequisitionLine,
+        PurchaseOrderLine,
+        GoodsReceiptBatchLog,
+        ApprovalRule,
+        WorkflowInstance,
+        WorkflowStep,
+    )
+except ImportError:
+    from app.domains.procurement.models import (  # noqa: E402
+        Vendor,
+        VendorBill,
+        ProcurementBill,
+        ProcurementVendor,
+        PurchaseRequisition,
+        PurchaseRequisitionLine,
+        PurchaseOrderLine,
+        GoodsReceiptBatchLog,
+        ApprovalRule,
+        WorkflowInstance,
+        WorkflowStep,
+    )
 
 
 # ==============================================================================
 # Phase 8: Inventory Management & Double-Entry Ledger Integration
 # ==============================================================================
-from backend.app.domains.inventory.models import (  # noqa: E402
-    Material,
-    StockBalance,
-    LandedCostAllocation,
-    LandedCostItem,
-    InventoryMovement,
-)
+try:
+    from backend.app.domains.inventory.models import (  # noqa: E402
+        Material,
+        StockBalance,
+        LandedCostAllocation,
+        LandedCostItem,
+        InventoryMovement,
+    )
+except ImportError:
+    from app.domains.inventory.models import (  # noqa: E402
+        Material,
+        StockBalance,
+        LandedCostAllocation,
+        LandedCostItem,
+        InventoryMovement,
+    )
 
 # Semantic domain aliases for Inventory & General Ledger integration
 Product = ProductProduct
@@ -2710,24 +2793,42 @@ InventoryLedgerMovement = InventoryMovement
 # ==============================================================================
 # Phase 10: Procurement Tendering, RFQ Engine & Vendor Portal Integration
 # ==============================================================================
-from backend.app.domains.procurement.models import (  # noqa: E402
-    ProcurementTender,
-    TenderRFQLine,
-    VendorPortalUser,
-    ProcurementBid,
-    ProcurementBidLine,
-    TenderRFQ,
-    TenderBid,
-    TenderBidLine,
-)
+try:
+    from backend.app.domains.procurement.models import (  # noqa: E402
+        ProcurementTender,
+        TenderRFQLine,
+        VendorPortalUser,
+        ProcurementBid,
+        ProcurementBidLine,
+        TenderRFQ,
+        TenderBid,
+        TenderBidLine,
+    )
+except ImportError:
+    from app.domains.procurement.models import (  # noqa: E402
+        ProcurementTender,
+        TenderRFQLine,
+        VendorPortalUser,
+        ProcurementBid,
+        ProcurementBidLine,
+        TenderRFQ,
+        TenderBid,
+        TenderBidLine,
+    )
 
 # ==============================================================================
 # Phase 1: SaaS Multi-Grade Subscription & Billing Domain Models
 # ==============================================================================
-from backend.app.domains.saas.models import (  # noqa: E402
-    SubscriptionPlan,
-    TenantSubscription,
-)
+try:
+    from backend.app.domains.saas.models import (  # noqa: E402
+        SubscriptionPlan,
+        TenantSubscription,
+    )
+except ImportError:
+    from app.domains.saas.models import (  # noqa: E402
+        SubscriptionPlan,
+        TenantSubscription,
+    )
 
 
 # ==============================================================================
@@ -2742,7 +2843,7 @@ class PlatformSetting(Base):
     setting_key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     setting_value: Mapped[dict] = mapped_column(JSONB, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False
     )
 
 
@@ -2755,7 +2856,7 @@ class SiteSetting(Base):
     key: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     value: Mapped[str] = mapped_column(Text, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False
     )
 
 
@@ -2806,10 +2907,10 @@ class TenantBranding(Base):
     landing_cta_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     landing_theme_mode: Mapped[Optional[str]] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False
     )
 
     organization: Mapped[Optional["Organization"]] = relationship(
@@ -2844,7 +2945,7 @@ class PlatformMasterSetting(Base):
     sovereignty_badge_text: Mapped[str] = mapped_column(Text, default="All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.", server_default="All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.", nullable=False)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False
     )
     updated_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
@@ -2862,15 +2963,15 @@ class PlatformLandingSection(Base):
     section_key: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", server_default="en", nullable=False)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    subtitle: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    subtitle: Mapped[Optional[Text]] = mapped_column(Text, nullable=True)
     content_data: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False
     )
 
 
@@ -2885,13 +2986,13 @@ class SystemBroadcast(Base):
     severity: Mapped[str] = mapped_column(String(32), default="info", server_default="info", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     starts_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
     expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     is_dismissible: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     target_scope: Mapped[str] = mapped_column(String(64), default="all", server_default="all", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False
+        DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False
     )
     created_by: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
 
@@ -2906,8 +3007,8 @@ class OxenglCurrency(Base):
     currency_symbol: Mapped[str] = mapped_column(String(10), nullable=False)
     currency_name: Mapped[str] = mapped_column(String(100), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False)
 
 
 class OxenglExchangeRate(Base):
@@ -2923,9 +3024,9 @@ class OxenglExchangeRate(Base):
     from_currency: Mapped[str] = mapped_column(String(10), nullable=False)
     to_currency: Mapped[str] = mapped_column(String(10), nullable=False)
     rate: Mapped[Decimal] = mapped_column(Numeric(18, 6), nullable=False)
-    effective_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    effective_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, server_default=func.now(), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, server_default=func.now(), nullable=False)
 
 
 class OxenglEngineSetting(Base):
@@ -2937,6 +3038,7 @@ class OxenglEngineSetting(Base):
     engine_name: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
     supported_currencies: Mapped[list] = mapped_column(JSONB, default=lambda: ["USD", "SAR", "YER"], server_default=text("'[\"USD\", \"SAR\", \"YER\"]'::jsonb"), nullable=False)
     settings: Mapped[dict] = mapped_column(JSONB, default=dict, server_default=text("'{}'::jsonb"), nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False)
+
 
 

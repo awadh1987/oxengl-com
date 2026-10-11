@@ -79,8 +79,8 @@ def _audit(db: Session, request: Request, user: Any, action: str, outcome: str |
 
 def require_strict_super_admin(
     request: Request,
-    db: Session = Depends(get_platform_db),
     current_user: Any = Depends(require_super_admin),
+    db: Session = Depends(get_platform_db),
 ) -> Any:
     """Payment credentials demand record-based Super_Admin authority (no dev/header bypass)."""
     if not has_record_super_admin_authority(current_user):

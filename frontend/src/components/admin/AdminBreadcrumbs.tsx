@@ -31,6 +31,10 @@ export const AdminBreadcrumbs: React.FC<AdminBreadcrumbsProps> = ({
 
     if (currentPath === '/admin' || currentPath === '/admin/cockpit') {
       base.push({ label: 'Mission Cockpit', labelAr: 'لوحة القيادة المركزية' });
+    } else if (currentPath.startsWith('/admin/billing-gateways') || currentPath.startsWith('/admin/billing')) {
+      base.push({ label: 'Payment & Billing Gateways', labelAr: 'بوابات الدفع والفوترة', path: '/admin/billing-gateways' });
+    } else if (currentPath.startsWith('/admin/platform')) {
+      base.push({ label: 'Platform Admin Portal', labelAr: 'بوابة إدارة المنصة', path: '/admin/platform' });
     } else if (currentPath.startsWith('/admin/tenants')) {
       base.push({ label: 'Tenants Registry', labelAr: 'سجل المستأجرين' });
     } else if (currentPath.startsWith('/admin/landing-editor')) {

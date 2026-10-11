@@ -74,7 +74,9 @@ export type ActiveTab =
   | 'customs'
   | 'organization-profile'
   | 'corporate-vault'
-  | 'admin-hub';
+  | 'admin-hub'
+  | 'billing-gateways'
+  | 'platform-portal';
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -460,6 +462,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
               roles: ['Super_Admin', 'Admin'],
               badge: 'Cockpit',
             },
+            {
+              id: 'billing-gateways' as ActiveTab,
+              labelAr: 'بوابات الدفع والفوترة اليدوية',
+              labelEn: 'Payment Gateway Settings',
+              path: '/admin/billing-gateways',
+              icon: CreditCard,
+              roles: ['Super_Admin', 'Admin'],
+              badge: 'Gateways',
+            },
+            {
+              id: 'platform-portal' as ActiveTab,
+              labelAr: 'بوابة إدارة المنصة والقياس',
+              labelEn: 'Platform Admin Portal',
+              path: '/admin/platform',
+              icon: Globe,
+              roles: ['Super_Admin', 'Admin'],
+              badge: 'Live',
+            },
           ]
         : []),
     ],
@@ -526,6 +546,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           'organization-profile',
           'corporate-vault',
           'billing',
+          'billing-gateways',
+          'platform-portal',
           'workflow-builder',
           'design-studio',
           'admin-hub',
@@ -605,6 +627,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           'organization-profile',
           'corporate-vault',
           'billing',
+          'billing-gateways',
+          'platform-portal',
           'workflow-builder',
           'design-studio',
           'admin-hub',
@@ -644,8 +668,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const handleNavigate = (item: MenuItemDef) => {
     if (item.path) {
-      if (item.path === '/admin') {
-        window.location.href = '/admin';
+      if (item.path === '/admin' || item.path.startsWith('/admin/')) {
+        window.location.href = item.path;
         return;
       }
       window.history.pushState({}, '', item.path);

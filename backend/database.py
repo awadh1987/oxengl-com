@@ -295,6 +295,18 @@ def get_platform_db(request: Request):
     from fastapi import HTTPException, status
 
     if not getattr(request.state, "platform_db_authorized", False):
+        auth_header = request.headers.get("Authorization") or ""
+        if auth_header.startswith("Bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+            try:
+                from backend.two_tier_auth import decode_two_tier_jwt
+                claims = decode_two_tier_jwt(token)
+                if claims and (claims.get("tier") == "master" or str(claims.get("role", "")).lower() in ("super_admin", "superadmin")):
+                    request.state.platform_db_authorized = True
+            except Exception:
+                pass
+
+    if not getattr(request.state, "platform_db_authorized", False):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform database access is not authorized")
     if PlatformSessionLocal is None:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Platform database access is not configured")
