@@ -6,7 +6,7 @@ import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from enum import Enum
-from typing import Any, Optional, TYPE_CHECKING, cast
+from typing import Any, Optional, TYPE_CHECKING
 
 from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint, event, func, inspect, text
 from sqlalchemy.exc import IntegrityError
@@ -325,7 +325,7 @@ class Tenant(Base):
 
     @property
     def name(self) -> str:
-        return str(self.company_name or "")
+        return self.company_name or ""
 
     @name.setter
     def name(self, value: str):
@@ -385,7 +385,7 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def tenant_id(self) -> Optional[uuid.UUID]:
-        return cast(Optional[uuid.UUID], self.company_id)
+        return self.company_id
 
     @tenant_id.setter
     def tenant_id(self, val: Optional[uuid.UUID]):
@@ -393,7 +393,7 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def hashed_password(self) -> str:
-        return str(self.password_hash or "")
+        return self.password_hash or ""
 
     @hashed_password.setter
     def hashed_password(self, val: str):
@@ -401,7 +401,7 @@ class ResUser(TimestampMixin, Base):
 
     @property
     def password(self) -> str:
-        return str(self.password_hash or "")
+        return self.password_hash or ""
 
     @password.setter
     def password(self, val: str):
@@ -2267,7 +2267,7 @@ class MasterUser(TimestampMixin, Base):
 
     @property
     def hashed_password(self) -> str:
-        return str(self.password_hash or "")
+        return self.password_hash or ""
 
     @hashed_password.setter
     def hashed_password(self, val: str):
@@ -2275,7 +2275,7 @@ class MasterUser(TimestampMixin, Base):
 
     @property
     def is_super_admin(self) -> bool:
-        return str(self.role or "") == "super_admin"
+        return self.role in ("super_admin",)
 
     @is_super_admin.setter
     def is_super_admin(self, val: bool):
@@ -2380,7 +2380,7 @@ class TenantUserRole(TimestampMixin, Base):
 
     @property
     def tenant_id(self) -> uuid.UUID:
-        return cast(uuid.UUID, self.company_id)
+        return self.company_id
 
     @tenant_id.setter
     def tenant_id(self, val: uuid.UUID):
@@ -2412,7 +2412,7 @@ class HrEmployee(TimestampMixin, Base):
 
     @property
     def tenant_id(self) -> uuid.UUID:
-        return cast(uuid.UUID, self.company_id)
+        return self.company_id
 
     @tenant_id.setter
     def tenant_id(self, val: uuid.UUID):
