@@ -28,6 +28,7 @@ const FinancialVouchersView = React.lazy(() => import('./views/FinancialVouchers
 const TenantLoginView = React.lazy(() => import('./views/TenantLoginView').then(m => ({ default: m.TenantLoginView })));
 const TenantRegistrationView = React.lazy(() => import('./views/TenantRegistrationView').then(m => ({ default: m.TenantRegistrationView })));
 const LandingPageView = React.lazy(() => import('./views/LandingPageView').then(m => ({ default: m.LandingPageView })));
+const OxenGLLandingPage = React.lazy(() => import('./pages/OxenGLLandingPage'));
 const TenantLandingView = React.lazy(() => import('./views/TenantLandingView').then(m => ({ default: m.TenantLandingView })));
 const SuperAdminLoginView = React.lazy(() => import('./views/SuperAdminLoginView').then(m => ({ default: m.SuperAdminLoginView })));
 const SuperAdminCockpitView = React.lazy(() => import('./views/SuperAdminCockpitView').then(m => ({ default: m.SuperAdminCockpitView })));
@@ -81,6 +82,8 @@ export const TENANT_LOGIN_PATH = '/tenant/login';
 
 const isPublicPath = (path: string): boolean =>
   path === '/' ||
+  path === '/nextgen' ||
+  path === '/landing-nextgen' ||
   path === TENANT_LOGIN_PATH ||
   path === '/register' ||
   path === '/forgot-password' ||
@@ -707,6 +710,14 @@ function AppContent() {
       custom_domain: customDom,
     }, '/operations/daily');
   };
+
+  if ((currentPath === '/nextgen' || currentPath === '/landing-nextgen') && !effectiveTenantSlug) {
+    return (
+      <Suspense fallback={<ViewLoadingFallback />}>
+        <Route path={currentPath} element={<OxenGLLandingPage />} />
+      </Suspense>
+    );
+  }
 
   if (currentPath === '/' && !effectiveTenantSlug) {
     return (
