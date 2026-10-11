@@ -487,8 +487,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const refreshCompanies = async (): Promise<Company[]> => {
-    const apiCompanies = await erpApi.getCompanies();
-    const mapped = apiCompanies.map((company) => ({
+    const isPublic = typeof window !== 'undefined' && (
+      window.location.pathname === '/' ||
+      window.location.pathname === '' ||
+      window.location.pathname === '/nextgen' ||
+      window.location.pathname === '/landing-nextgen'
+    );
+    const token = getAuthToken();
+    if (isPublic && !token) {
+      setCompanies([]);
+      return [];
+    }
+    try {
+      const apiCompanies = await erpApi.getCompanies();
+      if (!Array.isArray(apiCompanies)) {
+        setCompanies([]);
+        return [];
+      }
+      const mapped = apiCompanies.map((company) => ({
       id: company.id,
       parentId: company.parent_id,
       name: company.name,
@@ -558,6 +574,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return null;
     });
     return mapped;
+    } catch (error) {
+      console.warn('Company directory unavailable:', error);
+      setCompanies([]);
+      return [];
+    }
   };
 
   // Brand Configuration State (Dynamically derived from active company session)
@@ -821,6 +842,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [isOnline, currentCompany]);
 
   useEffect(() => {
+    const isPublic = typeof window !== 'undefined' && (
+      window.location.pathname === '/' ||
+      window.location.pathname === '' ||
+      window.location.pathname === '/nextgen' ||
+      window.location.pathname === '/landing-nextgen'
+    );
+    const token = getAuthToken();
+    if (isPublic && !token) {
+      return;
+    }
     refreshCompanies().catch((error) => console.warn('Company directory unavailable:', error));
   }, []);
 

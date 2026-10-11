@@ -1236,6 +1236,8 @@ async def websocket_fleet_tracking(websocket: WebSocket, stream_id: str = "fleet
 
 @app.get("/api/companies", response_model=list[ResCompanyRead], tags=["Companies"])
 def list_companies(database: Session = Depends(get_db), current_user: models.ResUser | None = Depends(get_optional_authenticated_user)):
+	if not current_user:
+		return []
 	companies = database.scalars(select(models.ResCompany).order_by(models.ResCompany.name)).all()
 	result = []
 	for c in companies:
