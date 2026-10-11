@@ -8,7 +8,7 @@ import type { ExportDocType } from './components/ExportPrintModal';
 import { Building2, Cpu, CreditCard, Layers, FileSpreadsheet, Landmark, LayoutDashboard, Menu, Palette, Receipt, Scale, Sparkles, Truck, Users, Wrench, X, Globe, Radio, TrendingUp } from 'lucide-react';
 import { UserRole } from './types';
 import { getSubdomain, isApexDomain, isCustomDomain, getCustomDomain, redirectToTenantWorkspace } from './utils/subdomain';
-import { resolveDomain } from './services/api';
+import { resolveDomain, getAuthToken } from './services/api';
 
 import { useNavigate } from './hooks/useNavigate';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -288,21 +288,13 @@ function AppContent() {
   const navigate = useNavigate();
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const hasToken = Boolean(
-      localStorage.getItem('oxengl_auth_jwt') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('access_token')
-    );
+    const hasToken = Boolean(getAuthToken());
     const sessionActive = localStorage.getItem('oxengl_session_active') === 'true';
     return Boolean(hasToken && sessionActive && currentUser?.role !== 'Guest' && currentUser?.id);
   });
 
   useEffect(() => {
-    if (isTwoTierAuthenticated && currentUser?.role !== 'Guest' && currentUser?.id) {
-      setIsLoggedIn(true);
-    } else if (currentUser?.role === 'Guest' || !currentUser?.id) {
-      setIsLoggedIn(false);
-    }
+    setIsLoggedIn(Boolean(isTwoTierAuthenticated && currentUser?.role !== 'Guest' && currentUser?.id));
   }, [isTwoTierAuthenticated, currentUser]);
 
   const [resolvedCustomSlug, setResolvedCustomSlug] = useState<string | null>(null);

@@ -7,7 +7,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useTranslation } from '../../hooks/useTranslation';
 import { Company } from '../../types';
-import { authFetch, erpApi, IsolationAudit, LicenseIssuePayload, SubscriptionPlanDto } from '../../services/api';
+import { authFetch, erpApi, getAuthToken, IsolationAudit, LicenseIssuePayload, SubscriptionPlanDto } from '../../services/api';
 import { invalidatePricingPlans, usePricingPlans } from '../../hooks/usePricingPlans';
 import { annualSavingsPercent, formatSar, isUnlimited, normalizeTierCode } from '../../utils/pricing';
 import { SpotlightCard } from '../design-system/SpotlightCard';
@@ -741,7 +741,7 @@ export const PlatformSettingsView: React.FC = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('oxengl_auth_jwt') || ''}`,
+              'Authorization': `Bearer ${getAuthToken() || ''}`,
             },
             body: JSON.stringify({
               fileName: file.name,
@@ -790,7 +790,7 @@ export const PlatformSettingsView: React.FC = () => {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('oxengl_auth_jwt') || ''}`,
+              'Authorization': `Bearer ${getAuthToken() || ''}`,
             },
             body: JSON.stringify({
               fileName: file.name,
@@ -842,7 +842,7 @@ export const PlatformSettingsView: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('oxengl_auth_jwt') || ''}`,
+          'Authorization': `Bearer ${getAuthToken() || ''}`,
         },
         body: JSON.stringify({
           fileName: 'platform_logo.png',
@@ -862,7 +862,7 @@ export const PlatformSettingsView: React.FC = () => {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('oxengl_auth_jwt') || ''}`,
+          'Authorization': `Bearer ${getAuthToken() || ''}`,
         },
         body: JSON.stringify([
           { key: 'site_name', value: nameEn || 'OxenGL' },

@@ -14,6 +14,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { setAuthSession } from '../services/api';
 
 export interface SuperAdminLoginViewProps {
   onLoginSuccess?: () => void;
@@ -66,7 +67,7 @@ export const SuperAdminLoginView: React.FC<SuperAdminLoginViewProps> = ({ onLogi
       });
 
       if (res?.access_token) {
-        localStorage.setItem('token', res.access_token);
+        setAuthSession(res.access_token, 'master', null, null);
       }
       localStorage.setItem('role', res?.role ?? res?.user?.role ?? 'Super_Admin');
 

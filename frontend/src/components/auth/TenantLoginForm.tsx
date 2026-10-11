@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Building2, KeyRound, Loader2, Lock, Mail, Phone, AlertCircle, ArrowRight, Sparkles, LogIn, CheckCircle2, ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { Company } from '../../types';
-import { erpApi } from '../../services/api';
+import { erpApi, setAuthSession } from '../../services/api';
 import { redirectToTenantSubdomain, redirectToTenantWorkspace } from '../../utils/subdomain';
 
 
@@ -96,8 +96,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
       }
 
       if (res?.access_token) {
-        localStorage.setItem('token', res.access_token);
-        localStorage.setItem('tenant_slug', res.tenant_slug || cleanSlug);
+        setAuthSession(res.access_token, 'tenant', res.tenant_slug || cleanSlug, res.tenant_id);
         localStorage.setItem('role', res.role || res.user?.role || 'admin');
         onSuccess?.();
 
@@ -184,10 +183,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
       }
 
       if (data.access_token) {
-        localStorage.setItem('token', data.access_token);
-        localStorage.setItem('oxengl_auth_jwt', data.access_token);
-        localStorage.setItem('oxengl_session_active', 'true');
-        localStorage.setItem('tenant_slug', data.tenant_slug || cleanSlug);
+        setAuthSession(data.access_token, 'tenant', data.tenant_slug || cleanSlug, data.tenant_id);
         localStorage.setItem('role', data.role || data.user?.role || 'admin');
 
         if (data.user) {

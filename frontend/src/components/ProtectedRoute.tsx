@@ -1,5 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { getAuthToken } from '../services/api';
 import { UserRole } from '../types';
 import {
   ShieldAlert,
@@ -50,10 +51,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   const authenticated = isLoggedIn !== undefined ? isLoggedIn : Boolean(
-    localStorage.getItem('oxengl_session_active') === 'true' ||
-    localStorage.getItem('oxengl_auth_jwt') ||
-    localStorage.getItem('token') ||
-    localStorage.getItem('access_token')
+    localStorage.getItem('oxengl_session_active') === 'true' && getAuthToken()
   );
 
   const handleRequireLogin = onRequireLogin || (() => {

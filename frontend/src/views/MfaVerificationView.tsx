@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ShieldCheck, ArrowLeft, KeyRound, AlertCircle, RefreshCw } from 'lucide-react';
+import { setAuthSession } from '../services/api';
 
 interface MfaVerificationViewProps {
   challengeToken?: string | null;
@@ -117,15 +118,15 @@ export const MfaVerificationView: React.FC<MfaVerificationViewProps> = ({
       };
       localStorage.removeItem('oxengl_2fa_pending_token');
       localStorage.removeItem('oxengl_challenge_token');
+      setAuthSession(authTokens.accessToken, 'tenant', data.tenant_slug || tenantSlug, data.tenant_id);
+      if (authTokens.refreshToken) {
+        localStorage.setItem('oxengl_refresh_token', authTokens.refreshToken);
+      } else {
+        localStorage.removeItem('oxengl_refresh_token');
+      }
       if (onSuccess) {
         onSuccess(authTokens);
       } else {
-        localStorage.setItem('oxengl_access_token', authTokens.accessToken);
-        if (authTokens.refreshToken) {
-          localStorage.setItem('oxengl_refresh_token', authTokens.refreshToken);
-        } else {
-          localStorage.removeItem('oxengl_refresh_token');
-        }
         window.location.href = '/dashboard';
       }
     } catch (err: any) {

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 
 import { useApp } from '../context/AppContext';
+import { getAuthToken, getTenantId } from '../services/api';
 
 export interface ApprovalItem {
   id: string;
@@ -57,9 +58,13 @@ export const ApprovalQueueView: React.FC = () => {
   const fetchApprovalQueue = async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('oxengl_access_token');
+      const token = getAuthToken();
+      const activeTenantId = getTenantId() || '';
       const res = await fetch('/api/v1/procurement/approvals/queue', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(activeTenantId ? { 'X-Tenant-ID': activeTenantId } : {}),
+        },
       });
       if (res.ok) {
         const data = await res.json();
@@ -153,12 +158,14 @@ export const ApprovalQueueView: React.FC = () => {
           ? `/api/v1/procurement/approvals/steps/${activeItem.step_id}/approve`
           : `/api/v1/procurement/approvals/steps/${activeItem.step_id}/reject`;
 
-      const token = localStorage.getItem('oxengl_access_token');
+      const token = getAuthToken();
+      const activeTenantId = getTenantId() || '';
       await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(activeTenantId ? { 'X-Tenant-ID': activeTenantId } : {}),
         },
         body: JSON.stringify({
           rejection_reason: rejectionReason,

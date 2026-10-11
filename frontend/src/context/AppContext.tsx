@@ -429,6 +429,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setAuthTier(null);
         setTenantSlug(null);
         setTenantId(null);
+        setCurrentUser(DEFAULT_FALLBACK_USER);
+        setCurrentCompany(null);
         localStorage.setItem('oxengl_session_active', 'false');
       }
       setAuthErrorMessage(customEvent.detail?.message || 'Authentication error');
@@ -629,7 +631,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     setIsAuthReady(true);
-    const token = localStorage.getItem('token') || localStorage.getItem('oxengl_auth_jwt');
+    const token = getAuthToken();
     if (token) {
       refreshUsers();
     }

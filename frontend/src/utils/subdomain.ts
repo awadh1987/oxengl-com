@@ -164,28 +164,49 @@ export function redirectToTenantSubdomain(tenantSlug: string, path = '/operation
 }
 
 
+const AUTH_COOKIE_NAMES = ['oxengl_session', 'oxengl_token', 'access_token', 'tenant_access_token'];
+
 export function setAuthCookie(token: string): void {
   if (typeof document === 'undefined') return;
-  if (isLocalhost()) {
-    document.cookie = `oxengl_token=${token}; path=/; samesite=lax`;
-  } else {
-    const rootDomain = getRootDomain();
-    document.cookie = `oxengl_token=${token}; domain=.${rootDomain}; path=/; secure; samesite=lax`;
+  const encodedToken = encodeURIComponent(token);
+  const isLocal = isLocalhost();
+  const rootDomain = isLocal ? null : getRootDomain();
+
+  for (const cookieName of AUTH_COOKIE_NAMES) {
+    if (isLocal) {
+      document.cookie = `${cookieName}=${encodedToken}; path=/; samesite=lax`;
+    } else {
+      document.cookie = `${cookieName}=${encodedToken}; domain=.${rootDomain}; path=/; secure; samesite=lax`;
+      document.cookie = `${cookieName}=${encodedToken}; path=/; secure; samesite=lax`;
+    }
   }
 }
 
 export function getAuthCookie(): string | null {
   if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|;\s*)oxengl_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  for (const cookieName of AUTH_COOKIE_NAMES) {
+    const regex = new RegExp(`(?:^|;\\s*)${cookieName}=([^;]*)`);
+    const match = document.cookie.match(regex);
+    if (match && match[1]) {
+      return decodeURIComponent(match[1]);
+    }
+  }
+  return null;
 }
 
 export function clearAuthCookie(): void {
   if (typeof document === 'undefined') return;
-  if (isLocalhost()) {
-    document.cookie = 'oxengl_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=lax';
-  } else {
-    const rootDomain = getRootDomain();
-    document.cookie = `oxengl_token=; domain=.${rootDomain}; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=lax`;
+  const isLocal = isLocalhost();
+  const rootDomain = isLocal ? null : getRootDomain();
+  const pastDate = 'Thu, 01 Jan 1970 00:00:00 GMT';
+
+  for (const cookieName of AUTH_COOKIE_NAMES) {
+    if (isLocal) {
+      document.cookie = `${cookieName}=; path=/; expires=${pastDate}; samesite=lax`;
+    } else {
+      document.cookie = `${cookieName}=; domain=.${rootDomain}; path=/; expires=${pastDate}; secure; samesite=lax`;
+      document.cookie = `${cookieName}=; path=/; expires=${pastDate}; secure; samesite=lax`;
+    }
   }
 }
+

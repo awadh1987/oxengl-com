@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Crown, KeyRound, Loader2, Lock, Mail, Phone, ShieldCheck, AlertCircle, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { setAuthSession } from '../../services/api';
 
 interface MasterLoginFormProps {
   onSuccess?: () => void;
@@ -42,7 +43,7 @@ export const MasterLoginForm: React.FC<MasterLoginFormProps> = ({
     try {
       const res = await loginMaster({ identity: cleanIdentity, password });
       if (res?.access_token) {
-        localStorage.setItem('token', res.access_token);
+        setAuthSession(res.access_token, 'master', null, null);
       }
       localStorage.setItem('role', res?.role ?? res?.user?.role ?? 'Super_Admin');
       onSuccess?.();

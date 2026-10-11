@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { getAuthToken, getTenantId } from '../../services/api';
 import { BalancedJournalLineItem, BalancedJournalVoucher } from '../../types';
 import {
   Calculator,
@@ -104,8 +105,8 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
   const loadHistory = async () => {
     setIsLoadingHistory(true);
     try {
-      const token = localStorage.getItem('oxengl_auth_jwt') || localStorage.getItem('token');
-      const activeTenantId = currentCompany?.id || localStorage.getItem('oxengl_tenant_id') || localStorage.getItem('tenant_id') || '';
+      const token = getAuthToken();
+      const activeTenantId = currentCompany?.id || getTenantId() || '';
       const resp = await fetch('/api/v1/finance/vouchers/balanced', {
         headers: {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -259,8 +260,8 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
         })),
       };
 
-      const token = localStorage.getItem('oxengl_auth_jwt') || localStorage.getItem('token');
-      const activeTenantId = currentCompany?.id || localStorage.getItem('oxengl_tenant_id') || localStorage.getItem('tenant_id') || '';
+      const token = getAuthToken();
+      const activeTenantId = currentCompany?.id || getTenantId() || '';
       const resp = await fetch('/api/v1/finance/vouchers/balanced', {
         method: 'POST',
         headers: {

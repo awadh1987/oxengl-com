@@ -865,10 +865,54 @@ interface Product {
 
 import { setAuthCookie, getAuthCookie, clearAuthCookie, getSubdomain, isCustomDomain, getCustomDomain, getEffectiveDomainIdentifier } from '../utils/subdomain';
 
-export const OXENGL_AUTH_TOKEN_KEY = 'oxengl_auth_jwt';
-export const OXENGL_AUTH_TIER_KEY = 'oxengl_auth_tier';
-export const OXENGL_TENANT_SLUG_KEY = 'oxengl_tenant_slug';
-export const OXENGL_TENANT_ID_KEY = 'oxengl_tenant_id';
+import {
+  apiClient,
+  request as clientRequest,
+  getAuthToken,
+  getAuthTier,
+  getTenantSlug,
+  getActiveCompanyId,
+  getTenantId,
+  setAuthSession,
+  clearAuthSession,
+  decodeJwtClaims,
+  isValidUUID,
+  scheduleRedirectToLogin,
+  isPublicOrAuthRoute,
+  scheduleDebouncedSessionClear,
+  cancelDebouncedSessionClear,
+  AUTH_STORAGE_KEYS,
+  TOKEN_STORAGE_KEYS,
+  PUBLIC_AUTH_ROUTES,
+  OXENGL_AUTH_TOKEN_KEY,
+  OXENGL_AUTH_TIER_KEY,
+  OXENGL_TENANT_SLUG_KEY,
+  OXENGL_TENANT_ID_KEY,
+} from '../api/client';
+
+export {
+  apiClient,
+  getAuthToken,
+  getAuthTier,
+  getTenantSlug,
+  getActiveCompanyId,
+  getTenantId,
+  setAuthSession,
+  clearAuthSession,
+  decodeJwtClaims,
+  isValidUUID,
+  scheduleRedirectToLogin,
+  isPublicOrAuthRoute,
+  scheduleDebouncedSessionClear,
+  cancelDebouncedSessionClear,
+  AUTH_STORAGE_KEYS,
+  TOKEN_STORAGE_KEYS,
+  PUBLIC_AUTH_ROUTES,
+  OXENGL_AUTH_TOKEN_KEY,
+  OXENGL_AUTH_TIER_KEY,
+  OXENGL_TENANT_SLUG_KEY,
+  OXENGL_TENANT_ID_KEY,
+};
 
 export interface ResolvedDomainResponse {
   resolved: boolean;
@@ -920,464 +964,10 @@ export async function verifyDomainDns(domain: string, expectedCname: string = 'd
   }
 }
 
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  const cookieToken = getAuthCookie();
-  const localToken = localStorage.getItem(OXENGL_AUTH_TOKEN_KEY) || localStorage.getItem('token') || localStorage.getItem('access_token');
-  if (cookieToken && !localToken) {
-    localStorage.setItem(OXENGL_AUTH_TOKEN_KEY, cookieToken);
-    localStorage.setItem('token', cookieToken);
-    localStorage.setItem('access_token', cookieToken);
-    return cookieToken;
-  }
-  return localToken || cookieToken;
-}
-
-export function getAuthTier(): 'master' | 'tenant' | null {
-  if (typeof window === 'undefined') return null;
-  const tier = (localStorage.getItem(OXENGL_AUTH_TIER_KEY) as 'master' | 'tenant');
-  if (tier) return tier;
-  if (getSubdomain() || isCustomDomain() || localStorage.getItem('tenant_slug') || localStorage.getItem(OXENGL_TENANT_SLUG_KEY)) return 'tenant';
-  if (localStorage.getItem('role') === 'Super_Admin') return 'master';
-  return null;
-}
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export function isValidUUID(val: any): val is string {
-  return typeof val === 'string' && UUID_REGEX.test(val.trim());
-}
-
-/**
- * Safely decodes JWT claims from a token string without external dependencies.
- */
-export function decodeJwtClaims(token: string | null): Record<string, any> | null {
-  if (!token || typeof token !== 'string') return null;
-  try {
-    const parts = token.split('.');
-    if (parts.length < 2) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-    const jsonStr = decodeURIComponent(
-      atob(padded)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonStr);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Extracts and strictly validates the active company UUID from:
- * 1. Explicit argument (if valid UUID)
- * 2. LocalStorage direct keys (tenant_id, company_id, oxengl_tenant_id)
- * 3. Decoded active JWT claims (company_id, tenant_id)
- * 4. Stored user objects (oxengl_user, meayon_user)
- * 5. Stored company object (oxengl_current_company)
- *
- * Guarantees that non-UUID slugs (e.g. 'default', 'saudi-aggregate') are NEVER returned.
- */
-export function getActiveCompanyId(explicitId?: string): string | null {
-  // 1. Explicit parameter if valid UUID
-  if (isValidUUID(explicitId)) {
-    return explicitId.trim();
-  }
-
-  if (typeof window === 'undefined') return null;
-
-  const effectiveDomain = getEffectiveDomainIdentifier();
-
-  // 2. If on a tenant workspace / custom domain, prioritize matching domain metadata
-  if (effectiveDomain) {
-    const rawCompany = localStorage.getItem('oxengl_current_company');
-    if (rawCompany) {
-      try {
-        const c = JSON.parse(rawCompany);
-        const matchesDomain =
-          c?.slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
-          c?.custom_domain?.toLowerCase() === effectiveDomain.toLowerCase() ||
-          c?.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
-        if (matchesDomain && isValidUUID(c?.id)) {
-          return c.id.trim();
-        }
-      } catch {}
-    }
-
-    const token = getAuthToken();
-    if (token) {
-      const claims = decodeJwtClaims(token);
-      if (claims) {
-        const matchesDomain =
-          claims.tenant_slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
-          claims.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
-        const cand = claims.company_id || claims.tenant_id || claims.companyId || claims.tenantId;
-        if (matchesDomain && isValidUUID(cand)) {
-          return cand.trim();
-        }
-      }
-    }
-
-    const rawUser = localStorage.getItem('oxengl_user') || localStorage.getItem('currentUser');
-    if (rawUser) {
-      try {
-        const u = JSON.parse(rawUser);
-        const matchesDomain =
-          u?.tenant_slug?.toLowerCase() === effectiveDomain.toLowerCase() ||
-          u?.domain_slug?.toLowerCase() === effectiveDomain.toLowerCase();
-        const cand = u?.company_id || u?.companyId || u?.tenant_id || u?.tenantId || u?.company?.id;
-        if (matchesDomain && isValidUUID(cand)) {
-          return cand.trim();
-        }
-      } catch {}
-    }
-
-    // Direct localStorage storage keys - only use if on this tenant's slug or saved company matches
-    const storedSlug = localStorage.getItem(OXENGL_TENANT_SLUG_KEY) || localStorage.getItem('tenant_slug');
-    if (storedSlug && storedSlug.toLowerCase() === effectiveDomain.toLowerCase()) {
-      const directKeys = [OXENGL_TENANT_ID_KEY, 'tenant_id', 'company_id', 'oxengl_tenant_uuid', 'active_company_id'];
-      for (const key of directKeys) {
-        const val = localStorage.getItem(key);
-        if (isValidUUID(val)) {
-          return val.trim();
-        }
-      }
-    }
-
-    // On a tenant domain, if local storage contains a stale mismatching tenant UUID, return null
-    // so downstream requests rely on backend Host header resolution instead of corrupting context.
-    return null;
-  }
-
-  // 3. Stored company object in localStorage (on apex or platform domain)
-  const rawCompany = localStorage.getItem('oxengl_current_company');
-  if (rawCompany) {
-    try {
-      const c = JSON.parse(rawCompany);
-      const candidates = [c?.id, c?.company_id, c?.tenant_id, c?.uuid];
-      for (const cand of candidates) {
-        if (isValidUUID(cand)) {
-          return cand.trim();
-        }
-      }
-    } catch {}
-  }
-
-  // 4. Direct localStorage storage keys (on apex or platform domain)
-  const directKeys = [
-    OXENGL_TENANT_ID_KEY,
-    'tenant_id',
-    'company_id',
-    'oxengl_tenant_uuid',
-    'active_company_id',
-  ];
-  for (const key of directKeys) {
-    const val = localStorage.getItem(key);
-    if (isValidUUID(val)) {
-      return val.trim();
-    }
-  }
-
-  // 5. Decoded JWT claims from active session token
-  const token = getAuthToken();
-  if (token) {
-    const claims = decodeJwtClaims(token);
-    if (claims) {
-      const candidates = [
-        claims.company_id,
-        claims.tenant_id,
-        claims.companyId,
-        claims.tenantId,
-      ];
-      for (const cand of candidates) {
-        if (isValidUUID(cand)) {
-          try {
-            localStorage.setItem(OXENGL_TENANT_ID_KEY, cand.trim());
-            localStorage.setItem('tenant_id', cand.trim());
-            localStorage.setItem('company_id', cand.trim());
-          } catch {}
-          return cand.trim();
-        }
-      }
-    }
-  }
-
-  // 6. Stored user objects in localStorage
-  const userKeys = ['oxengl_user', 'meayon_user', 'currentUser'];
-  for (const key of userKeys) {
-    const raw = localStorage.getItem(key);
-    if (raw) {
-      try {
-        const u = JSON.parse(raw);
-        const candidates = [
-          u?.company_id,
-          u?.companyId,
-          u?.tenant_id,
-          u?.tenantId,
-          u?.company?.id,
-        ];
-        for (const cand of candidates) {
-          if (isValidUUID(cand)) {
-            return cand.trim();
-          }
-        }
-      } catch {}
-    }
-  }
-
-  return null;
-}
-
-export function getTenantSlug(): string | null {
-  if (typeof window === 'undefined') return null;
-  const effectiveDomain = getEffectiveDomainIdentifier();
-  if (effectiveDomain) return effectiveDomain;
-  const stored = localStorage.getItem(OXENGL_TENANT_SLUG_KEY) || localStorage.getItem('tenant_slug');
-  if (stored) return stored;
-  const token = getAuthToken();
-  const claims = decodeJwtClaims(token);
-  return claims?.tenant_slug || claims?.domain_slug || null;
-}
-
-export function getTenantId(): string | null {
-  return getActiveCompanyId();
-}
-
-export function setAuthSession(token: string, tier: 'master' | 'tenant', tenantSlug?: string | null, tenantId?: string | null): void {
-  if (typeof window === 'undefined') return;
-  setAuthCookie(token);
-  localStorage.setItem(OXENGL_AUTH_TOKEN_KEY, token);
-  localStorage.setItem('token', token);
-  localStorage.setItem('access_token', token);
-  localStorage.setItem(OXENGL_AUTH_TIER_KEY, tier);
-  const effectiveSlug = tenantSlug || getEffectiveDomainIdentifier();
-  if (effectiveSlug) {
-    localStorage.setItem(OXENGL_TENANT_SLUG_KEY, effectiveSlug);
-    localStorage.setItem('tenant_slug', effectiveSlug);
-  } else {
-    localStorage.removeItem(OXENGL_TENANT_SLUG_KEY);
-    localStorage.removeItem('tenant_slug');
-  }
-
-  // Resolve valid UUID for tenantId, falling back to JWT claims if tenantId is a slug or missing
-  let validTenantId: string | null = null;
-  if (isValidUUID(tenantId)) {
-    validTenantId = tenantId.trim();
-  } else {
-    const claims = decodeJwtClaims(token);
-    const candidate = claims?.company_id || claims?.tenant_id || claims?.companyId || claims?.tenantId;
-    if (isValidUUID(candidate)) {
-      validTenantId = candidate.trim();
-    }
-  }
-
-  if (validTenantId) {
-    localStorage.setItem(OXENGL_TENANT_ID_KEY, validTenantId);
-    localStorage.setItem('tenant_id', validTenantId);
-    localStorage.setItem('company_id', validTenantId);
-  } else {
-    localStorage.removeItem(OXENGL_TENANT_ID_KEY);
-    localStorage.removeItem('tenant_id');
-    localStorage.removeItem('company_id');
-  }
-  localStorage.setItem('oxengl_session_active', 'true');
-}
-
-export function clearAuthSession(): void {
-  if (typeof window === 'undefined') return;
-  clearAuthCookie();
-  localStorage.removeItem(OXENGL_AUTH_TOKEN_KEY);
-  localStorage.removeItem('token');
-  localStorage.removeItem('access_token');
-  localStorage.removeItem('oxengl_auth_jwt');
-  localStorage.removeItem(OXENGL_AUTH_TIER_KEY);
-  localStorage.removeItem(OXENGL_TENANT_SLUG_KEY);
-  localStorage.removeItem('tenant_slug');
-  localStorage.removeItem(OXENGL_TENANT_ID_KEY);
-  localStorage.removeItem('tenant_id');
-  localStorage.removeItem('company_id');
-  localStorage.removeItem('oxengl_tenant_uuid');
-  localStorage.removeItem('active_company_id');
-  localStorage.removeItem('oxengl_current_company');
-  localStorage.removeItem('oxengl_user');
-  localStorage.removeItem('meayon_user');
-  localStorage.removeItem('currentUser');
-  localStorage.removeItem('role');
-  localStorage.removeItem('oxengl_session_active');
-}
-
 const apiBaseUrl = typeof window === 'undefined' ? '' : window.location.origin;
 
-/**
- * Debounced 401 session clearing to prevent cascading auth wipes.
- * When parallel requests are in flight (e.g., Corporate Vault loads documents + CV payload
- * simultaneously), a single transient 401 must NOT immediately destroy the session for
- * the other in-flight requests. Instead, we debounce: only clear the session if no
- * successful request arrives within 1.5 seconds of the first 401.
- */
-let _pending401ClearTimer: ReturnType<typeof setTimeout> | null = null;
-let _is401SessionClearScheduled = false;
-
-function scheduleDebouncedSessionClear(): void {
-  if (_is401SessionClearScheduled) return; // Already scheduled, don't stack
-  _is401SessionClearScheduled = true;
-  _pending401ClearTimer = setTimeout(() => {
-    // Only clear if a fresh token hasn't been set in the meantime
-    const currentToken = getAuthToken();
-    if (!currentToken) {
-      clearAuthSession();
-    }
-    _is401SessionClearScheduled = false;
-    _pending401ClearTimer = null;
-  }, 1500);
-}
-
-function cancelDebouncedSessionClear(): void {
-  if (_pending401ClearTimer) {
-    clearTimeout(_pending401ClearTimer);
-    _pending401ClearTimer = null;
-  }
-  _is401SessionClearScheduled = false;
-}
-
-/** Tracks whether a 401 retry is already in progress for a given path to prevent infinite loops. */
-const _retryingPaths = new Set<string>();
-
-async function request<T>(path: string, companyId?: string, options?: RequestInit): Promise<T> {
-  const token = getAuthToken();
-  const activeTenantSlug = getTenantSlug();
-  const activeCompanyId = getActiveCompanyId(companyId);
-
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(activeTenantSlug ? { 'X-Tenant-Slug': activeTenantSlug } : {}),
-    ...(activeCompanyId ? { 'X-Company-ID': activeCompanyId, 'X-Tenant-ID': activeCompanyId } : {}),
-    ...((options?.headers as Record<string, string>) || {}),
-  };
-
-  if (options?.body instanceof FormData) {
-    delete headers['Content-Type'];
-  }
-
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    headers,
-    credentials: 'include',
-  });
-
-  if (response.ok) {
-    // A successful response cancels any pending 401 session clear —
-    // the session is clearly still valid.
-    cancelDebouncedSessionClear();
-  }
-
-  if (!response.ok) {
-    let errorDetail = '';
-    try {
-      const errJson = await response.json();
-      if (typeof errJson.detail === 'string') {
-        errorDetail = errJson.detail;
-      } else if (Array.isArray(errJson.detail)) {
-        errorDetail = errJson.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
-      } else if (errJson.message) {
-        errorDetail = errJson.message;
-      } else if (errJson.error) {
-        errorDetail = typeof errJson.error === 'string' ? errJson.error : JSON.stringify(errJson.error);
-      }
-    } catch {}
-    if (errorDetail) {
-      console.error(`[API Error ${response.status}] ${path}:`, errorDetail);
-    }
-
-    // Global Error Interceptor: 403, 422, and 500 piped into toast notification system
-    if (typeof window !== 'undefined') {
-      let toastMsg = '';
-      if (response.status === 403) {
-        toastMsg = errorDetail || 'Access forbidden: You do not have permission for this resource (403).';
-      } else if (response.status === 422) {
-        toastMsg = errorDetail ? `Validation error: ${errorDetail}` : 'Unprocessable Entity: Form validation failed (422).';
-      } else if (response.status >= 500) {
-        toastMsg = errorDetail ? `Server error: ${errorDetail}` : `Internal server error (${response.status}). Please try again later.`;
-      }
-
-      if (toastMsg) {
-        window.dispatchEvent(
-          new CustomEvent('oxengl-toast', {
-            detail: { message: toastMsg, type: 'error' },
-          })
-        );
-      }
-    }
-
-    // 401 Single-Retry Strategy:
-    // If we have a valid token and this is the first attempt for this path,
-    // retry once. This handles transient JWT validation failures (e.g., clock skew,
-    // backend restart, or middleware race condition during parallel requests).
-    if (response.status === 401 && token && !_retryingPaths.has(path)) {
-      _retryingPaths.add(path);
-      try {
-        // Brief delay to let any concurrent token refresh settle
-        await new Promise((resolve) => setTimeout(resolve, 150));
-        const retryToken = getAuthToken();
-        if (retryToken) {
-          const retryHeaders: Record<string, string> = {
-            ...headers,
-            Authorization: `Bearer ${retryToken}`,
-          };
-          const retryActiveCompanyId = getActiveCompanyId(companyId);
-          if (retryActiveCompanyId) {
-            retryHeaders['X-Company-ID'] = retryActiveCompanyId;
-            retryHeaders['X-Tenant-ID'] = retryActiveCompanyId;
-          }
-          const retryResponse = await fetch(`${apiBaseUrl}${path}`, {
-            ...options,
-            headers: retryHeaders,
-            credentials: 'include',
-          });
-          if (retryResponse.ok) {
-            cancelDebouncedSessionClear();
-            _retryingPaths.delete(path);
-            if (retryResponse.status === 204) {
-              return undefined as T;
-            }
-            return retryResponse.json() as Promise<T>;
-          }
-        }
-      } catch {
-        // Retry failed silently, fall through to original error handling
-      } finally {
-        _retryingPaths.delete(path);
-      }
-    }
-
-    // Global 401/403 Interceptor
-    if (response.status === 401 || response.status === 403) {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('oxengl-auth-error', {
-            detail: { status: response.status, message: errorDetail || `Authentication error (${response.status})` },
-          })
-        );
-        if (response.status === 401) {
-          // Use debounced session clearing to prevent cascading auth wipe
-          // during parallel requests (e.g., Corporate Vault loads multiple
-          // endpoints simultaneously).
-          scheduleDebouncedSessionClear();
-        }
-      }
-    }
-
-    throw new Error(errorDetail || `API request failed: ${response.status}`);
-  }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-  return response.json() as Promise<T>;
+export async function request<T>(path: string, companyId?: string, options?: RequestInit): Promise<T> {
+  return clientRequest<T>(path, companyId, options);
 }
 
 /** fetch() for platform-plane (super admin) endpoints: always attaches the session token and cookies, never tenant headers. */
@@ -1523,8 +1113,13 @@ export const erpApi = {
   checkDomainSslStatus: (domain: string, port?: number) => checkDomainSslStatus(domain, port),
   verifyDomainDns: (domain: string, expectedCname?: string, token?: string) => verifyDomainDns(domain, expectedCname, token),
   // Two-Tier Identity & Auth Endpoints
-  masterLogin: (payload: MasterLoginPayload) =>
-    request<TwoTierAuthResponse>('/api/auth/master/login', undefined, { method: 'POST', body: JSON.stringify(payload) }),
+  masterLogin: async (payload: MasterLoginPayload) => {
+    const res = await request<TwoTierAuthResponse>('/api/auth/master/login', undefined, { method: 'POST', body: JSON.stringify(payload) });
+    if (res?.access_token) {
+      setAuthSession(res.access_token, 'master', null, null);
+    }
+    return res;
+  },
   tenantLogin: async (payload: TenantLoginPayload) => {
     const res = await request<TwoTierAuthResponse>('/api/auth/tenant/login', undefined, { method: 'POST', body: JSON.stringify(payload) });
     if (res?.access_token) {
