@@ -132,7 +132,7 @@ export const BillingConfigurationPanel: React.FC = () => {
     setIsSaving(true);
     try {
       const payload: PaymentGatewaySettingsUpdatePayload = {
-        expected_version: initialData.version,
+        expected_version: initialData.version ?? 0,
         is_stripe_enabled: isStripeEnabled,
         stripe_publishable_key: stripePublishableKeyInput.trim() || null,
         is_moyasar_enabled: isMoyasarEnabled,
@@ -426,7 +426,12 @@ export const BillingConfigurationPanel: React.FC = () => {
                 Publishable Key <span className="font-mono text-zinc-400 text-[11px]">(pk_live_... / pk_test_...)</span>
               </label>
               <input
+                id="stripe_publishable_key"
+                name="stripe_publishable_key"
                 type="text"
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={stripePublishableKeyInput}
                 onChange={e => setStripePublishableKeyInput(e.target.value)}
                 placeholder="pk_test_..."
@@ -456,7 +461,12 @@ export const BillingConfigurationPanel: React.FC = () => {
                 </button>
               </div>
               <input
+                id="stripe_secret_key"
+                name="stripe_secret_key"
                 type={showStripeSecret ? 'text' : 'password'}
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={stripeSecretKeyInput}
                 onChange={e => setStripeSecretKeyInput(e.target.value)}
                 placeholder={initialData?.stripe_secret_key.is_set ? 'Leave blank to keep existing secret key' : 'sk_test_...'}
@@ -486,7 +496,12 @@ export const BillingConfigurationPanel: React.FC = () => {
                 </button>
               </div>
               <input
+                id="stripe_webhook_secret"
+                name="stripe_webhook_secret"
                 type={showStripeWebhook ? 'text' : 'password'}
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={stripeWebhookSecretInput}
                 onChange={e => setStripeWebhookSecretInput(e.target.value)}
                 placeholder={initialData?.stripe_webhook_secret.is_set ? 'Leave blank to keep existing secret' : 'whsec_...'}
@@ -544,7 +559,12 @@ export const BillingConfigurationPanel: React.FC = () => {
                 Publishable API Key <span className="font-mono text-zinc-400 text-[11px]">(pk_live_... / pk_test_...)</span>
               </label>
               <input
+                id="moyasar_publishable_key"
+                name="moyasar_publishable_key"
                 type="text"
+                autoComplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={moyasarPublishableKeyInput}
                 onChange={e => setMoyasarPublishableKeyInput(e.target.value)}
                 placeholder="pk_test_..."
@@ -574,7 +594,12 @@ export const BillingConfigurationPanel: React.FC = () => {
                 </button>
               </div>
               <input
+                id="moyasar_api_key"
+                name="moyasar_api_key"
                 type={showMoyasarSecret ? 'text' : 'password'}
+                autoComplete="new-password"
+                data-lpignore="true"
+                data-1p-ignore="true"
                 value={moyasarApiKeyInput}
                 onChange={e => setMoyasarApiKeyInput(e.target.value)}
                 placeholder={initialData?.moyasar_api_key.is_set ? 'Leave blank to keep existing key' : 'sk_test_...'}

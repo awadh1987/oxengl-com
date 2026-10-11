@@ -66,7 +66,7 @@ export interface PaymentGatewaySettingsUpdatePayload {
   local_bank_instructions?: BankAccountInstruction[] | null;
   digital_wallet_instructions?: DigitalWalletInstruction[] | null;
 
-  expected_version?: number | null;
+  expected_version?: number | null; // Version integer >= 0 (0 for uninitialized settings)
 }
 
 export interface WalletQRUploadResponse {
