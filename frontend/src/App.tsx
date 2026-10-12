@@ -1,3 +1,4 @@
+import { PlanningHubView } from './views/PlanningHubView';
 import React, { useState, useEffect, Suspense } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Navbar } from './components/Navbar';
@@ -837,7 +838,7 @@ function AppContent() {
       case 'mfa':
         return <MfaVerificationView onCancel={() => navigateToTab('dashboard')} />;
       case 'planning':
-        return <PlanningDepartmentView />;
+      return <PlanningHubView />;
       case 'operations':
         return <OperationsLogView />;
       case 'maintenance':
@@ -910,7 +911,7 @@ function AppContent() {
 
   return (
     <div
-      id="meayon-erp-app-root"
+      id="oxengl-erp-app-root"
       dir={isAr ? 'rtl' : 'ltr'}
       className={`min-h-dvh erp-viewport-root font-sans antialiased selection:bg-[#F05627] selection:text-white relative transition-colors ${
         themeMode === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-neutral-900'

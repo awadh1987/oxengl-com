@@ -184,10 +184,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: isAr ? 'رئيسي' : 'Core',
       },
       {
+        // 2. Planning Department
         id: 'planning',
         labelAr: 'إدارة التخطيط الاستراتيجي',
         labelEn: 'Planning Department',
-        path: '/operations/planning',
+        path: '/planning',
         icon: Layers,
         roles: ['Super_Admin', 'Owner', 'Admin', 'COO', 'Accountant', 'Data_Entry', 'Guest', 'Read_Only'],
         badge: 'Tier 1-3',
@@ -211,7 +212,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'ZATCA P2',
       },
 
-      // 2. Procurement & S2P
+      // 3. Procurement & S2P
       {
         id: 'procurement',
         labelAr: 'المشتريات وسلسلة التوريد',
@@ -241,7 +242,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'GL',
       },
 
-      // 3. Logistics & Fleet
+      // 4. Logistics & Fleet
       {
         id: 'fleet-map',
         labelAr: 'خريطة التتبع والرادار المباشر',
@@ -279,7 +280,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: null,
       },
 
-      // 4. Finance & GL
+      // 5. Finance & GL
       {
         id: 'invoicing',
         labelAr: 'الفواتير الضريبية للعملاء',
@@ -364,7 +365,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         highlight: true,
       },
 
-      // 5. Human Resources & Payroll
+      // 6. Human Resources & Payroll
       {
         id: 'hr',
         labelAr: 'الموارد البشرية والرواتب',
@@ -375,7 +376,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         badge: 'HRMS',
       },
 
-      // 6. System Governance & Settings (Consolidated from Settings Popover)
+      // 7. System Governance & Settings (Consolidated from Settings Popover)
       {
         id: 'executive-admin',
         labelAr: 'الموافقات التنفيذية والتدقيق',

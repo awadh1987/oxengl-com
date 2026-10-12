@@ -1,37 +1,21 @@
 # ==============================================================================
-# OxenGL Enterprise Production Compose Orchestration (Podman / podman-compose)
-# Services: PostgreSQL (pgvector), FastAPI Backend, React Frontend (Nginx), Redis,
-#           Edge Nginx reverse proxy
-#
-# Synced to the LIVE container state on srv1874240 (2026-10-03):
-#   - Two networks: `oxengl_internal_network` (data plane: postgres/redis/backend)
-#     and `oxengl_net` (edge plane: nginx/frontend/backend). The edge resolves
-#     upstreams dynamically via Podman aardvark-dns on oxengl_net (see nginx.conf).
-#   - Backend + frontend code is baked into the images (no source/dist bind mounts).
-#   - Backend uses the SYNC psycopg2 driver (backend/database.py), not asyncpg.
-#   - NO secrets in this file. Values come from `.env` (gitignored). Required
-#     variables fail fast with `:?` instead of silently using a public default.
-#
-# Memory: postgres/redis carry explicit limits (2GB host); app containers are
-# currently unbounded on the live host (backend ~220MB RSS).
+# OxenGL Enterprise Production Compose Orchestration (Isolated .com Environment)
 # ==============================================================================
 
 services:
-  # 1. High-Precision Multi-Tenant PostgreSQL Ledger Engine
+  # 1. High-Precision Multi-Tenant PostgreSQL Ledger Engine (.com Instance)
   postgres_db:
     image: docker.io/pgvector/pgvector:pg15
-    container_name: oxengl_postgres_container
+    container_name: oxengl_com_postgres_container
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
-      POSTGRES_DB: erp_db
+      POSTGRES_DB: erp_db_com
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
-      - pg_data_volume:/var/lib/postgresql/data
-    # PostgreSQL parameters specifically tailored for a 2GB RAM host:
-    # 128MB shared_buffers + 4MB work_mem capped at 60 connections safely reserves <370MB
+      - pg_com_data_volume:/var/lib/postgresql/data
     command: >
       postgres
       -c max_connections=60
@@ -49,24 +33,24 @@ services:
     mem_limit: 512m
     mem_reservation: 128m
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-erp_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d erp_db_com"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - oxengl_internal_network
-      - oxengl_net
+      - oxengl_com_internal_network
+      - oxengl_com_net
 
-  # 2. High-Velocity Cache & State Broker
+  # 2. High-Velocity Cache & State Broker (.com Instance)
   redis_cache:
     image: docker.io/library/redis:7-alpine
-    container_name: oxengl_redis_container
+    container_name: oxengl_com_redis_container
     restart: always
     command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save ""
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
     volumes:
-      - redis_data_volume:/data
+      - redis_com_data_volume:/data
     mem_limit: 128m
     mem_reservation: 32m
     healthcheck:
@@ -75,25 +59,24 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - oxengl_internal_network
-      - oxengl_net
+      - oxengl_com_internal_network
+      - oxengl_com_net
 
-  # 3. OxenGL Enterprise Core Backend API Engine (FastAPI, code baked into image)
+  # 3. OxenGL Enterprise Core Backend API Engine (.com Instance)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    image: localhost/oxen-gl_backend:latest
-    container_name: oxengl_backend_container
+    image: localhost/oxen-gl_com_backend:latest
+    container_name: oxengl_com_backend_container
     restart: always
     command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
-    # .env supplies DB_*, REDIS_*, WASL_*, TCP_INGESTION_PORT, NGINX_STREAM_PORT,
-    # JWT_SECRET (and should supply JWT_SECRET_MASTER / JWT_SECRET_TENANT).
     env_file:
       - .env
     environment:
-      DATABASE_URL: "postgresql+psycopg2://${APP_DB_USER:?APP_DB_USER must be set in .env}:${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
-      PLATFORM_DATABASE_URL: "postgresql+psycopg2://${PLATFORM_DB_USER:?PLATFORM_DB_USER must be set in .env}:${PLATFORM_DB_PASSWORD:?PLATFORM_DB_PASSWORD must be set in .env}@postgres_db:5432/${DB_NAME:-erp_db}"
+      DATABASE_URL: "postgresql+psycopg2://${APP_DB_USER:?APP_DB_USER must be set in .env}:${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}@postgres_db:5432/erp_db_com"
+      PLATFORM_DATABASE_URL: "postgresql+psycopg2://${PLATFORM_DB_USER:?PLATFORM_DB_USER must be set in .env}:${PLATFORM_DB_PASSWORD:?PLATFORM_DB_PASSWORD must be set in .env}@postgres_db:5432/erp_db_com"
+      DB_NAME: "erp_db_com"
       REDIS_URL: "redis://redis_cache:6379/0"
       POSTGRES_HOST: postgres_db
       DB_USER: ${APP_DB_USER:?APP_DB_USER must be set in .env}
@@ -101,14 +84,12 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       SYNC_WEBHOOK_SECRETS_JSON: ${SYNC_WEBHOOK_SECRETS_JSON:-}
       PYTHONPATH: "/app"
-    # Live host currently publishes 0.0.0.0:8000; loopback-only is the intended
-    # posture (all public traffic must go through the edge nginx).
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
-      - avatar_files_volume:/app/backend/static/avatars
-      - uploads_files_volume:/app/backend/static/uploads
-      - crypto_keys_volume:/var/crypto/oxengl
+      - avatar_com_files_volume:/app/backend/static/avatars
+      - uploads_com_files_volume:/app/backend/static/uploads
+      - crypto_com_keys_volume:/var/crypto/oxengl
     depends_on:
       postgres_db:
         condition: service_healthy
@@ -120,16 +101,16 @@ services:
       timeout: 10s
       retries: 3
     networks:
-      - oxengl_internal_network
-      - oxengl_net
+      - oxengl_com_internal_network
+      - oxengl_com_net
 
-  # 4. OxenGL React Frontend (static build baked into the image, served by Nginx)
+  # 4. OxenGL React Frontend (.com Instance)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    image: localhost/oxen-gl_frontend:latest
-    container_name: oxengl_frontend_container
+    image: localhost/oxen-gl_com_frontend:latest
+    container_name: oxengl_com_frontend_container
     restart: always
     depends_on:
       - backend
@@ -139,16 +120,16 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - oxengl_net
+      - oxengl_com_net
 
-  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (fronted by host Apache for TLS)
+  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (.com Instance)
   nginx:
     image: docker.io/library/nginx:alpine
-    container_name: oxengl_nginx_container
+    container_name: oxengl_com_nginx_container
     restart: always
     ports:
-      - "8080:80"
-      - "4433:443"
+      - "8081:80"
+      - "4434:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
@@ -160,26 +141,24 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      - oxengl_net
+      - oxengl_com_net
 
 volumes:
-  pg_data_volume:
-    name: oxengl_pg_data_volume
-  redis_data_volume:
-    name: oxengl_redis_data_volume
-  avatar_files_volume:
-    name: oxengl_avatar_files_volume
-  uploads_files_volume:
-    name: oxengl_uploads_files_volume
-  crypto_keys_volume:
-    name: oxengl_crypto_keys_volume
+  pg_com_data_volume:
+    name: oxengl_com_pg_data_volume
+  redis_com_data_volume:
+    name: oxengl_com_redis_data_volume
+  avatar_com_files_volume:
+    name: oxengl_com_avatar_files_volume
+  uploads_com_files_volume:
+    name: oxengl_com_uploads_files_volume
+  crypto_com_keys_volume:
+    name: oxengl_com_crypto_com_keys_volume
 
 networks:
-  # Data plane (compose-managed; carries the `postgres_db` / `redis_cache` aliases).
-  oxengl_internal_network:
-    name: oxengl_internal_network
+  oxengl_com_internal_network:
+    name: oxengl_com_internal_network
     driver: bridge
-  # Edge plane (pre-created outside compose; nginx.conf's resolver = its gateway 10.89.1.1).
-  oxengl_net:
-    name: oxengl_net
-    external: true
+  oxengl_com_net:
+    name: oxengl_com_net
+    driver: bridge
