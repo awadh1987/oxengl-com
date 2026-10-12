@@ -1,0 +1,489 @@
+{
+  "table": "saas_invoices",
+  "file": "data-pipeline/profiles/pg_export/saas_invoices.csv",
+  "row_count": 71,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 71,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 71
+      },
+      "sample_values": [
+        "c0bfed4c-f1df-4d34-8d66-0515b5b15f95",
+        "4bdf29e8-3aaa-4447-a715-59cffcd78a31",
+        "a4c57432-0647-4781-9ac8-f6fca3fbc910",
+        "2fbf04a3-50f6-4f15-af9f-92597f5e62ce",
+        "7ef74612-9051-493a-a17d-f9d53e86fc6a"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 55,
+      "distinct_rate_pct": 77.5,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 71
+      },
+      "sample_values": [
+        "dcb40cee-b20a-4bdf-a79b-b284371f04fa",
+        "a0780854-fd06-4185-9117-04bb70133661",
+        "c389609d-a982-4020-a2be-eac834b1855f",
+        "c389609d-a982-4020-a2be-eac834b1855f",
+        "ede72a89-254b-44bb-9a54-82eb9676a79d"
+      ]
+    },
+    "invoice_number": {
+      "name": "invoice_number",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 71,
+      "distinct_rate_pct": 100.0,
+      "max_length": 25,
+      "min_length": 19,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "SAAS-INV-202609-001",
+        "SAAS-INV-202609-0001",
+        "SAAS-INV-202609-0003-1BC7",
+        "SAAS-INV-202609-0004-F99B",
+        "SAAS-INV-202609-0005-3F6D"
+      ]
+    },
+    "billing_cycle": {
+      "name": "billing_cycle",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 2.8,
+      "max_length": 7,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "monthly",
+        "monthly",
+        "monthly",
+        "monthly",
+        "annual"
+      ]
+    },
+    "tier": {
+      "name": "tier",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 4.2,
+      "max_length": 12,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "standard",
+        "ENTERPRISE",
+        "PROFESSIONAL",
+        "PROFESSIONAL",
+        "ENTERPRISE"
+      ]
+    },
+    "amount_sar": {
+      "name": "amount_sar",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 5.6,
+      "max_length": 10,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 71
+      },
+      "sample_values": [
+        "6500.0000",
+        "3750.0000",
+        "185.0000",
+        "185.0000",
+        "37500.0000"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 2.8,
+      "max_length": 7,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "paid",
+        "pending",
+        "paid",
+        "paid",
+        "pending"
+      ]
+    },
+    "issued_date": {
+      "name": "issued_date",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 71,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 71
+      },
+      "sample_values": [
+        "2026-09-18 15:48:25.132172+00",
+        "2026-09-26 20:04:58.524156+00",
+        "2026-09-26 20:22:05.929984+00",
+        "2026-09-26 20:22:05.998068+00",
+        "2026-09-26 20:22:06.093481+00"
+      ]
+    },
+    "due_date": {
+      "name": "due_date",
+      "total_values": 71,
+      "null_count": 17,
+      "null_rate_pct": 23.9,
+      "distinct_count": 54,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 54
+      },
+      "sample_values": [
+        "2026-10-18 15:48:25.13218+00",
+        "2026-10-26 20:04:58.524156+00",
+        "2026-09-26 20:22:05.929984+00",
+        "2026-09-26 20:22:05.998068+00",
+        "2026-10-26 20:22:06.093481+00"
+      ]
+    },
+    "paid_at": {
+      "name": "paid_at",
+      "total_values": 71,
+      "null_count": 19,
+      "null_rate_pct": 26.8,
+      "distinct_count": 52,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 52
+      },
+      "sample_values": [
+        "2026-09-18 15:48:25.132182+00",
+        "2026-09-26 20:22:05.929984+00",
+        "2026-09-26 20:22:05.998068+00",
+        "2026-09-26 20:24:02.202655+00",
+        "2026-09-26 20:24:02.256831+00"
+      ]
+    },
+    "pdf_url": {
+      "name": "pdf_url",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 55,
+      "distinct_rate_pct": 77.5,
+      "max_length": 61,
+      "min_length": 40,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "/api/tenant/billing/invoices/SAAS-INV-202609-001.pdf",
+        "/api/v1/tenant/billing/invoices/SAAS-INV-202609-0001.pdf",
+        "/api/v1/tenant/billing/invoices/SAAS-INV-202609-0003-1BC7.pdf",
+        "/api/v1/tenant/billing/invoices/SAAS-INV-202609-0004-F99B.pdf",
+        "/api/v1/tenant/billing/invoices/SAAS-INV-202609-0005-3F6D.pdf"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 71,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 71
+      },
+      "sample_values": [
+        "2026-09-25 15:48:25.11293+00",
+        "2026-09-26 20:04:58.522941+00",
+        "2026-09-26 20:22:05.925248+00",
+        "2026-09-26 20:22:05.994058+00",
+        "2026-09-26 20:22:06.092066+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 71,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 27,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 71
+      },
+      "sample_values": [
+        "2026-09-25 15:48:25.11293+00",
+        "2026-09-26 20:04:58.522941+00",
+        "2026-09-26 20:22:05.925248+00",
+        "2026-09-26 20:22:05.994058+00",
+        "2026-09-26 20:22:06.092066+00"
+      ]
+    },
+    "subscription_id": {
+      "name": "subscription_id",
+      "total_values": 71,
+      "null_count": 20,
+      "null_rate_pct": 28.2,
+      "distinct_count": 35,
+      "distinct_rate_pct": 68.6,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 51
+      },
+      "sample_values": [
+        "ef951a02-bd14-48ab-994a-846a604afa72",
+        "a17568d8-a044-4124-9a64-d562a570ead7",
+        "a17568d8-a044-4124-9a64-d562a570ead7",
+        "dd22e5e0-c82c-425e-af84-1b98833e24f2",
+        "c3cc9aaf-58dc-4cd3-8b13-9f2aabf2cced"
+      ]
+    },
+    "plan_id": {
+      "name": "plan_id",
+      "total_values": 71,
+      "null_count": 1,
+      "null_rate_pct": 1.4,
+      "distinct_count": 2,
+      "distinct_rate_pct": 2.9,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 70
+      },
+      "sample_values": [
+        "f7c013d0-73ff-4c19-823d-b15735967671",
+        "b95d3c63-b281-424f-9ce8-90bc39b3fd79",
+        "b95d3c63-b281-424f-9ce8-90bc39b3fd79",
+        "f7c013d0-73ff-4c19-823d-b15735967671",
+        "b95d3c63-b281-424f-9ce8-90bc39b3fd79"
+      ]
+    },
+    "payment_method": {
+      "name": "payment_method",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 4.2,
+      "max_length": 14,
+      "min_length": 11,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "stripe_card",
+        "purchase_order",
+        "stripe_card",
+        "stripe_card",
+        "purchase_order"
+      ]
+    },
+    "payment_reference": {
+      "name": "payment_reference",
+      "total_values": 71,
+      "null_count": 20,
+      "null_rate_pct": 28.2,
+      "distinct_count": 51,
+      "distinct_rate_pct": 100.0,
+      "max_length": 20,
+      "min_length": 11,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 51
+      },
+      "sample_values": [
+        "cs_test_565ca69f9ad8",
+        "in_c8a956ec",
+        "cs_test_edf04d6b27b8",
+        "in_5f771c2a",
+        "SARIE-WIRE-9F8B602A"
+      ]
+    },
+    "po_number": {
+      "name": "po_number",
+      "total_values": 71,
+      "null_count": 51,
+      "null_rate_pct": 71.8,
+      "distinct_count": 20,
+      "distinct_rate_pct": 100.0,
+      "max_length": 18,
+      "min_length": 9,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 20
+      },
+      "sample_values": [
+        "PO-2026-ARAMCO-998",
+        "PO-KSA-2026-006B",
+        "PO-KSA-2026-A3D8",
+        "PO-KSA-2026-D7F8",
+        "PO-KSA-2026-6888"
+      ]
+    },
+    "currency": {
+      "name": "currency",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 1.4,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 71
+      },
+      "sample_values": [
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR"
+      ]
+    },
+    "subtotal_sar": {
+      "name": "subtotal_sar",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 7.0,
+      "max_length": 10,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 71
+      },
+      "sample_values": [
+        "0.0000",
+        "3260.8696",
+        "160.8696",
+        "160.8696",
+        "32608.6957"
+      ]
+    },
+    "tax_sar": {
+      "name": "tax_sar",
+      "total_values": 71,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 7.0,
+      "max_length": 9,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 71
+      },
+      "sample_values": [
+        "0.0000",
+        "489.1304",
+        "24.1304",
+        "24.1304",
+        "4891.3043"
+      ]
+    },
+    "notes": {
+      "name": "notes",
+      "total_values": 71,
+      "null_count": 18,
+      "null_rate_pct": 25.4,
+      "distinct_count": 37,
+      "distinct_rate_pct": 69.8,
+      "max_length": 128,
+      "min_length": 34,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 53
+      },
+      "sample_values": [
+        "Corporate PO Net-30 payment terms.",
+        "Automated Stripe card payment (Session: cs_test_565ca69f9ad8)",
+        "Stripe recurring invoice payment succeeded: in_c8a956ec",
+        "Net-30 Enterprise Sovereign contract terms.",
+        "Automated Stripe card payment (Session: cs_test_edf04d6b27b8)"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "po_number",
+      "issue": "High null rate: 71.8%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "currency",
+      "issue": "Single distinct value: SAR",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 95,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 1,
+    "info": 1
+  }
+}

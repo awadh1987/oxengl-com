@@ -1,0 +1,4 @@
+id,tenant_id,user_id,employee_code,first_name,last_name,department,base_salary,hire_date,is_active
+4b376425-a37f-42d5-8385-ba264b3ea4a1,a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d,,EMP-TST-BEFCC7,خالد,بن عبد العزيز الزامل,العمليات اللوجستية,13500.00,2026-09-25,t
+fddd1273-ef5f-4612-a113-2e886c1a4234,a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d,,EMP-TST-EB1386,خالد,بن عبد العزيز الزامل,العمليات اللوجستية,13500.00,2026-09-26,t
+d951bd47-87b9-4582-a576-661125755264,a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d,,EMP-TST-A8E238,خالد,بن عبد العزيز الزامل,العمليات اللوجستية,13500.00,2026-09-26,t

@@ -1,0 +1,487 @@
+{
+  "table": "vehicles",
+  "file": "data-pipeline/profiles/pg_export/vehicles.csv",
+  "row_count": 8,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 8,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 8
+      },
+      "sample_values": [
+        "c9229000-ddc0-4615-974d-626aa0870642",
+        "ffaf8ea0-a52b-4e5d-9c98-aa24ee279537",
+        "83625f2c-0bb8-40dc-98de-3fabe10a6b80",
+        "3fb3be6f-57c1-42e9-ad39-072e361f762d",
+        "e4cfa581-e39d-4742-b786-3870edc358e1"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 25.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 8
+      },
+      "sample_values": [
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 50.0,
+      "max_length": 20,
+      "min_length": 13,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "Mercedes Actros 3340",
+        "Volvo FMX 460",
+        "MAN TGS 33.400",
+        "Mercedes Actros 4048",
+        "Mercedes Actros 3340"
+      ]
+    },
+    "license_plate": {
+      "name": "license_plate",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 50.0,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "7842-KAD",
+        "5120-RBD",
+        "3981-SAD",
+        "9012-HAD",
+        "7842-KAD"
+      ]
+    },
+    "vin_chassis": {
+      "name": "vin_chassis",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 50.0,
+      "max_length": 17,
+      "min_length": 17,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "WDB9340331L000101",
+        "YV2R4B0C1KA000202",
+        "WMA36SZZ3GP000303",
+        "WDB9340331L000404",
+        "WDB9340331L000101"
+      ]
+    },
+    "make": {
+      "name": "make",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "model": {
+      "name": "model",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 50.0,
+      "max_length": 11,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "Actros 3340",
+        "FMX 460",
+        "TGS 33.400",
+        "Actros 4048",
+        "Actros 3340"
+      ]
+    },
+    "model_year": {
+      "name": "model_year",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "vehicle_type": {
+      "name": "vehicle_type",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 12.5,
+      "max_length": 5,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "truck",
+        "truck",
+        "truck",
+        "truck",
+        "truck"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 12.5,
+      "max_length": 6,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 8
+      },
+      "sample_values": [
+        "active",
+        "active",
+        "active",
+        "active",
+        "active"
+      ]
+    },
+    "current_odometer": {
+      "name": "current_odometer",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 50.0,
+      "max_length": 9,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 8
+      },
+      "sample_values": [
+        "128450.00",
+        "94200.00",
+        "162100.00",
+        "78300.00",
+        "128450.00"
+      ]
+    },
+    "fuel_capacity": {
+      "name": "fuel_capacity",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "transporter_id": {
+      "name": "transporter_id",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "cost_center_id": {
+      "name": "cost_center_id",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 12.5,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 8
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 25.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 8
+      },
+      "sample_values": [
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 04:38:49.860865+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 25.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 8
+      },
+      "sample_values": [
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 19:50:25.257215+00",
+        "2026-09-28 04:38:49.860865+00"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "plate_number": {
+      "name": "plate_number",
+      "total_values": 8,
+      "null_count": 8,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "breakdown_risk_score": {
+      "name": "breakdown_risk_score",
+      "total_values": 8,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 12.5,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 8
+      },
+      "sample_values": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "make",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "make",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "model_year",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "model_year",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "vehicle_type",
+      "issue": "Single distinct value: truck",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "status",
+      "issue": "Single distinct value: active",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "fuel_capacity",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "fuel_capacity",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "transporter_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "transporter_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "cost_center_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "cost_center_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "tenant_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tenant_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "plate_number",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "plate_number",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "breakdown_risk_score",
+      "issue": "Single distinct value: 0",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 7,
+    "warning": 7,
+    "info": 4
+  }
+}

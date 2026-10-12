@@ -1,0 +1,209 @@
+{
+  "table": "finance_journal_lines",
+  "file": "data-pipeline/profiles/pg_export/finance_journal_lines.csv",
+  "row_count": 22,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 22,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 22
+      },
+      "sample_values": [
+        "8719c782-c42e-4df4-b8e1-46e1c282f5fb",
+        "4b8e63d4-a0ba-41ad-bd7c-88546ce30ea8",
+        "c30ea511-0712-4125-b2b6-7a2b68d48764",
+        "2abc7d75-4241-4387-a62b-593d0214d1e9",
+        "73621f69-4e8c-4358-b3a0-e100d3212f21"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 13.6,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 22
+      },
+      "sample_values": [
+        "7bcfe7f2-7b0b-477f-8fad-e45840130c59",
+        "7bcfe7f2-7b0b-477f-8fad-e45840130c59",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "entry_id": {
+      "name": "entry_id",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 50.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 22
+      },
+      "sample_values": [
+        "b9df054b-d3bc-4ca7-b852-91756fa953b7",
+        "b9df054b-d3bc-4ca7-b852-91756fa953b7",
+        "e02872f0-1457-4a62-bcc9-190d30a8ddb4",
+        "e02872f0-1457-4a62-bcc9-190d30a8ddb4",
+        "3dddd36c-1fa7-4595-83d6-d0df6fccffe1"
+      ]
+    },
+    "account_code": {
+      "name": "account_code",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 8,
+      "distinct_rate_pct": 36.4,
+      "max_length": 20,
+      "min_length": 6,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "string": 6,
+        "integer": 16
+      },
+      "sample_values": [
+        "5100-EXP",
+        "1010-CASH",
+        "120000",
+        "520000",
+        "520000"
+      ]
+    },
+    "account_id": {
+      "name": "account_id",
+      "total_values": 22,
+      "null_count": 22,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "description": {
+      "name": "description",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 19,
+      "distinct_rate_pct": 86.4,
+      "max_length": 81,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 22
+      },
+      "sample_values": [
+        "Debit",
+        "Credit",
+        "Inventory Asset Increase - MOV-TEST-4279D7 (Test Structural Steel I-Beam)",
+        "Inventory Valuation Gain/Adjustment - MOV-TEST-4279D7",
+        "Inventory Adjustment Loss/Scrap - MOV-SCRAP-A3D7D0 (Test Structural Steel I-Beam)"
+      ]
+    },
+    "debit": {
+      "name": "debit",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 27.3,
+      "max_length": 10,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 22
+      },
+      "sample_values": [
+        "1500.0000",
+        "0.0000",
+        "2500.0000",
+        "0.0000",
+        "600.0000"
+      ]
+    },
+    "credit": {
+      "name": "credit",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 27.3,
+      "max_length": 10,
+      "min_length": 6,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 22
+      },
+      "sample_values": [
+        "0.0000",
+        "1500.0000",
+        "0.0000",
+        "2500.0000",
+        "0.0000"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 22,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 50.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 22
+      },
+      "sample_values": [
+        "2026-09-29 00:52:55.798696+00",
+        "2026-09-29 00:52:55.798696+00",
+        "2026-09-29 04:53:01.999324+00",
+        "2026-09-29 04:53:01.999324+00",
+        "2026-09-29 04:53:02.071552+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "account_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "account_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 0
+  }
+}

@@ -1,0 +1,128 @@
+-- OxenGL ERP — Staging: Inventory Movements (Stock Cleaning)
+-- ============================================================
+-- Applies autocleaning rules:
+-- 1. UUID validation on primary and foreign keys
+-- 2. Negative stock quantity detection and status categorization
+-- 3. Optimized duplicate movement deduplication
+-- 4. Movement type normalization
+-- 5. Unit and total cost precision normalization
+
+config {
+  type: "incremental",
+  schema: "oxengl_staging",
+  name: "stg_inventory_movements",
+  description: "Autocleaned inventory movements with stock validation and dedup",
+  uniqueKey: ["id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["company_id"]
+  },
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id"]
+  }
+}
+
+SELECT
+  -- Primary Key: UUID validation
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  -- Foreign Key: Company ID
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(company_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(company_id AS STRING)
+    ELSE NULL
+  END AS company_id,
+
+  -- Foreign Key: Warehouse ID
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(warehouse_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(warehouse_id AS STRING)
+    ELSE NULL
+  END AS warehouse_id,
+
+  -- Foreign Key: Product ID
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(product_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(product_id AS STRING)
+    ELSE NULL
+  END AS product_id,
+
+  -- Movement Number
+  NULLIF(TRIM(CAST(movement_number AS STRING)), '') AS movement_number,
+
+  -- Quantity: 4-decimal precision
+  ROUND(SAFE_CAST(quantity AS NUMERIC), 4) AS quantity,
+
+  CASE
+    WHEN SAFE_CAST(quantity AS NUMERIC) < 0 THEN 'NEGATIVE'
+    WHEN SAFE_CAST(quantity AS NUMERIC) = 0 THEN 'ZERO'
+    ELSE 'POSITIVE'
+  END AS qty_sign_flag,
+
+  -- Movement Type: Normalize
+  CASE
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('IN', 'RECEIPT', 'INBOUND', 'RECEIVE') THEN 'INBOUND'
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('OUT', 'ISSUE', 'OUTBOUND', 'DISPATCH') THEN 'OUTBOUND'
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('TRANSFER', 'MOVE', 'INTER_WH') THEN 'TRANSFER'
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('ADJUST', 'ADJUSTMENT', 'CORRECTION') THEN 'ADJUSTMENT'
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('SCRAP', 'WRITE_OFF') THEN 'SCRAP'
+    WHEN UPPER(TRIM(CAST(movement_type AS STRING))) IN ('RETURN', 'RMA') THEN 'RETURN'
+    ELSE UPPER(TRIM(CAST(movement_type AS STRING)))
+  END AS movement_type,
+
+  -- Reason & Reference
+  NULLIF(TRIM(CAST(reason AS STRING)), '') AS reason,
+  NULLIF(TRIM(CAST(reference AS STRING)), '') AS reference,
+
+  -- Value / Cost: 4-decimal precision
+  ROUND(SAFE_CAST(unit_cost AS NUMERIC), 4) AS unit_cost,
+  ROUND(SAFE_CAST(total_cost AS NUMERIC), 4) AS total_cost,
+
+  -- Status
+  CASE
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('POSTED', 'CONFIRMED', 'DONE', 'COMPLETED') THEN 'POSTED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('DRAFT', 'PENDING') THEN 'DRAFT'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('CANCELLED', 'VOID') THEN 'CANCELLED'
+    ELSE UPPER(TRIM(CAST(status AS STRING)))
+  END AS status,
+
+  -- Posted Flag
+  COALESCE(SAFE_CAST(is_posted AS BOOLEAN), FALSE) AS is_posted,
+
+  -- Duplicate detection (row_number dedup optimized without excessive string casting)
+  ROW_NUMBER() OVER (
+    PARTITION BY
+      warehouse_id,
+      product_id,
+      CAST(quantity AS STRING),
+      movement_type
+    ORDER BY created_at ASC
+  ) AS dedup_rank,
+
+  -- Timestamps
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING)),
+    SAFE_CAST(created_at AS TIMESTAMP)
+  ) AS created_at,
+
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(updated_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(updated_at AS STRING)),
+    SAFE_CAST(updated_at AS TIMESTAMP)
+  ) AS updated_at,
+
+  -- Cleaning Metadata
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("inventory_movements")}
+WHERE id IS NOT NULL
+${when(incremental(), `  AND created_at > (SELECT MAX(created_at) FROM ${self()})`)}

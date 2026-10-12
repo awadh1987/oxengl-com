@@ -1,0 +1,145 @@
+{
+  "table": "tenant_audit_logs",
+  "file": "data-pipeline/profiles/pg_export/tenant_audit_logs.csv",
+  "row_count": 14,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 14,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 14,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 14
+      },
+      "sample_values": [
+        "e3f0867b-8c58-43e1-adca-870b70f6acac",
+        "d85f12bf-6744-4c76-a7be-ccbf0ff5b1e5",
+        "fe7a003f-6499-40e0-84b2-174ced2c2678",
+        "9f5f49c0-86e7-4d1b-9dec-a702a400678d",
+        "7dae2879-7267-405c-b71c-63b6f3f459df"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 14,
+      "null_count": 14,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "action_type": {
+      "name": "action_type",
+      "total_values": 14,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 28.6,
+      "max_length": 26,
+      "min_length": 13,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 14
+      },
+      "sample_values": [
+        "KEY_MIRRORED_OFFSITE",
+        "KEY_MIRRORED_OFFSITE",
+        "BULK_STATUS_UPDATE",
+        "BULK_STATUS_UPDATE",
+        "BULK_STATUS_UPDATE"
+      ]
+    },
+    "actor": {
+      "name": "actor",
+      "total_values": 14,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 28.6,
+      "max_length": 19,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 14
+      },
+      "sample_values": [
+        "CRON_SYSTEM_DAEMON",
+        "CRON_SYSTEM_DAEMON",
+        "PLATFORM_OPERATOR",
+        "PLATFORM_OPERATOR",
+        "PLATFORM_OPERATOR"
+      ]
+    },
+    "details": {
+      "name": "details",
+      "total_values": 14,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 28.6,
+      "max_length": 180,
+      "min_length": 84,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 14
+      },
+      "sample_values": [
+        "Master crypto vault key mirrored offsite (Local: /var/crypto/oxengl/offsite_key_mirror/master.key.mirror, SSECustomerAlgorithm: AES256, Cloud Bucket: oxengl-offsite-vault-primary).",
+        "Master crypto vault key mirrored offsite (Local: /var/crypto/oxengl/offsite_key_mirror/master.key.mirror, SSECustomerAlgorithm: AES256, Cloud Bucket: oxengl-offsite-vault-primary).",
+        "Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",
+        "Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance",
+        "Bulk status update: status=SUSPENDED, is_active=False, reason=Regulatory maintenance"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 14,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 14,
+      "distinct_rate_pct": 100.0,
+      "max_length": 26,
+      "min_length": 25,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 14
+      },
+      "sample_values": [
+        "2026-09-26 01:04:38.298372",
+        "2026-09-27 01:00:39.119089",
+        "2026-09-27 19:00:01.246116",
+        "2026-09-27 19:00:01.245983",
+        "2026-09-27 19:01:27.19808"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "tenant_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tenant_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 0
+  }
+}

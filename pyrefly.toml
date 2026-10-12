@@ -1,0 +1,14 @@
+project-includes = ["backend"]
+project-excludes = [
+    "**/node_modules",
+    "**/__pycache__",
+    ".venv",
+    "frontend",
+    "src",
+]
+search-path = [
+    ".",
+    "backend",
+]
+python-version = "3.12.0"
+site-package-path = [".venv/lib/python3.12/site-packages"]

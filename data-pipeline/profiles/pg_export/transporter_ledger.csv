@@ -1,0 +1,1 @@
+id,company_id,transporter_id,operation_id,expected_qty,delivered_qty,loss_percentage,ai_risk_assessment,created_at,updated_at

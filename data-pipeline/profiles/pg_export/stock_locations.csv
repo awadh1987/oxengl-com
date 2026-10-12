@@ -1,0 +1,3 @@
+id,company_id,name,location_type,parent_id,is_active,created_at,updated_at
+e0badd83-9d50-4d2b-9b47-517093c87993,df5dc940-2f26-4620-86fa-1012735b7ee5,Main Warehouse,internal,,t,2026-09-28 04:27:06.885434+00,2026-09-28 04:27:06.885434+00
+166e11a3-3ee7-40c2-8ddf-1cebba315596,676c1824-384c-476e-8914-a21a1a57f5d2,Main Warehouse,internal,,t,2026-09-28 13:26:02.595748+00,2026-09-28 13:26:02.595748+00

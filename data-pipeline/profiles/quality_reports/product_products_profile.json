@@ -1,0 +1,266 @@
+{
+  "table": "product_products",
+  "file": "data-pipeline/profiles/pg_export/product_products.csv",
+  "row_count": 3,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "acdd70ee-4951-4e42-a3d6-f2adc2f00ec6",
+        "206ce12f-df6c-487f-b066-de38d964ae3d",
+        "852d9395-6c25-4c14-8d18-d1b56a5d040f"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 3
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "sku": {
+      "name": "sku",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 10,
+      "min_length": 10,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "SKU-72D845",
+        "SKU-910702",
+        "SKU-21D345"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 28,
+      "min_length": 28,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "Test Structural Steel I-Beam",
+        "Test Structural Steel I-Beam",
+        "Test Structural Steel I-Beam"
+      ]
+    },
+    "product_type": {
+      "name": "product_type",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "storable",
+        "storable",
+        "storable"
+      ]
+    },
+    "unit_of_measure": {
+      "name": "unit_of_measure",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "ton",
+        "ton",
+        "ton"
+      ]
+    },
+    "standard_cost": {
+      "name": "standard_cost",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 3
+      },
+      "sample_values": [
+        "250.0000",
+        "250.0000",
+        "250.0000"
+      ]
+    },
+    "sale_price": {
+      "name": "sale_price",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "decimal",
+      "type_distribution": {
+        "decimal": 3
+      },
+      "sample_values": [
+        "300.0000",
+        "300.0000",
+        "300.0000"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 33.3,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 3
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-29 04:53:01.48689+00",
+        "2026-09-29 04:58:48.977287+00",
+        "2026-09-29 05:02:45.903196+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 3,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-29 04:53:01.48689+00",
+        "2026-09-29 04:58:48.977287+00",
+        "2026-09-29 05:02:45.903196+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "name",
+      "issue": "Single distinct value: Test Structural Steel I-Beam",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "product_type",
+      "issue": "Single distinct value: storable",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "unit_of_measure",
+      "issue": "Single distinct value: ton",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "standard_cost",
+      "issue": "Single distinct value: 250.0000",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "sale_price",
+      "issue": "Single distinct value: 300.0000",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 7
+  }
+}

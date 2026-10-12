@@ -1,0 +1,236 @@
+{
+  "table": "platform_audit_logs",
+  "file": "data-pipeline/profiles/pg_export/platform_audit_logs.csv",
+  "row_count": 59,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 59,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 59
+      },
+      "sample_values": [
+        "d755e9f0-4eb6-44d3-b0d0-9279efa0c8d6",
+        "e5b340c2-a4cd-4888-a6a2-1efbb1f798e2",
+        "9e12b14e-16ca-42c7-9996-a158cde7f746",
+        "9f7d39b2-d455-4ed4-a877-6568980d39ec",
+        "b042c91f-b15d-4d7d-a765-c0b3615bdb5c"
+      ]
+    },
+    "actor_email": {
+      "name": "actor_email",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 5.1,
+      "max_length": 23,
+      "min_length": 9,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "anonymous",
+        "anonymous",
+        "anonymous",
+        "anonymous",
+        "anonymous"
+      ]
+    },
+    "action": {
+      "name": "action",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 5.1,
+      "max_length": 20,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "LOGOUT",
+        "LOGOUT",
+        "LOGOUT",
+        "LOGOUT",
+        "LOGOUT"
+      ]
+    },
+    "outcome": {
+      "name": "outcome",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 3.4,
+      "max_length": 7,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "SUCCESS",
+        "SUCCESS",
+        "SUCCESS",
+        "SUCCESS",
+        "SUCCESS"
+      ]
+    },
+    "endpoint_accessed": {
+      "name": "endpoint_accessed",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 6,
+      "distinct_rate_pct": 10.2,
+      "max_length": 22,
+      "min_length": 13,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "/api/auth/logout",
+        "/api/auth/logout",
+        "/api/auth/logout",
+        "/api/auth/logout",
+        "/api/auth/logout"
+      ]
+    },
+    "request_id": {
+      "name": "request_id",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 59,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 59
+      },
+      "sample_values": [
+        "2667840b-6e68-4913-a216-b22c7296f3b5",
+        "34a3b19e-19f4-4a00-8c86-3ae320728ff7",
+        "e87c9b62-9a31-40b4-884e-67221c8e8f01",
+        "17ec5770-17c7-4f85-b7ed-3d624b414060",
+        "50243d30-2acc-47e0-af8a-e2200825afa6"
+      ]
+    },
+    "user_agent": {
+      "name": "user_agent",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 5.1,
+      "max_length": 125,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown",
+        "unknown"
+      ]
+    },
+    "ip_address": {
+      "name": "ip_address",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 6.8,
+      "max_length": 14,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 59
+      },
+      "sample_values": [
+        "176.123.28.8",
+        "176.123.28.8",
+        "176.123.28.8",
+        "176.123.28.8",
+        "176.123.17.30"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 59,
+      "null_count": 55,
+      "null_rate_pct": 93.2,
+      "distinct_count": 1,
+      "distinct_rate_pct": 25.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 4
+      },
+      "sample_values": [
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 59,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 59,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 59
+      },
+      "sample_values": [
+        "2026-09-25 20:22:33.978457+00",
+        "2026-09-25 20:29:16.672218+00",
+        "2026-09-26 00:17:13.660749+00",
+        "2026-09-26 13:47:11.629567+00",
+        "2026-09-27 05:26:53.90244+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "company_id",
+      "issue": "High null rate: 93.2%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: 676c1824-384c-476e-8914-a21a1a57f5d2",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 95,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 1,
+    "info": 1
+  }
+}

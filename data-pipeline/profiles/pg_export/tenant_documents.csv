@@ -1,0 +1,1 @@
+id,company_id,document_type,title,document_number,file_path,file_name,file_size,mime_type,issue_date,expiry_date,issuing_authority,verification_status,verified_at,verified_by,notes,metadata_json,is_active,created_at,updated_at

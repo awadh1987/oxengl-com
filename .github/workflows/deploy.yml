@@ -1,0 +1,72 @@
+# File: .github/workflows/deploy.yml
+name: OxenGL Multi-Tenant Production CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - staging-deployment
+
+jobs:
+  audit-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Tree Code Base
+        uses: actions/checkout@v4
+
+      - name: Initialize Python Runtime Container
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Backend Dependency Matrix
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastapi uvicorn sqlalchemy alembic httpx pytest
+
+      - name: Run Backend Integration & RLS Breach Audits
+        run: |
+          PYTHONPATH=. pytest backend/tests/test_rls_boundary_breach.py -v
+
+      - name: Initialize Node.js Environments
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Run Production Frontend Typecheck & Assembly
+        run: |
+          cd frontend
+          npm ci
+          npx tsc --noEmit
+          npm run build
+
+  deploy-to-vultr-monolith:
+    needs: audit-and-validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Remote SSH Zero-Downtime Server Reload
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: root
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/oxen-gl
+            git fetch origin staging-deployment
+            git reset --hard origin/staging-deployment
+            
+            # Rebuild frontend bundles
+            cd frontend
+            rm -rf dist node_modules/.vite
+            npm install
+            npm run build
+            
+            # Sync to Nginx web root and cycle daemons
+            cd ..
+            python3 scripts/migration_sanity_check.py
+            sudo cp -r frontend/dist/* /var/www/oxengl/dist/
+            sudo systemctl reload nginx
+            sudo systemctl restart oxengl.service

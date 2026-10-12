@@ -1,0 +1,1 @@
+id,purchase_order_id,material_id,description,quantity_ordered,quantity_received,quantity_billed,unit_price,tax_rate,line_subtotal,line_total

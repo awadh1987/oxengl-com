@@ -1,0 +1,499 @@
+{
+  "table": "tenant_subscriptions",
+  "file": "data-pipeline/profiles/pg_export/tenant_subscriptions.csv",
+  "row_count": 72,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 72
+      },
+      "sample_values": [
+        "2210ee35-ca54-408a-a2eb-fab7af2b5b72",
+        "ef951a02-bd14-48ab-994a-846a604afa72",
+        "ea216562-cf33-4ca2-82de-69c9671586a6",
+        "3239deaa-c66c-4c7d-a46b-2a9fdcc0bb7b",
+        "6e0e7673-1d83-4291-880f-798c95ba7bc3"
+      ]
+    },
+    "tenant_id": {
+      "name": "tenant_id",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 72
+      },
+      "sample_values": [
+        "6e21a7dd-2491-4db9-a2c1-9bd42d0837f6",
+        "a0780854-fd06-4185-9117-04bb70133661",
+        "c115a41a-9c09-449f-a3e4-5f7ef118dec7",
+        "0fb54366-bddd-4b9e-b5c6-40e1ca96fcd0",
+        "ad6add91-b6cd-489a-9b77-3e11b1abc232"
+      ]
+    },
+    "plan_id": {
+      "name": "plan_id",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 4.2,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 72
+      },
+      "sample_values": [
+        "8de75239-5780-4f9d-9a82-9355395916a7",
+        "f7c013d0-73ff-4c19-823d-b15735967671",
+        "f7c013d0-73ff-4c19-823d-b15735967671",
+        "8de75239-5780-4f9d-9a82-9355395916a7",
+        "f7c013d0-73ff-4c19-823d-b15735967671"
+      ]
+    },
+    "stripe_customer_id": {
+      "name": "stripe_customer_id",
+      "total_values": 72,
+      "null_count": 55,
+      "null_rate_pct": 76.4,
+      "distinct_count": 17,
+      "distinct_rate_pct": 100.0,
+      "max_length": 12,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 17
+      },
+      "sample_values": [
+        "cus_d9ef631f",
+        "cus_6e4559ed",
+        "cus_f2cc58f7",
+        "cus_0ff9ecd7",
+        "cus_bd30883c"
+      ]
+    },
+    "status": {
+      "name": "status",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 4.2,
+      "max_length": 8,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 72
+      },
+      "sample_values": [
+        "trialing",
+        "active",
+        "active",
+        "canceled",
+        "active"
+      ]
+    },
+    "current_seats_used": {
+      "name": "current_seats_used",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 1.4,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 72
+      },
+      "sample_values": [
+        "1",
+        "1",
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "current_vehicles_used": {
+      "name": "current_vehicles_used",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 1.4,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 72
+      },
+      "sample_values": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    "current_period_end": {
+      "name": "current_period_end",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 72
+      },
+      "sample_values": [
+        "2026-10-26 20:25:12.396075+00",
+        "2026-10-26 20:04:58.51825+00",
+        "2026-10-26 20:05:16.084514+00",
+        "2026-10-26 20:25:12.625049+00",
+        "2027-09-26 20:25:13.607997+00"
+      ]
+    },
+    "billing_cycle": {
+      "name": "billing_cycle",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 2.8,
+      "max_length": 7,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 72
+      },
+      "sample_values": [
+        "monthly",
+        "monthly",
+        "monthly",
+        "monthly",
+        "annual"
+      ]
+    },
+    "payment_method_type": {
+      "name": "payment_method_type",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 4.2,
+      "max_length": 14,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 72
+      },
+      "sample_values": [
+        "card",
+        "card",
+        "card",
+        "stripe_card",
+        "purchase_order"
+      ]
+    },
+    "stripe_subscription_id": {
+      "name": "stripe_subscription_id",
+      "total_values": 72,
+      "null_count": 55,
+      "null_rate_pct": 76.4,
+      "distinct_count": 17,
+      "distinct_rate_pct": 100.0,
+      "max_length": 12,
+      "min_length": 12,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 17
+      },
+      "sample_values": [
+        "sub_eb729a02",
+        "sub_4af0a6ea",
+        "sub_92d1eae4",
+        "sub_50713108",
+        "sub_16bde6b5"
+      ]
+    },
+    "current_storage_mb_used": {
+      "name": "current_storage_mb_used",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 1.4,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 72
+      },
+      "sample_values": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    "current_period_start": {
+      "name": "current_period_start",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 72
+      },
+      "sample_values": [
+        "2026-09-26 20:25:12.396075+00",
+        "2026-09-26 20:04:58.51825+00",
+        "2026-09-26 20:05:16.084514+00",
+        "2026-09-26 20:25:12.625049+00",
+        "2026-09-26 20:25:13.607997+00"
+      ]
+    },
+    "cancel_at_period_end": {
+      "name": "cancel_at_period_end",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 1.4,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 72
+      },
+      "sample_values": [
+        "f",
+        "f",
+        "f",
+        "f",
+        "f"
+      ]
+    },
+    "canceled_at": {
+      "name": "canceled_at",
+      "total_values": 72,
+      "null_count": 56,
+      "null_rate_pct": 77.8,
+      "distinct_count": 16,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 16
+      },
+      "sample_values": [
+        "2026-09-26 20:25:12.701832+00",
+        "2026-09-26 20:22:06.036536+00",
+        "2026-09-26 20:26:45.221989+00",
+        "2026-09-26 20:24:02.292788+00",
+        "2026-09-26 20:27:48.821979+00"
+      ]
+    },
+    "trial_ends_at": {
+      "name": "trial_ends_at",
+      "total_values": 72,
+      "null_count": 38,
+      "null_rate_pct": 52.8,
+      "distinct_count": 34,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 34
+      },
+      "sample_values": [
+        "2026-10-26 20:25:12.396075+00",
+        "2026-10-26 20:25:13.708402+00",
+        "2026-10-26 20:26:44.930326+00",
+        "2026-10-26 20:22:05.785783+00",
+        "2026-10-26 20:22:08.55748+00"
+      ]
+    },
+    "custom_limits": {
+      "name": "custom_limits",
+      "total_values": 72,
+      "null_count": 55,
+      "null_rate_pct": 76.4,
+      "distinct_count": 1,
+      "distinct_rate_pct": 5.9,
+      "max_length": 73,
+      "min_length": 73,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 17
+      },
+      "sample_values": [
+        "{\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_external_database\": true}",
+        "{\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_external_database\": true}",
+        "{\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_external_database\": true}",
+        "{\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_external_database\": true}",
+        "{\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_external_database\": true}"
+      ]
+    },
+    "notes": {
+      "name": "notes",
+      "total_values": 72,
+      "null_count": 72,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 72
+      },
+      "sample_values": [
+        "2026-09-26 20:25:12.377791+00",
+        "2026-09-26 20:04:58.514845+00",
+        "2026-09-26 20:05:16.045448+00",
+        "2026-09-26 20:25:12.548134+00",
+        "2026-09-26 20:25:12.742157+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 72,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 72,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 72
+      },
+      "sample_values": [
+        "2026-09-26 20:25:12.377791+00",
+        "2026-09-26 20:04:58.514845+00",
+        "2026-09-26 20:05:16.045448+00",
+        "2026-09-26 20:25:12.699359+00",
+        "2026-09-26 20:25:13.046168+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "stripe_customer_id",
+      "issue": "High null rate: 76.4%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "current_seats_used",
+      "issue": "Single distinct value: 1",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "current_vehicles_used",
+      "issue": "Single distinct value: 0",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "stripe_subscription_id",
+      "issue": "High null rate: 76.4%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "current_storage_mb_used",
+      "issue": "Single distinct value: 0",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "cancel_at_period_end",
+      "issue": "Single distinct value: f",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "canceled_at",
+      "issue": "High null rate: 77.8%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "WARNING",
+      "column": "trial_ends_at",
+      "issue": "High null rate: 52.8%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "WARNING",
+      "column": "custom_limits",
+      "issue": "High null rate: 76.4%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "custom_limits",
+      "issue": "Single distinct value: {\"max_seats\": 750, \"max_vehicles\": 1500, \"allow_ex",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "notes",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "notes",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 50,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 6,
+    "info": 5
+  }
+}

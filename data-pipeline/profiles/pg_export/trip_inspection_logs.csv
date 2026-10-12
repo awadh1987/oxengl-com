@@ -1,0 +1,1 @@
+id,company_id,trip_id,vehicle_id,driver_id,inspection_type,odometer_reading,is_safe_to_operate,notes,inspected_at,created_at,updated_at

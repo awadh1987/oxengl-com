@@ -1,0 +1,155 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "ERP user accounts and roles",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "fullName": { "type": "string" },
+        "fullNameAr": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["Admin", "COO", "Accountant", "Data_Entry", "Guest"] },
+        "avatar": { "type": "string" },
+        "status": { "type": "string" },
+        "assignedCustomerId": { "type": "string" },
+        "created_at": { "type": "string" }
+      },
+      "required": ["id", "fullName", "email", "role"]
+    },
+    "operations": {
+      "title": "OperationRecord",
+      "description": "Daily truck haulage and scale ticket records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "loading_date": { "type": "string" },
+        "truck_no": { "type": "string" },
+        "transporter_name": { "type": "string" },
+        "loading_source": { "type": "string" },
+        "loading_invoice_no": { "type": "string" },
+        "destination_customer": { "type": "string" },
+        "receipt_invoice_no": { "type": "string" },
+        "material_type": { "type": "string" },
+        "qty_loaded": { "type": "number" },
+        "qty_delivered": { "type": "number" },
+        "qty_wastage": { "type": "number" },
+        "wastage_percentage": { "type": "number" },
+        "scale_ticket_no": { "type": "string" },
+        "sales_amount": { "type": "number" },
+        "vat_amount": { "type": "number" },
+        "total_sales": { "type": "number" },
+        "purchases_cost": { "type": "number" },
+        "crusher_payment": { "type": "number" },
+        "net_profit": { "type": "number" },
+        "operation_month": { "type": "number" },
+        "operation_year": { "type": "number" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      },
+      "required": ["id", "loading_date", "truck_no", "destination_customer", "loading_source"]
+    },
+    "customers": {
+      "title": "Customer",
+      "description": "Customer accounts and credit limits",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerNameEn": { "type": "string" },
+        "taxNumber": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "customerName", "taxNumber"]
+    },
+    "crushers": {
+      "title": "Crusher",
+      "description": "Crusher suppliers and quarry locations",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "crusherName": { "type": "string" },
+        "crusherNameEn": { "type": "string" },
+        "location": { "type": "string" },
+        "bankDetails": { "type": "string" },
+        "openingBalance": { "type": "number" }
+      },
+      "required": ["id", "crusherName"]
+    },
+    "transporters": {
+      "title": "Transporter",
+      "description": "Fleet haulage transporters and drivers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "transporterName": { "type": "string" },
+        "driverName": { "type": "string" },
+        "phone": { "type": "string" },
+        "truckDetails": { "type": "string" }
+      },
+      "required": ["id", "transporterName"]
+    },
+    "materials": {
+      "title": "MaterialOption",
+      "description": "Quarry aggregate material options and baseline prices",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nameAr": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "category": { "type": "string" },
+        "defaultSellingPrice": { "type": "number" },
+        "defaultPurchasePrice": { "type": "number" },
+        "unit": { "type": "string" }
+      },
+      "required": ["id", "nameAr"]
+    },
+    "vouchers": {
+      "title": "FinancialVoucher",
+      "description": "Payment and receipt financial vouchers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "voucherNumber": { "type": "string" },
+        "type": { "type": "string", "enum": ["Payment", "Receipt"] },
+        "category": { "type": "string" },
+        "date": { "type": "string" },
+        "amount": { "type": "number" },
+        "partyName": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "purpose": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "voucherNumber", "type", "amount", "partyName"]
+    },
+    "brand_config": {
+      "title": "BrandConfig",
+      "description": "Enterprise white-label branding and homepage metadata",
+      "type": "object",
+      "properties": {
+        "companyNameAr": { "type": "string" },
+        "companyNameEn": { "type": "string" },
+        "taxNumber": { "type": "string" },
+        "crNumber": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "primaryColor": { "type": "string" }
+      },
+      "required": ["companyNameAr", "taxNumber", "crNumber"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "users", "description": "User records" },
+    "/operations/{opId}": { "schema": "operations", "description": "Haulage trips" },
+    "/customers/{customerId}": { "schema": "customers", "description": "Customers" },
+    "/crushers/{crusherId}": { "schema": "crushers", "description": "Crushers" },
+    "/transporters/{transporterId}": { "schema": "transporters", "description": "Transporters" },
+    "/materials/{materialId}": { "schema": "materials", "description": "Materials" },
+    "/vouchers/{voucherId}": { "schema": "vouchers", "description": "Vouchers" },
+    "/brand_config/{configId}": { "schema": "brand_config", "description": "Brand Config" }
+  }
+}

@@ -1,0 +1,53 @@
+{% extends "base_email.html" %}
+
+{% block content %}
+<h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px;">
+  Join {{ tenant.name }} on OxenGL
+</h1>
+
+<p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
+  Hello <strong>{{ user.first_name }}</strong>,
+</p>
+
+<p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
+  <strong>{{ inviter.name }}</strong> has invited you to join the <strong>{{ tenant.name }}</strong> workspace on OxenGL as <strong>{{ user.role }}</strong>. You can now access your dashboard, operations modules, and business data.
+</p>
+
+<!-- Credential Summary Card -->
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; margin: 0 0 28px 0;">
+  <tr>
+    <td style="padding: 16px 20px;">
+      <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #64748B; margin-bottom: 8px;">Your Account Details</div>
+      <div style="font-size: 14px; color: #1E293B; margin-bottom: 6px;">
+        <strong>Email:</strong> <span style="font-family: monospace;">{{ user.email }}</span>
+      </div>
+      {% if user.temp_password %}
+      <div style="font-size: 14px; color: #1E293B;">
+        <strong>Temporary Password:</strong> <code style="background-color: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-weight: 600;">{{ user.temp_password }}</code>
+      </div>
+      {% endif %}
+    </td>
+  </tr>
+</table>
+
+<!-- Action Button -->
+<table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin: 0 0 28px 0;">
+  <tr>
+    <td align="center">
+      <a href="{{ action_url }}" class="btn-primary" target="_blank">
+        Sign In &amp; Access Workspace
+      </a>
+    </td>
+  </tr>
+</table>
+
+<p style="font-size: 13px; line-height: 1.5; color: #64748B; margin: 0 0 16px 0;">
+  This link is unique to your identity and expires in <strong>{{ expiry_hours | default(48) }} hours</strong>. For security, you will be required to update your temporary password upon first sign-in.
+</p>
+
+<!-- Fallback URL -->
+<div style="font-size: 12px; color: #94A3B8; word-break: break-all; border-top: 1px solid #F1F5F9; padding-top: 16px;">
+  Button not working? Copy and paste this URL into your browser:<br>
+  <a href="{{ action_url }}" style="color: #2563EB;">{{ action_url }}</a>
+</div>
+{% endblock %}

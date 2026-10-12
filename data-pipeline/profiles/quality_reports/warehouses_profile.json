@@ -1,0 +1,198 @@
+{
+  "table": "warehouses",
+  "file": "data-pipeline/profiles/pg_export/warehouses.csv",
+  "row_count": 5,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "3710b463-ff3c-456f-a641-4ac90b32a23d",
+        "d267ac03-0ec8-4201-8f0b-4d2f1c2f417a",
+        "43d7a43b-2a5f-4acf-98ba-ea47eeb9a6ac",
+        "36031d1e-95f7-4fa1-ac25-6ba9972db1ff",
+        "d4716f7d-b2be-4eec-a3f2-a3ac23131ece"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 5
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "code": {
+      "name": "code",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 10,
+      "min_length": 7,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "WH-MAIN",
+        "WH-58711",
+        "WH-QIDDIYA",
+        "WH-BC2D3",
+        "WH-0CA72"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 3,
+      "distinct_rate_pct": 60.0,
+      "max_length": 41,
+      "min_length": 30,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 5
+      },
+      "sample_values": [
+        "\u0627\u0644\u0645\u0633\u062a\u0648\u062f\u0639 \u0627\u0644\u0644\u0648\u062c\u0633\u062a\u064a \u0627\u0644\u0631\u0626\u064a\u0633\u064a / Central Hub",
+        "Test Regional Distribution Hub",
+        "Qiddiya Mega-Project Logistics Hub & Yard",
+        "Test Regional Distribution Hub",
+        "Test Regional Distribution Hub"
+      ]
+    },
+    "address": {
+      "name": "address",
+      "total_values": 5,
+      "null_count": 3,
+      "null_rate_pct": 60.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 59,
+      "min_length": 40,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "King Fahd Industrial Port Logistics Yard",
+        "Qiddiya Entertainment City Access Corridor, Riyadh Province"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 20.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 5
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 5
+      },
+      "sample_values": [
+        "2026-09-28 21:31:43.042637+00",
+        "2026-09-29 04:53:01.48689+00",
+        "2026-09-29 04:53:58.836861+00",
+        "2026-09-29 04:58:48.977287+00",
+        "2026-09-29 05:02:45.903196+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 5,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 5
+      },
+      "sample_values": [
+        "2026-09-28 21:31:43.042637+00",
+        "2026-09-29 04:53:01.48689+00",
+        "2026-09-29 04:53:58.836861+00",
+        "2026-09-29 04:58:48.977287+00",
+        "2026-09-29 05:02:45.903196+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "company_id",
+      "issue": "Single distinct value: df5dc940-2f26-4620-86fa-1012735b7ee5",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "address",
+      "issue": "High null rate: 60.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 95,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 1,
+    "info": 2
+  }
+}

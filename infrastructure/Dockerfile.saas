@@ -1,0 +1,163 @@
+# ==============================================================================
+# OxenGL SaaS Multi-Tenant Commercial Platform - Production Container Blueprint
+# Zero-Downtime Rolling Update Compatible with RLS Isolation & Edge Routing
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Stage 1: Frontend & Edge Server Compiler (Node.js 20)
+# ------------------------------------------------------------------------------
+FROM node:20-alpine AS frontend-builder
+WORKDIR /build/frontend
+
+COPY frontend/package*.json frontend/tsconfig*.json frontend/vite.config.ts ./
+RUN npm ci --prefer-offline --no-audit || npm install --no-audit
+
+COPY frontend/index.html ./
+COPY frontend/src/ ./src/
+COPY frontend/server.ts ./
+
+# Compile client bundle and bundle edge server into dist/server.cjs
+RUN npm run build
+
+# ------------------------------------------------------------------------------
+# Stage 2: Python Backend Dependency Builder
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim AS python-builder
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt ./
+RUN pip install --upgrade pip && \
+    pip wheel --no-cache-dir --wheel-dir /build/wheels \
+    -r requirements.txt \
+    psycopg2-binary \
+    argon2-cffi \
+    redis
+
+# ------------------------------------------------------------------------------
+# Stage 3: Minimal, Hardened Production Runtime
+# ------------------------------------------------------------------------------
+FROM python:3.11-slim AS production-runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    NODE_ENV=production \
+    PORT=3000 \
+    BACKEND_PORT=8000
+
+WORKDIR /app
+
+# Install Node.js 20, PostgreSQL Client, cURL for health probes, and OS-level graphics libraries for WeasyPrint
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    gnupg \
+    postgresql-client \
+    libpq5 \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libpangocairo-1.0-0 \
+    libcairo2 \
+    libffi-dev \
+    shared-mime-info \
+    libgdk-pixbuf-2.0-0 \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python wheels from builder
+COPY --from=python-builder /build/wheels /wheels
+RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
+
+# Create dedicated non-root application user
+RUN groupadd -g 1001 oxengl && \
+    useradd -u 1001 -g oxengl -s /bin/bash -m oxengl
+
+# Copy compiled frontend and bundled Node edge server
+COPY --from=frontend-builder --chown=oxengl:oxengl /build/frontend/dist ./dist
+COPY --from=frontend-builder --chown=oxengl:oxengl /build/frontend/package*.json ./
+
+# Copy backend application and database schemas
+COPY --chown=oxengl:oxengl backend/ ./backend/
+
+# Copy supervisor entrypoint script
+COPY --chown=oxengl:oxengl <<'EOF' /app/entrypoint.sh
+#!/bin/bash
+set -eo pipefail
+
+echo "======================================================================"
+echo " Starting OxenGL SaaS Multi-Tenant Platform Engine (PID: $$)"
+echo "======================================================================"
+
+# Validate required cryptographic keys before any startup migration executes.
+# The validator reports variable names only and never prints secret values.
+python -c '
+from backend.secret_env import require_secret
+master = require_secret("JWT_SECRET_MASTER")
+tenant = require_secret("JWT_SECRET_TENANT")
+require_secret("DATA_RESIDENCY_KEY")
+require_secret("JWT_SECRET")
+if master == tenant:
+    raise RuntimeError("JWT_SECRET_MASTER and JWT_SECRET_TENANT must differ.")
+'
+
+# Graceful termination handler for zero-downtime rolling updates
+cleanup() {
+    echo "[Zero-Downtime Supervisor] SIGTERM received. Initiating graceful shutdown..."
+    if [ -n "$NODE_PID" ]; then kill -TERM "$NODE_PID" 2>/dev/null || true; fi
+    if [ -n "$FASTAPI_PID" ]; then kill -TERM "$FASTAPI_PID" 2>/dev/null || true; fi
+    wait "$NODE_PID" 2>/dev/null || true
+    wait "$FASTAPI_PID" 2>/dev/null || true
+    echo "[Zero-Downtime Supervisor] All worker processes terminated gracefully. Exiting."
+    exit 0
+}
+
+trap cleanup SIGTERM SIGINT
+
+# Optional: Run RLS migration if AUTO_MIGRATE=true
+if [ "$AUTO_MIGRATE" = "true" ] && [ -n "$DATABASE_URL" ]; then
+    echo "[Migrations] Applying PostgreSQL RLS multi-tenant schema..."
+    psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f /app/backend/schema_multi_tenant_rls.sql
+fi
+
+# 1. Start FastAPI backend (port 8000)
+echo "[FastAPI] Launching core accounting & compliance backend on port ${BACKEND_PORT}..."
+uvicorn backend.main:app --host 0.0.0.0 --port "${BACKEND_PORT}" --workers 2 &
+FASTAPI_PID=$!
+
+# Wait for backend readiness before routing
+for i in $(seq 1 30); do
+    if curl -s "http://127.0.0.1:${BACKEND_PORT}/docs" > /dev/null 2>&1 || [ -f "/app/backend/main.py" ]; then
+        break
+    fi
+    sleep 0.5
+done
+
+# 2. Start Node.js multi-tenant edge routing server (port 3000)
+echo "[Edge Router] Launching virtual host domain resolver on port ${PORT}..."
+node /app/dist/server.cjs &
+NODE_PID=$!
+
+echo "[Ready] OxenGL SaaS Platform is operational and ready to accept traffic."
+
+# Monitor processes
+wait -n "$NODE_PID" "$FASTAPI_PID"
+EOF
+
+RUN chmod +x /app/entrypoint.sh
+
+USER oxengl
+
+EXPOSE 3000 8000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]

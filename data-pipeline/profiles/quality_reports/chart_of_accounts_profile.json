@@ -1,0 +1,149 @@
+{
+  "table": "chart_of_accounts",
+  "file": "data-pipeline/profiles/pg_export/chart_of_accounts.csv",
+  "row_count": 107,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 100,
+      "distinct_rate_pct": 93.5,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 107
+      },
+      "sample_values": [
+        "cd4f86f5-d422-47cc-b5d3-e480709210e8",
+        "33bcfb1c-f05a-47e8-84f7-b1f63d4208a5",
+        "b9e3f882-d5a1-48b2-8038-c7fa86c1de43",
+        "8f404187-10ac-4d33-a737-84326091a626",
+        "59f2568c-cf31-4703-a93b-f2a02e1f58ec"
+      ]
+    },
+    "account_code": {
+      "name": "account_code",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 100,
+      "distinct_rate_pct": 93.5,
+      "max_length": 6,
+      "min_length": 6,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 107
+      },
+      "sample_values": [
+        "412000",
+        "421000",
+        "411100",
+        "521102",
+        "522101"
+      ]
+    },
+    "account_name": {
+      "name": "account_name",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 100,
+      "distinct_rate_pct": 93.5,
+      "max_length": 37,
+      "min_length": 6,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 107
+      },
+      "sample_values": [
+        "Agricultural & Bulk Trading",
+        "Ancillary Gains & Returns",
+        "Heavy Haulage Freight",
+        "GOSI Social Insurance Employer Share",
+        "Vultr Cloud Compute Infrastructure"
+      ]
+    },
+    "node_path": {
+      "name": "node_path",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 100,
+      "distinct_rate_pct": 93.5,
+      "max_length": 9,
+      "min_length": 1,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 92,
+        "integer": 5,
+        "decimal": 10
+      },
+      "sample_values": [
+        "4.1.2",
+        "4.2.1",
+        "4.1.1.1",
+        "5.2.1.1.2",
+        "5.2.2.1.1"
+      ]
+    },
+    "account_type": {
+      "name": "account_type",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 5,
+      "distinct_rate_pct": 4.7,
+      "max_length": 9,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 107
+      },
+      "sample_values": [
+        "Revenue",
+        "Revenue",
+        "Revenue",
+        "Expense",
+        "Expense"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 107,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 0.9,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 107
+      },
+      "sample_values": [
+        "2026-09-25 12:35:44.531158+00",
+        "2026-09-25 12:35:44.531158+00",
+        "2026-09-25 12:35:44.531158+00",
+        "2026-09-25 12:35:44.531158+00",
+        "2026-09-25 12:35:44.531158+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "created_at",
+      "issue": "Single distinct value: 2026-09-25 12:35:44.531158+00",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 1
+  }
+}

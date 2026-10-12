@@ -1,0 +1,184 @@
+{
+  "table": "stock_locations",
+  "file": "data-pipeline/profiles/pg_export/stock_locations.csv",
+  "row_count": 2,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "e0badd83-9d50-4d2b-9b47-517093c87993",
+        "166e11a3-3ee7-40c2-8ddf-1cebba315596"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 2
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "676c1824-384c-476e-8914-a21a1a57f5d2"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 14,
+      "min_length": 14,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "Main Warehouse",
+        "Main Warehouse"
+      ]
+    },
+    "location_type": {
+      "name": "location_type",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 8,
+      "min_length": 8,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 2
+      },
+      "sample_values": [
+        "internal",
+        "internal"
+      ]
+    },
+    "parent_id": {
+      "name": "parent_id",
+      "total_values": 2,
+      "null_count": 2,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 50.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 2
+      },
+      "sample_values": [
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 13:26:02.595748+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 2,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 2
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 13:26:02.595748+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "name",
+      "issue": "Single distinct value: Main Warehouse",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "INFO",
+      "column": "location_type",
+      "issue": "Single distinct value: internal",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "parent_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "parent_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 75,
+  "flag_summary": {
+    "critical": 1,
+    "warning": 1,
+    "info": 3
+  }
+}

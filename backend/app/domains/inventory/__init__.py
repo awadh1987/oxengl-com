@@ -1,0 +1,1 @@
+"""OxenGL Inventory Domain Module."""

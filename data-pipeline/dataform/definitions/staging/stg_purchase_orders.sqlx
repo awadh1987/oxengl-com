@@ -1,0 +1,115 @@
+-- OxenGL ERP — Staging: Purchase Orders (Procurement Cleaning)
+-- =============================================================
+-- Applies autocleaning rules:
+-- 1. UUID validation on all ID/FK columns
+-- 2. Price/quantity validation (positive, non-zero)
+-- 3. Vendor reference integrity (partner_id)
+-- 4. Amount precision (4-decimal SAR)
+-- 5. Status normalization
+-- 6. Duplicate PO number detection
+
+config {
+  type: "table",
+  schema: "oxengl_staging",
+  name: "stg_purchase_orders",
+  description: "Autocleaned purchase orders with price/qty validation and vendor reference checks",
+  bigquery: {
+    partitionBy: "order_date",
+    clusterBy: ["company_id", "partner_id"]
+  },
+  assertions: {
+    uniqueKey: ["id"],
+    nonNull: ["id", "company_id", "po_number"]
+  }
+}
+
+SELECT
+  -- Primary Key
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(id AS STRING)
+    ELSE NULL
+  END AS id,
+
+  -- Company FK
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(company_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(company_id AS STRING)
+    ELSE NULL
+  END AS company_id,
+
+  -- Partner (Vendor) FK
+  CASE
+    WHEN REGEXP_CONTAINS(CAST(partner_id AS STRING), r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    THEN CAST(partner_id AS STRING)
+    ELSE NULL
+  END AS partner_id,
+
+  -- PO Number
+  NULLIF(TRIM(CAST(po_number AS STRING)), '') AS po_number,
+
+  -- Financial Amounts: 4-decimal precision
+  ROUND(SAFE_CAST(subtotal AS NUMERIC), 4) AS subtotal,
+  ROUND(SAFE_CAST(tax_amount AS NUMERIC), 4) AS tax_amount,
+  ROUND(SAFE_CAST(total_amount AS NUMERIC), 4) AS total_amount,
+
+  -- Amount Validation
+  CASE
+    WHEN SAFE_CAST(total_amount AS NUMERIC) <= 0 THEN 'ZERO_OR_NEGATIVE'
+    WHEN SAFE_CAST(subtotal AS NUMERIC) IS NULL THEN 'NULL_SUBTOTAL'
+    ELSE 'VALID'
+  END AS amount_quality_flag,
+
+  -- VAT Consistency
+  CASE
+    WHEN ABS(SAFE_CAST(tax_amount AS NUMERIC) - ROUND(SAFE_CAST(subtotal AS NUMERIC) * 0.15, 2)) <= 1.0
+    THEN 'VALID'
+    ELSE 'VAT_MISMATCH'
+  END AS vat_consistency_flag,
+
+  -- Currency
+  COALESCE(UPPER(TRIM(CAST(currency AS STRING))), 'SAR') AS currency,
+
+  -- Status
+  CASE
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('CONFIRMED', 'APPROVED', 'COMMITTED') THEN 'CONFIRMED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('DRAFT', 'PENDING', 'REQUESTED') THEN 'DRAFT'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('CANCELLED', 'VOID', 'REJECTED') THEN 'CANCELLED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('RECEIVED', 'CLOSED', 'COMPLETED') THEN 'RECEIVED'
+    WHEN UPPER(TRIM(CAST(status AS STRING))) IN ('PARTIALLY_RECEIVED', 'PARTIAL') THEN 'PARTIALLY_RECEIVED'
+    ELSE UPPER(TRIM(CAST(status AS STRING)))
+  END AS status,
+
+  -- Dates
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(order_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(order_date AS STRING)),
+    DATE(SAFE_CAST(order_date AS TIMESTAMP))
+  ) AS order_date,
+
+  COALESCE(
+    SAFE.PARSE_DATE('%Y-%m-%d', CAST(expected_delivery_date AS STRING)),
+    SAFE.PARSE_DATE('%d/%m/%Y', CAST(expected_delivery_date AS STRING)),
+    DATE(SAFE_CAST(expected_delivery_date AS TIMESTAMP))
+  ) AS expected_delivery_date,
+
+  -- Notes
+  NULLIF(TRIM(CAST(notes AS STRING)), '') AS notes,
+
+  -- Timestamps
+  COALESCE(
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%dT%H:%M:%E*S%Ez', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S', CAST(created_at AS STRING)),
+    SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%S', CAST(created_at AS STRING)),
+    SAFE_CAST(created_at AS TIMESTAMP)
+  ) AS created_at,
+
+  -- Duplicate PO detection (window function)
+  COUNT(*) OVER (PARTITION BY TRIM(CAST(po_number AS STRING))) AS po_number_occurrence,
+
+  -- Cleaning metadata
+  CURRENT_TIMESTAMP() AS _cleaned_at,
+  'dataform_autocleaning_v1' AS _cleaned_by
+
+FROM ${ref("purchase_orders")}
+WHERE id IS NOT NULL

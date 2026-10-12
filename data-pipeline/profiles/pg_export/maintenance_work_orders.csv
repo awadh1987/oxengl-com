@@ -1,0 +1,1 @@
+id,company_id,order_number,vehicle_id,order_type,priority,status,odometer_reading,cost_center_id,description,total_parts_cost,total_labor_cost,total_cost,scheduled_date,completed_date,created_at,updated_at

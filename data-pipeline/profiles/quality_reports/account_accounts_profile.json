@@ -1,0 +1,189 @@
+{
+  "table": "account_accounts",
+  "file": "data-pipeline/profiles/pg_export/account_accounts.csv",
+  "row_count": 18,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 18,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 18
+      },
+      "sample_values": [
+        "172c1ac5-fd7e-45af-8d94-55b6ff1b6c2f",
+        "63ce94d5-a6e1-421a-b128-72bca4fa0a9e",
+        "52366be6-2eb4-426c-ad95-ab002e34d9ee",
+        "62d44935-5adb-4df9-8855-5317bed6acd5",
+        "e8d25dd8-996e-49ac-b181-40d9c2e43a61"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 11.1,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 18
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "df5dc940-2f26-4620-86fa-1012735b7ee5"
+      ]
+    },
+    "code": {
+      "name": "code",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 9,
+      "distinct_rate_pct": 50.0,
+      "max_length": 6,
+      "min_length": 6,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 18
+      },
+      "sample_values": [
+        "101000",
+        "120000",
+        "130000",
+        "201000",
+        "202000"
+      ]
+    },
+    "name": {
+      "name": "name",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 9,
+      "distinct_rate_pct": 50.0,
+      "max_length": 38,
+      "min_length": 11,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 18
+      },
+      "sample_values": [
+        "Operating Cash / Bank",
+        "Accounts Receivable",
+        "Stock Valuation / Material Inventory",
+        "Accounts Payable - Raw Materials",
+        "Accounts Payable - Freight & Logistics"
+      ]
+    },
+    "internal_type": {
+      "name": "internal_type",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 22.2,
+      "max_length": 9,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 18
+      },
+      "sample_values": [
+        "asset",
+        "asset",
+        "asset",
+        "liability",
+        "liability"
+      ]
+    },
+    "currency": {
+      "name": "currency",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 5.6,
+      "max_length": 3,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 18
+      },
+      "sample_values": [
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR",
+        "SAR"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 11.1,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 18
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 18,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 11.1,
+      "max_length": 29,
+      "min_length": 29,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 18
+      },
+      "sample_values": [
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00",
+        "2026-09-28 04:27:06.885434+00"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "currency",
+      "issue": "Single distinct value: SAR",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 100,
+  "flag_summary": {
+    "critical": 0,
+    "warning": 0,
+    "info": 1
+  }
+}

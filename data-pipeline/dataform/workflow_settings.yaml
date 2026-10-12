@@ -1,0 +1,12 @@
+defaultDataset: oxengl_staging
+defaultProject: project-587cf20f-74ef-484a-ba6
+defaultLocation: US
+dataformCoreVersion: 3.0.7
+
+vars:
+  raw_dataset: oxengl_raw
+  staging_dataset: oxengl_staging
+  clean_dataset: oxengl_clean
+  vat_rate: "0.15"
+  default_currency: SAR
+  execution_env: production

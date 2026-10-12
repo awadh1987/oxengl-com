@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to OxenGL - Subscription Activated</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B;">
+
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F1F5F9; padding: 36px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 10px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          
+          <!-- Header Banner -->
+          <tr>
+            <td style="background-color: #0F172A; padding: 32px 40px; text-align: left;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td>
+                    <span style="font-size: 24px; font-weight: 800; color: #FFFFFF; letter-spacing: -0.5px;">OxenGL</span>
+                    <span style="display: block; font-size: 11px; color: #38BDF8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;">Cloud ERP & Logistics Platform</span>
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; background-color: #065F46; color: #34D399; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      ✓ Activated
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 36px 40px 28px 40px;">
+              <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0F172A; line-height: 1.3;">
+                Welcome to OxenGL / Subscription Activated
+              </h1>
+              
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                Dear <strong>{{ tenant_name }}</strong>,
+              </p>
+
+              <p style="margin: 0 0 20px 0; font-size: 15px; line-height: 1.6; color: #334155;">
+                We are pleased to inform you that your manual transfer has been successfully verified and approved by the OxenGL Administration team. Your organization's subscription workspace is now <strong>fully active</strong>.
+              </p>
+
+              <!-- Subscription Summary Card -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; margin: 24px 0; overflow: hidden;">
+                <tr>
+                  <td style="padding: 16px 20px; background-color: #F1F5F9; border-bottom: 1px solid #E2E8F0;">
+                    <strong style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">Subscription & Payment Summary</strong>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 20px;">
+                    <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 14px; color: #64748B; width: 40%;">Plan Tier:</td>
+                        <td style="padding: 6px 0; font-size: 14px; font-weight: 700; color: #0F172A;">{{ plan_tier }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 14px; color: #64748B;">Invoice Number:</td>
+                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #0F172A;">{{ invoice_number }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 14px; color: #64748B;">Amount Settled:</td>
+                        <td style="padding: 6px 0; font-size: 15px; font-weight: 700; color: #059669;">{{ amount_formatted }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 14px; color: #64748B;">Billing Cycle:</td>
+                        <td style="padding: 6px 0; font-size: 14px; font-weight: 600; color: #0F172A;">{{ billing_cycle | capitalize }}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 14px; color: #64748B;">Valid Until:</td>
+                        <td style="padding: 6px 0; font-size: 14px; font-weight: 700; color: #0284C7;">{{ current_period_end }}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0 24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{ workspace_url | default('https://portal.oxengl.com') }}" target="_blank" style="display: inline-block; padding: 14px 36px; background-color: #0F172A; color: #FFFFFF; font-size: 15px; font-weight: 600; text-decoration: none; border-radius: 6px; box-shadow: 0 2px 4px rgba(15, 23, 42, 0.2);">
+                      Launch Workspace &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- PDF Attachment Notice -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; margin-top: 24px;">
+                <tr>
+                  <td style="padding: 14px 18px; font-size: 13.5px; line-height: 1.5; color: #166534;">
+                    <span style="font-size: 16px; margin-right: 6px;">📎</span>
+                    <strong>Official Receipt Attached:</strong>
+                    Your official payment receipt (<strong>OxenGL_Receipt_{{ invoice_number }}.pdf</strong>) is attached to this email for your tax, accounting, and compliance records.
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Signature & Footer -->
+          <tr>
+            <td style="background-color: #F8FAFC; padding: 24px 40px; border-top: 1px solid #E2E8F0; font-size: 12.5px; color: #64748B; line-height: 1.5;">
+              <p style="margin: 0 0 8px 0; font-weight: 600; color: #1E293B;">
+                OxenGL Operations & Billing Administration
+              </p>
+              <p style="margin: 0 0 12px 0;">
+                If you have questions regarding your account or invoice, contact us at <a href="mailto:billing@oxengl.com" style="color: #0284C7; text-decoration: none;">billing@oxengl.com</a> or via <a href="mailto:support@oxengl.com" style="color: #0284C7; text-decoration: none;">support@oxengl.com</a>.
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94A3B8;">
+                &copy; {{ current_year | default(2026) }} OxenGL Platform. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

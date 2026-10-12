@@ -1,0 +1,437 @@
+{
+  "table": "res_users",
+  "file": "data-pipeline/profiles/pg_export/res_users.csv",
+  "row_count": 24,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 24
+      },
+      "sample_values": [
+        "595f75f1-6fd4-46d8-9f56-b6e7249fa9d2",
+        "3e99d547-0361-4d5f-ace7-e1d11d8255df",
+        "1e71ea44-9fc0-4082-88fd-7ba693699fb0",
+        "c29258ff-dee3-43e0-a8bf-5599ce25fd5e",
+        "f3cc5e48-060e-46a9-990d-48e9ca686287"
+      ]
+    },
+    "firebase_uid": {
+      "name": "firebase_uid",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 30,
+      "min_length": 17,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 24
+      },
+      "sample_values": [
+        "inv_595f75f16fd446d8",
+        "fb_53183374ec484312",
+        "fb_395bd984a49342db",
+        "fb_ccec09fafc2a4356",
+        "fb_11b53943b6e9476c"
+      ]
+    },
+    "email": {
+      "name": "email",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 28,
+      "min_length": 16,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 24
+      },
+      "sample_values": [
+        "abdulmajeed.ahmed@meayon.com",
+        "superadmin-59dcbf@oxengl.com",
+        "superadmin-61650d@oxengl.com",
+        "superadmin-db02d3@oxengl.com",
+        "orphan-0c1114@oxengl.com"
+      ]
+    },
+    "full_name": {
+      "name": "full_name",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 28,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 24
+      },
+      "sample_values": [
+        "Abdulmajeed Ahmed",
+        "superadmin-59dcbf@oxengl.com",
+        "superadmin-61650d@oxengl.com",
+        "superadmin-db02d3@oxengl.com",
+        "orphan-0c1114@oxengl.com"
+      ]
+    },
+    "phone": {
+      "name": "phone",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "password_hash": {
+      "name": "password_hash",
+      "total_values": 24,
+      "null_count": 21,
+      "null_rate_pct": 87.5,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 97,
+      "min_length": 97,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 3
+      },
+      "sample_values": [
+        "$argon2id$v=19$m=65536,t=3,p=4$/d8b49z739u7V8qZc46xdg$irXuvElIOkwpy3g8NKBQ/al8PDUM9vF7yqACIXEUmxM",
+        "$argon2id$v=19$m=65536,t=3,p=4$lzJGKIUQYgxhLOWcs7ZWKg$V/Zd17SNQG2RCz/HlGJ938fARnO2FEnDBtyNHeE+G1w",
+        "$argon2id$v=19$m=65536,t=3,p=4$kXIOYazV2rtXKoUQ4rw3Bg$F+IVSizmFjsJorT7bsNe14H+muB1pgXihb9qHZnW3Lo"
+      ]
+    },
+    "company_id": {
+      "name": "company_id",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 16.7,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 24
+      },
+      "sample_values": [
+        "df5dc940-2f26-4620-86fa-1012735b7ee5",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "676c1824-384c-476e-8914-a21a1a57f5d2",
+        "fb47be25-2f85-4908-9a8f-f0176ec2ca4d"
+      ]
+    },
+    "role": {
+      "name": "role",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 4,
+      "distinct_rate_pct": 16.7,
+      "max_length": 10,
+      "min_length": 5,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 24
+      },
+      "sample_values": [
+        "Admin",
+        "Owner",
+        "Owner",
+        "Owner",
+        "Accountant"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 4.2,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 24
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 24
+      },
+      "sample_values": [
+        "2026-09-28 04:32:09.560125+00",
+        "2026-09-28 12:40:51.612997+00",
+        "2026-09-28 12:40:51.647874+00",
+        "2026-09-28 12:40:51.667889+00",
+        "2026-09-28 12:40:51.693729+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 24,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 24
+      },
+      "sample_values": [
+        "2026-09-28 04:32:09.560125+00",
+        "2026-09-28 12:40:51.612997+00",
+        "2026-09-28 12:40:51.647874+00",
+        "2026-09-28 12:40:51.667889+00",
+        "2026-09-28 12:40:51.707642+00"
+      ]
+    },
+    "role_ids": {
+      "name": "role_ids",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "branch_scope_ids": {
+      "name": "branch_scope_ids",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "warehouse_scope_ids": {
+      "name": "warehouse_scope_ids",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "access_control_list": {
+      "name": "access_control_list",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "mfa_enabled": {
+      "name": "mfa_enabled",
+      "total_values": 24,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 4.2,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 24
+      },
+      "sample_values": [
+        "f",
+        "f",
+        "f",
+        "f",
+        "f"
+      ]
+    },
+    "mfa_secret": {
+      "name": "mfa_secret",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "mfa_backup_codes": {
+      "name": "mfa_backup_codes",
+      "total_values": 24,
+      "null_count": 24,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "WARNING",
+      "column": "phone",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "phone",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "password_hash",
+      "issue": "High null rate: 87.5%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "role_ids",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "role_ids",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "branch_scope_ids",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "branch_scope_ids",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "warehouse_scope_ids",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "warehouse_scope_ids",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "access_control_list",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "access_control_list",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "mfa_enabled",
+      "issue": "Single distinct value: f",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "mfa_secret",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "mfa_secret",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "mfa_backup_codes",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "mfa_backup_codes",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 7,
+    "warning": 8,
+    "info": 2
+  }
+}

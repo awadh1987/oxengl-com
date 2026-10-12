@@ -1,0 +1,1 @@
+id,company_id,purchasing_organization_id,tender_number,title,description,category,status,submission_deadline,bid_opening_date,currency,estimated_budget,is_sealed_bid,bids_unsealed,unsealed_at,unsealed_by_user_id,winning_bid_id,awarded_purchase_order_id,terms_and_conditions,source_pr_id,created_at,updated_at

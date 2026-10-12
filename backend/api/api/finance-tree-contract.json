@@ -1,0 +1,58 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "OxenGLHierarchicalCoaResponse",
+    "description": "JSON API structure tracking recursive 6-generation ledger values designed for front-end tree components.",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "required": [
+            "account_code",
+            "account_name",
+            "node_path",
+            "account_type",
+            "accumulated_balance",
+            "children"
+        ],
+        "properties": {
+            "account_code": {
+                "type": "string",
+                "description": "Unique standardized alpha-numeric tracking code.",
+                "example": "100000"
+            },
+            "account_name": {
+                "type": "string",
+                "description": "Human-readable label assigned to the account node.",
+                "example": "Current Assets"
+            },
+            "node_path": {
+                "type": "string",
+                "description": "PostgreSQL ltree path string reflecting exact position within the financial tree hierarchy.",
+                "example": "1.1.2.1"
+            },
+            "account_type": {
+                "type": "string",
+                "enum": [
+                    "Asset",
+                    "Liability",
+                    "Equity",
+                    "Revenue",
+                    "Expense"
+                ],
+                "example": "Asset"
+            },
+            "accumulated_balance": {
+                "type": "string",
+                "pattern": "^-?[0-9]+\\.[0-9]{4}$",
+                "description": "String-wrapped high-precision decimal representation of all nested child transaction balances.",
+                "example": "148500.5000"
+            },
+            "children": {
+                "type": "array",
+                "description": "Recursive nested list array storing child account sub-nodes.",
+                "items": {
+                    "$ref": "#"
+                }
+            }
+        }
+    }
+}

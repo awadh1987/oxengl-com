@@ -1,0 +1,411 @@
+{
+  "table": "tenant_users",
+  "file": "data-pipeline/profiles/pg_export/tenant_users.csv",
+  "row_count": 49,
+  "columns": {
+    "id": {
+      "name": "id",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 36,
+      "inferred_type": "uuid",
+      "type_distribution": {
+        "uuid": 49
+      },
+      "sample_values": [
+        "70a35062-0c6a-4934-83e7-15823250ef9d",
+        "a2cd9658-d05d-4b61-b3e8-c1670b5746f8",
+        "ca839ab9-3df8-4c42-a6b4-ae5de7373445",
+        "b1c92cd9-aaf1-47ad-92cf-b38baf5f66ee",
+        "1872ad3a-5add-4350-b775-4a7a3de0cb28"
+      ]
+    },
+    "email": {
+      "name": "email",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 36,
+      "min_length": 15,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "sre-audit-f05499@quantum-test.com",
+        "sre-audit-73d306@quantum-test.com",
+        "new_hire_0908d9@tenanta.com",
+        "sre-audit-432a44@quantum-test.com",
+        "new_hire_95a417@tenanta.com"
+      ]
+    },
+    "mobile_number": {
+      "name": "mobile_number",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 13,
+      "min_length": 13,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 49
+      },
+      "sample_values": [
+        "+966527570039",
+        "+966593984296",
+        "+966586486643",
+        "+966511250964",
+        "+966537021520"
+      ]
+    },
+    "first_name": {
+      "name": "first_name",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 10,
+      "distinct_rate_pct": 20.4,
+      "max_length": 11,
+      "min_length": 3,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "Quantum",
+        "Quantum",
+        "New",
+        "Quantum",
+        "New"
+      ]
+    },
+    "last_name": {
+      "name": "last_name",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 11,
+      "distinct_rate_pct": 22.4,
+      "max_length": 10,
+      "min_length": 1,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 48,
+        "integer": 1
+      },
+      "sample_values": [
+        "Logistics",
+        "Logistics",
+        "Hire Staff",
+        "Logistics",
+        "Hire Staff"
+      ]
+    },
+    "password_hash": {
+      "name": "password_hash",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 97,
+      "min_length": 97,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "$argon2id$v=19$m=65536,t=3,p=4$MeY859x7b40R4jyntLYWgg$OeC1NmBxaRcVD6B5+Ta4uybUbi4kfZFbb91j6AQuBC0",
+        "$argon2id$v=19$m=65536,t=3,p=4$W2ut9V7rvde6936vtdb6/w$EzYuz5AkaD1Rm6d0+oo14BJxF/akh3o9cRAcdFlaU7M",
+        "$argon2id$v=19$m=65536,t=3,p=4$FSLk3HtvrVXKuVfq3bsXwg$g5X1mG5+lmaapuyJ/14lKPzK+nhrupFLi82MG7sQi4E",
+        "$argon2id$v=19$m=65536,t=3,p=4$V8qZ01prDeF87z0n5HxPKQ$bE9Pom86NP7FOdW4cal2iTWP3jgTlkFAbqByJDU0LaI",
+        "$argon2id$v=19$m=65536,t=3,p=4$pDSGUKp1jtH6X+ud01rL2Q$5Yh5srzjjZsDekP9+yRuxm3SgsOP9p3W9PzuT3JyHmk"
+      ]
+    },
+    "role": {
+      "name": "role",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 2,
+      "distinct_rate_pct": 4.1,
+      "max_length": 5,
+      "min_length": 4,
+      "inferred_type": "string",
+      "type_distribution": {
+        "string": 49
+      },
+      "sample_values": [
+        "admin",
+        "admin",
+        "user",
+        "admin",
+        "user"
+      ]
+    },
+    "is_active": {
+      "name": "is_active",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 2.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 49
+      },
+      "sample_values": [
+        "t",
+        "t",
+        "t",
+        "t",
+        "t"
+      ]
+    },
+    "department": {
+      "name": "department",
+      "total_values": 49,
+      "null_count": 49,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "failed_login_attempts": {
+      "name": "failed_login_attempts",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 2.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "integer",
+      "type_distribution": {
+        "integer": 49
+      },
+      "sample_values": [
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
+      ]
+    },
+    "locked_until": {
+      "name": "locked_until",
+      "total_values": 49,
+      "null_count": 49,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "invited_by_user_id": {
+      "name": "invited_by_user_id",
+      "total_values": 49,
+      "null_count": 49,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "last_login_at": {
+      "name": "last_login_at",
+      "total_values": 49,
+      "null_count": 46,
+      "null_rate_pct": 93.9,
+      "distinct_count": 3,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 3
+      },
+      "sample_values": [
+        "2026-09-28 21:09:28.135221+00",
+        "2026-09-27 14:26:58.171594+00",
+        "2026-09-29 02:28:28.44415+00"
+      ]
+    },
+    "created_at": {
+      "name": "created_at",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 49
+      },
+      "sample_values": [
+        "2026-09-25 20:12:46.455191+00",
+        "2026-09-25 21:33:42.102552+00",
+        "2026-09-26 12:02:43.807273+00",
+        "2026-09-26 12:02:57.890387+00",
+        "2026-09-26 00:38:36.467274+00"
+      ]
+    },
+    "updated_at": {
+      "name": "updated_at",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 49,
+      "distinct_rate_pct": 100.0,
+      "max_length": 29,
+      "min_length": 28,
+      "inferred_type": "date",
+      "type_distribution": {
+        "date": 49
+      },
+      "sample_values": [
+        "2026-09-25 20:12:46.455191+00",
+        "2026-09-25 21:33:42.102552+00",
+        "2026-09-26 12:02:43.807273+00",
+        "2026-09-26 12:02:57.890387+00",
+        "2026-09-26 00:38:36.467274+00"
+      ]
+    },
+    "tfa_secret": {
+      "name": "tfa_secret",
+      "total_values": 49,
+      "null_count": 49,
+      "null_rate_pct": 100.0,
+      "distinct_count": 0,
+      "distinct_rate_pct": 0.0,
+      "max_length": 0,
+      "min_length": 0,
+      "inferred_type": "unknown",
+      "type_distribution": {},
+      "sample_values": []
+    },
+    "tfa_enabled": {
+      "name": "tfa_enabled",
+      "total_values": 49,
+      "null_count": 0,
+      "null_rate_pct": 0.0,
+      "distinct_count": 1,
+      "distinct_rate_pct": 2.0,
+      "max_length": 1,
+      "min_length": 1,
+      "inferred_type": "boolean",
+      "type_distribution": {
+        "boolean": 49
+      },
+      "sample_values": [
+        "f",
+        "f",
+        "f",
+        "f",
+        "f"
+      ]
+    }
+  },
+  "quality_flags": [
+    {
+      "severity": "INFO",
+      "column": "is_active",
+      "issue": "Single distinct value: t",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "department",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "department",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "failed_login_attempts",
+      "issue": "Single distinct value: 0",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    },
+    {
+      "severity": "WARNING",
+      "column": "locked_until",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "locked_until",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "invited_by_user_id",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "invited_by_user_id",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "WARNING",
+      "column": "last_login_at",
+      "issue": "High null rate: 93.9%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "WARNING",
+      "column": "tfa_secret",
+      "issue": "High null rate: 100.0%",
+      "recommendation": "Investigate if column is truly optional or data is missing"
+    },
+    {
+      "severity": "CRITICAL",
+      "column": "tfa_secret",
+      "issue": "Column is 100% NULL",
+      "recommendation": "Consider dropping column or investigating data source"
+    },
+    {
+      "severity": "INFO",
+      "column": "tfa_enabled",
+      "issue": "Single distinct value: f",
+      "recommendation": "Column may be a constant \u2014 verify if meaningful"
+    }
+  ],
+  "quality_score": 0,
+  "flag_summary": {
+    "critical": 4,
+    "warning": 5,
+    "info": 3
+  }
+}
