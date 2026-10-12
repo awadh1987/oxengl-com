@@ -28,6 +28,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 
 from .database import (
+    PlatformSessionLocal,
     TenantConnectionManager,
     encrypt_connection_url,
     get_db,
@@ -38,6 +39,7 @@ from .models import (
     MasterPasswordReset,
     MasterTenant,
     MasterUser,
+    ResCompany,
     ResUser,
     TenantDatabase,
     TenantPasswordReset,
@@ -625,11 +627,13 @@ def master_login(payload: MasterLoginRequest, request: Request, db: Session = De
 def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Session = Depends(get_db)):
     """Resolves Tenant Plane database via slug and authenticates tenant user."""
     slug = (payload.workspace_slug or payload.tenant_slug or "").lower().strip()
-    meta = None
+    meta = getattr(request.state, "tenant_meta", None)
     if not slug:
         # Zero-Slug Resolution: Extract from request.state or inspect Host / X-Forwarded-Host header
         if hasattr(request.state, "tenant_slug") and request.state.tenant_slug:
             slug = str(request.state.tenant_slug).lower().strip()
+        elif meta and meta.get("tenant_slug"):
+            slug = str(meta["tenant_slug"]).lower().strip()
         else:
             raw_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
             from backend.app.core.middleware import resolve_tenant_from_host
@@ -637,76 +641,171 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             if meta and meta.get("tenant_slug"):
                 slug = str(meta["tenant_slug"]).lower().strip()
 
-    if not slug:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="workspace_slug is required when logging in from generic hub. For zero-slug login, access via your custom domain or tenant subdomain."
-        )
-
     # If slug represents a custom domain (contains a dot), attempt domain resolution
-    if "." in slug:
+    if slug and "." in slug:
         from backend.app.core.middleware import resolve_tenant_from_host
         if not meta:
             meta = resolve_tenant_from_host(slug, db=master_db)
         if meta and meta.get("tenant_slug"):
             slug = str(meta["tenant_slug"]).lower().strip()
 
-    slug_variants = list(dict.fromkeys([slug, slug.replace("-", "_"), slug.replace("_", "-")])) if slug else []
+    target_tenant_id = None
+    if meta and meta.get("tenant_id"):
+        target_tenant_id = meta["tenant_id"]
+    elif getattr(request.state, "tenant_id", None):
+        target_tenant_id = request.state.tenant_id
+    elif getattr(request.state, "tenant_company_id", None):
+        target_tenant_id = request.state.tenant_company_id
+
+    if not slug and not target_tenant_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="workspace_slug is required when logging in from generic hub. For zero-slug login, access via your custom domain or tenant subdomain."
+        )
+
+    raw_target = (payload.workspace_slug or payload.tenant_slug or slug).lower().strip()
+    raw_host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").split(":")[0].lower().strip()
+
+    slug_variants = list(dict.fromkeys([s for s in [slug, slug.replace("-", "_"), slug.replace("_", "-")] if s])) if slug else []
     if meta and meta.get("tenant_slug") and meta["tenant_slug"] not in slug_variants:
         slug_variants.append(meta["tenant_slug"])
 
-    from sqlalchemy import func
-    tenant = None
-    raw_target = (payload.workspace_slug or payload.tenant_slug or slug).lower().strip()
-    if slug_variants:
-        tenant = master_db.scalar(
-            select(MasterTenant).where(
-                (MasterTenant.slug.in_(slug_variants)) |
-                (func.lower(func.trim(MasterTenant.custom_domain)) == raw_target)
-            )
-        )
-    if not tenant and meta and meta.get("tenant_id"):
-        try:
-            tenant = master_db.get(MasterTenant, uuid.UUID(meta["tenant_id"]))
-        except Exception:
-            pass
+    domain_targets = list(dict.fromkeys([
+        s for s in [
+            raw_target,
+            raw_host,
+            (meta.get("custom_domain") if meta else None),
+            getattr(request.state, "custom_domain", None),
+        ] if s and "." in s
+    ]))
 
-    if not tenant:
-        # Check res_companies table fallback and register into master_tenants dynamically
+    target_uuid = None
+    if target_tenant_id:
         try:
-            comp_row = master_db.execute(
-                text("""
-                    SELECT id, name, domain_slug, slug, custom_domain, admin_email 
-                    FROM res_companies 
-                    WHERE domain_slug = :s OR slug = :s 
-                       OR domain_slug = :s2 OR slug = :s2 
-                       OR lower(trim(custom_domain)) = :s
-                       OR lower(trim(custom_domain)) = :raw
-                    LIMIT 1
-                """),
-                {"s": slug, "s2": slug.replace("-", "_"), "raw": raw_target}
-            ).mappings().first()
+            target_uuid = uuid.UUID(str(target_tenant_id))
+        except Exception:
+            target_uuid = None
+
+    tenant = None
+
+    # Step 1: Query MasterTenant via master_db
+    try:
+        query_conditions = []
+        if target_uuid:
+            query_conditions.append(MasterTenant.id == target_uuid)
+        if slug_variants:
+            query_conditions.append(MasterTenant.slug.in_(slug_variants))
+        if domain_targets:
+            query_conditions.append(func.lower(func.trim(MasterTenant.custom_domain)).in_(domain_targets))
+            query_conditions.append(func.lower(func.trim(MasterTenant.workspace_domain)).in_(domain_targets))
+
+        if query_conditions:
+            tenant = master_db.scalar(select(MasterTenant).where(or_(*query_conditions)))
+    except Exception as e:
+        logger.warning(f"Error querying MasterTenant via master_db: {e}")
+
+    # Step 2: Fallback to PlatformSessionLocal (authoritative, bypasses RLS)
+    if not tenant and PlatformSessionLocal is not None:
+        try:
+            with PlatformSessionLocal() as p_db:
+                p_conditions = []
+                if target_uuid:
+                    p_conditions.append(MasterTenant.id == target_uuid)
+                if slug_variants:
+                    p_conditions.append(MasterTenant.slug.in_(slug_variants))
+                if domain_targets:
+                    p_conditions.append(func.lower(func.trim(MasterTenant.custom_domain)).in_(domain_targets))
+                    p_conditions.append(func.lower(func.trim(MasterTenant.workspace_domain)).in_(domain_targets))
+                if p_conditions:
+                    p_tenant = p_db.scalar(select(MasterTenant).where(or_(*p_conditions)))
+                    if p_tenant:
+                        tenant = MasterTenant(
+                            id=p_tenant.id,
+                            name=p_tenant.name,
+                            slug=p_tenant.slug,
+                            custom_domain=p_tenant.custom_domain,
+                            workspace_domain=p_tenant.workspace_domain,
+                            owner_full_name=p_tenant.owner_full_name,
+                            owner_email=p_tenant.owner_email,
+                            owner_mobile=p_tenant.owner_mobile,
+                            status=p_tenant.status,
+                            subscription_tier=p_tenant.subscription_tier,
+                            max_users=p_tenant.max_users,
+                            max_storage_gb=p_tenant.max_storage_gb,
+                        )
+        except Exception as e:
+            logger.warning(f"Error querying MasterTenant via PlatformSessionLocal: {e}")
+
+    # Step 3: ResCompany fallback and dynamic reconciliation into MasterTenant
+    if not tenant:
+        try:
+            lookup_sessions = [master_db]
+            if PlatformSessionLocal is not None and master_db != PlatformSessionLocal:
+                lookup_sessions.append(PlatformSessionLocal())
+
+            comp_row = None
+            for s_db in lookup_sessions:
+                try:
+                    comp_row = s_db.execute(
+                        text("""
+                            SELECT id, name, domain_slug, slug, custom_domain, workspace_domain, admin_email, subscription_tier
+                            FROM res_companies 
+                            WHERE (:target_uuid IS NOT NULL AND id = :target_uuid)
+                               OR domain_slug = :s OR slug = :s 
+                               OR domain_slug = :s2 OR slug = :s2 
+                               OR lower(trim(custom_domain)) = :raw
+                               OR lower(trim(custom_domain)) = :raw_host
+                               OR lower(trim(workspace_domain)) = :raw
+                               OR lower(trim(workspace_domain)) = :raw_host
+                            LIMIT 1
+                        """),
+                        {
+                            "target_uuid": target_uuid,
+                            "s": slug or "",
+                            "s2": (slug or "").replace("-", "_"),
+                            "raw": raw_target or "",
+                            "raw_host": raw_host or "",
+                        }
+                    ).mappings().first()
+                    if comp_row:
+                        break
+                finally:
+                    if s_db != master_db:
+                        s_db.close()
+
             if comp_row:
-                resolved_domain = comp_row.get("custom_domain") or (raw_target if "." in raw_target else None)
+                resolved_domain = comp_row.get("custom_domain") or (raw_target if "." in raw_target else (raw_host if "." in raw_host else None))
                 tenant = MasterTenant(
                     id=comp_row["id"],
                     name=comp_row["name"],
-                    slug=comp_row.get("slug") or comp_row.get("domain_slug") or slug,
+                    slug=comp_row.get("slug") or comp_row.get("domain_slug") or slug or (comp_row["name"].lower().replace(" ", "_")[:32]),
                     custom_domain=resolved_domain,
+                    workspace_domain=comp_row.get("workspace_domain") or resolved_domain,
                     owner_full_name=comp_row["name"],
-                    owner_email=comp_row.get("admin_email") or f"admin@{slug}.com",
+                    owner_email=comp_row.get("admin_email") or f"admin@{slug or 'oxengl'}.com",
                     owner_mobile="+966500000000",
                     status="active",
-                    subscription_tier="standard",
+                    subscription_tier=comp_row.get("subscription_tier") or "standard",
                     max_users=10,
                     max_storage_gb=25,
                 )
-                master_db.add(tenant)
-                master_db.commit()
-                master_db.refresh(tenant)
+                if PlatformSessionLocal is not None:
+                    try:
+                        with PlatformSessionLocal() as p_db:
+                            p_db.merge(tenant)
+                            p_db.commit()
+                    except Exception as pe:
+                        logger.warning(f"Error persisting MasterTenant in platform session: {pe}")
+                else:
+                    try:
+                        master_db.add(tenant)
+                        master_db.commit()
+                        master_db.refresh(tenant)
+                    except Exception as me:
+                        logger.warning(f"Error persisting MasterTenant in master_db: {me}")
+                        master_db.rollback()
         except Exception as e:
             logger.warning(f"Error checking res_companies fallback: {e}")
-            master_db.rollback()
 
     if not tenant:
         dummy_verify()
@@ -908,15 +1007,25 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         # Resolve canonical company ID from ResCompany
         canonical_cid = tenant.id
         try:
-            matched_comp = master_db.query(ResCompany).filter(
+            comp_filter = (
                 (ResCompany.id == tenant.id)
                 | (ResCompany.slug == tenant.slug)
                 | (ResCompany.domain_slug == tenant.slug)
-                | (
+            )
+            if getattr(tenant, "custom_domain", None):
+                comp_filter = comp_filter | (
                     func.lower(func.trim(ResCompany.custom_domain))
-                    == func.lower(func.trim(getattr(tenant, "custom_domain", "") or ""))
+                    == func.lower(func.trim(tenant.custom_domain))
                 )
-            ).first()
+            if getattr(tenant, "workspace_domain", None):
+                comp_filter = comp_filter | (
+                    func.lower(func.trim(ResCompany.workspace_domain))
+                    == func.lower(func.trim(tenant.workspace_domain))
+                )
+            matched_comp = master_db.query(ResCompany).filter(comp_filter).first()
+            if not matched_comp and PlatformSessionLocal is not None:
+                with PlatformSessionLocal() as p_db:
+                    matched_comp = p_db.query(ResCompany).filter(comp_filter).first()
             if matched_comp:
                 canonical_cid = matched_comp.id
         except Exception:

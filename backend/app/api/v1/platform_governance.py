@@ -428,15 +428,20 @@ DEFAULT_LANDING_SECTIONS_PAYLOAD = [
 
 
 def _get_or_create_master_settings(db: Session) -> PlatformMasterSetting:
+    setting = None
     try:
-        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS enable_sovereignty_badge BOOLEAN DEFAULT TRUE NOT NULL;"))
-        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS sovereignty_badge_title VARCHAR(255) DEFAULT 'Data Sovereignty & Infrastructure Policy' NOT NULL;"))
-        db.execute(text("ALTER TABLE platform_master_settings ADD COLUMN IF NOT EXISTS sovereignty_badge_text TEXT DEFAULT 'All tenant customer schemas, cryptographic keys, and telemetry logs are strictly persisted on sovereign infrastructure.' NOT NULL;"))
-        db.commit()
+        setting = db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
     except Exception:
-        db.rollback()
+        pass
 
-    setting = db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
+    if not setting:
+        try:
+            from backend.database import PlatformSessionLocal
+            with PlatformSessionLocal() as p_db:
+                setting = p_db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
+        except Exception:
+            pass
+
     if not setting:
         setting = PlatformMasterSetting(
             id="default",
@@ -458,13 +463,6 @@ def _get_or_create_master_settings(db: Session) -> PlatformMasterSetting:
                 "contact_address": "Riyadh, Saudi Arabia",
             },
         )
-        db.add(setting)
-        try:
-            db.commit()
-            db.refresh(setting)
-        except Exception:
-            db.rollback()
-            setting = db.query(PlatformMasterSetting).filter(PlatformMasterSetting.id == "default").first()
     return setting
 
 

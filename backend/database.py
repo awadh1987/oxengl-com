@@ -161,61 +161,6 @@ def get_db(request: Request = None):
     is_master = False
 
     if request is not None:
-        try:
-            # 1. Check request headers
-            if hasattr(request, "headers"):
-                headers = request.headers
-                tenant_id = (
-                    headers.get("X-Tenant-ID")
-                    or headers.get("x-tenant-id")
-                    or headers.get("X-Company-ID")
-                    or headers.get("x-company-id")
-                    or headers.get("X-Tenant-Slug")
-                    or headers.get("x-tenant-slug")
-                )
-                role = headers.get("x-role")
-                if role and str(role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
-                    is_master = True
-
-            # 2. Check request.state
-            if hasattr(request, "state"):
-                if not tenant_id:
-                    tenant_id = (
-                        getattr(request.state, "tenant_id", None)
-                        or getattr(request.state, "company_id", None)
-                    )
-                role = getattr(request.state, "role", None)
-                if role and str(role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
-                    is_master = True
-
-            # 3. Check query and path params
-            if not tenant_id:
-                if hasattr(request, "path_params") and request.path_params:
-                    tenant_id = request.path_params.get("tenant_id") or request.path_params.get("company_id")
-                if not tenant_id and hasattr(request, "query_params") and request.query_params:
-                    tenant_id = request.query_params.get("tenant_id") or request.query_params.get("company_id")
-
-            # 4. Check Authorization Bearer JWT token
-            if not tenant_id and hasattr(request, "headers"):
-                auth = request.headers.get("Authorization") or request.headers.get("authorization")
-                if auth and auth.startswith("Bearer "):
-                    token = auth.split(" ", 1)[1].strip()
-                    try:
-                        from backend.app.dependencies import decode_jwt_token
-                        claims = decode_jwt_token(token)
-                        tenant_id = claims.get("tenant_id") or claims.get("company_id")
-                        c_role = claims.get("role")
-                        if c_role and str(c_role).upper().replace(" ", "_") in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]:
-                            is_master = True
-                    except Exception:
-                        pass
-        except Exception:
-            pass
-
-    # Do not let caller-selected headers or role labels survive context resolution.
-    tenant_id = None
-    is_master = False
-    if request is not None:
         authenticated_user = getattr(request.state, "current_user", None)
         raw_token = request.cookies.get("access_token") or request.cookies.get("oxengl_session")
         authorization = request.headers.get("Authorization") or request.headers.get("authorization")
@@ -247,13 +192,22 @@ def get_db(request: Request = None):
             tenant_id = claims.get("tenant_id") or claims.get("company_id")
             if claims.get("tier") == "master" or str(claims.get("role", "")).lower() in ("super_admin", "superadmin"):
                 is_master = True
-        elif request.url.path.startswith(("/api/v1/auth", "/api/v1/iam", "/api/v1/tenant/auth")):
-            tenant_id = (
-                request.headers.get("X-Tenant-ID")
-                or request.headers.get("X-Company-ID")
-            )
         else:
-            tenant_id = None
+            # Context resolution from HostHeaderMiddleware (custom domains and subdomains)
+            state_tenant = (
+                getattr(request.state, "tenant_company_id", None)
+                or getattr(request.state, "tenant_id", None)
+                or getattr(request.state, "company_id", None)
+            )
+            if state_tenant:
+                tenant_id = str(state_tenant)
+            elif request.url.path.startswith(("/api/v1/auth", "/api/auth", "/api/v1/iam", "/api/v1/tenant/auth")):
+                tenant_id = (
+                    request.headers.get("X-Tenant-ID")
+                    or request.headers.get("X-Company-ID")
+                )
+            else:
+                tenant_id = None
             is_master = False
 
     # Resolve company_uuid

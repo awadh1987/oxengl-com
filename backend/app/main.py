@@ -458,8 +458,43 @@ def verify_migration_managed_schema() -> None:
 	return None
 
 
+from urllib.parse import urlparse
+
+
+class DynamicTenantCORSMiddleware(CORSMiddleware):
+	"""
+	Enterprise Multi-Tenant CORS Middleware.
+	Dynamically verifies custom enterprise domains and tenant subdomains against active tenant catalog
+	using authoritative domain resolution, ensuring tenant custom domains receive full CORS clearance
+	without requiring server restarts or static origin registration.
+	"""
+
+	def is_allowed_origin(self, origin: str) -> bool:
+		if super().is_allowed_origin(origin):
+			return True
+		if not origin:
+			return False
+		try:
+			parsed = urlparse(origin)
+			host = (parsed.hostname or "").lower().strip()
+			if not host:
+				return False
+			if host in ("localhost", "127.0.0.1", "0.0.0.0", "testserver"):
+				return True
+			# Dynamically check tenant custom domain resolution
+			from backend.app.core.middleware import resolve_tenant_from_host
+			meta = resolve_tenant_from_host(host)
+			if meta is not None:
+				return True
+		except Exception as exc:
+			logging.getLogger("oxengl.cors").warning(
+				f"Error validating dynamic tenant CORS origin '{origin}': {exc}"
+			)
+		return False
+
+
 app.add_middleware(
-	CORSMiddleware,
+	DynamicTenantCORSMiddleware,
 	allow_origins=[
 		f"https://{DOMAIN}",
 		f"https://app.{DOMAIN}",
@@ -470,8 +505,12 @@ app.add_middleware(
 		"http://127.0.0.1:5173",
 		"http://localhost:3000",
 		"http://127.0.0.1:3000",
+		"http://localhost:8080",
+		"http://127.0.0.1:8080",
+		"http://localhost",
+		"http://127.0.0.1",
 	],
-	allow_origin_regex=r"^https://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)$",
+	allow_origin_regex=r"^https?://([a-zA-Z0-9-]+\.)*oxengl\.(me|com)(:\d+)?$",
 	allow_credentials=True,
 	allow_methods=["*"],
 	allow_headers=["*"],

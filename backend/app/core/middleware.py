@@ -134,8 +134,10 @@ def invalidate_domain_cache(domain: Optional[str] = None) -> None:
 def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optional[dict[str, Any]]:
     """
     Resolves tenant configuration and company metadata from an incoming Host/X-Forwarded-Host header.
-    Supports both custom enterprise domains (e.g. 'transport.horizon.sa')
+    Supports both custom enterprise domains (e.g. 'myon-contract.cloud')
     and tenant subdomains (e.g. 'tenant-a.oxengl.me').
+    Authoritatively queries MasterTenant, ResCompany, and Tenant using PlatformSessionLocal
+    to safely resolve tenant routing before RLS session variables are established.
     """
     if not raw_host:
         return None
@@ -155,8 +157,11 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
     should_close_db = False
     if db is None:
         try:
-            from backend.database import SessionLocal
-            db = SessionLocal()
+            from backend.database import PlatformSessionLocal, SessionLocal
+            if PlatformSessionLocal is not None:
+                db = PlatformSessionLocal()
+            else:
+                db = SessionLocal()
             should_close_db = True
         except Exception as init_err:
             logger.warning(f"Could not initialize DB session for domain resolution: {init_err}")
@@ -164,23 +169,33 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
 
     try:
         from sqlalchemy import func
-        from backend.models import MasterTenant, ResCompany
+        from backend.models import MasterTenant, ResCompany, Tenant
 
-        # 1. Custom Domain Match on MasterTenant
+        # 1. Custom Domain / Workspace Domain Match on MasterTenant
         master = db.query(MasterTenant).filter(
-            func.lower(func.trim(MasterTenant.custom_domain)) == clean_host
+            (func.lower(func.trim(MasterTenant.custom_domain)) == clean_host) |
+            (func.lower(func.trim(MasterTenant.workspace_domain)) == clean_host)
         ).first()
         company = None
 
-        # 2. Custom Domain Match on ResCompany
+        # 2. Custom Domain / Workspace Domain Match on ResCompany
         if not master:
             company = db.query(ResCompany).filter(
                 (func.lower(func.trim(ResCompany.custom_domain)) == clean_host) |
+                (func.lower(func.trim(ResCompany.workspace_domain)) == clean_host) |
                 (func.lower(func.trim(ResCompany.domain_slug)) == clean_host)
             ).first()
 
-        # 3. Subdomain extraction for *.oxengl.me
-        if not master and not company and clean_host.endswith(".oxengl.me"):
+        # 3. Custom Domain / Workspace Domain Match on Tenant
+        tenant_obj = None
+        if not master and not company:
+            tenant_obj = db.query(Tenant).filter(
+                (func.lower(func.trim(Tenant.workspace_domain)) == clean_host) |
+                (func.lower(func.trim(Tenant.schema_name)) == clean_host)
+            ).first()
+
+        # 4. Subdomain extraction for *.oxengl.me
+        if not master and not company and not tenant_obj and clean_host.endswith(".oxengl.me"):
             subdomain = clean_host.split(".")[0]
             if subdomain not in {"www", "app", "api", "admin", "domains"}:
                 master = db.query(MasterTenant).filter(MasterTenant.slug == subdomain).first()
@@ -188,16 +203,57 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                     company = db.query(ResCompany).filter(
                         (ResCompany.slug == subdomain) | (ResCompany.domain_slug == subdomain)
                     ).first()
+                if not master and not company:
+                    tenant_obj = db.query(Tenant).filter(Tenant.schema_name == subdomain).first()
 
-        # 4. Fallback direct slug match
-        if not master and not company:
+        # 5. Fallback direct slug match
+        if not master and not company and not tenant_obj:
             master = db.query(MasterTenant).filter(MasterTenant.slug == clean_host).first()
             if not master:
                 company = db.query(ResCompany).filter(
                     (ResCompany.slug == clean_host) | (ResCompany.domain_slug == clean_host)
                 ).first()
+            if not master and not company:
+                tenant_obj = db.query(Tenant).filter(Tenant.schema_name == clean_host).first()
 
-        # 5. Dynamic reconciliation between ResCompany and MasterTenant
+        # 6. Fallback platform check if caller passed an RLS-restricted session
+        if not master and not company and not tenant_obj and not should_close_db:
+            try:
+                from backend.database import PlatformSessionLocal
+                if PlatformSessionLocal is not None and db != PlatformSessionLocal:
+                    with PlatformSessionLocal() as platform_db:
+                        return resolve_tenant_from_host(raw_host, db=platform_db)
+            except Exception:
+                pass
+
+        # 7. Dynamic reconciliation from Tenant model
+        if tenant_obj and not master and not company:
+            master = db.query(MasterTenant).filter(
+                (MasterTenant.id == tenant_obj.id) | (MasterTenant.slug == tenant_obj.schema_name)
+            ).first()
+            if not master:
+                company = db.query(ResCompany).filter(
+                    (ResCompany.id == tenant_obj.id) | (ResCompany.slug == tenant_obj.schema_name)
+                ).first()
+            if not master and not company:
+                canonical_id = str(tenant_obj.id)
+                result = {
+                    "tenant_id": canonical_id,
+                    "company_id": canonical_id,
+                    "tenant_slug": tenant_obj.schema_name,
+                    "name": tenant_obj.company_name,
+                    "custom_domain": clean_host,
+                    "is_custom_domain": not clean_host.endswith(".oxengl.me"),
+                    "logo_url": tenant_obj.logo_url,
+                    "primary_color": None,
+                    "subscription_tier": "standard",
+                    "status": "active" if tenant_obj.is_active else "inactive",
+                }
+                with _DOMAIN_CACHE_LOCK:
+                    _DOMAIN_CACHE[clean_host] = result
+                return result
+
+        # 8. Dynamic reconciliation between ResCompany and MasterTenant
         if company and not master:
             try:
                 master = MasterTenant(
@@ -268,7 +324,7 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
                 _DOMAIN_CACHE[clean_host] = result
             return result
 
-        # Negative cache
+        # Negative cache only when resolution cleanly found no match
         with _DOMAIN_CACHE_LOCK:
             _DOMAIN_CACHE[clean_host] = None
         return None
@@ -279,15 +335,6 @@ def resolve_tenant_from_host(raw_host: str, db: Optional[Any] = None) -> Optiona
     finally:
         if should_close_db and db:
             db.close()
-
-
-def invalidate_domain_cache(host: Optional[str] = None) -> None:
-    """Invalidates the in-memory domain resolution cache for a specific host or all hosts."""
-    with _DOMAIN_CACHE_LOCK:
-        if host:
-            _DOMAIN_CACHE.pop(host.lower().strip(), None)
-        else:
-            _DOMAIN_CACHE.clear()
 
 
 class HostHeaderMiddleware(BaseHTTPMiddleware):
@@ -310,6 +357,7 @@ class HostHeaderMiddleware(BaseHTTPMiddleware):
         request.state.tenant_slug = getattr(request.state, "tenant_slug", None)
         request.state.custom_domain = None
         request.state.is_custom_domain = False
+        request.state.tenant_meta = None
 
         tenant_meta = resolve_tenant_from_host(clean_host) if clean_host else None
 
@@ -322,6 +370,7 @@ class HostHeaderMiddleware(BaseHTTPMiddleware):
             request.state.tenant_name = tenant_meta["name"]
             request.state.custom_domain = clean_host
             request.state.is_custom_domain = tenant_meta.get("is_custom_domain", False)
+            request.state.tenant_meta = tenant_meta
         else:
             header_or_query_cid = (
                 request.headers.get("x-company-id")
