@@ -13,6 +13,9 @@ import os
 from os import getenv
 from typing import Any, Generator, Optional
 
+from backend.app.routers.planning import router as planning_router
+app.include_router(planning_router, prefix="/api/planning", tags=["Planning Department Spine"])
+
 from backend.schemas import AccountMoveLineCreate
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
@@ -258,9 +261,9 @@ except NameError:
 
 
 app = FastAPI(
-	title="Meayon ERP backend API",
+	title="oxengl ERP backend API",
 	version="1.0.0",
-	description="نظام إدارة عمليات النقل والشحن والمالية لشركة ميون",
+	description="نظام إدارة عمليات النقل والشحن والمالية لشركة oxengl",
 )
 
 app.state.limiter = limiter
