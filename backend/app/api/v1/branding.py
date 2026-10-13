@@ -309,6 +309,7 @@ def get_platform_branding(db: Session = Depends(get_db)):
     Public Tier 1 endpoint: Returns global platform branding defaults.
     Accessible publicly without authentication for landing page and login portals.
     """
+    setting = None
     try:
         setting = db.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
     except Exception as exc:
@@ -317,12 +318,23 @@ def get_platform_branding(db: Session = Depends(get_db)):
             db.rollback()
         except Exception:
             pass
-        with SessionLocal() as central_sess:
-            setting = central_sess.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
+        try:
+            with SessionLocal() as central_sess:
+                setting = central_sess.query(PlatformSetting).filter(PlatformSetting.setting_key == "global_branding").first()
+        except Exception as fallback_exc:
+            logger.error("Failed to query platform_settings from fallback session: %s. Returning defaults.", fallback_exc)
 
     if setting and setting.setting_value:
-        merged = {**DEFAULT_GLOBAL_BRANDING, **setting.setting_value}
-        return PlatformBrandingResponse(**merged)
+        val = setting.setting_value
+        if isinstance(val, str):
+            import json
+            try:
+                val = json.loads(val)
+            except Exception:
+                val = {}
+        if isinstance(val, dict):
+            merged = {**DEFAULT_GLOBAL_BRANDING, **val}
+            return PlatformBrandingResponse(**merged)
 
     return PlatformBrandingResponse(**DEFAULT_GLOBAL_BRANDING)
 

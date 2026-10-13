@@ -238,7 +238,7 @@ class Tenant(Base):
     schema_name: Mapped[str] = mapped_column(String(64), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
-    logo_url = Column(String(500), nullable=True, default=None)
+    logo_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True, default=None)
 
 
 try:

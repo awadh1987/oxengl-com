@@ -12,10 +12,15 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
       POSTGRES_DB: erp_db_com
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      PLATFORM_DB_USER: ${PLATFORM_DB_USER}
+      PLATFORM_DB_PASSWORD: ${PLATFORM_DB_PASSWORD}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
       - pg_com_data_volume:/var/lib/postgresql/data
+      - ./backend/scripts/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
     command: >
       postgres
       -c max_connections=60
@@ -87,6 +92,7 @@ services:
     ports:
       - "127.0.0.1:8001:8000"
     volumes:
+      - ./backend/alembic:/app/backend/alembic:ro
       - avatar_com_files_volume:/app/backend/static/avatars
       - uploads_com_files_volume:/app/backend/static/uploads
       - crypto_com_keys_volume:/var/crypto/oxengl
