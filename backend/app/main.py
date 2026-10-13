@@ -13,9 +13,6 @@ import os
 from os import getenv
 from typing import Any, Generator, Optional
 
-from backend.app.routers.planning import router as planning_router
-app.include_router(planning_router, prefix="/api/planning", tags=["Planning Department Spine"])
-
 from backend.schemas import AccountMoveLineCreate
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Header, HTTPException, Query, Request, Response, UploadFile, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import JSONResponse
@@ -6635,6 +6632,8 @@ from backend.app.api.v1.site_settings import router as site_settings_router
 app.include_router(site_settings_router)
 from backend.app.api.v1.platform_governance import router as platform_governance_router
 app.include_router(platform_governance_router)
+from backend.app.routers.planning import router as planning_router
+app.include_router(planning_router, prefix="/api/planning", tags=["Planning Department Spine"])
 
 # Mount static files for platform branding assets
 from pathlib import Path

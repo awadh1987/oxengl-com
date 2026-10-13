@@ -97,7 +97,7 @@ def upgrade() -> None:
         if 'project_id' not in columns:
             print(f"Adding project_id column to: {table}")
             try:
-                with op.get_context().begin_nested():
+                with bind.begin_nested():
                     op.add_column(table, sa.Column('project_id', postgresql.UUID(as_uuid=True), nullable=True))
                     op.create_index(op.f(f'ix_{table}_project_id'), table, ['project_id'], unique=False)
             except Exception as e:
@@ -115,13 +115,21 @@ def upgrade() -> None:
         if fk_name not in existing_fks:
             try:
                 print(f"Binding foreign key for: {table}")
-                with op.get_context().begin_nested():
+                with bind.begin_nested():
+                    forced = bind.execute(
+                        sa.text("SELECT relforcerowsecurity FROM pg_class WHERE oid = to_regclass(:t)"),
+                        {"t": f'public."{table}"'},
+                    ).scalar()
+                    if forced:
+                        op.execute(f'ALTER TABLE "{table}" NO FORCE ROW LEVEL SECURITY')
                     op.create_foreign_key(
                         fk_name,
                         table, 'core_projects',
                         ['project_id'], ['id'],
                         ondelete='SET NULL'
                     )
+                    if forced:
+                        op.execute(f'ALTER TABLE "{table}" FORCE ROW LEVEL SECURITY')
             except Exception as e:
                 print(f"Skipping FK for {table}: {e}")
 
@@ -137,12 +145,12 @@ def downgrade() -> None:
         columns = [c['name'] for c in inspector.get_columns(table)]
         if 'project_id' in columns:
             try:
-                with op.get_context().begin_nested():
+                with bind.begin_nested():
                     op.drop_constraint(f'fk_{table}_core_projects', table, type_='foreignkey')
             except Exception:
                 pass
             try:
-                with op.get_context().begin_nested():
+                with bind.begin_nested():
                     op.drop_index(op.f(f'ix_{table}_project_id'), table_name=table)
                     op.drop_column(table, 'project_id')
             except Exception:

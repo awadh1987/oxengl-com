@@ -15,6 +15,9 @@ from backend.database import DATABASE_URL, Base  # noqa: E402
 from backend import models  # noqa: F401,E402
 from backend.app.db import base as app_db_base  # noqa: F401,E402
 from backend.app.domains.planning import models as planning_models  # noqa: F401,E402
+from backend.app.models.core_project import attach_project_spine_columns  # noqa: F401,E402
+
+attach_project_spine_columns()
 
 config = context.config
 
@@ -47,6 +50,7 @@ def run_migrations_online() -> None:
 
         with context.begin_transaction():
             context.run_migrations()
+        connection.commit()
 
 if context.is_offline_mode():
     run_migrations_offline()

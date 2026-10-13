@@ -246,6 +246,8 @@ try:
 except ImportError:
     ResCompany = Tenant
 
+from backend.app.models.core_project import CoreProject, ProjectStatusEnum
+
 __all__ = [
     "ProjectCharter",
     "ExecutionTask",
@@ -254,6 +256,9 @@ __all__ = [
     "CustomsManifest",
     "Tenant",
     "ResCompany",
+    "CoreProject",
+    "ProjectStatusEnum",
 ]
+
 
 

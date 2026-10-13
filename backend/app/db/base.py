@@ -83,8 +83,25 @@ from backend.app.domains.planning.models import (
     CustomsManifest,
 )
 
+from backend.app.models.core_project import (
+    CoreProject,
+    ProjectStatusEnum,
+    attach_project_spine_columns,
+)
+
+# Attach project spine foreign keys and indexes to Base.metadata for all operational tables
+attach_project_spine_columns()
+
 __all__ = [
     "Base",
+    # Planning & Core Spine
+    "CoreProject",
+    "ProjectStatusEnum",
+    "ProjectCharter",
+    "ExecutionTask",
+    "StrategicHazard",
+    "ElectronicLedgerBlock",
+    "CustomsManifest",
     # IAM
     "UserSession",
     "RefreshToken",
@@ -129,5 +146,6 @@ __all__ = [
     "AIKnowledgeDocument",
     "AIKnowledgeChunk",
 ]
+
 
 

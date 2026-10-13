@@ -17,8 +17,9 @@ down_revision: Union[str, None] = 'f3a4b5c6d7e8'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-
 def upgrade() -> None:
+    op.execute("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255);")
+
     # 0. Ensure features_override column exists on res_companies
     op.execute("""
         ALTER TABLE res_companies 
@@ -87,19 +88,9 @@ def upgrade() -> None:
         CREATE INDEX IF NOT EXISTS ix_tenant_branding_custom_domain ON tenant_branding (custom_domain);
     """)
 
-    # 6. Seed tenant_branding from existing organizations and res_companies
+    # 6. Seed tenant_branding via dynamic SQL (bypasses planner), after table creation
     op.execute("""
-        INSERT INTO tenant_branding (tenant_id, brand_name, logo_url, primary_color, accent_color, custom_domain)
-        SELECT 
-            o.id,
-            c.name,
-            COALESCE(c.ui_logo_url, c.logo_url, '/oxengl-logo.svg'),
-            COALESCE(c.ui_primary_color, c.primary_color, '#f97316'),
-            COALESCE(c.secondary_color, '#0f172a'),
-            COALESCE(c.custom_domain, c.domain_slug, c.slug)
-        FROM organizations o
-        JOIN res_companies c ON o.company_id = c.id
-        ON CONFLICT (tenant_id) DO NOTHING;
+DO $$ BEGIN EXECUTE 'INSERT INTO tenant_branding (tenant_id, brand_name, logo_url, primary_color, accent_color, custom_domain) SELECT o.id, c.name, COALESCE(c.ui_logo_url, c.logo_url, ''/oxengl-logo.svg''), COALESCE(c.ui_primary_color, c.primary_color, ''#f97316''), COALESCE(c.secondary_color, ''#0f172a''), COALESCE(c.custom_domain, c.domain_slug, c.slug) FROM organizations o JOIN res_companies c ON o.company_id = c.id ON CONFLICT (tenant_id) DO NOTHING;'; END $$;
     """)
 
 
