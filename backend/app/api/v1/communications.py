@@ -29,6 +29,17 @@ logger = logging.getLogger("oxengl.communications")
 
 tenant_router = APIRouter(prefix="/api/v1/tenant-control/communications", tags=["Tenant Communications"])
 superadmin_router = APIRouter(prefix="/api/v1/superadmin/communications", tags=["Super Admin Communications"])
+tenant_branding_router = APIRouter(prefix="/api/v1/tenant/communication", tags=["Tenant Communication"])
+
+
+class TenantCommunicationBranding(BaseModel):
+    workspace_login_url: str | None = None
+    logo_url: str | None = None
+    support_email: str | None = None
+    invitation_headline: str | None = None
+    invitation_body: str | None = None
+    signature_name: str | None = None
+    signature_title: str | None = None
 
 
 class SettingCreate(BaseModel):
@@ -123,10 +134,19 @@ def _audit(
 
 def _tenant_admin(request: Request, user: Any = Depends(current_user_dep), db: Session = Depends(get_db)) -> tuple[Any, uuid.UUID]:
     tenant_id = _uuid(getattr(user, "company_id", None))
-    if _normalize_role(getattr(user, "role", None)) not in {"ADMIN", "OWNER"} or tenant_id is None:
+    if tenant_id is None and _is_super_admin(user):
+        tid_param = request.query_params.get("tenant_id") or request.headers.get("x-tenant-id")
+        tenant_id = _uuid(tid_param)
+        if tenant_id is None:
+            first_comp = db.query(ResCompany).first()
+            if first_comp:
+                tenant_id = first_comp.id
+    if _normalize_role(getattr(user, "role", None)) not in {"ADMIN", "OWNER"} and not _is_super_admin(user):
         _audit(db, request, user, action="COMMUNICATION_ACCESS_DENIED", outcome="DENIED", tenant_id=tenant_id)
         db.commit()
         raise HTTPException(status_code=403, detail="Tenant Owner or Admin role is required.")
+    if tenant_id is None:
+        raise HTTPException(status_code=400, detail="Tenant context is required.")
     return user, tenant_id
 
 
@@ -396,3 +416,112 @@ def delete_platform_setting(setting_id: str, request: Request, user: Any = Depen
 async def test_platform_setting(setting_id: str, payload: TestRequest, request: Request, user: Any = Depends(_super_admin), db: Session = Depends(get_platform_db)):
     row = _setting_or_404(db, request, user, setting_id, None)
     return await _test(db, request, user, None, row, payload.recipient)
+
+
+# ----------------------------------------------------------------------
+# Tenant Email & Invitation Branding Customization Endpoints
+# ----------------------------------------------------------------------
+
+def _fetch_tenant_branding_dto(company: ResCompany) -> TenantCommunicationBranding:
+    from backend.app.services.email_service import (
+        construct_workspace_login_url,
+        resolve_tenant_branding,
+        resolve_tenant_logo_url,
+    )
+    brand_ctx = resolve_tenant_branding(company)
+    features = (company.features_override or {}) if isinstance(company.features_override, dict) else {}
+    cb = features.get("communication_branding", {})
+
+    return TenantCommunicationBranding(
+        workspace_login_url=(
+            getattr(company, "workspace_login_url", None)
+            or cb.get("workspace_login_url")
+            or construct_workspace_login_url(company)
+        ),
+        logo_url=getattr(company, "logo_url", None) or cb.get("logo_url") or resolve_tenant_logo_url(company),
+        support_email=getattr(company, "support_email", None) or cb.get("support_email") or brand_ctx.support_email or "support@oxengl.com",
+        invitation_headline=(
+            getattr(company, "invitation_headline", None)
+            or cb.get("invitation_headline")
+            or f"Join {company.name} on OxenGL"
+        ),
+        invitation_body=getattr(company, "invitation_body", None) or cb.get("invitation_body") or "",
+        signature_name=(
+            getattr(company, "signature_name", None)
+            or cb.get("signature_name")
+            or brand_ctx.signature_name
+            or f"{company.name} Administration"
+        ),
+        signature_title=(
+            getattr(company, "signature_title", None)
+            or cb.get("signature_title")
+            or brand_ctx.signature_title
+            or "Operations Team"
+        ),
+    )
+
+
+@tenant_branding_router.get("/branding", response_model=TenantCommunicationBranding)
+@tenant_router.get("/branding", response_model=TenantCommunicationBranding)
+def get_tenant_communication_branding(
+    request: Request,
+    auth: tuple[Any, uuid.UUID] = Depends(_tenant_admin),
+    db: Session = Depends(get_db),
+):
+    user, tenant_id = auth
+    company = db.query(ResCompany).filter(ResCompany.id == tenant_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Tenant company not found.")
+    _audit(db, request, user, action="COMMUNICATION_BRANDING_VIEWED", outcome="SUCCESS", tenant_id=tenant_id)
+    db.commit()
+    return _fetch_tenant_branding_dto(company)
+
+
+@tenant_branding_router.put("/branding", response_model=TenantCommunicationBranding)
+@tenant_router.put("/branding", response_model=TenantCommunicationBranding)
+def update_tenant_communication_branding(
+    payload: TenantCommunicationBranding,
+    request: Request,
+    auth: tuple[Any, uuid.UUID] = Depends(_tenant_admin),
+    db: Session = Depends(get_db),
+):
+    user, tenant_id = auth
+    company = db.query(ResCompany).filter(ResCompany.id == tenant_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="Tenant company not found.")
+
+    if hasattr(company, "workspace_login_url"):
+        company.workspace_login_url = payload.workspace_login_url
+    if hasattr(company, "logo_url"):
+        company.logo_url = payload.logo_url
+    if hasattr(company, "support_email"):
+        company.support_email = payload.support_email
+    if hasattr(company, "invitation_headline"):
+        company.invitation_headline = payload.invitation_headline
+    if hasattr(company, "invitation_body"):
+        company.invitation_body = payload.invitation_body
+    if hasattr(company, "signature_name"):
+        company.signature_name = payload.signature_name
+    if hasattr(company, "signature_title"):
+        company.signature_title = payload.signature_title
+
+    features = dict(company.features_override or {})
+    features["communication_branding"] = payload.model_dump()
+    company.features_override = features
+
+    cs_row = db.query(CommunicationSetting).filter(
+        CommunicationSetting.tenant_id == tenant_id,
+        CommunicationSetting.channel == "email",
+        CommunicationSetting.is_active.is_(True),
+    ).first()
+    if cs_row:
+        cfg = dict(cs_row.config or {})
+        cfg["branding"] = payload.model_dump()
+        cs_row.config = cfg
+
+    _audit(db, request, user, action="COMMUNICATION_BRANDING_UPDATED", outcome="SUCCESS", tenant_id=tenant_id)
+    db.commit()
+    db.refresh(company)
+
+    return _fetch_tenant_branding_dto(company)
+

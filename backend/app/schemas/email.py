@@ -8,7 +8,20 @@ class TenantBrandContext(BaseModel):
     logo_url: Optional[str] = None
     signature_name: Optional[str] = None
     signature_title: Optional[str] = None
-    support_email: Optional[EmailStr] = None
+    support_email: Optional[str] = None
+    workspace_login_url: Optional[str] = None
+    invitation_headline: Optional[str] = None
+    invitation_body: Optional[str] = None
+
+
+class TenantCommunicationBranding(BaseModel):
+    workspace_login_url: Optional[str] = None
+    logo_url: Optional[str] = None
+    support_email: Optional[str] = None
+    invitation_headline: Optional[str] = None
+    invitation_body: Optional[str] = None
+    signature_name: Optional[str] = None
+    signature_title: Optional[str] = None
 
 
 class UserContext(BaseModel):

@@ -391,6 +391,14 @@ def verify_migration_managed_schema() -> None:
 			db.execute(text("ALTER TABLE tenants ALTER COLUMN logo_url TYPE TEXT;"))
 			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;"))
 			db.execute(text("CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS workspace_login_url VARCHAR(500);"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_headline VARCHAR(255);"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_body TEXT;"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_name VARCHAR(100) DEFAULT 'Executive Administration';"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_title VARCHAR(100) DEFAULT 'Operations Team';"))
+			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS support_email VARCHAR(255);"))
+			db.execute(text("ALTER TABLE res_users ADD COLUMN IF NOT EXISTS invitation_status VARCHAR(32) DEFAULT 'pending';"))
+			db.execute(text("UPDATE res_users SET invitation_status = CASE WHEN must_change_password IS TRUE THEN 'pending' ELSE 'active' END WHERE invitation_status IS NULL;"))
 			db.execute(text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;"))
 			db.execute(text("ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_code_key;"))
 			db.execute(text("""
@@ -603,6 +611,7 @@ app.include_router(backup_destinations_api.tenant_router)
 app.include_router(backup_destinations_api.superadmin_router)
 from backend.app.api.v1 import communications as communications_api
 app.include_router(communications_api.tenant_router)
+app.include_router(communications_api.tenant_branding_router)
 app.include_router(communications_api.superadmin_router)
 from backend.app.api.v1 import tenant_control, master_platform
 # tenant_control.router carries a router-level get_authenticated_user dependency;
@@ -861,6 +870,28 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 		# bound to a header-derived or first company). Provisioning happens only via explicit flows
 		# (registration, invites, admin user creation, configured SSO JIT).
 		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session subject is not a registered active user")
+
+	# Phase 2: Mandatory first-login password change interceptor
+	if bool(getattr(user, "must_change_password", False)) or (claims and claims.get("scope") == "password_change"):
+		req_path = request.url.path.rstrip("/")
+		allowed_pw_paths = {
+			"/api/v1/auth/first-login-password-change",
+			"/api/auth/first-login-password-change",
+			"/api/v1/first-login-password-change",
+			"/first-login-password-change",
+			"/api/v1/users/me/change-password",
+			"/api/users/me/change-password",
+			"/api/v1/users/me",
+			"/api/users/me",
+			"/api/v1/auth/logout",
+			"/api/auth/logout",
+			"/logout",
+		}
+		if req_path not in allowed_pw_paths and not any(req_path.endswith(p) for p in ["/first-login-password-change", "/me/change-password"]):
+			raise HTTPException(
+				status_code=status.HTTP_403_FORBIDDEN,
+				detail="Password change required before accessing workspace.",
+			)
 
 	# SECURITY (Addendum C): platform super-admin authority is taken ONLY from the database record.
 	# Token claims (role / tier / scopes / is_superuser) are never trusted to elevate a user: the tenant
@@ -1157,7 +1188,7 @@ def require_tenant_admin(
 ) -> models.ResUser:
 	"""TenantContext security guard restricting tenant administrative actions."""
 	role_normalized = str(getattr(current_user, "role", "") or "").upper().replace(" ", "_")
-	if not getattr(current_user, "is_superuser", False) and role_normalized not in {"SUPER_ADMIN", "ADMIN", "CEO", "EXECUTIVE"}:
+	if not getattr(current_user, "is_superuser", False) and role_normalized not in {"SUPER_ADMIN", "ADMIN", "OWNER", "TENANT_OWNER", "COMPANY_OWNER", "CEO", "EXECUTIVE"}:
 		record_security_event(
 			database,
 			event_type="policy_denial",
@@ -1169,11 +1200,11 @@ def require_tenant_admin(
 			user_agent=request.headers.get("user-agent"),
 			request_path=request.url.path,
 			request_method=request.method,
-			details=f"User role '{current_user.role}' denied access: requires Admin, CEO, or Super_Admin",
+			details=f"User role '{current_user.role}' denied access: requires Owner, Admin, CEO, or Super_Admin",
 		)
 		raise HTTPException(
 			status_code=status.HTTP_403_FORBIDDEN,
-			detail="Access denied: Admin or CEO role required for tenant security operations",
+			detail="Access denied: Owner, Admin, or CEO role required for tenant security operations",
 		)
 	return current_user
 
@@ -5529,6 +5560,8 @@ def list_tenant_users(
 				models.ResUser.company_id == company_id,
 				models.ResUser.id.in_(user_ids_subq),
 			),
+			models.ResUser.is_superuser.is_(False),
+			models.ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
 			models.ResUser.deleted_at.is_(None),
 		)
 		.distinct()
@@ -5547,15 +5580,16 @@ def create_tenant_user(
 ):
 	"""Create a new tenant user strictly bounded within the active company tenant."""
 	from backend.app.domains.iam.role_catalog import (
-		HR_REGISTRATION_REQUIRED_MESSAGE,
-		is_internal_or_privileged_role_name,
+		resolve_tenant_invite_role,
 	)
 
-	if is_internal_or_privileged_role_name(payload.role):
+	resolved = resolve_tenant_invite_role(payload.role)
+	if not resolved:
 		raise HTTPException(
-			status_code=status.HTTP_403_FORBIDDEN,
-			detail=HR_REGISTRATION_REQUIRED_MESSAGE,
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=f"Role '{payload.role}' is not a valid workspace role or requires platform administration.",
 		)
+	_, role_spec = resolved
 
 	company = database.get(models.ResCompany, company_id)
 	master_tenant = database.scalar(select(models.MasterTenant).where(models.MasterTenant.slug == company.slug)) if company else None
@@ -5582,7 +5616,8 @@ def create_tenant_user(
 		email=email,
 		full_name=payload.full_name.strip(),
 		company_id=company_id,
-		role=payload.role,
+		role=role_spec["legacy_role"],
+		iam_role=role_spec["iam_role"],
 		password_hash=hash_password(payload.password),
 		is_active=True,
 	)
@@ -5593,7 +5628,7 @@ def create_tenant_user(
 		id=uuid.uuid4(),
 		user_id=new_user.id,
 		company_id=company_id,
-		role=payload.role,
+		role=role_spec["legacy_role"],
 		is_active=True,
 	)
 	database.add(tur)

@@ -41,7 +41,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.database import PlatformSessionLocal, get_db
-from backend.models import ResCompany, ResUser, TenantUser, User
+from backend.models import ResCompany, ResUser, TenantUser, TenantUserRole, User
 from backend.api.dependencies import (
     TenantContext,
     get_current_user,
@@ -54,6 +54,7 @@ from backend.app.services.notification_service import (
 )
 from backend.app.domains.iam.role_catalog import (
     EXTERNAL_INVITE_ROLES,
+    TENANT_INVITE_ROLES,
     WORKSPACE_ASSIGNABLE_ROLES,
     HR_REGISTRATION_REQUIRED_MESSAGE,
     PLATFORM_WIDE_LEGACY_ROLES,
@@ -63,6 +64,7 @@ from backend.app.domains.iam.role_catalog import (
     normalize_role_token,
     resolve_external_role,
     resolve_internal_role,
+    resolve_tenant_invite_role,
 )
 from backend.two_tier_auth import hash_password, verify_password
 
@@ -140,6 +142,7 @@ class UserResponse(BaseModel):
     must_change_password: bool = False
     is_active: bool
     status: str = "active"
+    invitation_status: Optional[str] = "active"
     created_at: Optional[datetime] = None
     tenant_id: str
 
@@ -308,7 +311,7 @@ def _commit_audit(
 
 
 def _with_target(ctx: AuditContext, target_id: Optional[uuid.UUID]) -> AuditContext:
-    if not target_id:
+    if not target_id or not dataclasses.is_dataclass(ctx):
         return ctx
     suffix = f"|target_user={target_id}"
     return dataclasses.replace(ctx, endpoint=(ctx.endpoint[: 255 - len(suffix)] + suffix)[:255])
@@ -554,19 +557,36 @@ def get_tenant_users(
     if context.is_super_admin and actor.level >= LEVEL_PLATFORM:
         # A platform super admin may scope to an explicit target company.
         if context.company_id and str(context.company_id) != str(getattr(context.user, "company_id", "")):
-            query = query.filter(ResUser.company_id == context.company_id).filter(ResUser.is_superuser.is_(False))
+            query = query.filter(
+                ResUser.company_id == context.company_id,
+                ResUser.is_superuser.is_(False),
+                ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+            )
         else:
             query = query.filter(ResUser.company_id.in_(accessible_cids))
     else:
         # Organization-wide listing so invitees stay visible when switching workspace/branch views.
         scope = _organization_scope(db, actor.company_id)
         # Global super-admins never appear inside tenant matrices.
-        query = query.filter(ResUser.company_id.in_(scope), ResUser.is_superuser.is_(False))
+        query = query.filter(
+            ResUser.company_id.in_(scope),
+            ResUser.is_superuser.is_(False),
+            ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+        )
 
     users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
     if not users and actor.user_id is not None:
-        # Never render an empty matrix: seed the session owner's own record (already persisted) into the view.
-        owner = db.query(ResUser).filter(ResUser.id == actor.user_id, ResUser.deleted_at.is_(None)).first()
+        # Never render an empty matrix: seed the session owner's own record (already persisted) into the view if not a superadmin.
+        owner = (
+            db.query(ResUser)
+            .filter(
+                ResUser.id == actor.user_id,
+                ResUser.is_superuser.is_(False),
+                ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+                ResUser.deleted_at.is_(None),
+            )
+            .first()
+        )
         if owner is not None:
             users = [owner]
     return [
@@ -582,6 +602,7 @@ def get_tenant_users(
             must_change_password=bool(u.must_change_password),
             is_active=u.is_active,
             status=("suspended" if not u.is_active else "pending" if u.must_change_password else "active"),
+            invitation_status=getattr(u, "invitation_status", None) or ("pending" if u.must_change_password else "active"),
             created_at=u.created_at,
             tenant_id=str(u.company_id),
         )
@@ -908,17 +929,28 @@ async def invite_tenant_user(
     if tenant_id is None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No workspace is bound to this account.")
 
-    if is_internal_or_privileged_role_name(payload.role):
-        _commit_audit(db, actor.audit, f"IAM_INVITE_DENIED:internal_role:channel={payload.channel}", "DENIED", tenant_id)
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=HR_REGISTRATION_REQUIRED_MESSAGE)
+    raw_requested_role = payload.role or "Member"
+    norm_token = normalize_role_token(raw_requested_role).lower()
+    if norm_token in ("super_admin", "superadmin", "owner"):
+        _commit_audit(db, actor.audit, f"IAM_INVITE_DENIED:privileged_role:channel={payload.channel}", "DENIED", tenant_id)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot invite platform Super_Admin or Owner through tenant workspace invitation.",
+        )
 
-    external_role = resolve_external_role(payload.role or "Guest")
-    if not external_role:
+    resolved = resolve_tenant_invite_role(raw_requested_role)
+    if not resolved:
         _commit_audit(db, actor.audit, f"IAM_INVITE_DENIED:unknown_role:channel={payload.channel}", "DENIED", tenant_id)
+        allowed_roles_str = ", ".join(list(TENANT_INVITE_ROLES.keys()))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid invite role. Allowed: {', '.join(EXTERNAL_INVITE_ROLES)}",
+            detail=f"Invalid invite role. Allowed roles: {allowed_roles_str}",
         )
+
+    role_canonical, spec = resolved
+    legacy_role = spec["legacy_role"]
+    iam_role = spec.get("iam_role", role_canonical)
+    abac_context = dict(spec["abac_context"])
 
     email_clean = (payload.email or "").strip().lower() or None
     phone_clean = payload.phone if payload.channel in ("sms", "manual") else None
@@ -970,7 +1002,6 @@ async def invite_tenant_user(
                 detail="This contact cannot be invited. It may already be registered.",
             )
 
-    spec = EXTERNAL_INVITE_ROLES[external_role]
     user_id = target_user.id if (is_reinvite and target_user) else uuid.uuid4()
     name_fallback = email_clean.split("@")[0].replace(".", " ").title() if email_clean else "External User"
     full_name = ((payload.full_name or name_fallback).strip() or "External User")[:255]
@@ -1007,7 +1038,7 @@ async def invite_tenant_user(
                 dispatch_user_invitation,
                 recipient_email=email_clean,
                 first_name=first_name,
-                user_role=spec["legacy_role"],
+                user_role=role_canonical,
                 action_url=action_url,
                 inviter_name=inviter_name,
                 tenant=tenant_ctx,
@@ -1043,6 +1074,7 @@ async def invite_tenant_user(
         target_user.deleted_at = None
         target_user.is_active = True
         target_user.must_change_password = True
+        target_user.invitation_status = "pending"
         target_user.password_hash = password_hash
         target_user.full_name = full_name
         if email_clean:
@@ -1050,12 +1082,30 @@ async def invite_tenant_user(
         if phone_clean:
             target_user.phone = phone_clean
         target_user.company_id = tenant_id
-        target_user.role = spec["legacy_role"]
-        target_user.iam_role = external_role
-        target_user.abac_context = dict(spec["abac_context"])
+        target_user.role = legacy_role
+        target_user.iam_role = iam_role
+        target_user.abac_context = abac_context
         target_user.updated_at = datetime.now(timezone.utc)
         if not getattr(target_user, "firebase_uid", None) or not target_user.firebase_uid.startswith("native:"):
             target_user.firebase_uid = f"native:{target_user.id}"
+
+        # Synchronize TenantUserRole
+        tur = (
+            db.query(TenantUserRole)
+            .filter(TenantUserRole.user_id == target_user.id, TenantUserRole.company_id == tenant_id)
+            .first()
+        )
+        if tur is not None:
+            tur.role = legacy_role
+            tur.is_active = True
+            tur.updated_at = datetime.now(timezone.utc)
+        else:
+            db.add(TenantUserRole(
+                user_id=target_user.id,
+                company_id=tenant_id,
+                role=legacy_role,
+                is_active=True,
+            ))
 
         mirror = db.query(TenantUser).filter(TenantUser.id == target_user.id).first()
         if mirror is not None:
@@ -1073,7 +1123,7 @@ async def invite_tenant_user(
         append_audit_from_context(
             db,
             _with_target(actor.audit, target_user.id),
-            action=f"IAM_USER_REINVITED:{external_role}:channel={payload.channel}",
+            action=f"IAM_USER_REINVITED:{role_canonical}:channel={payload.channel}",
             outcome="SUCCESS",
             tenant_id=tenant_id,
         )
@@ -1081,7 +1131,7 @@ async def invite_tenant_user(
         logger.info(
             "IAM invite refreshed ghost user=%s role=%s tenant=%s channel=%s",
             target_user.id,
-            external_role,
+            role_canonical,
             tenant_id,
             payload.channel,
         )
@@ -1093,18 +1143,25 @@ async def invite_tenant_user(
             phone=phone_clean,
             password_hash=password_hash,
             company_id=tenant_id,
-            role=spec["legacy_role"],
-            iam_role=external_role,
-            abac_context=dict(spec["abac_context"]),
+            role=legacy_role,
+            iam_role=iam_role,
+            abac_context=abac_context,
             must_change_password=True,
+            invitation_status="pending",
             is_active=True,
             firebase_uid=f"native:{user_id}",
         )
         db.add(new_user)
+        db.add(TenantUserRole(
+            user_id=user_id,
+            company_id=tenant_id,
+            role=legacy_role,
+            is_active=True,
+        ))
         append_audit_from_context(
             db,
             _with_target(actor.audit, user_id),
-            action=f"IAM_USER_INVITED:{external_role}:channel={payload.channel}",
+            action=f"IAM_USER_INVITED:{role_canonical}:channel={payload.channel}",
             outcome="SUCCESS",
             tenant_id=tenant_id,
         )
@@ -1112,18 +1169,10 @@ async def invite_tenant_user(
         logger.info(
             "IAM invite created user=%s role=%s tenant=%s channel=%s",
             user_id,
-            external_role,
+            role_canonical,
             tenant_id,
             payload.channel,
         )
-
-    logger.info(
-        "IAM invite created user=%s role=%s tenant=%s channel=%s",
-        user_id,
-        external_role,
-        tenant_id,
-        payload.channel,
-    )
 
     manual = payload.channel == "manual"
     if manual and response is not None:
@@ -1135,14 +1184,14 @@ async def invite_tenant_user(
         phone=phone_clean,
         channel=payload.channel,
         full_name=full_name,
-        role=external_role,
+        role=role_canonical,
         reset_dispatched=not manual,
         temporary_password=temporary_password if manual else None,
         message=(
-            "External user created. Copy the temporary password now; it is shown only once and a "
+            f"User created with role '{role_canonical}'. Copy the temporary password now; it is shown only once and a "
             "password change is required on first login."
             if manual
-            else f"External user created. Temporary credentials were sent via {payload.channel.upper()}; "
+            else f"User created with role '{role_canonical}'. Temporary credentials were sent via {payload.channel.upper()}; "
             "a password change is required on first login."
         ),
     )

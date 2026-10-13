@@ -15,7 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
-from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration, TenantSubscription, TenantUser, User
+from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration, TenantSubscription, TenantUser, TenantUserRole, User
 from backend.two_tier_auth import hash_password
 from backend.schemas import (
     TenantDatabaseInfoResponse,
@@ -209,9 +209,19 @@ def list_team_members(
     """Lists team members belonging strictly to the active tenant from PostgreSQL."""
     target_uuid = _caller_tenant_id(current_user)
     
-    users = db.query(ResUser).filter(ResUser.company_id == target_uuid).all()
+    users = (
+        db.query(ResUser)
+        .filter(
+            ResUser.company_id == target_uuid,
+            ResUser.is_superuser.is_(False),
+            ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+            ResUser.deleted_at.is_(None),
+        )
+        .all()
+    )
     team = []
     for u in users:
+        member_status = getattr(u, "invitation_status", None) or ("active" if u.is_active else "invited")
         team.append({
             "id": str(u.id),
             "tenant_id": str(target_uuid),
@@ -219,7 +229,7 @@ def list_team_members(
             "full_name": u.full_name or "Team Member",
             "role": (u.role or "user").lower(),
             "department": getattr(u, "department", "Operations") or "Operations",
-            "status": "active" if u.is_active else "invited",
+            "status": member_status,
             "created_at": u.created_at.isoformat() if u.created_at else datetime.now(timezone.utc).isoformat(),
         })
 
@@ -264,23 +274,28 @@ def invite_team_member(
             )
 
     role_mapping = {
-        "admin": "Admin",
-        "super_admin": "Super_Admin",
-        "coo": "COO",
-        "ceo": "CEO",
-        "accountant": "Accountant",
-        "data_entry": "Data_Entry",
-        "user": "Data_Entry",
-        "guest": "Guest",
+        "admin": ("Admin", "Admin"),
+        "manager": ("Ops_Manager", "Ops_Manager"),
+        "accountant": ("Accountant", "Finance_Editor"),
+        "staff": ("Data_Entry", "Data_Entry"),
+        "member": ("User", "Employee_Self_Serve"),
+        "user": ("User", "Employee_Self_Serve"),
+        "guest": ("Guest", "Guest"),
+        "external_auditor": ("Guest", "External_Auditor"),
+        "coo": ("COO", "Ops_Manager"),
+        "ceo": ("CEO", "General_Manager"),
+        "data_entry": ("Data_Entry", "Data_Entry"),
     }
-    raw_role = (payload.role or "user").strip().lower()
-    assigned_role = role_mapping.get(raw_role, "Data_Entry")
-    # Tenant admins can never mint platform Super_Admin accounts.
-    if assigned_role == "Super_Admin" and not is_super_admin_authorized(current_user, None):
+    raw_role = (payload.role or "member").strip().lower()
+    # Tenant admins can never mint platform Super_Admin or workspace Owner accounts via invitation.
+    if raw_role in ("super_admin", "superadmin", "owner") and not is_super_admin_authorized(current_user, None):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only platform Super Admins may assign the Super_Admin role.",
+            detail="Cannot assign platform Super_Admin or Owner through team invite.",
         )
+
+    assigned_role, assigned_iam_role = role_mapping.get(raw_role, ("User", "Employee_Self_Serve"))
+    display_role = payload.role.capitalize() if payload.role and payload.role.lower() in role_mapping else assigned_role
 
     temp_pw = uuid.uuid4().hex[:12]
     if is_reinvite and existing:
@@ -288,11 +303,31 @@ def invite_team_member(
         user.company_id = target_uuid
         user.full_name = payload.full_name
         user.role = assigned_role
+        user.iam_role = assigned_iam_role
         user.is_active = True
         user.deleted_at = None
         user.must_change_password = True
+        user.invitation_status = "pending"
         user.password_hash = hash_password(temp_pw)
         user.updated_at = datetime.now(timezone.utc)
+
+        tur = (
+            db.query(TenantUserRole)
+            .filter(TenantUserRole.user_id == user.id, TenantUserRole.company_id == target_uuid)
+            .first()
+        )
+        if tur is not None:
+            tur.role = assigned_role
+            tur.is_active = True
+            tur.updated_at = datetime.now(timezone.utc)
+        else:
+            db.add(TenantUserRole(
+                user_id=user.id,
+                company_id=target_uuid,
+                role=assigned_role,
+                is_active=True,
+            ))
+
         db.commit()
         db.refresh(user)
     else:
@@ -304,11 +339,19 @@ def invite_team_member(
             full_name=payload.full_name,
             company_id=target_uuid,
             role=assigned_role,
+            iam_role=assigned_iam_role,
             is_active=True,
             must_change_password=True,
+            invitation_status="pending",
             password_hash=hash_password(temp_pw),
         )
         db.add(user)
+        db.add(TenantUserRole(
+            user_id=new_id,
+            company_id=target_uuid,
+            role=assigned_role,
+            is_active=True,
+        ))
         db.commit()
         db.refresh(user)
         increment_tenant_seat_usage(db, target_uuid)
@@ -345,7 +388,7 @@ def invite_team_member(
         dispatch_user_invitation,
         recipient_email=norm_email,
         first_name=first_name,
-        user_role=assigned_role,
+        user_role=display_role,
         action_url=action_url,
         inviter_name=inviter_name,
         tenant=tenant_ctx,

@@ -214,11 +214,11 @@ def test_soft_delete_rejects_self_and_preserves_account(h):
 
 # ----------------------------------------------------------------------------- invite
 
-@pytest.mark.parametrize("role", ["Super_Admin", "Finance_Manager", "Employee_Self_Serve", "Admin", "Owner", "Data_Entry", "CEO"])
+@pytest.mark.parametrize("role", ["Super_Admin", "super_admin", "Owner"])
 def test_invite_rejects_internal_roles_server_side(h, role):
     resp = h.client.post("/api/v1/users/invite", json={"email": "new.person@gmail.com", "role": role})
     assert resp.status_code == 403
-    assert resp.json()["detail"] == HR_REGISTRATION_REQUIRED_MESSAGE
+    assert "Cannot invite platform Super_Admin or Owner" in resp.json()["detail"]
     with h.factory() as db:
         assert db.query(models.ResUser).filter_by(email="new.person@gmail.com").count() == 0
     assert any(a.action.startswith("IAM_INVITE_DENIED") and a.outcome == "DENIED" for a in h.audit())
@@ -479,5 +479,6 @@ def test_sms_password_reset_can_toggle_next_login_change_requirement(h, monkeypa
 
 
 def test_unknown_or_malformed_target(h):
+    h.login_as(h.add_user("Admin"))
     assert h.client.post(f"/api/v1/users/{uuid.uuid4()}/suspend").status_code == 404
     assert h.client.post("/api/v1/users/not-a-uuid/suspend").status_code == 400

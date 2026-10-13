@@ -77,7 +77,7 @@ export const CorporateVault: React.FC = () => {
   const isDark = themeMode === 'dark';
 
   const isSuperAdmin = currentUser?.role === 'Super_Admin';
-  const isAdmin = currentUser?.role === 'Admin' || isSuperAdmin;
+  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Owner' || isSuperAdmin;
   const canMutate = isAdmin || currentUser?.role === 'COO' || currentUser?.role === 'Accountant' || currentUser?.role === 'Data_Entry';
 
   // State

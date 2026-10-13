@@ -66,6 +66,7 @@ const DataObservabilityView = React.lazy(() => import('./views/DataObservability
 const FinancialAnalyticsHubView = React.lazy(() => import('./views/FinancialAnalyticsHubView').then(m => ({ default: m.FinancialAnalyticsHubView })));
 const BillingConfigurationPanel = React.lazy(() => import('./components/admin/BillingConfigurationPanel').then(m => ({ default: m.BillingConfigurationPanel })));
 const PlatformAdminPortal = React.lazy(() => import('./views/PlatformAdminPortal').then(m => ({ default: m.PlatformAdminPortal })));
+import { ForceChangePasswordModal } from './components/auth/ForceChangePasswordModal';
 
 const ViewLoadingFallback = () => (
   <div className="flex min-h-[400px] w-full flex-col items-center justify-center p-12 text-center">
@@ -283,18 +284,18 @@ export const tenantNavigation: {
 ];
 
 function AppContent() {
-  const { language, currentUser, brandConfig, isDriverMode, themeMode, authTier, tenantId, logoutUser, isTwoTierAuthenticated } = useApp();
+  const { language, currentUser, setCurrentUser, brandConfig, isDriverMode, themeMode, authTier, tenantId, logoutUser, isTwoTierAuthenticated } = useApp();
   const isAr = language === 'ar';
   const navigate = useNavigate();
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
     const hasToken = Boolean(getAuthToken());
     const sessionActive = localStorage.getItem('oxengl_session_active') === 'true';
-    return Boolean(hasToken && sessionActive && currentUser?.role !== 'Guest' && currentUser?.id);
+    return Boolean(hasToken && sessionActive && currentUser?.id);
   });
 
   useEffect(() => {
-    setIsLoggedIn(Boolean(isTwoTierAuthenticated && currentUser?.role !== 'Guest' && currentUser?.id));
+    setIsLoggedIn(Boolean(isTwoTierAuthenticated && currentUser?.id));
   }, [isTwoTierAuthenticated, currentUser]);
 
   const [resolvedCustomSlug, setResolvedCustomSlug] = useState<string | null>(null);
@@ -986,6 +987,21 @@ function AppContent() {
           setIsAIChatOpen(false);
         }}
       />
+
+      {/* Mandatory First-Login Password Change Modal */}
+      {(Boolean(currentUser?.mustChangePassword) || (typeof window !== 'undefined' && localStorage.getItem('must_change_password') === 'true')) && (
+        <ForceChangePasswordModal
+          isOpen={true}
+          email={currentUser?.email}
+          workspaceSlug={effectiveTenantSlug || undefined}
+          onSuccess={() => {
+            localStorage.removeItem('must_change_password');
+            if (currentUser) {
+              setCurrentUser({ ...currentUser, mustChangePassword: false, status: 'Active' });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

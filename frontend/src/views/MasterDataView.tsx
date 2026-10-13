@@ -36,6 +36,7 @@ import {
   HR_REGISTRATION_WARNING_AR,
   HR_REGISTRATION_WARNING_EN,
   PRIVILEGED_IAM_ROLES,
+  TENANT_INVITE_ROLES,
   iamRoleLabel,
 } from '../constants/iamRoles';
 
@@ -139,7 +140,7 @@ export const MasterDataView: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteChannel, setInviteChannel] = useState<'email' | 'sms' | 'manual'>('email');
-  const [inviteRole, setInviteRole] = useState<string>('Guest');
+  const [inviteRole, setInviteRole] = useState<string>('Member');
   const [inviteFullName, setInviteFullName] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -253,7 +254,7 @@ export const MasterDataView: React.FC = () => {
       setCreatePrimaryTenant(currentCompany?.id || '');
       setCreateIsSuperuser(false);
     } else {
-      setCreateRole('Guest');
+      setCreateRole('Member');
       setCreateSelectedTenants([]);
       setCreatePrimaryTenant('');
       setCreateIsSuperuser(false);
@@ -488,21 +489,21 @@ export const MasterDataView: React.FC = () => {
             <span>{isAr ? 'إنشاء مستخدم جديد' : 'Create User'}</span>
           </button>
 
-          {/* Invite External User Button (Tenant Context) */}
+          {/* Invite User Button (Tenant Context) */}
           {!isPlatformView && (
             <button
               type="button"
               onClick={() => {
                 setInviteResult(null);
                 setInviteError(null);
-                setInviteRole('Guest');
+                setInviteRole('Member');
                 setInviteChannel('email');
                 setIsInviteModalOpen(true);
               }}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               <Plus className="h-3.5 w-3.5 text-purple-600" />
-              <span>{isAr ? 'دعوة مستخدم خارجي' : 'Invite External'}</span>
+              <span>{isAr ? 'دعوة مستخدم' : 'Invite User'}</span>
             </button>
           )}
         </div>
@@ -542,7 +543,10 @@ export const MasterDataView: React.FC = () => {
               className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               <option value="all">{isAr ? 'كافة الأدوار' : 'All Roles'}</option>
-              {[...iamRoles.roles, ...iamRoles.externalRoles.filter((role) => !iamRoles.roles.includes(role))].map((role) => (
+              {(isPlatformView
+                ? [...iamRoles.roles, ...iamRoles.externalRoles.filter((role) => !iamRoles.roles.includes(role))]
+                : [...iamRoles.roles, ...iamRoles.externalRoles.filter((role) => !iamRoles.roles.includes(role))].filter((role) => !['Super_Admin', 'super_admin'].includes(role))
+              ).map((role) => (
                 <option key={role} value={role}>{iamRoleLabel(role, isAr)}</option>
               ))}
             </select>
@@ -920,10 +924,8 @@ export const MasterDataView: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <option value="Guest">{isAr ? 'Guest - ضيف (قراءة فقط)' : 'Guest - Read-only'}</option>
-                        <option value="External_Auditor">{isAr ? 'External Auditor - مدقق خارجي' : 'External Auditor'}</option>
-                        {iamRoles.externalRoles.filter((r) => !['Guest', 'External_Auditor'].includes(r)).map((r) => (
-                          <option key={r} value={r}>{iamRoleLabel(r, isAr)}</option>
+                        {TENANT_INVITE_ROLES.map((role) => (
+                          <option key={role} value={role}>{iamRoleLabel(role, isAr)}</option>
                         ))}
                       </>
                     )}
@@ -1088,10 +1090,9 @@ export const MasterDataView: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handleInviteUser} className="space-y-4">
-                <div role="alert" className="flex items-start gap-2 rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-amber-900 dark:border-amber-600 dark:bg-amber-950/40 dark:text-amber-200">
-                  <ShieldAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                  <p className="text-xs font-black leading-relaxed">{isAr ? HR_REGISTRATION_WARNING_AR : HR_REGISTRATION_WARNING_EN}</p>
-                </div>
+                <p className="text-xs font-medium leading-relaxed text-slate-600 dark:text-slate-400">
+                  {isAr ? 'اختر الدور التشغيلي للمستخدم. سيُطلب منه تعيين كلمة مرور جديدة عند أول تسجيل دخول.' : 'Select the operational role for this user. They will be prompted to set a new password upon first login.'}
+                </p>
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'قناة إرسال بيانات الدخول *' : 'Credential Delivery Channel *'}</label>
                   <select value={inviteChannel} onChange={(event) => setInviteChannel(event.target.value as 'email' | 'sms' | 'manual')} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
@@ -1120,14 +1121,18 @@ export const MasterDataView: React.FC = () => {
                 <div>
                   <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">{isAr ? 'الدور ومستوى الصلاحيات (RBAC Role) *' : 'Assigned Role & Permissions *'}</label>
                   <select value={inviteRole} onChange={(event) => setInviteRole(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-900 focus:border-orange-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100">
-                    {iamRoles.externalRoles.map((role) => <option key={role} value={role}>{role === 'Guest' ? (isAr ? 'Guest - ضيف (قراءة فقط)' : 'Guest - Read-only access') : role === 'External_Auditor' ? (isAr ? 'External Auditor - مدقق خارجي (قراءة فقط، نطاق التدقيق)' : 'External Auditor - Read-only, audit scope') : iamRoleLabel(role, isAr)}</option>)}
+                    {TENANT_INVITE_ROLES.map((role) => (
+                      <option key={role} value={role}>
+                        {iamRoleLabel(role, isAr)}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 {inviteError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">{inviteError}</p>}
                 <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-slate-800">
                   <button type="button" onClick={() => setIsInviteModalOpen(false)} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-400 dark:hover:bg-slate-800">{isAr ? 'إلغاء' : 'Cancel'}</button>
                   <button type="submit" disabled={inviteLoading} className="inline-flex items-center gap-1.5 rounded-xl bg-orange-600 px-5 py-2 text-xs font-bold text-white hover:bg-orange-700 disabled:opacity-50">
-                    {inviteLoading ? (isAr ? 'جارِ الإرسال...' : 'Inviting...') : <><UserPlus className="h-4 w-4" /><span>{isAr ? 'دعوة الهوية الخارجية' : 'Invite External User'}</span></>}
+                    {inviteLoading ? (isAr ? 'جارِ الإرسال...' : 'Inviting...') : <><UserPlus className="h-4 w-4" /><span>{isAr ? 'إرسال الدعوة' : 'Send Invitation'}</span></>}
                   </button>
                 </div>
               </form>

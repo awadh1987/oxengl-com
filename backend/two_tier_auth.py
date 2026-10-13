@@ -187,6 +187,8 @@ def issue_two_tier_jwt(
     role: str,
     tenant_id: Optional[uuid.UUID] = None,
     tenant_slug: Optional[str] = None,
+    must_change_password: bool = False,
+    scope: Optional[str] = None,
 ) -> str:
     """Issues a cryptographically signed JWT strictly bound to its operational tier."""
     now = int(time.time())
@@ -195,6 +197,7 @@ def issue_two_tier_jwt(
     audience = "oxengl-master-portal" if tier == "master" else "oxengl-erp-app"
 
     header = {"alg": "HS256", "typ": "JWT"}
+    effective_scope = scope if scope is not None else ("password_change" if must_change_password else "full")
     payload = {
         "tier": tier,
         "sub": str(user_id),
@@ -208,6 +211,8 @@ def issue_two_tier_jwt(
         "company_id": str(tenant_id) if tenant_id else None,
         "tenant_slug": tenant_slug,
         "domain_slug": tenant_slug,
+        "must_change_password": bool(must_change_password),
+        "scope": effective_scope,
         "iss": issuer,
         "aud": audience,
         "iat": now,
@@ -432,6 +437,8 @@ class AuthTokenResponse(BaseModel):
     company_id: Optional[str] = None
     domain_slug: Optional[str] = None
     must_change_password: Optional[bool] = None
+    scope: Optional[str] = None
+    invitation_status: Optional[str] = None
 
 
 # ==============================================================================
@@ -460,6 +467,27 @@ def require_tenant_auth(
     claims = verify_two_tier_jwt(token, expected_tier="tenant")
     user_id = uuid.UUID(claims["sub"])
     token_tenant_id = uuid.UUID(claims["tenant_id"])
+
+    if claims.get("scope") == "password_change" or bool(claims.get("must_change_password")):
+        req_path = request.url.path.rstrip("/")
+        allowed_pw_paths = {
+            "/api/v1/auth/first-login-password-change",
+            "/api/auth/first-login-password-change",
+            "/api/v1/first-login-password-change",
+            "/first-login-password-change",
+            "/api/v1/users/me/change-password",
+            "/api/users/me/change-password",
+            "/api/v1/users/me",
+            "/api/users/me",
+            "/api/v1/auth/logout",
+            "/api/auth/logout",
+            "/logout",
+        }
+        if req_path not in allowed_pw_paths and not any(req_path.endswith(p) for p in ["/first-login-password-change", "/me/change-password"]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Password change required before accessing workspace.",
+            )
 
     # If an explicit X-Tenant-Slug header was passed, ensure it matches the token claim
     if x_tenant_slug:
@@ -1031,6 +1059,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         except Exception:
             pass
 
+        scope = "password_change" if must_change_password else "full"
         token = issue_two_tier_jwt(
             tier="tenant",
             user_id=user.id,
@@ -1038,7 +1067,10 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             role=user.role,
             tenant_id=canonical_cid,
             tenant_slug=tenant.slug,
+            must_change_password=must_change_password,
+            scope=scope,
         )
+        invitation_status = "pending" if must_change_password else "active"
         return {
             "access_token": token,
             "token_type": "bearer",
@@ -1049,6 +1081,8 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             "tenant_slug": tenant.slug,
             "domain_slug": tenant.slug,
             "must_change_password": must_change_password,
+            "scope": scope,
+            "invitation_status": invitation_status,
             "user": {
                 "id": str(user.id),
                 "email": user.email,
@@ -1060,6 +1094,9 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                 "tenant_slug": tenant.slug,
                 "domain_slug": tenant.slug,
                 "must_change_password": must_change_password,
+                "scope": scope,
+                "invitation_status": invitation_status,
+                "status": invitation_status,
             },
         }
 

@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -50,6 +50,15 @@ pwd_context = CryptContext(
     argon2__time_cost=3,
     argon2__parallelism=4,
 )
+
+
+class FirstLoginPasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., description="Current temporary password")
+    new_password: str = Field(..., min_length=8, description="New secret passphrase (min 8 chars)")
+    confirm_password: Optional[str] = Field(None, description="Confirmation of new secret passphrase")
+    email: Optional[str] = Field(None, description="Registered account email address")
+    workspace_slug: Optional[str] = Field(None, description="Target tenant workspace identifier")
+    tenant_slug: Optional[str] = Field(None, description="Target tenant workspace identifier")
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -1021,5 +1030,164 @@ def verify_two_factor(payload: TwoFactorVerifyRequest, request: Request, db: Ses
         "message": "Two-factor authentication successfully enabled and verified.",
         "tfa_enabled": True,
         "email": norm_email,
+    }
+
+
+@router.post("/first-login-password-change", status_code=status.HTTP_200_OK)
+@router.post("/auth/first-login-password-change", status_code=status.HTTP_200_OK)
+async def first_login_password_change(
+    payload: FirstLoginPasswordChangeRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """
+    Mandatory first-login password change endpoint.
+    Accepts current temporary password, new password, and confirmation.
+    Enforces password complexity, clears must_change_password flag,
+    transitions invitation_status from 'pending' to 'active', and issues a full-access JWT session token.
+    """
+    if payload.confirm_password is not None and payload.new_password != payload.confirm_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password and password confirmation do not match.",
+        )
+
+    if len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long.",
+        )
+
+    if payload.new_password == payload.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be different from the temporary password.",
+        )
+
+    from backend.models import ResCompany, ResUser, TenantUser
+    from backend.two_tier_auth import (
+        verify_password,
+        hash_password,
+        issue_two_tier_jwt,
+        extract_token_from_request,
+        verify_two_tier_jwt,
+    )
+
+    user = None
+    claims = None
+
+    # 1. Attempt extracting from bearer session
+    token = None
+    try:
+        token = extract_token_from_request(request)
+    except Exception:
+        token = None
+    if token:
+        try:
+            claims = verify_two_tier_jwt(token, expected_tier="tenant")
+        except Exception:
+            try:
+                claims = verify_two_tier_jwt(token, expected_tier="master")
+            except Exception:
+                claims = None
+        if claims:
+            sub = claims.get("sub")
+            if sub:
+                try:
+                    user = db.query(ResUser).filter(ResUser.id == uuid.UUID(str(sub))).first()
+                except Exception:
+                    pass
+            if not user and claims.get("identity"):
+                user = db.query(ResUser).filter(func.lower(ResUser.email) == str(claims["identity"]).strip().lower()).first()
+
+    # 2. If no valid session token, resolve by payload email
+    norm_email = (payload.email or "").strip().lower()
+    if not user and norm_email:
+        user = db.query(ResUser).filter(func.lower(ResUser.email) == norm_email).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication session or valid registered email is required.",
+        )
+
+    # 3. Verify current password
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current temporary password is incorrect.",
+        )
+
+    # 4. Hash new password and transition status
+    new_hashed = hash_password(payload.new_password)
+    user.password_hash = new_hashed
+    user.must_change_password = False
+    user.invitation_status = "active"
+    user.is_active = True
+    user.updated_at = datetime.now(timezone.utc)
+
+    # Sync mirror in tenant_users if present
+    try:
+        mirror = db.query(TenantUser).filter(TenantUser.id == user.id).first()
+        if mirror is not None:
+            mirror.password_hash = new_hashed
+            mirror.is_active = True
+            mirror.updated_at = datetime.now(timezone.utc)
+    except Exception:
+        pass
+
+    db.commit()
+    db.refresh(user)
+
+    # 5. Resolve tenant slug and company details
+    company = None
+    if user.company_id:
+        company = db.query(ResCompany).filter(ResCompany.id == user.company_id).first()
+    tenant_slug = company.slug if company else (payload.tenant_slug or payload.workspace_slug or "master")
+    full_name = user.full_name or user.email.split("@")[0]
+
+    # 6. Issue full access token
+    new_token = issue_two_tier_jwt(
+        tier="tenant",
+        user_id=user.id,
+        identity=user.email,
+        role=user.role,
+        tenant_id=user.company_id,
+        tenant_slug=tenant_slug,
+        must_change_password=False,
+        scope="full",
+    )
+
+    logger.info(
+        "[PASSWORD ACTIVATED] User %s successfully completed first-login password change and status is active.",
+        _masked_identifier(user.email),
+    )
+
+    return {
+        "status": "success",
+        "message": "Password updated successfully. Full workspace access granted.",
+        "access_token": new_token,
+        "token_type": "bearer",
+        "tier": "tenant",
+        "role": user.role,
+        "company_id": str(user.company_id) if user.company_id else None,
+        "tenant_id": str(user.company_id) if user.company_id else None,
+        "tenant_slug": tenant_slug,
+        "must_change_password": False,
+        "scope": "full",
+        "invitation_status": "active",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "fullName": full_name,
+            "role": user.role,
+            "company_id": str(user.company_id) if user.company_id else None,
+            "tenant_id": str(user.company_id) if user.company_id else None,
+            "tenant_slug": tenant_slug,
+            "must_change_password": False,
+            "scope": "full",
+            "invitation_status": "active",
+            "status": "active",
+        },
     }
 

@@ -103,6 +103,7 @@ def legacy_role_for(iam_role: str) -> str:
 EXTERNAL_INVITE_ROLES: Mapping[str, Mapping[str, Any]] = MappingProxyType({
     "Guest": MappingProxyType({
         "legacy_role": "Guest",
+        "iam_role": "Guest",
         "abac_context": MappingProxyType({
             "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
             "external_identity": True, "read_only": True,
@@ -110,6 +111,62 @@ EXTERNAL_INVITE_ROLES: Mapping[str, Mapping[str, Any]] = MappingProxyType({
     }),
     "External_Auditor": MappingProxyType({
         "legacy_role": "Guest",
+        "iam_role": "External_Auditor",
+        "abac_context": MappingProxyType({
+            "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": True,
+            "external_identity": True, "read_only": True, "audit_scope_only": True,
+        }),
+    }),
+})
+
+# Operational & external roles selectable during tenant workspace user invitations
+TENANT_INVITE_ROLES: Mapping[str, Mapping[str, Any]] = MappingProxyType({
+    "Admin": MappingProxyType({
+        "legacy_role": "Admin",
+        "iam_role": "Admin",
+        "abac_context": MappingProxyType({
+            "approval_limit": 1000000, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+        }),
+    }),
+    "Manager": MappingProxyType({
+        "legacy_role": "Ops_Manager",
+        "iam_role": "Ops_Manager",
+        "abac_context": MappingProxyType({
+            "approval_limit": 500000, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+        }),
+    }),
+    "Accountant": MappingProxyType({
+        "legacy_role": "Accountant",
+        "iam_role": "Finance_Editor",
+        "abac_context": MappingProxyType({
+            "approval_limit": 100000, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+        }),
+    }),
+    "Staff": MappingProxyType({
+        "legacy_role": "Data_Entry",
+        "iam_role": "Data_Entry",
+        "abac_context": MappingProxyType({
+            "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+        }),
+    }),
+    "Member": MappingProxyType({
+        "legacy_role": "User",
+        "iam_role": "Employee_Self_Serve",
+        "abac_context": MappingProxyType({
+            "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+        }),
+    }),
+    "Guest": MappingProxyType({
+        "legacy_role": "Guest",
+        "iam_role": "Guest",
+        "abac_context": MappingProxyType({
+            "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": False,
+            "external_identity": True, "read_only": True,
+        }),
+    }),
+    "External_Auditor": MappingProxyType({
+        "legacy_role": "Guest",
+        "iam_role": "External_Auditor",
         "abac_context": MappingProxyType({
             "approval_limit": 0, "shift_locked": False, "ip_restricted": False, "requires_mfa": True,
             "external_identity": True, "read_only": True, "audit_scope_only": True,
@@ -131,6 +188,58 @@ def resolve_external_role(raw: Optional[str]) -> Optional[str]:
     return None
 
 
+def resolve_tenant_invite_role(raw: Optional[str]) -> Optional[tuple[str, Mapping[str, Any]]]:
+    """Resolve role for tenant workspace user invitations.
+
+    Accepts core tenant roles (Admin, Manager, Accountant, Staff, Member, Guest, External_Auditor)
+    or standardized roles from WORKSPACE_ASSIGNABLE_ROLES (excluding Super_Admin and Owner).
+    Returns (canonical_name, spec_dict) or None if role is invalid/prohibited.
+    """
+    token = normalize_role_token(raw).lower()
+    if not token:
+        return None
+
+    # Never allow platform Super_Admin or workspace Owner through team invitation
+    if token in ("super_admin", "superadmin", "owner"):
+        return None
+
+    # 1. Direct match in TENANT_INVITE_ROLES
+    for role_name, spec in TENANT_INVITE_ROLES.items():
+        if role_name.lower() == token:
+            return role_name, spec
+
+    # 2. Common aliases
+    alias_map: Mapping[str, str] = MappingProxyType({
+        "user": "Member",
+        "data_entry": "Staff",
+        "ops_manager": "Manager",
+        "operations_manager": "Manager",
+        "auditor": "External_Auditor",
+        "external auditor": "External_Auditor",
+    })
+    if token in alias_map:
+        target = alias_map[token]
+        return target, TENANT_INVITE_ROLES[target]
+
+    # 3. Any standard workspace assignable role (excluding privileged)
+    internal = resolve_internal_role(raw)
+    if internal and internal not in PRIVILEGED_IAM_ROLES:
+        legacy = legacy_role_for(internal)
+        dynamic_spec = MappingProxyType({
+            "legacy_role": legacy,
+            "iam_role": internal,
+            "abac_context": MappingProxyType({
+                "approval_limit": 50000 if ("Editor" in internal or "Operator" in internal) else 250000,
+                "shift_locked": False,
+                "ip_restricted": False,
+                "requires_mfa": False,
+            }),
+        })
+        return internal, dynamic_spec
+
+    return None
+
+
 def is_internal_or_privileged_role_name(raw: Optional[str]) -> bool:
     """True for any standardized or legacy role name that denotes internal staff / elevated access."""
     token = normalize_role_token(raw).lower()
@@ -139,3 +248,4 @@ def is_internal_or_privileged_role_name(raw: Optional[str]) -> bool:
     if resolve_internal_role(raw):
         return True
     return token in {r.lower() for r in LEGACY_RES_USER_ROLES} or token in PLATFORM_WIDE_LEGACY_ROLES
+

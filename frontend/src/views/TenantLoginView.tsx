@@ -27,6 +27,7 @@ import { useNavigate } from '../hooks/useNavigate';
 import { setAuthSession, isValidUUID } from '../services/api';
 import { TenantAvatar } from '../components/TenantAvatar';
 import { TenantBrandingContext } from '../types';
+import { ForceChangePasswordModal } from '../components/auth/ForceChangePasswordModal';
 
 
 interface TenantLoginViewProps {
@@ -51,6 +52,8 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
   const [slugValidated, setSlugValidated] = useState(Boolean(forcedSlug));
   const [validatedTarget, setValidatedTarget] = useState<string | null>(null);
   const [brandingContext, setBrandingContext] = useState<TenantBrandingContext | null>(null);
+  const [showForcePasswordModal, setShowForcePasswordModal] = useState(false);
+  const [tempAuthIdentity, setTempAuthIdentity] = useState('');
 
   const matchedCompany = companies?.find((c) => c.slug?.toLowerCase() === tenantSlug.toLowerCase()) || (currentCompany?.slug?.toLowerCase() === tenantSlug.toLowerCase() ? currentCompany : null);
   const matchedLogo = matchedCompany?.logo_url || matchedCompany?.uiLogoUrl || (matchedCompany as any)?.ui_logo_url;
@@ -231,6 +234,14 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
         }
         if (res.user) {
           localStorage.setItem('oxengl_user', JSON.stringify(res.user));
+        }
+
+        const mustChange = Boolean(res.must_change_password || (res.user as any)?.must_change_password);
+        if (mustChange) {
+          localStorage.setItem('must_change_password', 'true');
+          setTempAuthIdentity(cleanIdentity);
+          setShowForcePasswordModal(true);
+          return;
         }
 
         if (onLoginSuccess) {
@@ -566,6 +577,23 @@ export const TenantLoginView: React.FC<TenantLoginViewProps> = ({
       <footer className="relative z-10 py-3 text-center text-[11px] text-slate-600 font-mono">
         OxenGL Two-Tier Zero-Knowledge Multi-Tenant Architecture • End-to-End Encryption
       </footer>
+
+      {/* Mandatory First-Login Password Change Modal */}
+      <ForceChangePasswordModal
+        isOpen={showForcePasswordModal}
+        email={tempAuthIdentity}
+        workspaceSlug={tenantSlug}
+        onSuccess={() => {
+          setShowForcePasswordModal(false);
+          if (onLoginSuccess) {
+            onLoginSuccess();
+          }
+          redirectToTenantWorkspace({
+            slug: tenantSlug,
+            custom_domain: matchedCompany?.custom_domain,
+          }, '/operations/daily');
+        }}
+      />
     </div>
   );
 };

@@ -180,3 +180,81 @@ def test_render_role_updated_template(base_tenant_context):
     assert "Senior Logistics Operations Manager" in html
     assert "2026-10-09 17:00 UTC" in html
     assert "https://desert-trans.oxengl.me/dashboard" in html
+
+
+def test_render_invite_user_with_custom_branding_and_placeholders():
+    """Verify invite_user.html renders custom headline, custom body, custom support email, and custom login URL."""
+    custom_tenant_context = {
+        "name": "Alwehda Alarabia Oil Services Co Ltd",
+        "workspace_domain": "wac-ye.oxengl.com",
+        "logo_url": "https://wac-ye.com/assets/logo.png",
+        "signature_name": "WAC Executive Administration",
+        "signature_title": "Field Operations Team",
+        "support_email": "support@wac-ye.com",
+    }
+    context = {
+        "user": {
+            "first_name": "Ahmed",
+            "email": "ahmed@wac-ye.com",
+            "role": "Operations Engineer",
+            "temp_password": "TempSecure#2026",
+        },
+        "inviter": {"name": "Tenant Owner"},
+        "action_url": "https://wac-ye.oxengl.com/auth/login",
+        "expiry_hours": 48,
+        "tenant": custom_tenant_context,
+        "headline": "Welcome to Alwehda Alarabia Oil Services on OxenGL",
+        "custom_body": "Welcome Ahmed to Alwehda Alarabia Oil Services Co Ltd! Your account is ready with role Operations Engineer.",
+        "subject": "Welcome to Alwehda Alarabia Oil Services on OxenGL",
+    }
+
+    html = EmailService._render_template("invite_user.html", context)
+
+    # Inlined CSS verification
+    assert "style=" in html
+    # Custom headline and body verification
+    assert "Welcome to Alwehda Alarabia Oil Services on OxenGL" in html
+    assert "Welcome Ahmed to Alwehda Alarabia Oil Services Co Ltd! Your account is ready with role Operations Engineer." in html
+    # Custom action URL in button link and fallback text
+    assert "https://wac-ye.oxengl.com/auth/login" in html
+    # Custom logo and tenant name
+    assert "https://wac-ye.com/assets/logo.png" in html
+    assert "Alwehda Alarabia Oil Services Co Ltd" in html
+    # Custom signature and support email
+    assert "WAC Executive Administration" in html
+    assert "Field Operations Team" in html
+    assert "support@wac-ye.com" in html
+    assert "mailto:support@wac-ye.com" in html
+
+
+def test_construct_workspace_login_url_with_custom_override():
+    from app.services.email_service import construct_workspace_login_url
+    company = {
+        "workspace_login_url": "https://custom-login.wac-ye.com",
+        "slug": "wac-ye",
+    }
+    url = construct_workspace_login_url(company)
+    assert url == "https://custom-login.wac-ye.com"
+
+
+def test_resolve_tenant_branding_with_custom_fields():
+    from app.services.email_service import resolve_tenant_branding
+    company = {
+        "name": "Alwehda Alarabia Oil Services Co Ltd",
+        "slug": "wac-ye",
+        "support_email": "support@wac-ye.com",
+        "logo_url": "https://wac-ye.com/logo.png",
+        "signature_name": "Executive Administration",
+        "signature_title": "Operations Team",
+        "workspace_login_url": "https://wac-ye.oxengl.com/auth/login",
+        "invitation_headline": "Join WAC Yemen Operations",
+        "invitation_body": "Hello {user_name}, welcome to {tenant_name}.",
+    }
+    brand = resolve_tenant_branding(company)
+    assert brand.name == "Alwehda Alarabia Oil Services Co Ltd"
+    assert brand.support_email == "support@wac-ye.com"
+    assert brand.logo_url == "https://wac-ye.com/logo.png"
+    assert brand.workspace_login_url == "https://wac-ye.oxengl.com/auth/login"
+    assert brand.invitation_headline == "Join WAC Yemen Operations"
+    assert brand.invitation_body == "Hello {user_name}, welcome to {tenant_name}."
+

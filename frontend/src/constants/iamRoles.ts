@@ -37,9 +37,21 @@ export type IamRole = (typeof IAM_ROLES)[number];
 /** Workspace-assignable roles: the 25 standardized roles plus the workspace Owner. */
 export const ASSIGNABLE_IAM_ROLES = [...IAM_ROLES, 'Owner'] as const;
 
-/** External / contractor identities - the only roles the Invite flow may assign. */
+/** External / contractor identities */
 export const EXTERNAL_INVITE_ROLES = ['Guest', 'External_Auditor'] as const;
 export type ExternalInviteRole = (typeof EXTERNAL_INVITE_ROLES)[number];
+
+/** Available roles selectable during tenant workspace invitations (Phase 3). */
+export const TENANT_INVITE_ROLES = [
+  'Admin',
+  'Manager',
+  'Accountant',
+  'Staff',
+  'Member',
+  'Guest',
+  'External_Auditor',
+] as const;
+export type TenantInviteRole = (typeof TENANT_INVITE_ROLES)[number];
 
 /** Roles whose assignment is restricted (Owner/CEO/platform admin) and audited server-side. */
 export const PRIVILEGED_IAM_ROLES: readonly string[] = ['Super_Admin', 'Owner'];
@@ -51,6 +63,13 @@ export const HR_REGISTRATION_WARNING_AR =
 
 const AR_ROLE_LABELS: Record<string, string> = {
   Super_Admin: 'مدير أعلى',
+  Owner: 'مالك مساحة العمل',
+  Admin: 'مدير (مسؤول مساحة العمل)',
+  Manager: 'مدير عمليات',
+  Accountant: 'محاسب مالي',
+  Staff: 'موظف عمليات / إدخال بيانات',
+  Member: 'عضو فريق',
+  User: 'عضو فريق',
   Operations_Admin: 'مدير العمليات (إداري)',
   Finance_Admin: 'مدير المالية (إداري)',
   System_Admin: 'مدير النظام',
@@ -75,8 +94,8 @@ const AR_ROLE_LABELS: Record<string, string> = {
   Maintenance_Operator: 'مشغل صيانة',
   Security_Operator: 'مشغل أمن',
   Employee_Self_Serve: 'خدمة الموظف الذاتية',
-  Guest: 'ضيف',
-  External_Auditor: 'مدقق خارجي',
+  Guest: 'ضيف (قراءة فقط)',
+  External_Auditor: 'مدقق خارجي (قراءة فقط، نطاق التدقيق)',
 };
 
 /** Human label for a role value ("Finance_Manager" -> "Finance Manager" / Arabic). Unknown values pass through. */
@@ -85,3 +104,4 @@ export function iamRoleLabel(role: string | null | undefined, isAr: boolean): st
   if (isAr && AR_ROLE_LABELS[role]) return AR_ROLE_LABELS[role];
   return role.replace(/_/g, ' ');
 }
+

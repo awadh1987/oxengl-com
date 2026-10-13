@@ -536,6 +536,28 @@ async def get_current_user(
             detail="User account has been deactivated.",
         )
 
+    must_change = bool(getattr(user, "must_change_password", False)) or payload.get("scope") == "password_change"
+    if must_change:
+        req_path = request.url.path.rstrip("/")
+        allowed_pw_paths = {
+            "/api/v1/auth/first-login-password-change",
+            "/api/auth/first-login-password-change",
+            "/api/v1/first-login-password-change",
+            "/first-login-password-change",
+            "/api/v1/users/me/change-password",
+            "/api/users/me/change-password",
+            "/api/v1/users/me",
+            "/api/users/me",
+            "/api/v1/auth/logout",
+            "/api/auth/logout",
+            "/logout",
+        }
+        if req_path not in allowed_pw_paths and not any(req_path.endswith(p) for p in ["/first-login-password-change", "/me/change-password"]):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Password change required before accessing workspace.",
+            )
+
     request.state.current_user = user
     request.state.tenant_id = str(getattr(user, "company_id", "") or "")
     request.state.role = user.role

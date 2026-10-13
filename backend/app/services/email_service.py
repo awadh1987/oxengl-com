@@ -232,6 +232,27 @@ def construct_workspace_login_url(company: Any) -> str:
     if not company:
         return "https://portal.oxengl.com/auth/login"
 
+    # 1. Direct workspace_login_url override
+    workspace_login_url = _clean_str(
+        company.get("workspace_login_url")
+        if isinstance(company, dict)
+        else getattr(company, "workspace_login_url", None)
+    )
+    if not workspace_login_url:
+        features = (
+            company.get("features_override")
+            if isinstance(company, dict)
+            else getattr(company, "features_override", None)
+        )
+        if isinstance(features, dict):
+            branding = features.get("communication_branding")
+            if isinstance(branding, dict):
+                workspace_login_url = _clean_str(branding.get("workspace_login_url"))
+
+    if workspace_login_url:
+        return workspace_login_url
+
+    # 2. Custom domain override
     custom_domain = _clean_str(
         company.get("custom_domain")
         if isinstance(company, dict)
@@ -240,6 +261,7 @@ def construct_workspace_login_url(company: Any) -> str:
     if custom_domain:
         return f"https://{custom_domain}/auth/login"
 
+    # 3. Workspace domain override
     workspace_domain = _clean_str(
         company.get("workspace_domain")
         if isinstance(company, dict)
@@ -263,6 +285,17 @@ def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
     if isinstance(tenant_model, TenantBrandContext):
         return tenant_model
 
+    # Check features_override if present
+    branding_dict = {}
+    if isinstance(tenant_model, dict):
+        feat = tenant_model.get("features_override")
+        if isinstance(feat, dict):
+            branding_dict = feat.get("communication_branding") or {}
+    elif tenant_model is not None:
+        feat = getattr(tenant_model, "features_override", None)
+        if isinstance(feat, dict):
+            branding_dict = feat.get("communication_branding") or {}
+
     def _val(obj: Any, *keys: str, default: Optional[str] = None) -> Optional[str]:
         if isinstance(obj, dict):
             for k in keys:
@@ -278,16 +311,25 @@ def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
                     s = str(v).strip()
                     if s:
                         return s
+        for k in keys:
+            v = branding_dict.get(k)
+            if v is not None:
+                s = str(v).strip()
+                if s:
+                    return s
         return default
 
     name = _val(tenant_model, "company_name", "name", default="OxenGL Enterprise") or "OxenGL Enterprise"
     slug = _val(tenant_model, "slug", "domain_slug", "schema_name", default="portal") or "portal"
     custom_domain = _val(tenant_model, "custom_domain")
     workspace_domain = _val(tenant_model, "workspace_domain") or custom_domain or f"{slug}.oxengl.com"
-    logo_url = resolve_tenant_logo_url(tenant_model)
+    logo_url = resolve_tenant_logo_url(tenant_model) or _val(tenant_model, "logo_url")
     signature_name = _val(tenant_model, "signature_name", default=name) or name
-    signature_title = _val(tenant_model, "signature_title", default="Workspace Operations") or "Workspace Operations"
+    signature_title = _val(tenant_model, "signature_title", default="Operations Team") or "Operations Team"
     support_email = _val(tenant_model, "support_email", default="support@oxengl.com") or "support@oxengl.com"
+    workspace_login_url = _val(tenant_model, "workspace_login_url")
+    invitation_headline = _val(tenant_model, "invitation_headline")
+    invitation_body = _val(tenant_model, "invitation_body")
 
     return TenantBrandContext(
         name=name,
@@ -296,6 +338,9 @@ def resolve_tenant_branding(tenant_model: Any) -> TenantBrandContext:
         signature_name=signature_name,
         signature_title=signature_title,
         support_email=support_email,
+        workspace_login_url=workspace_login_url,
+        invitation_headline=invitation_headline,
+        invitation_body=invitation_body,
     )
 
 
@@ -418,7 +463,7 @@ async def dispatch_user_invitation(
     first_name: str,
     role: Optional[str] = None,
     user_role: Optional[str] = None,
-    action_url: str,
+    action_url: Optional[str] = None,
     inviter_name: str,
     tenant: Union[TenantBrandContext, Any],
     temp_password: Optional[str] = None,
@@ -426,16 +471,68 @@ async def dispatch_user_invitation(
     custom_smtp: Optional[Dict[str, Any]] = None,
     tenant_smtp_config: Optional[Dict[str, Any]] = None,
     company: Optional[Any] = None,
+    custom_body: Optional[str] = None,
+    headline: Optional[str] = None,
     **kwargs: Any,
 ) -> bool:
     assigned_role = user_role or role or "Team Member"
-    tenant_brand = resolve_tenant_branding(tenant)
+    target_company = company or kwargs.get("company_obj") or tenant
+    tenant_brand = resolve_tenant_branding(target_company if target_company is not None else tenant)
+
+    # Resolve action_url with preference to custom workspace_login_url
+    if tenant_brand.workspace_login_url:
+        resolved_action_url = tenant_brand.workspace_login_url
+    elif target_company and (getattr(target_company, "workspace_login_url", None) or (isinstance(target_company, dict) and target_company.get("workspace_login_url"))):
+        resolved_action_url = construct_workspace_login_url(target_company)
+    elif action_url:
+        resolved_action_url = action_url
+    else:
+        resolved_action_url = construct_workspace_login_url(target_company)
 
     # Fetch tenant's SMTP credentials if not explicitly provided
     resolved_smtp = tenant_smtp_config or custom_smtp
     if not resolved_smtp:
-        target_company = company or kwargs.get("company_obj") or tenant
         resolved_smtp = fetch_tenant_smtp_config(target_company)
+
+    # Token map for placeholder replacement
+    tokens = {
+        "{tenant_name}": tenant_brand.name,
+        "{company_name}": tenant_brand.name,
+        "{user_name}": first_name,
+        "{name}": first_name,
+        "{user_email}": recipient_email,
+        "{email}": recipient_email,
+        "{role}": assigned_role,
+        "{inviter_name}": inviter_name,
+        "{action_url}": resolved_action_url,
+    }
+
+    # Custom invitation body
+    raw_custom_body = (
+        custom_body
+        or getattr(tenant_brand, "invitation_body", None)
+        or (getattr(target_company, "invitation_body", None) if target_company else None)
+        or (target_company.get("invitation_body") if isinstance(target_company, dict) else None)
+    )
+    formatted_custom_body = None
+    if raw_custom_body:
+        formatted_custom_body = str(raw_custom_body)
+        for token, val in tokens.items():
+            formatted_custom_body = formatted_custom_body.replace(token, str(val))
+
+    # Custom headline
+    raw_headline = (
+        headline
+        or getattr(tenant_brand, "invitation_headline", None)
+        or (getattr(target_company, "invitation_headline", None) if target_company else None)
+        or (target_company.get("invitation_headline") if isinstance(target_company, dict) else None)
+    )
+    if raw_headline:
+        formatted_headline = str(raw_headline)
+        for token, val in tokens.items():
+            formatted_headline = formatted_headline.replace(token, str(val))
+    else:
+        formatted_headline = f"Join {tenant_brand.name} on OxenGL"
 
     context = {
         "user": {
@@ -445,12 +542,14 @@ async def dispatch_user_invitation(
             "temp_password": temp_password,
         },
         "inviter": {"name": inviter_name},
-        "action_url": action_url,
+        "action_url": resolved_action_url,
         "expiry_hours": expiry_hours,
+        "headline": formatted_headline,
+        "custom_body": formatted_custom_body,
     }
     return await EmailService.send_email(
         recipient_email=recipient_email,
-        subject=f"Invitation to join {tenant_brand.name} on OxenGL",
+        subject=formatted_headline if raw_headline else f"Invitation to join {tenant_brand.name} on OxenGL",
         template_name="invite_user.html",
         template_context=context,
         tenant=tenant_brand,

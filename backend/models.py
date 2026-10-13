@@ -99,6 +99,9 @@ class ResCompany(TimestampMixin, Base):
     signature_name: Mapped[Optional[str]] = mapped_column(String(100), default="Executive Administration", server_default=text("'Executive Administration'"), nullable=True)
     signature_title: Mapped[Optional[str]] = mapped_column(String(100), default="Operations Team", server_default=text("'Operations Team'"), nullable=True)
     support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    workspace_login_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    invitation_headline: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    invitation_body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     custom_smtp_settings = Column(JSONB, nullable=True, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default=text("true"), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="ACTIVE", server_default=text("'ACTIVE'"), nullable=False)
@@ -360,6 +363,7 @@ class ResUser(TimestampMixin, Base):
     iam_role: Mapped[Optional[str]] = mapped_column(String(48), nullable=True)
     abac_context: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
+    invitation_status: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, default="pending", server_default=text("'pending'"))
     tenant_roles: Mapped[list["TenantUserRole"]] = relationship(
         "TenantUserRole", cascade="all, delete-orphan", passive_deletes=True, back_populates="user"
     )

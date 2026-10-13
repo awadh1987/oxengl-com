@@ -100,7 +100,7 @@ export const OrganizationProfile: React.FC = () => {
   });
 
   const isSuperAdmin = currentUser?.role === 'Super_Admin';
-  const isAdmin = currentUser?.role === 'Admin' || isSuperAdmin;
+  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'Owner' || isSuperAdmin;
 
   // 1. Fetch organizational tree
   const fetchTree = useCallback(async (quiet = false) => {

@@ -408,7 +408,34 @@ export interface TwoTierAuthResponse {
     fullName?: string;
     fullNameAr?: string;
     role?: string;
+    must_change_password?: boolean;
+    invitation_status?: string;
+    status?: string;
   };
+}
+
+export interface FirstLoginPasswordChangePayload {
+  current_password: string;
+  new_password: string;
+  confirm_password?: string;
+  email?: string;
+  workspace_slug?: string;
+  tenant_slug?: string;
+}
+
+export interface FirstLoginPasswordChangeResponse {
+  status: string;
+  message: string;
+  access_token: string;
+  token_type?: string;
+  tier?: string;
+  role?: string;
+  tenant_id?: string;
+  tenant_slug?: string;
+  must_change_password?: boolean;
+  scope?: string;
+  invitation_status?: string;
+  user?: any;
 }
 
 
@@ -1036,6 +1063,16 @@ export interface CommunicationSettingDto {
   last_test_error?: string | null;
 }
 
+export interface TenantCommunicationBrandingDto {
+  workspace_login_url?: string | null;
+  logo_url?: string | null;
+  support_email?: string | null;
+  invitation_headline?: string | null;
+  invitation_body?: string | null;
+  signature_name?: string | null;
+  signature_title?: string | null;
+}
+
 export interface RecoveryOptionsDto {
   email_enabled: boolean;
   sms_enabled: boolean;
@@ -1147,6 +1184,22 @@ export const erpApi = {
     request<{ message: string; delivery_channel?: string; reset_token?: string }>('/api/auth/recover-password', undefined, { method: 'POST', body: JSON.stringify(payload) }),
   resetPassword: (payload: PasswordResetPayload) =>
     request<{ message: string }>('/api/auth/reset-password', undefined, { method: 'POST', body: JSON.stringify(payload) }),
+  firstLoginPasswordChange: async (payload: FirstLoginPasswordChangePayload) => {
+    const res = await request<FirstLoginPasswordChangeResponse>('/api/v1/auth/first-login-password-change', undefined, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    if (res?.access_token) {
+      setAuthSession(res.access_token, 'tenant', res.tenant_slug || payload.tenant_slug, res.tenant_id);
+      localStorage.setItem('token', res.access_token);
+      localStorage.setItem('access_token', res.access_token);
+      localStorage.removeItem('must_change_password');
+      if (res.user) {
+        localStorage.setItem('oxengl_user', JSON.stringify(res.user));
+      }
+    }
+    return res;
+  },
   getMasterMe: () =>
     request<any>('/api/auth/master/me'),
   getTenantMe: () =>
@@ -1393,6 +1446,13 @@ export const erpApi = {
     }),
 
   // Outbound transactional communications. Credential fields are write-only.
+  getCommunicationBranding: () =>
+    request<TenantCommunicationBrandingDto>('/api/v1/tenant/communication/branding'),
+  updateCommunicationBranding: (payload: TenantCommunicationBrandingDto) =>
+    request<TenantCommunicationBrandingDto>('/api/v1/tenant/communication/branding', undefined, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
   listCommunicationSettings: () =>
     request<CommunicationSettingDto[]>('/api/v1/tenant-control/communications'),
   createCommunicationSetting: (payload: CommunicationSettingWritePayload) =>

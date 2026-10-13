@@ -6,6 +6,7 @@ import {
   CommunicationSettingDto,
   CommunicationSettingWritePayload,
   RecoveryOptionsDto,
+  TenantCommunicationBrandingDto,
   erpApi,
 } from '../../services/api';
 
@@ -112,6 +113,61 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({ isAr = fal
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [active, setActive] = useState(true);
 
+  const [branding, setBranding] = useState<TenantCommunicationBrandingDto>({
+    workspace_login_url: '',
+    support_email: '',
+    logo_url: '',
+    signature_name: '',
+    signature_title: '',
+    invitation_headline: '',
+    invitation_body: '',
+  });
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingNotice, setBrandingNotice] = useState('');
+  const [brandingError, setBrandingError] = useState('');
+
+  const loadBranding = useCallback(async () => {
+    if (superAdmin) return;
+    try {
+      const res = await erpApi.getCommunicationBranding();
+      setBranding({
+        workspace_login_url: res.workspace_login_url || '',
+        support_email: res.support_email || '',
+        logo_url: res.logo_url || '',
+        signature_name: res.signature_name || '',
+        signature_title: res.signature_title || '',
+        invitation_headline: res.invitation_headline || '',
+        invitation_body: res.invitation_body || '',
+      });
+    } catch {
+      // Non-blocking for branding pre-fill
+    }
+  }, [superAdmin]);
+
+  const handleSaveBranding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBrandingSaving(true);
+    setBrandingNotice('');
+    setBrandingError('');
+    try {
+      const res = await erpApi.updateCommunicationBranding(branding);
+      setBranding({
+        workspace_login_url: res.workspace_login_url || '',
+        support_email: res.support_email || '',
+        logo_url: res.logo_url || '',
+        signature_name: res.signature_name || '',
+        signature_title: res.signature_title || '',
+        invitation_headline: res.invitation_headline || '',
+        invitation_body: res.invitation_body || '',
+      });
+      setBrandingNotice(isAr ? 'تم حفظ الهوية البصرية للبريد بنجاح.' : 'Email & invitation branding saved successfully.');
+    } catch (err) {
+      setBrandingError(err instanceof Error ? err.message : 'Could not save branding settings.');
+    } finally {
+      setBrandingSaving(false);
+    }
+  };
+
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -131,7 +187,10 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({ isAr = fal
     }
   }, [superAdmin, scopeFilter, channelFilter, tenantFilter]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+    void loadBranding();
+  }, [load, loadBranding]);
 
   const resetForm = () => {
     setFormOpen(false);
@@ -272,6 +331,148 @@ export const CommunicationsTab: React.FC<CommunicationsTabProps> = ({ isAr = fal
       )}
 
       {superAdmin && <RecoveryOptionsPanel tenantId={tenantFilter.trim() || undefined} />}
+
+      {!superAdmin && (
+        <form onSubmit={handleSaveBranding} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/60 p-4 sm:p-5 shadow-lg backdrop-blur" data-testid="email-branding-form">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <Mail className="h-4 w-4 text-indigo-400" />
+                {isAr ? 'الهوية البصرية للبريد والدعوات' : 'Email & Invitation Branding'}
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isAr
+                  ? 'تخصيص رابط تسجيل الدخول، الشعار، بريد الدعم الفني، والتوقيع، ونص رسالة الدعوة لمستخدمي هذه المنشأة.'
+                  : 'Customize workspace login URL, public logo, support email, email signatures, and user invitation body text.'}
+              </p>
+            </div>
+            <button
+              type="submit"
+              disabled={brandingSaving}
+              className={`${buttonClass} bg-indigo-600 text-white hover:bg-indigo-500 self-start sm:self-auto`}
+            >
+              <Send className="h-3.5 w-3.5" />
+              {brandingSaving ? (isAr ? 'جارٍ الحفظ…' : 'Saving…') : (isAr ? 'حفظ الهوية' : 'Save Branding')}
+            </button>
+          </div>
+
+          {brandingError && (
+            <div role="alert" className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+              <AlertCircle className="h-4 w-4 shrink-0" />{brandingError}
+            </div>
+          )}
+          {brandingNotice && (
+            <div role="status" className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />{brandingNotice}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="space-y-1 text-xs text-slate-300">
+              <span>{isAr ? 'رابط تسجيل الدخول المخصص' : 'Workspace Login URL'}</span>
+              <input
+                type="url"
+                value={branding.workspace_login_url || ''}
+                onChange={(e) => setBranding({ ...branding, workspace_login_url: e.target.value })}
+                placeholder="https://wac-ye.oxengl.com/auth/login"
+                className={inputClass}
+              />
+              <span className="text-[10px] text-slate-500 block">
+                {isAr ? 'تجاوز رابط تسجيل الدخول الافتراضي في رسائل الدعوة' : 'Overrides default platform login link in user invite emails'}
+              </span>
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-300">
+              <span>{isAr ? 'بريد الدعم الفني للشركة' : 'Support Contact Email'}</span>
+              <input
+                type="email"
+                value={branding.support_email || ''}
+                onChange={(e) => setBranding({ ...branding, support_email: e.target.value })}
+                placeholder="support@wac-ye.com"
+                className={inputClass}
+              />
+              <span className="text-[10px] text-slate-500 block">
+                {isAr ? 'يظهر في تذييل البريد ويتلقى ردود المستخدمين' : 'Appears in email footer and receives invite recipient replies'}
+              </span>
+            </label>
+
+            <div className="space-y-1 text-xs text-slate-300 sm:col-span-2">
+              <label className="block">
+                <span>{isAr ? 'رابط الشعار المخصص (HTTPS)' : 'Custom Public Logo URL (HTTPS)'}</span>
+                <input
+                  type="url"
+                  value={branding.logo_url || ''}
+                  onChange={(e) => setBranding({ ...branding, logo_url: e.target.value })}
+                  placeholder="https://wac-ye.com/brand/logo.png"
+                  className={inputClass}
+                />
+              </label>
+              {branding.logo_url && (
+                <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-slate-950 border border-slate-800">
+                  <span className="text-[11px] text-slate-400">{isAr ? 'معاينة الشعار:' : 'Logo Preview:'}</span>
+                  <img
+                    src={branding.logo_url}
+                    alt="Logo Preview"
+                    className="max-h-8 max-w-[160px] object-contain rounded bg-white/5 p-1"
+                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+            </div>
+
+            <label className="space-y-1 text-xs text-slate-300">
+              <span>{isAr ? 'اسم توقيع البريد' : 'Email Signature Name'}</span>
+              <input
+                type="text"
+                value={branding.signature_name || ''}
+                onChange={(e) => setBranding({ ...branding, signature_name: e.target.value })}
+                placeholder="Executive Administration"
+                className={inputClass}
+              />
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-300">
+              <span>{isAr ? 'المسمى الوظيفي في التوقيع' : 'Email Signature Title'}</span>
+              <input
+                type="text"
+                value={branding.signature_title || ''}
+                onChange={(e) => setBranding({ ...branding, signature_title: e.target.value })}
+                placeholder="Operations Team"
+                className={inputClass}
+              />
+            </label>
+
+            <label className="space-y-1 text-xs text-slate-300 sm:col-span-2">
+              <span>{isAr ? 'عنوان رسالة الدعوة' : 'Invitation Headline'}</span>
+              <input
+                type="text"
+                value={branding.invitation_headline || ''}
+                onChange={(e) => setBranding({ ...branding, invitation_headline: e.target.value })}
+                placeholder="Join {tenant_name} on OxenGL"
+                className={inputClass}
+              />
+            </label>
+
+            <div className="space-y-1 text-xs text-slate-300 sm:col-span-2">
+              <label className="block">
+                <span>{isAr ? 'نص رسالة الدعوة المخصص' : 'Custom Invitation Message Body'}</span>
+                <textarea
+                  rows={4}
+                  value={branding.invitation_body || ''}
+                  onChange={(e) => setBranding({ ...branding, invitation_body: e.target.value })}
+                  placeholder="{inviter_name} has invited you to join the {tenant_name} workspace on OxenGL as {role}. You can now access your dashboard, operations modules, and business data."
+                  className={`${inputClass} font-sans leading-relaxed`}
+                />
+              </label>
+              <p className="text-[11px] text-slate-400">
+                {isAr
+                  ? 'المتغيرات المدعومة: {tenant_name}، {user_name}، {role}، {inviter_name}، {action_url}'
+                  : 'Available token placeholders: {tenant_name}, {user_name}, {role}, {inviter_name}, {action_url}'}
+              </p>
+            </div>
+          </div>
+        </form>
+      )}
 
       {formOpen ? (
         <form onSubmit={submit} className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 sm:p-5">

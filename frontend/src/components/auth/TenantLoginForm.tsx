@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { Company } from '../../types';
 import { erpApi, setAuthSession } from '../../services/api';
 import { redirectToTenantSubdomain, redirectToTenantWorkspace } from '../../utils/subdomain';
+import { ForceChangePasswordModal } from './ForceChangePasswordModal';
 
 
 interface TenantLoginFormProps {
@@ -30,6 +31,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [verifyingTwoFactor, setVerifyingTwoFactor] = useState(false);
   const isVerifyingRef = useRef(false);
+  const [showForcePasswordModal, setShowForcePasswordModal] = useState(false);
 
   const [tenantSlug, setTenantSlug] = useState(() => {
     return initialTenantSlug || selectedCompany?.slug || (companies.length > 0 ? companies[0].slug : '');
@@ -98,6 +100,14 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
       if (res?.access_token) {
         setAuthSession(res.access_token, 'tenant', res.tenant_slug || cleanSlug, res.tenant_id);
         localStorage.setItem('role', res.role || res.user?.role || 'admin');
+
+        const mustChange = Boolean(res.must_change_password || (res.user as any)?.must_change_password);
+        if (mustChange) {
+          localStorage.setItem('must_change_password', 'true');
+          setShowForcePasswordModal(true);
+          return;
+        }
+
         onSuccess?.();
 
         const effectiveSlug = res.tenant_slug || cleanSlug;
@@ -631,6 +641,23 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
           )}
         </div>
       </form>
+
+      {/* Mandatory First-Login Password Change Modal */}
+      <ForceChangePasswordModal
+        isOpen={showForcePasswordModal}
+        email={identity}
+        workspaceSlug={tenantSlug}
+        onSuccess={() => {
+          setShowForcePasswordModal(false);
+          onSuccess?.();
+          const effectiveSlug = tenantSlug;
+          const customDomain = (selectedCompany as any)?.custom_domain;
+          redirectToTenantWorkspace({
+            slug: effectiveSlug,
+            custom_domain: customDomain,
+          }, '/operations/daily');
+        }}
+      />
     </div>
   );
 };

@@ -2,16 +2,22 @@
 
 {% block content %}
 <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px;">
-  Join {{ tenant.name }} on OxenGL
+  {{ headline | default('Join ' ~ tenant.name ~ ' on OxenGL') }}
 </h1>
 
 <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 20px 0;">
   Hello <strong>{{ user.first_name }}</strong>,
 </p>
 
+{% if custom_body %}
+<div style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px 0; white-space: pre-line;">
+  {{ custom_body }}
+</div>
+{% else %}
 <p style="font-size: 15px; line-height: 1.6; color: #334155; margin: 0 0 24px 0;">
   <strong>{{ inviter.name }}</strong> has invited you to join the <strong>{{ tenant.name }}</strong> workspace on OxenGL as <strong>{{ user.role }}</strong>. You can now access your dashboard, operations modules, and business data.
 </p>
+{% endif %}
 
 <!-- Credential Summary Card -->
 <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; margin: 0 0 28px 0;">
