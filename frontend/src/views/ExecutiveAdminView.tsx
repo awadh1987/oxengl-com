@@ -152,8 +152,15 @@ export const ExecutiveAdminView: React.FC = () => {
   // Recycle bin category
   const [recycleCategory, setRecycleCategory] = useState<'operations' | 'customers' | 'crushers' | 'transporters' | 'materials' | 'users'>('operations');
 
-  // Security gate check (Executive Admin: Admin/CEO & COO)
-  if (!isAdmin && !isCOO) {
+  // Security gate check (Executive Admin: Admin/CEO, COO & Tenant Owner)
+  const isOwner =
+    currentUser?.role === 'Owner' ||
+    (currentUser?.role as string) === 'owner' ||
+    (currentUser?.role as string) === 'COMPANY_OWNER' ||
+    currentUser?.iamRole === 'Owner' ||
+    (currentUser?.iamRole as string) === 'owner' ||
+    (currentUser?.iamRole as string) === 'COMPANY_OWNER';
+  if (!isAdmin && !isCOO && !isOwner) {
     return (
       <div className="flex min-h-[500px] flex-col items-center justify-center rounded-3xl border border-rose-200 bg-rose-50/50 p-8 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">

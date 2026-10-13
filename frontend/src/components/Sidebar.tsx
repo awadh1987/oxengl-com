@@ -596,7 +596,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const filteredMenuItems = useMemo(() => {
     let items = allMenuItems;
     const activeRole = currentUser?.role ?? 'Guest';
-    const isOwnerOrSuper = activeRole === 'Super_Admin' || activeRole === 'Owner';
+    const rawRole = String(currentUser?.role ?? '');
+    const rawIamRole = String(currentUser?.iamRole ?? '');
+    const isOwnerOrSuper =
+      activeRole === 'Super_Admin' ||
+      activeRole === 'Owner' ||
+      rawRole === 'owner' ||
+      rawRole === 'COMPANY_OWNER' ||
+      rawIamRole === 'Owner' ||
+      rawIamRole === 'owner' ||
+      rawIamRole === 'COMPANY_OWNER';
 
     // If availableViews is explicitly set and user is not Owner/Super_Admin (Owner/Super_Admin always has full access)
     if (availableViews && availableViews.length > 0 && !isOwnerOrSuper) {
@@ -618,8 +627,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }
       });
 
-      // Always allow governance views for Admin/COO
-      if (activeRole === 'Admin' || activeRole === 'COO') {
+      // Always allow governance views for Admin/COO/Owner
+      if (activeRole === 'Admin' || activeRole === 'COO' || isOwnerOrSuper) {
         const govIds = [
           'executive-admin',
           'master-data',

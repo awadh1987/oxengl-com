@@ -198,6 +198,14 @@ export const MasterDataView: React.FC = () => {
     return users
       .filter((user) => !user.is_deleted)
       .filter((user) => {
+        const roleNorm = String(user.role || '').trim().toUpperCase().replace(/\s+/g, '_');
+        const iamRoleNorm = String(user.iamRole || '').trim().toUpperCase().replace(/\s+/g, '_');
+        if (roleNorm === 'SUPER_ADMIN' || roleNorm === 'SUPERADMIN') return false;
+        if (iamRoleNorm === 'SUPER_ADMIN' || iamRoleNorm === 'SUPERADMIN') return false;
+        if ((user as any).is_superuser === true) return false;
+        return true;
+      })
+      .filter((user) => {
         if (query && ![
           user.fullName,
           user.fullNameAr,

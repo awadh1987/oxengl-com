@@ -1437,15 +1437,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // RBAC Permission Gates with defensive optional chaining & fallbacks
   const userRole: UserRole = currentUser?.role ?? 'Guest';
-  const isAdmin = userRole === 'Admin' || userRole === 'Super_Admin';
-  const isCOO = userRole === 'COO';
-  const isExecutive = isAdmin || isCOO;
+  const rawRoleStr = String(currentUser?.role ?? '');
+  const rawIamRoleStr = String(currentUser?.iamRole ?? '');
+  const isOwnerRole =
+    userRole === 'Owner' ||
+    rawRoleStr === 'owner' ||
+    rawRoleStr === 'COMPANY_OWNER' ||
+    rawIamRoleStr === 'Owner' ||
+    rawIamRoleStr === 'owner' ||
+    rawIamRoleStr === 'COMPANY_OWNER';
+  const isAdmin = userRole === 'Admin' || userRole === 'Super_Admin' || isOwnerRole;
+  const isCOO = userRole === 'COO' || rawIamRoleStr === 'COO';
+  const isExecutive = isAdmin || isCOO || isOwnerRole;
   const canAccessFinancials = isAdmin || isCOO || userRole === 'Accountant';
-  const canEditOperations = isAdmin || isCOO || userRole === 'Owner' || userRole === 'Accountant' || userRole === 'Data_Entry';
+  const canEditOperations = isAdmin || isCOO || isOwnerRole || userRole === 'Accountant' || userRole === 'Data_Entry';
   const canApproveEdits = isAdmin || isCOO;
-  const canApproveInvoices = isAdmin; // strictly CEO/Admin
-  const canApproveVouchers = isAdmin; // strictly CEO/Admin for PV & RV
-  const canEditBranding = isAdmin; // strictly CEO/Admin
+  const canApproveInvoices = isAdmin; // strictly CEO/Admin/Owner
+  const canApproveVouchers = isAdmin; // strictly CEO/Admin/Owner for PV & RV
+  const canEditBranding = isAdmin; // strictly CEO/Admin/Owner
   const canDeleteRecords = isAdmin || isCOO;
   const canManageSettings = isAdmin;
   const isGuestUser = userRole === 'Guest';

@@ -141,7 +141,12 @@ def _tenant_admin(request: Request, user: Any = Depends(current_user_dep), db: S
             first_comp = db.query(ResCompany).first()
             if first_comp:
                 tenant_id = first_comp.id
-    if _normalize_role(getattr(user, "role", None)) not in {"ADMIN", "OWNER"} and not _is_super_admin(user):
+    allowed_roles = {"ADMIN", "OWNER", "COMPANY_OWNER", "TENANT_OWNER", "CEO", "COO", "EXECUTIVE"}
+    user_roles = {
+        _normalize_role(getattr(user, "role", None)),
+        _normalize_role(getattr(user, "iam_role", None)),
+    }
+    if not (user_roles & allowed_roles) and not _is_super_admin(user):
         _audit(db, request, user, action="COMMUNICATION_ACCESS_DENIED", outcome="DENIED", tenant_id=tenant_id)
         db.commit()
         raise HTTPException(status_code=403, detail="Tenant Owner or Admin role is required.")

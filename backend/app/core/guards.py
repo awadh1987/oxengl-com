@@ -65,3 +65,48 @@ def assert_not_protected_tenant(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Forbidden: The system anchor company (oxengl-platform) is protected and cannot be suspended or offboarded.",
         )
+
+
+EXECUTIVE_CONSOLE_ROLES = {
+    "Admin",
+    "admin",
+    "ADMIN",
+    "Super_Admin",
+    "SUPER_ADMIN",
+    "COO",
+    "coo",
+    "CEO",
+    "ceo",
+    "EXECUTIVE",
+    "Owner",
+    "owner",
+    "OWNER",
+    "COMPANY_OWNER",
+    "TENANT_OWNER",
+}
+
+
+def is_executive_authorized(user: Any) -> bool:
+    """Return True if the user holds an Executive/Owner/Admin/COO role."""
+    if not user:
+        return False
+    if bool(getattr(user, "is_superuser", False)):
+        return True
+    for attr in ("role", "iam_role"):
+        raw = str(getattr(user, attr, "") or "").strip()
+        if not raw:
+            continue
+        if raw in EXECUTIVE_CONSOLE_ROLES or raw.upper().replace(" ", "_") in EXECUTIVE_CONSOLE_ROLES:
+            return True
+    return False
+
+
+def require_executive(user: Any) -> Any:
+    """Guard ensuring Executive Console access is permitted for Admin, COO, and Tenant Owner roles."""
+    if not is_executive_authorized(user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Restricted Area - Executive Admin Only (requires Owner, Admin, or COO role).",
+        )
+    return user
+

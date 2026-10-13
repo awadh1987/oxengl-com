@@ -54,7 +54,13 @@ def factory():
             "CREATE TABLE res_companies (id CHAR(32) PRIMARY KEY, %s)" % ", ".join(RES_COMPANY_STUB_COLUMNS)
         )
     models.Base.metadata.create_all(
-        eng, tables=[models.ResUser.__table__, models.PlatformAuditLog.__table__, models.TenantUser.__table__]
+        eng,
+        tables=[
+            models.ResUser.__table__,
+            models.PlatformAuditLog.__table__,
+            models.TenantUser.__table__,
+            models.TenantUserRole.__table__,
+        ],
     )
     yield sessionmaker(bind=eng, expire_on_commit=False, autoflush=False)
     eng.dispose()

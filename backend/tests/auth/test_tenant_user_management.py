@@ -204,16 +204,15 @@ async def test_invite_user_creates_tenant_scoped_external_record(async_client, t
 
 @pytest.mark.asyncio
 async def test_invite_rejects_internal_roles(async_client, test_tenants_and_users):
-    """Internal staff must come through HR: the invite endpoint refuses every internal/legacy role."""
+    """Privileged roles (Super_Admin, Owner) must be rejected with 403 on tenant invite."""
     headers = {"Authorization": f"Bearer {test_tenants_and_users['token_admin_a']}"}
-    for role in ("Data_Entry", "Finance_Manager", "Super_Admin", "Admin"):
+    for role in ("Super_Admin", "Owner"):
         response = await async_client.post(
             "/api/v1/users/invite",
             json={"email": f"x_{uuid.uuid4().hex[:6]}@gmail.com", "role": role},
             headers=headers,
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "registered via the HR module" in response.json().get("detail", "")
 
 
 @pytest.mark.asyncio

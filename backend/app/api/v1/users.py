@@ -156,7 +156,10 @@ class InviteUserRequest(BaseModel):
     channel: Literal["email", "sms", "manual"] = Field(
         "email", description="Temporary credential delivery channel; 'manual' returns the password once to the admin"
     )
-    role: str = Field("Guest", description="External identity type: Guest or External_Auditor")
+    role: str = Field(
+        "Member",
+        description="Workspace invite role resolved via resolve_tenant_invite_role (e.g. Admin, Manager, Accountant, Staff, Member, Guest, External_Auditor)",
+    )
     full_name: Optional[str] = Field(None, description="Full name of user")
 
     @field_validator("channel", mode="before")
@@ -553,36 +556,41 @@ def get_tenant_users(
     if not accessible_cids:
         accessible_cids = [context.company_id]
 
-    query = db.query(ResUser)
+    query = db.query(ResUser).filter(
+        ResUser.role != "Super_Admin",
+        ResUser.is_superuser == False,  # noqa: E712
+        ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+        or_(
+            ResUser.iam_role.is_(None),
+            ResUser.iam_role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+        ),
+        ResUser.deleted_at.is_(None),
+    )
     if context.is_super_admin and actor.level >= LEVEL_PLATFORM:
         # A platform super admin may scope to an explicit target company.
         if context.company_id and str(context.company_id) != str(getattr(context.user, "company_id", "")):
-            query = query.filter(
-                ResUser.company_id == context.company_id,
-                ResUser.is_superuser.is_(False),
-                ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
-            )
+            query = query.filter(ResUser.company_id == context.company_id)
         else:
             query = query.filter(ResUser.company_id.in_(accessible_cids))
     else:
         # Organization-wide listing so invitees stay visible when switching workspace/branch views.
         scope = _organization_scope(db, actor.company_id)
-        # Global super-admins never appear inside tenant matrices.
-        query = query.filter(
-            ResUser.company_id.in_(scope),
-            ResUser.is_superuser.is_(False),
-            ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
-        )
+        query = query.filter(ResUser.company_id.in_(scope))
 
-    users = query.filter(ResUser.deleted_at.is_(None)).order_by(ResUser.created_at.desc()).all()
+    users = query.order_by(ResUser.created_at.desc()).all()
     if not users and actor.user_id is not None:
         # Never render an empty matrix: seed the session owner's own record (already persisted) into the view if not a superadmin.
         owner = (
             db.query(ResUser)
             .filter(
                 ResUser.id == actor.user_id,
-                ResUser.is_superuser.is_(False),
+                ResUser.role != "Super_Admin",
+                ResUser.is_superuser == False,  # noqa: E712
                 ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+                or_(
+                    ResUser.iam_role.is_(None),
+                    ResUser.iam_role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+                ),
                 ResUser.deleted_at.is_(None),
             )
             .first()
@@ -904,7 +912,7 @@ def is_ghost_or_unverified_account(user: ResUser, tenant_id: uuid.UUID, db: Sess
 
 
 # ==============================================================================
-# 2. POST /api/v1/users/invite  (external / contractor identities ONLY)
+# 2. POST /api/v1/users/invite  (workspace user invitations via resolve_tenant_invite_role)
 # ==============================================================================
 @router.post(
     "/invite", response_model=InviteUserResponse, response_model_exclude_none=True, status_code=status.HTTP_201_CREATED
@@ -917,13 +925,13 @@ async def invite_tenant_user(
     response: Response = None,  # type: ignore[assignment]  # injected by FastAPI
 ):
     """
-    Invite an external identity (Guest / External_Auditor) into the caller's own workspace.
+    Invite a workspace user (Admin, Manager, Accountant, Staff, Member, Guest, External_Auditor,
+    or any non-privileged workspace role resolved via resolve_tenant_invite_role) into the caller's workspace.
 
-    Internal staff must be registered through HR. A temporary password is sent out-of-band through
-    the selected channel, stored only as a strong hash, and marked for change on first login.
-    Credentials are never logged; they are returned once, only for the explicit manual channel.
-    If an existing account is in an unverified or soft-deleted 'ghost' state, it is safely
-    re-invited with newly generated temporary credentials.
+    A temporary password is sent out-of-band through the selected channel, stored only as a strong
+    hash, and marked for change on first login. Credentials are never logged; they are returned
+    once, only for the explicit manual channel. If an existing account is in an unverified or
+    soft-deleted 'ghost' state, it is safely re-invited with newly generated temporary credentials.
     """
     tenant_id = actor.company_id
     if tenant_id is None:

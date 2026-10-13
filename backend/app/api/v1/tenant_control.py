@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, status
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
@@ -213,8 +213,13 @@ def list_team_members(
         db.query(ResUser)
         .filter(
             ResUser.company_id == target_uuid,
-            ResUser.is_superuser.is_(False),
+            ResUser.role != "Super_Admin",
+            ResUser.is_superuser == False,  # noqa: E712
             ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+            or_(
+                ResUser.iam_role.is_(None),
+                ResUser.iam_role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+            ),
             ResUser.deleted_at.is_(None),
         )
         .all()

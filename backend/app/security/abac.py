@@ -48,10 +48,13 @@ class ABACEngine:
             if action.startswith("PAYROLL_") and role_upper in ["LOGISTICS_DRIVER", "DRIVER", "WAREHOUSE_OPERATOR"]:
                 return False
 
-        # 0b. Super Admin or Executive Admin/CEO Override:
-        # Users with Admin or CEO role have full executive clearance for their assigned company
-        user_role = str(getattr(user, "role", "") or "").upper().replace(" ", "_")
-        is_exec = user.is_super_admin or user_role in ["SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "EXECUTIVE"]
+        # 0b. Super Admin or Executive Admin/CEO/Owner Override:
+        # Users with Admin, Owner, COO, or CEO role have full executive clearance for their assigned company
+        raw_role = str(getattr(user, "role", "") or "").strip()
+        user_role = raw_role.upper().replace(" ", "_")
+        is_exec = user.is_super_admin or raw_role in ["Owner", "owner", "COMPANY_OWNER"] or user_role in [
+            "SUPER_ADMIN", "SUPERADMIN", "ADMIN", "CEO", "COO", "EXECUTIVE", "OWNER", "COMPANY_OWNER", "TENANT_OWNER"
+        ]
         if is_exec:
             if user.is_super_admin:
                 return True

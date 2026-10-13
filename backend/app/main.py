@@ -385,23 +385,24 @@ def verify_migration_managed_schema() -> None:
 			)
 	try:
 		with SessionLocal() as db:
-			db.execute(text("ALTER TABLE weighbridge_tickets ADD COLUMN IF NOT EXISTS uom VARCHAR(32) DEFAULT 'MT';"))
-			db.execute(text("CREATE OR REPLACE VIEW public.chart_of_accounts AS SELECT id, tenant_id, company_id, code AS account_code, name AS account_name, path AS node_path, account_type, currency, is_active, created_at, parent_id FROM public.accounts;"))
-			db.execute(text("ALTER TABLE res_companies ALTER COLUMN logo_url TYPE TEXT;"))
-			db.execute(text("ALTER TABLE tenants ALTER COLUMN logo_url TYPE TEXT;"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;"))
-			db.execute(text("CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS workspace_login_url VARCHAR(500);"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_headline VARCHAR(255);"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_body TEXT;"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_name VARCHAR(100) DEFAULT 'Executive Administration';"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_title VARCHAR(100) DEFAULT 'Operations Team';"))
-			db.execute(text("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS support_email VARCHAR(255);"))
-			db.execute(text("ALTER TABLE res_users ADD COLUMN IF NOT EXISTS invitation_status VARCHAR(32) DEFAULT 'pending';"))
-			db.execute(text("UPDATE res_users SET invitation_status = CASE WHEN must_change_password IS TRUE THEN 'pending' ELSE 'active' END WHERE invitation_status IS NULL;"))
-			db.execute(text("ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;"))
-			db.execute(text("ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_code_key;"))
-			db.execute(text("""
+			ddl_statements = [
+				"ALTER TABLE weighbridge_tickets ADD COLUMN IF NOT EXISTS uom VARCHAR(32) DEFAULT 'MT';",
+				"CREATE OR REPLACE VIEW public.chart_of_accounts AS SELECT id, tenant_id, company_id, code AS account_code, name AS account_name, path AS node_path, account_type, currency, is_active, created_at, parent_id FROM public.accounts;",
+				"ALTER TABLE res_companies ALTER COLUMN logo_url TYPE TEXT;",
+				"ALTER TABLE tenants ALTER COLUMN logo_url TYPE TEXT;",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;",
+				"CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS workspace_login_url VARCHAR(500);",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_headline VARCHAR(255);",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS invitation_body TEXT;",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_name VARCHAR(100) DEFAULT 'Executive Administration';",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS signature_title VARCHAR(100) DEFAULT 'Operations Team';",
+				"ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS support_email VARCHAR(255);",
+				"ALTER TABLE res_users ADD COLUMN IF NOT EXISTS invitation_status VARCHAR(32) DEFAULT 'pending';",
+				"UPDATE res_users SET invitation_status = CASE WHEN must_change_password IS TRUE THEN 'pending' ELSE 'active' END WHERE invitation_status IS NULL;",
+				"ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES accounts(id) ON DELETE SET NULL;",
+				"ALTER TABLE accounts DROP CONSTRAINT IF EXISTS accounts_code_key;",
+				"""
 				DO $$
 				BEGIN
 					IF NOT EXISTS (
@@ -410,52 +411,59 @@ def verify_migration_managed_schema() -> None:
 						ALTER TABLE accounts ADD CONSTRAINT uq_accounts_tenant_code UNIQUE (tenant_id, code);
 					END IF;
 				END $$;
-			"""))
-			# SaaS Billing & Subscription Schema Self-Healing
-			db.execute(text("ALTER TABLE subscription_plans ALTER COLUMN stripe_price_id DROP NOT NULL;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_name VARCHAR(100) DEFAULT 'Standard Plan';"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS annual_price NUMERIC(10, 2) DEFAULT 0.00;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_product_id VARCHAR(255);"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_storage_gb INTEGER DEFAULT 10;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_monthly_transactions INTEGER DEFAULT 1000;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_external_database BOOLEAN DEFAULT FALSE;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_custom_domain BOOLEAN DEFAULT FALSE;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_dedicated_ssl BOOLEAN DEFAULT FALSE;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features JSON DEFAULT '[]'::json;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_features JSON NOT NULL DEFAULT '[]'::json;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;"))
-			db.execute(text("ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ALTER COLUMN stripe_customer_id DROP NOT NULL;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(32) DEFAULT 'monthly';"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(64) DEFAULT 'card';"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_storage_mb_used INTEGER DEFAULT 0;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ DEFAULT NOW();"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMPTZ;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS custom_limits JSON;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS notes TEXT;"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();"))
-			db.execute(text("ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subscription_id UUID REFERENCES tenant_subscriptions(id) ON DELETE SET NULL;"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES subscription_plans(id) ON DELETE SET NULL;"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(64) DEFAULT 'stripe_card';"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS po_number VARCHAR(100);"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subtotal_sar NUMERIC(18, 4) DEFAULT 0;"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS tax_sar NUMERIC(18, 4) DEFAULT 0;"))
-			db.execute(text("ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS notes TEXT;"))
-			db.execute(text("ALTER TABLE saas_invoices DROP CONSTRAINT IF EXISTS ck_saas_invoice_cycle;"))
-			db.execute(text("ALTER TABLE saas_invoices ADD CONSTRAINT ck_saas_invoice_cycle CHECK (billing_cycle IN ('monthly', 'yearly', 'annual', 'quarterly', 'contract'));"))
-			db.execute(text("ALTER TABLE master_tenants DROP CONSTRAINT IF EXISTS ck_master_tenant_tier;"))
-			db.execute(text("ALTER TABLE master_tenants ADD CONSTRAINT ck_master_tenant_tier CHECK (subscription_tier IN ('starter', 'standard', 'growth', 'enterprise', 'free', 'professional'));"))
+				""",
+				# SaaS Billing & Subscription Schema Self-Healing
+				"ALTER TABLE subscription_plans ALTER COLUMN stripe_price_id DROP NOT NULL;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_name VARCHAR(100) DEFAULT 'Standard Plan';",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS annual_price NUMERIC(10, 2) DEFAULT 0.00;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_product_id VARCHAR(255);",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_storage_gb INTEGER DEFAULT 10;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_monthly_transactions INTEGER DEFAULT 1000;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_external_database BOOLEAN DEFAULT FALSE;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_custom_domain BOOLEAN DEFAULT FALSE;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_dedicated_ssl BOOLEAN DEFAULT FALSE;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features JSON DEFAULT '[]'::json;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_features JSON NOT NULL DEFAULT '[]'::json;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;",
+				"ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;",
+				"ALTER TABLE tenant_subscriptions ALTER COLUMN stripe_customer_id DROP NOT NULL;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(32) DEFAULT 'monthly';",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(64) DEFAULT 'card';",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_storage_mb_used INTEGER DEFAULT 0;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ DEFAULT NOW();",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMPTZ;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS custom_limits JSON;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS notes TEXT;",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();",
+				"ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subscription_id UUID REFERENCES tenant_subscriptions(id) ON DELETE SET NULL;",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS plan_id UUID REFERENCES subscription_plans(id) ON DELETE SET NULL;",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_method VARCHAR(64) DEFAULT 'stripe_card';",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS payment_reference VARCHAR(255);",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS po_number VARCHAR(100);",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS subtotal_sar NUMERIC(18, 4) DEFAULT 0;",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS tax_sar NUMERIC(18, 4) DEFAULT 0;",
+				"ALTER TABLE saas_invoices ADD COLUMN IF NOT EXISTS notes TEXT;",
+				"ALTER TABLE saas_invoices DROP CONSTRAINT IF EXISTS ck_saas_invoice_cycle;",
+				"ALTER TABLE saas_invoices ADD CONSTRAINT ck_saas_invoice_cycle CHECK (billing_cycle IN ('monthly', 'yearly', 'annual', 'quarterly', 'contract'));",
+				"ALTER TABLE master_tenants DROP CONSTRAINT IF EXISTS ck_master_tenant_tier;",
+				"ALTER TABLE master_tenants ADD CONSTRAINT ck_master_tenant_tier CHECK (subscription_tier IN ('starter', 'standard', 'growth', 'enterprise', 'free', 'professional'));",
+			]
+			for stmt in ddl_statements:
+				try:
+					with db.begin_nested():
+						db.execute(text(stmt))
+				except Exception as stmt_exc:
+					logging.getLogger("uvicorn.error").warning(f"Schema self-healing statement warning: {stmt_exc}")
 			db.commit()
 
 			# Auto-seed the 3-tier subscription plans (Free, Professional, Enterprise)
@@ -487,7 +495,7 @@ class DynamicTenantCORSMiddleware(CORSMiddleware):
 			host = (parsed.hostname or "").lower().strip()
 			if not host:
 				return False
-			if host in ("localhost", "127.0.0.1", "0.0.0.0", "testserver"):
+			if host == "testserver":
 				return True
 			# Dynamically check tenant custom domain resolution
 			from backend.app.core.middleware import resolve_tenant_from_host
@@ -1187,8 +1195,20 @@ def require_tenant_admin(
 	company_id: uuid.UUID = Depends(get_active_company_id),
 ) -> models.ResUser:
 	"""TenantContext security guard restricting tenant administrative actions."""
-	role_normalized = str(getattr(current_user, "role", "") or "").upper().replace(" ", "_")
-	if not getattr(current_user, "is_superuser", False) and role_normalized not in {"SUPER_ADMIN", "ADMIN", "OWNER", "TENANT_OWNER", "COMPANY_OWNER", "CEO", "EXECUTIVE"}:
+	role_raw = str(getattr(current_user, "role", "") or "").strip()
+	iam_raw = str(getattr(current_user, "iam_role", "") or "").strip()
+	allowed_exec_roles = {
+		"SUPER_ADMIN", "ADMIN", "OWNER", "owner", "Owner",
+		"TENANT_OWNER", "COMPANY_OWNER", "CEO", "COO", "EXECUTIVE",
+	}
+	is_allowed = (
+		getattr(current_user, "is_superuser", False)
+		or role_raw in allowed_exec_roles
+		or iam_raw in allowed_exec_roles
+		or role_raw.upper().replace(" ", "_") in allowed_exec_roles
+		or iam_raw.upper().replace(" ", "_") in allowed_exec_roles
+	)
+	if not is_allowed:
 		record_security_event(
 			database,
 			event_type="policy_denial",
@@ -5560,8 +5580,13 @@ def list_tenant_users(
 				models.ResUser.company_id == company_id,
 				models.ResUser.id.in_(user_ids_subq),
 			),
-			models.ResUser.is_superuser.is_(False),
+			models.ResUser.role != "Super_Admin",
+			models.ResUser.is_superuser == False,  # noqa: E712
 			models.ResUser.role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+			or_(
+				models.ResUser.iam_role.is_(None),
+				models.ResUser.iam_role.notin_(["Super_Admin", "super_admin", "SUPER_ADMIN", "SUPERADMIN"]),
+			),
 			models.ResUser.deleted_at.is_(None),
 		)
 		.distinct()

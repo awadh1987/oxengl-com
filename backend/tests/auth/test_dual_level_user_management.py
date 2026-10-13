@@ -265,19 +265,18 @@ async def test_tenant_user_create_enforces_hr_rule_and_isolation(async_client, d
     headers_1 = {"Authorization": f"Bearer {dual_level_test_env['token_admin_1']}"}
     tenant_1_id = str(dual_level_test_env["tenant_1_id"])
 
-    # 1. Internal role rejected with HR notice
+    # 1. Privileged platform role rejected on tenant user creation
     resp_hr = await async_client.post(
         "/api/v1/tenant/users",
         json={
             "email": f"operator_{uuid.uuid4().hex[:6]}@alpha.com",
-            "full_name": "Internal Operator",
+            "full_name": "Unauthorized Super Admin",
             "password": "Password123!",
-            "role": "Data_Entry",
+            "role": "Super_Admin",
         },
         headers=headers_1,
     )
-    assert resp_hr.status_code == status.HTTP_403_FORBIDDEN
-    assert "registered via the HR module" in resp_hr.json().get("detail", "")
+    assert resp_hr.status_code in (status.HTTP_400_BAD_REQUEST, status.HTTP_403_FORBIDDEN)
 
     # 2. External role created successfully
     guest_email = f"guest_{uuid.uuid4().hex[:6]}@partner.sa"
