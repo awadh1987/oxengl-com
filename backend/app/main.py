@@ -794,29 +794,43 @@ def get_request_id(request: Request) -> str:
 	return request.headers.get("x-request-id") or str(uuid.uuid4())
 
 
-def get_authenticated_user(request: Request, database: Session = Depends(get_db)) -> models.ResUser:
-	token = request.cookies.get(SESSION_COOKIE_NAME)
-	if not token:
-		auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
-		if auth_header and auth_header.startswith("Bearer "):
-			token = auth_header.split(" ", 1)[1].strip()
-	if not token:
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication session is required")
-	claims = None
+def _decode_credential_claims(token: str) -> dict[str, object] | None:
 	try:
-		claims = decode_session_token(token)
+		return decode_session_token(token)
 	except Exception:
+		pass
+	try:
+		from .two_tier_auth import verify_two_tier_jwt
+	except ImportError:
+		from backend.two_tier_auth import verify_two_tier_jwt
+	for tier in ("tenant", "master"):
 		try:
-			from .two_tier_auth import verify_two_tier_jwt
-		except ImportError:
-			from backend.two_tier_auth import verify_two_tier_jwt
-		try:
-			claims = verify_two_tier_jwt(token, expected_tier="tenant")
+			return verify_two_tier_jwt(token, expected_tier=tier)
 		except Exception:
-			try:
-				claims = verify_two_tier_jwt(token, expected_tier="master")
-			except Exception as error:
-				raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session") from error
+			continue
+	return None
+
+
+def get_authenticated_user(request: Request, database: Session = Depends(get_db)) -> models.ResUser:
+	candidates: list[str] = []
+	cookie_token = request.cookies.get(SESSION_COOKIE_NAME)
+	if cookie_token:
+		candidates.append(cookie_token)
+	auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+	if auth_header and auth_header.startswith("Bearer "):
+		bearer_token = auth_header.split(" ", 1)[1].strip()
+		if bearer_token and bearer_token not in candidates:
+			candidates.append(bearer_token)
+	if not candidates:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication session is required")
+	# A stale/invalid cookie must not mask a valid Bearer token.
+	claims = None
+	for candidate in candidates:
+		claims = _decode_credential_claims(candidate)
+		if claims is not None:
+			break
+	if claims is None:
+		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired session")
 
 	email = str(claims.get("identity") or claims.get("sub") or "").lower().strip()
 	if not email:
