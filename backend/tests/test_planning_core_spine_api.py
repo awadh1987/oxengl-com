@@ -739,3 +739,109 @@ def test_list_projects_status_normalization_and_case_insensitive_db_filter(seede
     )
     assert bad_status.status_code == 422
 
+
+def test_create_project_modal_payloads_and_extra_top_level_fields_ignored(seeded_tenants):
+    """
+    Verifies that:
+    1. All 6 project archetypes created via the frontend ProjectCreationModal succeed (201).
+    2. If any harmless UI-only top-level fields (`company_id`, `start_date`, `end_date`, `currency_id`)
+       are ever included in the request body, `CoreProjectCreate` (`extra="ignore"`) silently ignores them
+       without raising a 422 validation error.
+    """
+    client = TestClient(app)
+    tenant_a = seeded_tenants["tenant_a"]
+    headers = {"X-Tenant-ID": str(tenant_a)}
+
+    modal_payloads = [
+        {
+            "name": "Red Sea Logistics Spine",
+            "project_type": "logistics",
+            "status": "Active Execution",
+            "financial_envelope": 2500000,
+            "metadata_json": {
+                "origin": "Jeddah Islamic Port",
+                "destination": "Riyadh Dry Port",
+                "cargo_type": "Breakbulk & Heavy ISO Containers",
+                "estimated_distance_km": 949,
+                "vehicle_requirements": ["40T Lowbed", "Reefer 40ft"],
+                "custom_attributes": {"beneficiary_client_ref": "Ma'aden Logistics"},
+            },
+        },
+        {
+            "name": "Jubail Industrial Supply Chain",
+            "project_type": "supply_chain",
+            "status": "Active Execution",
+            "financial_envelope": 1800000,
+            "metadata_json": {
+                "origin_hub": "Jubail Industrial Hub",
+                "destination_hub": "NEOM Oxagon Port",
+                "incoterms": "CIF",
+                "commodity_category": "Industrial Petrochemicals",
+                "lead_time_days": 14,
+            },
+        },
+        {
+            "name": "UNHCR Relief Corridor",
+            "project_type": "humanitarian_supply",
+            "status": "Active Execution",
+            "financial_envelope": 3200000,
+            "metadata_json": {
+                "donor_organization": "UNHCR / KSrelief Joint Mission",
+                "grant_code": "UN-KSR-2026-884",
+                "target_demographics": "Displaced Families & Regional Clinics",
+                "target_beneficiaries": 25000,
+                "relief_cluster": "WASH, Medical & Cold-Chain Food",
+            },
+        },
+        {
+            "name": "NEOM Spine Substation EPC",
+            "project_type": "epc",
+            "status": "Planning",
+            "financial_envelope": 9500000,
+            "metadata_json": {
+                "site_location": "NEOM Spine Zone 4 - Tabuk",
+                "contractor_tier": "Tier-1 Turnkey EPC",
+                "retention_percentage": 10,
+                "wbs_phases": ["1.0 Civil Works", "2.0 MEP", "3.0 Substation"],
+            },
+        },
+        {
+            "name": "Ghawar Block-72 Rig Logistics",
+            "project_type": "oil_gas",
+            "status": "Active Execution",
+            "financial_envelope": 6400000,
+            "metadata_json": {
+                "well_block_id": "GHAWAR-BLK-72",
+                "rig_code": "RIG-ARAMCO-409",
+                "hazmat_class": "Class 3 Flammable Liquids",
+                "hse_clearance_level": "ARAMCO-HSE-LEVEL-4-CRITICAL",
+                "daily_barrel_target": 15000,
+            },
+        },
+        {
+            "name": "Al-Qassim Cold-Chain Harvest",
+            "project_type": "commercial_agribusiness",
+            "status": "Active Execution",
+            "financial_envelope": 1450000,
+            "metadata_json": {
+                "crop_commodity": "Organic Medjool Dates & Wheat",
+                "harvest_season": "Q3-2026 Autumn Harvest",
+                "hectares_area": 1200,
+                "cold_chain_required": True,
+            },
+            # Also verify extra top-level UI fields are silently ignored by CoreProjectCreate
+            "company_id": None,
+            "start_date": "2026-01-01",
+            "end_date": "2026-12-31",
+            "currency_id": "SAR",
+        },
+    ]
+
+    for payload in modal_payloads:
+        resp = client.post("/api/v1/planning/projects", headers=headers, json=payload)
+        assert resp.status_code == 201, f"Failed for {payload['project_type']}: {resp.text}"
+        body = resp.json()
+        assert body["name"] == payload["name"]
+        assert body["project_type"] == payload["project_type"]
+
+

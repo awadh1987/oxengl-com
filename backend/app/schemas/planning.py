@@ -51,14 +51,20 @@ class LogisticsMetadata(BaseModel):
     transport_mode: Optional[Literal["road", "sea", "air", "rail", "multi_modal"]] = None
     origin_hub: Optional[str] = None
     destination_hub: Optional[str] = None
+    origin: Optional[str] = None
+    destination: Optional[str] = None
     route_corridor: Optional[str] = None
     customs_regime: Optional[str] = None
     container_count: Optional[int] = Field(default=None, ge=0)
     fleet_allocation_count: Optional[int] = Field(default=None, ge=0)
     cargo_classification: Optional[str] = None
+    cargo_type: Optional[str] = None
+    estimated_distance_km: Optional[float] = Field(default=None, ge=0.0)
+    vehicle_requirements: Optional[List[str]] = None
     sla_target_hours: Optional[float] = Field(default=None, ge=0.0)
     max_payload_tons: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
     cold_chain_required: Optional[bool] = None
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
     @model_validator(mode="after")
@@ -76,12 +82,15 @@ class SupplyChainMetadata(BaseModel):
     """Metadata schema for `supply_chain` (GCC mega-project materials, rations, fuel/energy)."""
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
+    origin_hub: Optional[str] = None
+    destination_hub: Optional[str] = None
     commodity_category: Optional[str] = None
     incoterms: Optional[str] = None
     lead_time_days: Optional[int] = Field(default=None, ge=0)
     warehouse_hub: Optional[str] = None
     materials_list: Optional[List[str]] = None
     safety_stock_pct: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
 
@@ -90,15 +99,20 @@ class HumanitarianSupplyMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     donor_agency: Optional[str] = None
+    donor_organization: Optional[str] = None
     donor_grant_code: Optional[str] = None
+    grant_code: Optional[str] = None
     cluster_sector: Optional[str] = None
+    relief_cluster: Optional[str] = None
     grant_reference: Optional[str] = None
     distribution_region: Optional[str] = None
+    target_demographics: Optional[str] = None
     target_beneficiaries: Optional[int] = Field(default=None, ge=0)
     target_beneficiaries_count: Optional[int] = Field(default=None, ge=0)
     distribution_camps: Optional[List[str]] = None
     customs_exemption_ref: Optional[str] = None
     last_mile_audit_required: Optional[bool] = True
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
 
@@ -107,6 +121,7 @@ class EpcMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     contract_type: Optional[str] = None
+    contractor_tier: Optional[str] = None
     site_code: Optional[str] = None
     retention_percentage: Optional[Decimal] = Field(
         default=None, ge=Decimal("0"), le=Decimal("100")
@@ -115,6 +130,8 @@ class EpcMetadata(BaseModel):
     site_location: Optional[str] = None
     prime_contractor: Optional[str] = None
     subcontractors: Optional[List[str]] = None
+    wbs_phases: Optional[List[str]] = None
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
 
@@ -123,11 +140,16 @@ class OilGasMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     field_stream: Optional[Literal["upstream", "midstream", "downstream", "integrated"]] = None
+    well_block_id: Optional[str] = None
     rig_identifier: Optional[str] = None
+    rig_code: Optional[str] = None
     hazmat_classification: Optional[str] = None
+    hazmat_class: Optional[str] = None
     hse_compliance_tier: Optional[str] = None
+    hse_clearance_level: Optional[str] = None
     well_count: Optional[int] = Field(default=None, ge=0)
     daily_barrel_target: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
 
@@ -136,11 +158,16 @@ class CommercialAgribusinessMetadata(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     crop_or_product_line: Optional[str] = None
+    crop_commodity: Optional[str] = None
+    harvest_season: Optional[str] = None
+    hectares_area: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
+    cold_chain_required: Optional[bool] = None
     cycle_duration_days: Optional[int] = Field(default=None, ge=0)
     cold_chain_min_temp_c: Optional[float] = None
     cold_chain_max_temp_c: Optional[float] = None
     bom_reference: Optional[str] = None
     expected_yield_tons: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
+    beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
     @model_validator(mode="after")
@@ -209,7 +236,7 @@ class PartnerBrief(BaseModel):
 
 class CoreProjectBase(BaseModel):
     """Shared attributes for `CoreProject` creation and representation."""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
 
     name: Optional[str] = Field(
         default=None,
@@ -340,6 +367,7 @@ def get_status_search_variants(
 
 class CoreProjectCreate(CoreProjectBase):
     """Payload for `POST /api/v1/planning/projects`."""
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
 
     @model_validator(mode="after")
     def _validate_polymorphic_metadata(self) -> "CoreProjectCreate":
@@ -351,7 +379,7 @@ class CoreProjectCreate(CoreProjectBase):
 
 class CoreProjectUpdate(BaseModel):
     """Payload for `PUT /api/v1/planning/projects/{project_id}`."""
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True, extra="ignore")
 
     name: Optional[str] = Field(
         default=None,

@@ -360,22 +360,28 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
     if (clientId && !isUuid(clientId)) {
       const matchedClient = clientOptions.find((c) => c.id === clientId);
       if (matchedClient) {
-        metadataPayload.beneficiary_client_ref = matchedClient.name;
+        metadataPayload.custom_attributes = {
+          ...(metadataPayload.custom_attributes || {}),
+          beneficiary_client_ref: matchedClient.name,
+        };
       }
     }
 
+    const numericBudget = Number(totalBudget) || 0;
+    const normalizedCurrency = currencyId.toUpperCase() || 'SAR';
+    const resolvedCompanyId =
+      currentCompanyId && isUuid(currentCompanyId) ? currentCompanyId : null;
+
+    // Strictly match backend CoreProjectCreate schema (omit UI-only/read-only fields:
+    // company_id, start_date, end_date, currency_id)
     const payload: CoreProjectCreatePayload = {
-      company_id: currentCompanyId && isUuid(currentCompanyId) ? currentCompanyId : null,
       parent_project_id: parentProjectId && isUuid(parentProjectId) ? parentProjectId : null,
       project_code: projectCode.trim().toUpperCase(),
       name: projectName.trim(),
       project_type: projectType,
       status,
       client_id: clientId && isUuid(clientId) ? clientId : null,
-      start_date: startDate,
-      end_date: endDate || null,
-      total_budget: Number(totalBudget) || 0,
-      currency_id: currencyId.toUpperCase(),
+      financial_envelope: numericBudget,
       metadata_json: metadataPayload,
       esg_metrics: {
         co2_emissions_kg: Number(co2TargetKg) || 0,
@@ -391,24 +397,35 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
 
     try {
       const created = await erpApi.createCoreProject(payload, currentCompanyId || undefined);
-      onCreated(created);
+      onCreated({
+        ...created,
+        name: created.name || payload.name,
+        total_budget: Number(
+          (created as any).total_budget ??
+            (created as any).financial_envelope ??
+            numericBudget
+        ),
+        start_date: created.start_date || startDate,
+        end_date: created.end_date ?? (endDate || null),
+        currency_id: created.currency_id || normalizedCurrency,
+      });
       onClose();
     } catch (err: any) {
       // If offline/demo mode, synthesize deterministic CoreProjectRecord so user workflow remains uninterrupted
       const fallbackRecord: CoreProjectRecord = {
         id: crypto.randomUUID ? crypto.randomUUID() : `11111111-2222-4333-8444-${Date.now().toString().slice(-12)}`,
         tenant_id: '00000000-0000-0000-0000-000000000001',
-        company_id: payload.company_id || null,
+        company_id: resolvedCompanyId,
         parent_project_id: payload.parent_project_id || null,
-        project_code: payload.project_code,
+        project_code: payload.project_code || 'PRJ-GEN-2026-001',
         name: payload.name,
         project_type: payload.project_type,
-        status: payload.status || 'active',
+        status: payload.status || 'Active Execution',
         client_id: payload.client_id || null,
-        start_date: payload.start_date,
-        end_date: payload.end_date || null,
-        total_budget: payload.total_budget,
-        currency_id: payload.currency_id || 'SAR',
+        start_date: startDate,
+        end_date: endDate || null,
+        total_budget: numericBudget,
+        currency_id: normalizedCurrency,
         metadata_json: payload.metadata_json,
         esg_metrics: payload.esg_metrics || {},
         telemetry_data: payload.telemetry_data || {},
@@ -1272,6 +1289,7 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
                   variant="primary"
                   icon={CheckCircle2}
                   isLoading={submitting}
+                  data-testid="wizard-submit-btn"
                 >
                   {isAr ? 'اعتماد وتأسيس المشروع' : 'Deploy Core Spine Project'}
                 </Button>

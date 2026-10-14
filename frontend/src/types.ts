@@ -913,34 +913,30 @@ export interface CoreProjectRecord {
 }
 
 export interface CoreProjectCreatePayload {
-  company_id?: string | null;
   parent_project_id?: string | null;
-  project_code: string;
+  project_code?: string;
   name: string;
   project_type: CoreProjectType;
   status?: CoreProjectStatus;
   client_id?: string | null;
-  start_date: string;
-  end_date?: string | null;
-  total_budget: number;
-  currency_id?: string;
+  beneficiary_id?: string | null;
+  financial_envelope?: number;
+  total_budget?: number;
   metadata_json: Record<string, any>;
   esg_metrics?: Record<string, any>;
   telemetry_data?: Record<string, any>;
 }
 
 export interface CoreProjectUpdatePayload {
-  company_id?: string | null;
   parent_project_id?: string | null;
   project_code?: string;
   name?: string;
   project_type?: CoreProjectType;
   status?: CoreProjectStatus;
   client_id?: string | null;
-  start_date?: string;
-  end_date?: string | null;
+  beneficiary_id?: string | null;
+  financial_envelope?: number;
   total_budget?: number;
-  currency_id?: string;
   metadata_json?: Record<string, any>;
   esg_metrics?: Record<string, any>;
   telemetry_data?: Record<string, any>;

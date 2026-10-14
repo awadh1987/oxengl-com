@@ -105,6 +105,27 @@ describe('PlanningHubView & Command Center Suite', () => {
       expect(screen.getByText(/Well \/ Concession Block ID/i)).toBeDefined();
       expect(screen.getByText(/Drilling Rig Code/i)).toBeDefined();
     });
+
+    // Advance to Step 3 and submit the form
+    fireEvent.click(screen.getByTestId('wizard-next-step-btn'));
+
+    const submitBtn = await screen.findByTestId('wizard-submit-btn');
+    fireEvent.click(submitBtn);
+
+    const mockCreate = vi.mocked(erpApi.createCoreProject);
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    const sentPayload = mockCreate.mock.calls[0][0] as Record<string, any>;
+    expect(sentPayload.name).toBe('Ghawar South Rig Logistics Spine');
+    expect(sentPayload.project_type).toBe('oil_gas');
+    expect(sentPayload.financial_envelope).toBe(1500000);
+    // Ensure the 4 extra UI-only / read-only fields are stripped from the request body
+    expect(sentPayload).not.toHaveProperty('company_id');
+    expect(sentPayload).not.toHaveProperty('start_date');
+    expect(sentPayload).not.toHaveProperty('end_date');
+    expect(sentPayload).not.toHaveProperty('currency_id');
   });
 
   it('ProjectSelector queries status="Active Execution" and shows clean fallback notice when API fails', async () => {
