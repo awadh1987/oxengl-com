@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import date, datetime, timezone
 from decimal import Decimal
@@ -12,6 +13,9 @@ from sqlalchemy import Date, JSON, BigInteger, Boolean, CheckConstraint, Column,
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, foreign, mapped_column, relationship
+
+sys.modules.setdefault("models", sys.modules[__name__])
+sys.modules.setdefault("backend.models", sys.modules[__name__])
 
 def utc_now() -> datetime:
     """Return timezone-aware current UTC datetime."""
@@ -717,6 +721,9 @@ class StockPicking(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("core_projects.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     reference: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     picking_type: Mapped[str] = mapped_column(String(32), nullable=False)
     state: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
@@ -724,6 +731,7 @@ class StockPicking(TimestampMixin, Base):
     scheduled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
+    project: Mapped[Optional["CoreProject"]] = relationship("CoreProject", back_populates="stock_pickings", overlaps="pickings")
     moves: Mapped[list[StockMove]] = relationship(back_populates="picking", cascade="all, delete-orphan")
     weighbridge_tickets: Mapped[list[WeighbridgeTicket]] = relationship(back_populates="picking", cascade="all, delete-orphan")
     partner: Mapped[Optional[ResPartner]] = relationship(back_populates="pickings")
@@ -1053,6 +1061,9 @@ class AccountMoveLine(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("core_projects.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     move_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account_moves.id", ondelete="CASCADE"), nullable=False, index=True)
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("account_accounts.id"), nullable=False)
     partner_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"))
@@ -1061,6 +1072,7 @@ class AccountMoveLine(Base):
     credit: Mapped[Decimal] = mapped_column(Numeric(18, 4), nullable=False, default=Decimal("0"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 
+    project: Mapped[Optional["CoreProject"]] = relationship("CoreProject", back_populates="journal_items", overlaps="account_move_lines")
     move: Mapped[AccountMove] = relationship(back_populates="lines")
     account: Mapped[AccountAccount] = relationship(back_populates="move_lines")
     cost_center: Mapped[Optional[CostCenter]] = relationship()
@@ -1444,6 +1456,9 @@ class PurchaseOrder(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("core_projects.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     po_number: Mapped[str] = mapped_column(String(64), nullable=False)
     partner_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_partners.id"), nullable=False, index=True)
     cost_center_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("cost_centers.id", ondelete="SET NULL"), index=True)
@@ -1459,6 +1474,7 @@ class PurchaseOrder(TimestampMixin, Base):
     custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
+    project: Mapped[Optional["CoreProject"]] = relationship("CoreProject", back_populates="purchase_orders")
     partner: Mapped[ResPartner] = relationship()
     cost_center: Mapped[Optional[CostCenter]] = relationship()
     purchasing_organization: Mapped[Optional[PurchasingOrganization]] = relationship()
@@ -1840,6 +1856,9 @@ class StockMovement(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("core_projects.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     movement_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     stock_item_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("stock_items.id"), nullable=False, index=True)
     lot_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("stock_lots.id", ondelete="SET NULL"), index=True)
@@ -1856,6 +1875,7 @@ class StockMovement(TimestampMixin, Base):
     custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
+    project: Mapped[Optional["CoreProject"]] = relationship("CoreProject", back_populates="stock_movements")
     stock_item: Mapped[StockItem] = relationship(back_populates="movements")
     lot: Mapped[Optional[StockLot]] = relationship(back_populates="movements")
     warehouse: Mapped[Warehouse] = relationship(back_populates="stock_movements")
@@ -2535,6 +2555,9 @@ class FleetTrip(TimestampMixin, Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     company_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("res_companies.id", ondelete="CASCADE"), nullable=False, index=True)
+    project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("core_projects.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     trip_number: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     vehicle_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("vehicles.id", ondelete="SET NULL"), index=True)
     driver_id: Mapped[Optional[uuid.UUID]] = mapped_column(ForeignKey("res_partners.id", ondelete="SET NULL"), index=True)
@@ -2554,6 +2577,7 @@ class FleetTrip(TimestampMixin, Base):
     custom_attributes: Mapped[dict] = mapped_column(_PortableJSON, nullable=False, default=dict, server_default=text("'{}'"))
 
     company: Mapped[ResCompany] = relationship()
+    project: Mapped[Optional["CoreProject"]] = relationship("CoreProject", back_populates="fleet_trips")
     vehicle: Mapped[Optional[Vehicle]] = relationship()
     driver: Mapped[Optional[ResPartner]] = relationship()
     delivery_proof: Mapped[Optional["DeliveryProof"]] = relationship(back_populates="trip", uselist=False, cascade="all, delete-orphan")
@@ -3045,4 +3069,22 @@ class OxenglEngineSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, server_default=func.now(), nullable=False)
 
 
-
+# ==============================================================================
+# Planning-First Core Spine Models (`core_projects`, `sale_orders`, `logistics_trips`)
+# ==============================================================================
+try:
+    from backend.app.models.planning import (  # noqa: E402
+        CoreProject,
+        LogisticsTrip,
+        ProjectStatus,
+        ProjectType,
+        SaleOrder,
+    )
+except ImportError:
+    from app.models.planning import (  # noqa: E402
+        CoreProject,
+        LogisticsTrip,
+        ProjectStatus,
+        ProjectType,
+        SaleOrder,
+    )

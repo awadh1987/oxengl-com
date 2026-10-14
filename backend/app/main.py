@@ -119,6 +119,7 @@ try:
 	from backend.app.api.v1.saas import router as saas_router
 	from backend.app.api.v1.ai import router as ai_router
 	from backend.app.api.v1.planning import router as planning_router
+	from backend.app.routers.planning import router as planning_core_router
 	from backend.app.api.v1.auth import router as recovery_auth_router
 	try:
 		from app.agent.router import router as agent_router
@@ -223,6 +224,7 @@ except ImportError:
 	from backend.app.api.v1.saas import router as saas_router  # type: ignore[no-redef]
 	from backend.app.api.v1.ai import router as ai_router  # type: ignore[no-redef]
 	from backend.app.api.v1.planning import router as planning_router  # type: ignore[no-redef]
+	from backend.app.routers.planning import router as planning_core_router  # type: ignore[no-redef]
 	from backend.app.api.v1.auth import router as recovery_auth_router  # type: ignore[no-redef]
 	try:
 		from app.agent.router import router as agent_router  # type: ignore[no-redef]
@@ -591,6 +593,8 @@ except (ImportError, ModuleNotFoundError):
 		logging.getLogger("uvicorn.error").warning(f"Failed to register sales_exports router: {_e}")
 app.include_router(planning_router, prefix="/api/tenant/planning")
 app.include_router(planning_router, prefix="/api/v1/planning")
+app.include_router(planning_core_router, prefix="/api/tenant/planning")
+app.include_router(planning_core_router, prefix="/api/v1/planning")
 from backend.app.api.v1 import super_admin
 app.include_router(super_admin.router)
 app.add_api_route(

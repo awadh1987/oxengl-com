@@ -246,7 +246,29 @@ try:
 except ImportError:
     ResCompany = Tenant
 
+try:
+    from backend.app.models.planning import (
+        CoreProject,
+        LogisticsTrip,
+        ProjectStatus,
+        ProjectType,
+        SaleOrder,
+    )
+except ImportError:
+    from app.models.planning import (
+        CoreProject,
+        LogisticsTrip,
+        ProjectStatus,
+        ProjectType,
+        SaleOrder,
+    )
+
 __all__ = [
+    "CoreProject",
+    "SaleOrder",
+    "LogisticsTrip",
+    "ProjectType",
+    "ProjectStatus",
     "ProjectCharter",
     "ExecutionTask",
     "StrategicHazard",

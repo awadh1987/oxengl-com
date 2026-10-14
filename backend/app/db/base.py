@@ -76,6 +76,9 @@ from backend.app.domains.ai.models import (
 )
 
 from backend.app.domains.planning.models import (
+    CoreProject,
+    SaleOrder,
+    LogisticsTrip,
     ProjectCharter,
     ExecutionTask,
     StrategicHazard,
@@ -85,6 +88,15 @@ from backend.app.domains.planning.models import (
 
 __all__ = [
     "Base",
+    # Planning Core Spine
+    "CoreProject",
+    "SaleOrder",
+    "LogisticsTrip",
+    "ProjectCharter",
+    "ExecutionTask",
+    "StrategicHazard",
+    "ElectronicLedgerBlock",
+    "CustomsManifest",
     # IAM
     "UserSession",
     "RefreshToken",
@@ -129,5 +141,6 @@ __all__ = [
     "AIKnowledgeDocument",
     "AIKnowledgeChunk",
 ]
+
 
 

@@ -29,6 +29,7 @@ import {
 import { DynamicFieldRenderer } from '../components/DynamicFieldRenderer';
 import { StockItemModal } from '../components/StockItemModal';
 import { HoverIcon } from '../components/common/HoverIcon';
+import { ProjectSelector, FALLBACK_ACTIVE_PROJECTS } from '../components/common/ProjectSelector';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/formatters';
 import {
@@ -75,6 +76,7 @@ export const InventoryView: React.FC = () => {
   const [formData, setFormData] = useState({
     warehouse_id: '',
     product_id: '',
+    project_id: FALLBACK_ACTIVE_PROJECTS[0].id,
     movement_type: 'ADJUSTMENT',
     quantity: 10,
     unit_cost: 150,
@@ -214,6 +216,13 @@ export const InventoryView: React.FC = () => {
       });
       return;
     }
+    if (!formData.project_id) {
+      setNotification({
+        type: 'error',
+        message: isAr ? 'يرجى اختيار المشروع المرتبط بالحركة المخزنية' : 'Please select an active core project',
+      });
+      return;
+    }
 
     setCreating(true);
     try {
@@ -221,6 +230,7 @@ export const InventoryView: React.FC = () => {
       const created = await erpApi.createInventoryMovement({
         warehouse_id: formData.warehouse_id,
         product_id: formData.product_id || undefined,
+        project_id: formData.project_id,
         movement_type: formData.movement_type,
         quantity: Number(formData.quantity),
         unit_cost: Number(formData.unit_cost),
@@ -1053,6 +1063,16 @@ export const InventoryView: React.FC = () => {
             </div>
 
             <form onSubmit={handleCreateAdjustment} className="space-y-4">
+              {/* Planning Core Spine Anchor: Required Project Selector */}
+              <div className="rounded-2xl border border-cyan-500/30 bg-slate-950/60 p-3">
+                <ProjectSelector
+                  id="adj-project-selector"
+                  value={formData.project_id}
+                  onChange={(id) => setFormData({ ...formData, project_id: id })}
+                  required={true}
+                />
+              </div>
+
               {/* Warehouse */}
               <div>
                 <label htmlFor="adj-warehouse-select" className="block text-xs font-semibold text-slate-300 mb-1.5">

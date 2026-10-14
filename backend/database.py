@@ -3,6 +3,7 @@
 import base64
 import hashlib
 import os
+import sys
 import threading
 import uuid
 from contextlib import contextmanager
@@ -13,6 +14,9 @@ from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 from sqlalchemy import URL, Engine, create_engine, select, text, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+sys.modules.setdefault("database", sys.modules[__name__])
+sys.modules.setdefault("backend.database", sys.modules[__name__])
 
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")

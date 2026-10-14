@@ -5,6 +5,7 @@ import { tafqeetArabic, tafqeetEnglish } from '../utils/tafqeet';
 import { X, CreditCard, Building, FileText, CheckCircle2, DollarSign, Sparkles } from 'lucide-react';
 import { DynamicFieldRenderer } from './DynamicFieldRenderer';
 import { HoverIcon } from './common/HoverIcon';
+import { ProjectSelector, FALLBACK_ACTIVE_PROJECTS } from './common/ProjectSelector';
 
 interface CreateVoucherModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface CreateVoucherModalProps {
   initialAmount?: number;
   initialLinkedRef?: string;
   initialPurpose?: string;
+  initialProjectId?: string;
   onSuccess?: (createdVoucher: FinancialVoucher) => void;
 }
 
@@ -31,6 +33,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
   initialAmount = 0,
   initialLinkedRef = '',
   initialPurpose = '',
+  initialProjectId = '',
   onSuccess,
 }) => {
   const {
@@ -77,6 +80,12 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
   const [receivedBy, setReceivedBy] = useState<string>('');
   const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [autoApprove, setAutoApprove] = useState<boolean>(isAdmin);
+  const [projectId, setProjectId] = useState<string>(
+    initialProjectId || FALLBACK_ACTIVE_PROJECTS[0].id
+  );
+  const [projectCode, setProjectCode] = useState<string>(
+    FALLBACK_ACTIVE_PROJECTS[0].project_code
+  );
 
   // Sync initial props whenever modal opens with new pre-fill
   useEffect(() => {
@@ -166,6 +175,11 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
       return;
     }
 
+    if (!projectId) {
+      showToast(isAr ? 'يرجى ربط السند بمشروع معتمد في قسم التخطيط' : 'Please link this voucher to an active core project', 'warning');
+      return;
+    }
+
     const created = await createVoucher({
       voucherNumber: '',
       type,
@@ -181,6 +195,8 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
       transferRefNumber: paymentMethod === 'Bank Transfer' ? transferRefNumber : undefined,
       checkNumber: paymentMethod === 'Cheque' ? checkNumber : undefined,
       linkedReferenceNo: linkedReferenceNo || undefined,
+      project_id: projectId,
+      project_code: projectCode || undefined,
       purpose: purpose.trim() || (isAr ? `سند ${type === 'Payment' ? 'صرف' : 'قبض'} رسمي` : `Official ${type} Voucher`),
       notes: notes.trim() || undefined,
       custom_attributes: customAttributes,
@@ -241,6 +257,18 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
 
         {/* Modal Form Body */}
         <form noValidate onSubmit={handleSubmit} className="max-h-[82vh] overflow-y-auto p-6 space-y-5">
+          {/* Planning Core Spine Anchor: Required Project Selector */}
+          <div className="rounded-2xl border border-cyan-500/30 bg-slate-900/5 dark:bg-slate-950/60 p-3.5">
+            <ProjectSelector
+              id="voucher-project-selector"
+              value={projectId}
+              onChange={(id, proj) => {
+                setProjectId(id);
+                if (proj?.project_code) setProjectCode(proj.project_code);
+              }}
+              required={true}
+            />
+          </div>
           {/* Voucher Type & Category Switchers */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>

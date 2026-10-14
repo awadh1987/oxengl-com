@@ -1662,6 +1662,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         net_profit: opData.net_profit,
         operation_month: opData.operation_month,
         operation_year: opData.operation_year,
+        project_id: opData.project_id,
         notes: opData.notes,
         custom_attributes: opData.custom_attributes || {},
       });
@@ -1677,6 +1678,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         purchases_cost: opData.purchases_cost || 0,
         crusher_payment: opData.crusher_payment || 0,
         net_profit: opData.net_profit || 0,
+        project_id: opData.project_id,
+        project_code: opData.project_code,
         notes: opData.notes,
         scale_ticket_attachment: opData.scale_ticket_attachment,
         attachments: opData.attachments,
@@ -3212,3 +3215,13 @@ export const useApp = () => {
   }
   return context;
 };
+
+export const useAppContext = () => {
+  const context = useApp();
+  return {
+    ...context,
+    lang: context.language,
+    currentCompanyId: context.currentCompany?.id ?? null,
+  };
+};
+

@@ -27,6 +27,7 @@ import { formatCurrency, formatTonnage, getMonthName } from '../utils/formatters
 import { QuickAddEntityModal, QuickAddEntityType } from './QuickAddEntityModal';
 import { MultiAttachmentModal } from './MultiAttachmentModal';
 import { SearchableSelect } from './common/SearchableSelect';
+import { ProjectSelector, FALLBACK_ACTIVE_PROJECTS } from './common/ProjectSelector';
 
 interface DailyOperationsModalProps {
   isOpen: boolean;
@@ -86,6 +87,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
   const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [attachments, setAttachments] = useState<DocumentAttachment[]>([]);
   const [scaleTicketAttachment, setScaleTicketAttachment] = useState('');
+  const [projectId, setProjectId] = useState<string>(initialData?.project_id || FALLBACK_ACTIVE_PROJECTS[0].id);
+  const [projectCode, setProjectCode] = useState<string>(initialData?.project_code || FALLBACK_ACTIVE_PROJECTS[0].project_code);
 
   // Unit prices helpers for smart auto-filling
   const [sellingUnitPrice, setSellingUnitPrice] = useState<number>(44);
@@ -284,7 +287,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!truckNo || !transporterName || !destinationCustomer || !loadingSource) {
+    if (!truckNo || !transporterName || !destinationCustomer || !loadingSource || !projectId) {
       showToast(isAr ? 'يرجى تعبئة كافة الحقول الإلزامية المطلوبة' : 'Please fill all required fields', 'warning');
       return;
     }
@@ -312,6 +315,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
       net_profit: netProfit,
       operation_month: opMonth,
       operation_year: opYear,
+      project_id: projectId,
+      project_code: projectCode || undefined,
       notes: notes,
       custom_attributes: customAttributes,
       scale_ticket_attachment: scaleTicketAttachment,
@@ -445,6 +450,18 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         {/* Main Form Body */}
         <form noValidate onSubmit={handleSubmit} className="mt-4 flex min-h-0 flex-1 flex-col overflow-visible">
           <div className="erp-modal-body space-y-4">
+          {/* Planning Core Spine Anchor: Required Project Selector */}
+          <div className="rounded-2xl border border-cyan-500/30 bg-slate-900/5 dark:bg-slate-950/60 p-3.5">
+            <ProjectSelector
+              id="trip-project-selector"
+              value={projectId}
+              onChange={(id, proj) => {
+                setProjectId(id);
+                if (proj?.project_code) setProjectCode(proj.project_code);
+              }}
+              required={true}
+            />
+          </div>
           {/* Group 1: Logistics & Identification */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 p-3.5 space-y-3 relative">
             <div className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">

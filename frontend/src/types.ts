@@ -163,6 +163,8 @@ export interface MaterialOption {
 
 export interface OperationRecord {
   id: string;
+  project_id?: string;
+  project_code?: string;
   loading_date: string; // YYYY-MM-DD
   date?: string;
   truck_no: string;
@@ -482,6 +484,8 @@ export interface FinancialVoucher {
   partyId?: string;
   partyName: string; // اسم المستفيد / المستلم منه
   partyTaxNumber?: string;
+  project_id?: string;
+  project_code?: string;
   custom_attributes?: Record<string, any>;
   paymentMethod: 'Bank Transfer' | 'Cash' | 'Cheque' | 'Credit Memo';
   bankName?: string;
@@ -858,3 +862,164 @@ export interface HrmsJournalEntry {
   status: string;
   lines?: HrmsJournalLine[];
 }
+
+// ==============================================================================
+// Phase 4 Enterprise Core Interfaces: Planning Core Spine (core_projects)
+// ==============================================================================
+export type CoreProjectType =
+  | 'logistics'
+  | 'supply_chain'
+  | 'humanitarian_supply'
+  | 'epc'
+  | 'oil_gas'
+  | 'commercial_agribusiness';
+
+export type CoreProjectStatus =
+  | 'draft'
+  | 'planning'
+  | 'approved'
+  | 'active'
+  | 'on_hold'
+  | 'completed'
+  | 'closed'
+  | 'cancelled';
+
+export interface CoreProjectRecord {
+  id: string;
+  tenant_id: string;
+  company_id?: string | null;
+  parent_project_id?: string | null;
+  project_code: string;
+  name: string;
+  project_type: CoreProjectType;
+  status: CoreProjectStatus;
+  client_id?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  total_budget: number;
+  currency_id: string;
+  metadata_json: Record<string, any>;
+  esg_metrics: Record<string, any>;
+  telemetry_data: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoreProjectCreatePayload {
+  company_id?: string | null;
+  parent_project_id?: string | null;
+  project_code: string;
+  name: string;
+  project_type: CoreProjectType;
+  status?: CoreProjectStatus;
+  client_id?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  total_budget: number;
+  currency_id?: string;
+  metadata_json: Record<string, any>;
+  esg_metrics?: Record<string, any>;
+  telemetry_data?: Record<string, any>;
+}
+
+export interface CoreProjectUpdatePayload {
+  company_id?: string | null;
+  parent_project_id?: string | null;
+  project_code?: string;
+  name?: string;
+  project_type?: CoreProjectType;
+  status?: CoreProjectStatus;
+  client_id?: string | null;
+  start_date?: string;
+  end_date?: string | null;
+  total_budget?: number;
+  currency_id?: string;
+  metadata_json?: Record<string, any>;
+  esg_metrics?: Record<string, any>;
+  telemetry_data?: Record<string, any>;
+}
+
+export interface CoreProjectWBSNode {
+  id: string;
+  tenant_id: string;
+  company_id?: string | null;
+  parent_project_id?: string | null;
+  project_code: string;
+  name: string;
+  project_type: CoreProjectType;
+  status: CoreProjectStatus;
+  client_id?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  total_budget: number;
+  rolled_up_budget: number;
+  currency_id: string;
+  depth: number;
+  wbs_path: string;
+  metadata_json: Record<string, any>;
+  esg_metrics: Record<string, any>;
+  telemetry_data: Record<string, any>;
+  sub_projects: CoreProjectWBSNode[];
+}
+
+export interface CoreProjectWBSResponse {
+  root_project_id: string;
+  total_nodes: number;
+  max_depth: number;
+  tree: CoreProjectWBSNode;
+}
+
+export interface ProjectBudgetRollup {
+  allocated_budget: number;
+  rolled_up_wbs_budget: number;
+  actual_gl_expenses: number;
+  actual_gl_revenue: number;
+  committed_po_amount: number;
+  contracted_so_amount: number;
+  remaining_budget: number;
+  utilization_pct: number;
+  journal_lines_count: number;
+  purchase_orders_count: number;
+  sale_orders_count: number;
+}
+
+export interface ProjectFleetRollup {
+  total_trips: number;
+  active_trips: number;
+  completed_trips: number;
+  total_distance_km: number;
+  total_fuel_liters: number;
+  total_net_weight_tons: number;
+  total_trip_expenses: number;
+}
+
+export interface ProjectStockReservationRollup {
+  stock_pickings_count: number;
+  active_pickings_count: number;
+  completed_pickings_count: number;
+  stock_movements_count: number;
+  reserved_or_moved_qty: number;
+  reserved_or_moved_value: number;
+}
+
+export interface ProjectEsgSnapshot {
+  esg_metrics: Record<string, any>;
+  telemetry_data: Record<string, any>;
+  estimated_scope1_co2_kg: number;
+}
+
+export interface ProjectTelemetryResponse {
+  project_id: string;
+  project_code: string;
+  project_name: string;
+  project_type: CoreProjectType;
+  status: CoreProjectStatus;
+  currency_id: string;
+  included_project_ids: string[];
+  budget_vs_actual: ProjectBudgetRollup;
+  active_fleet: ProjectFleetRollup;
+  stock_reservations: ProjectStockReservationRollup;
+  esg_and_iot: ProjectEsgSnapshot;
+  generated_at: string;
+}
+

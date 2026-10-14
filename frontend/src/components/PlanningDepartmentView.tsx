@@ -19,8 +19,9 @@ import {
   ExecutionTaskItem,
   StrategicHazardItem
 } from './planningTypes';
-import { Upload as BulkUploadIcon } from 'lucide-react';
+import { Upload as BulkUploadIcon, FolderKanban } from 'lucide-react';
 import { BulkImportModal } from './BulkImportModal';
+import { PlanningHubView } from '../views/PlanningHubView';
 
 export const PlanningDepartmentView: React.FC = () => {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
@@ -34,7 +35,7 @@ export const PlanningDepartmentView: React.FC = () => {
   const [error, setError] = useState<string>('');
 
   // Active view tab
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'MATRIX' | 'HAZARDS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'CORE_SPINE' | 'OVERVIEW' | 'MATRIX' | 'HAZARDS'>('OVERVIEW');
 
   // Slide-over modal states
   const [hazardModalOpen, setHazardModalOpen] = useState(false);
@@ -178,6 +179,18 @@ export const PlanningDepartmentView: React.FC = () => {
       {/* Navigation Tabs */}
       <div className="flex border-b border-slate-800 gap-6 text-sm font-semibold">
         <button
+          onClick={() => setActiveTab('CORE_SPINE')}
+          className={`pb-3 transition-colors flex items-center gap-2 ${
+            activeTab === 'CORE_SPINE'
+              ? 'text-indigo-400 border-b-2 border-indigo-500 font-bold'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <FolderKanban className="w-4 h-4" />
+          {isAr ? 'العمود الفقري للمشاريع (Core Projects Spine)' : 'Core Projects Spine (WBS)'}
+        </button>
+
+        <button
           onClick={() => setActiveTab('OVERVIEW')}
           className={`pb-3 transition-colors flex items-center gap-2 ${
             activeTab === 'OVERVIEW'
@@ -222,19 +235,24 @@ export const PlanningDepartmentView: React.FC = () => {
       )}
 
       {/* Main Tab Content */}
+      {activeTab === 'CORE_SPINE' && <PlanningHubView />}
+
       {activeTab === 'OVERVIEW' && (
-        <CharterDashboard
-          charters={charters}
-          selectedCharterId={selectedCharterId}
-          onSelectCharter={handleSelectCharter}
-          onCharterCreated={(newCharter) => {
-            if (newCharter?.id) {
-              setSelectedCharterId(newCharter.id);
-            }
-            handleDataRefresh();
-          }}
-          onOpenProvisionModal={() => setProvisionSlideOverOpen(true)}
-        />
+        <div className="space-y-8">
+          <PlanningHubView />
+          <CharterDashboard
+            charters={charters}
+            selectedCharterId={selectedCharterId}
+            onSelectCharter={handleSelectCharter}
+            onCharterCreated={(newCharter) => {
+              if (newCharter?.id) {
+                setSelectedCharterId(newCharter.id);
+              }
+              handleDataRefresh();
+            }}
+            onOpenProvisionModal={() => setProvisionSlideOverOpen(true)}
+          />
+        </div>
       )}
 
       {activeTab === 'MATRIX' && (

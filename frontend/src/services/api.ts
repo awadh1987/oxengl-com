@@ -1912,6 +1912,8 @@ export const erpApi = {
     net_profit?: number;
     operation_month?: number;
     operation_year?: number;
+    project_id?: string;
+    projectId?: string;
     notes?: string;
     custom_attributes?: Record<string, any>;
   }) {
@@ -1957,6 +1959,7 @@ export const erpApi = {
           net_profit: input.net_profit,
           operation_month: input.operation_month,
           operation_year: input.operation_year,
+          project_id: input.project_id || input.projectId || null,
           notes: input.notes,
           custom_attributes: input.custom_attributes || {},
         }),
@@ -2420,6 +2423,66 @@ export const erpApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     }),
+
+  // ============================================================================
+  // Planning Core Spine API (/api/v1/planning/projects)
+  // ============================================================================
+  getCoreProjects: (
+    params?: {
+      project_type?: import('../types').CoreProjectType | '';
+      status?: import('../types').CoreProjectStatus | '';
+      parent_project_id?: string;
+      root_only?: boolean;
+      search?: string;
+    },
+    companyId?: string
+  ) => {
+    const query = new URLSearchParams();
+    if (params?.project_type) query.set('project_type', params.project_type);
+    if (params?.status) query.set('status', params.status);
+    if (params?.parent_project_id) query.set('parent_project_id', params.parent_project_id);
+    if (params?.root_only) query.set('root_only', 'true');
+    if (params?.search) query.set('search', params.search);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return request<import('../types').CoreProjectRecord[]>(`/api/v1/planning/projects${qs}`, companyId);
+  },
+
+  getCoreProject: (projectId: string, companyId?: string) =>
+    request<import('../types').CoreProjectRecord>(`/api/v1/planning/projects/${projectId}`, companyId),
+
+  createCoreProject: (payload: import('../types').CoreProjectCreatePayload, companyId?: string) =>
+    request<import('../types').CoreProjectRecord>('/api/v1/planning/projects', companyId, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updateCoreProject: (
+    projectId: string,
+    payload: import('../types').CoreProjectUpdatePayload,
+    companyId?: string
+  ) =>
+    request<import('../types').CoreProjectRecord>(`/api/v1/planning/projects/${projectId}`, companyId, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  deleteCoreProject: (projectId: string, companyId?: string) =>
+    request<void>(`/api/v1/planning/projects/${projectId}`, companyId, {
+      method: 'DELETE',
+    }),
+
+  getCoreProjectWBS: (projectId: string, companyId?: string) =>
+    request<import('../types').CoreProjectWBSResponse>(`/api/v1/planning/projects/${projectId}/wbs`, companyId),
+
+  getCoreProjectTelemetry: (
+    projectId: string,
+    includeSubProjects: boolean = true,
+    companyId?: string
+  ) =>
+    request<import('../types').ProjectTelemetryResponse>(
+      `/api/v1/planning/projects/${projectId}/telemetry?include_sub_projects=${includeSubProjects ? 'true' : 'false'}`,
+      companyId
+    ),
 };
 
 export interface TenantDocumentRecord {
@@ -2534,6 +2597,7 @@ export interface ApiInventoryMovement {
   id: string;
   tenant_id: string;
   company_id?: string;
+  project_id?: string;
   movement_number: string;
   movement_type: string;
   warehouse_id: string;
