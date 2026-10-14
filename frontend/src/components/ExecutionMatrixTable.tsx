@@ -54,9 +54,10 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
   const phases = ['Initiation', 'Planning', 'Execution', 'Monitoring', 'Closure'];
   const departments = ['Fleet Operations', 'Logistics', 'Warehouse', 'Legal & Compliance', 'Finance', 'Human Resources'];
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchesPhase = selectedPhase === 'ALL' || t.phase === selectedPhase;
-    const matchesDept = selectedDept === 'ALL' || t.department === selectedDept;
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const filteredTasks = safeTasks.filter((t) => {
+    const matchesPhase = selectedPhase === 'ALL' || t?.phase === selectedPhase;
+    const matchesDept = selectedDept === 'ALL' || t?.department === selectedDept;
     return matchesPhase && matchesDept;
   });
 
@@ -80,7 +81,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
   const handleAddBatchRow = () => {
     setBatchRows([
-      ...batchRows,
+      ...(batchRows || []),
       {
         task_name: '',
         phase: 'Execution',
@@ -95,8 +96,8 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
   const handleBatchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const validRows = batchRows.filter((r) => r.task_name.trim());
-    if (validRows.length === 0) {
+    const validRows = (batchRows || []).filter((r) => r?.task_name?.trim());
+    if ((validRows?.length ?? 0) === 0) {
       setBatchError('Please provide at least one task with a name.');
       return;
     }
@@ -163,7 +164,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
             onChange={(e) => setSelectedPhase(e.target.value)}
             className="bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-blue-500 font-medium"
           >
-            <option value="ALL">{t('planning.allPhases', 'All Phases')} ({tasks.length})</option>
+            <option value="ALL">{t('planning.allPhases', 'All Phases')} ({safeTasks?.length ?? 0})</option>
             {phases.map((p) => (
               <option key={p} value={p}>
                 {p}
@@ -209,15 +210,17 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/60">
-            {filteredTasks.length === 0 ? (
+            {(filteredTasks?.length ?? 0) === 0 ? (
               <tr>
                 <td colSpan={7} className="py-6 text-center text-slate-500 text-xs">
                   {t('planning.noTasks', 'No execution tasks matching selected criteria.')}
                 </td>
               </tr>
             ) : (
-              filteredTasks.map((task) => {
-                const activeHazards = task.hazards?.filter((h) => h.mitigation_status !== 'MITIGATED') || [];
+              (filteredTasks || []).map((task) => {
+                const activeHazards = Array.isArray(task?.hazards)
+                  ? task.hazards.filter((h) => h?.mitigation_status !== 'MITIGATED')
+                  : [];
 
                 return (
                   <tr
@@ -229,7 +232,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
                       <div className="font-bold text-white group-hover:text-blue-400 transition-colors text-[11px]">
                         {task.task_name}
                       </div>
-                      {task.materials_required && task.materials_required.length > 0 && (
+                      {Array.isArray(task?.materials_required) && (task.materials_required?.length ?? 0) > 0 && (
                         <div className="text-[9.5px] text-slate-500 flex items-center gap-1">
                           <span className="font-mono text-slate-400">{t('planning.materialsLabel', 'Mat:')}</span>{' '}
                           {task.materials_required.join(', ')}
@@ -317,15 +320,15 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
                       <button
                         onClick={() => onOpenHazardModal(task)}
                         className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition-all ${
-                          activeHazards.length > 0
+                          (activeHazards?.length ?? 0) > 0
                             ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
                             : 'bg-slate-800/60 text-slate-400 border-slate-700 hover:text-slate-200'
                         }`}
                       >
                         <ShieldAlert className="w-3 h-3" />
                         <span>
-                          {activeHazards.length > 0
-                            ? t('planning.activeCount', { count: activeHazards.length, defaultValue: `${activeHazards.length} Active` })
+                          {(activeHazards?.length ?? 0) > 0
+                            ? t('planning.activeCount', { count: activeHazards?.length ?? 0, defaultValue: `${activeHazards?.length ?? 0} Active` })
                             : t('planning.logRisk', 'Risk')}
                         </span>
                       </button>
@@ -364,17 +367,17 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
 
             <form onSubmit={handleBatchSubmit} className="space-y-4">
               <div className="space-y-3">
-                {batchRows.map((row, index) => (
+                {(batchRows || []).map((row, index) => (
                   <div
                     key={index}
                     className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/60 space-y-3"
                   >
                     <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
                       <span>Row #{index + 1}</span>
-                      {batchRows.length > 1 && (
+                      {(batchRows?.length ?? 0) > 1 && (
                         <button
                           type="button"
-                          onClick={() => setBatchRows(batchRows.filter((_, i) => i !== index))}
+                          onClick={() => setBatchRows((batchRows || []).filter((_, i) => i !== index))}
                           className="text-rose-400 hover:text-rose-300"
                         >
                           Remove
@@ -513,7 +516,7 @@ export const ExecutionMatrixTable: React.FC<ExecutionMatrixTableProps> = ({
                     disabled={batchSubmitting}
                     className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
                   >
-                    {batchSubmitting ? 'Inserting Tasks...' : `Commit ${batchRows.length} Tasks`}
+                    {batchSubmitting ? 'Inserting Tasks...' : `Commit ${batchRows?.length ?? 0} Tasks`}
                   </button>
                 </div>
               </div>

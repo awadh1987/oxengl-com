@@ -47,7 +47,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
   const [scopeText, setScopeText] = useState('');
   const [formError, setFormError] = useState('');
 
-  const activeCharter = charters.find((c) => c.id === selectedCharterId) || charters[0];
+  const safeCharters = Array.isArray(charters) ? charters : [];
+  const activeCharter = safeCharters.find((c) => c?.id === selectedCharterId) || safeCharters[0];
 
   const handleCreateCharter = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,13 +171,13 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
-          {charters.length > 1 && (
+          {(safeCharters?.length ?? 0) > 1 && (
             <select
               value={selectedCharterId}
               onChange={(e) => onSelectCharter(e.target.value)}
               className="bg-slate-800 text-slate-200 text-sm rounded-xl px-3 py-2 border border-slate-700 focus:outline-none focus:border-blue-500"
             >
-              {charters.map((c) => (
+              {(safeCharters || []).map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.project_name}
                 </option>
@@ -305,13 +306,13 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
               Strategic SMART Goals & Target Delivery
             </h3>
             <span className="text-xs text-slate-400">
-              {activeCharter.smart_goals?.length || 0} Defined Objectives
+              {activeCharter?.smart_goals?.length || 0} Defined Objectives
             </span>
           </div>
 
           <div className="space-y-3">
-            {activeCharter.smart_goals && activeCharter.smart_goals.length > 0 ? (
-              activeCharter.smart_goals.map((g, idx) => (
+            {Array.isArray(activeCharter?.smart_goals) && (activeCharter.smart_goals?.length ?? 0) > 0 ? (
+              (activeCharter.smart_goals || []).map((g, idx) => (
                 <div
                   key={g.id || idx}
                   className="flex items-center justify-between p-3.5 bg-slate-800/40 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-all"

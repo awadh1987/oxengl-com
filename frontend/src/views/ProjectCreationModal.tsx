@@ -209,14 +209,16 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
   // Unified Client / Beneficiary directory (merges API res_partners + context customers)
   const clientOptions = useMemo(() => {
     const map = new Map<string, { id: string; name: string; type: string; taxNo?: string }>();
-    for (const p of apiPartners) {
+    for (const p of apiPartners || []) {
+      if (!p?.id) continue;
       map.set(p.id, {
         id: p.id,
-        name: p.name,
+        name: p.name || '',
         type: p.partner_type || 'client',
       });
     }
-    for (const c of customers) {
+    for (const c of customers || []) {
+      if (!c?.id) continue;
       if (!map.has(c.id)) {
         map.set(c.id, {
           id: c.id,
@@ -231,9 +233,9 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
     const q = clientSearch.toLowerCase();
     return all.filter(
       (item) =>
-        item.name.toLowerCase().includes(q) ||
-        item.type.toLowerCase().includes(q) ||
-        (item.taxNo && item.taxNo.toLowerCase().includes(q))
+        (item?.name || '').toLowerCase().includes(q) ||
+        (item?.type || '').toLowerCase().includes(q) ||
+        (item?.taxNo && item.taxNo.toLowerCase().includes(q))
     );
   }, [apiPartners, customers, clientSearch, isAr]);
 
@@ -651,9 +653,9 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
                     <option value="">
                       {isAr ? '-- مشروع رئيسي مستقل (Root WBS Level 0) --' : '-- Root Master Project (WBS Level 0) --'}
                     </option>
-                    {existingProjects.map((proj) => (
-                      <option key={proj.id} value={proj.id}>
-                        [{proj.project_code}] {proj.name}
+                    {(existingProjects || []).map((proj) => (
+                      <option key={proj?.id} value={proj?.id}>
+                        [{proj?.project_code}] {proj?.name || proj?.project_code}
                       </option>
                     ))}
                   </select>
@@ -687,7 +689,7 @@ export const ProjectCreationModal: React.FC<ProjectCreationModalProps> = ({
                       <option value="">
                         {isAr ? '-- اختر العميل أو المستفيد --' : '-- Select Client / Beneficiary Partner --'}
                       </option>
-                      {clientOptions.map((client) => (
+                      {(clientOptions || []).map((client) => (
                         <option key={client.id} value={client.id}>
                           {client.name} ({client.type})
                         </option>

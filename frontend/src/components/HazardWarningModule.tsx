@@ -44,13 +44,14 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
 
   if (!isOpen) return null;
 
+  const safeHazards = Array.isArray(hazards) ? hazards : [];
   const relevantHazards = targetTask
-    ? hazards.filter((h) => h.execution_task_id === targetTask.id)
-    : hazards;
+    ? safeHazards.filter((h) => h?.execution_task_id === targetTask.id)
+    : safeHazards;
 
-  const displayedHazards = relevantHazards.filter((h) => {
-    if (activeTab === 'ACTIVE') return h.mitigation_status !== 'MITIGATED';
-    if (activeTab === 'MITIGATED') return h.mitigation_status === 'MITIGATED';
+  const displayedHazards = (relevantHazards || []).filter((h) => {
+    if (activeTab === 'ACTIVE') return h?.mitigation_status !== 'MITIGATED';
+    if (activeTab === 'MITIGATED') return h?.mitigation_status === 'MITIGATED';
     return true;
   });
 
@@ -147,7 +148,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {t('planning.activeHazardsTab', 'Active Hazards')} ({relevantHazards.filter((h) => h.mitigation_status !== 'MITIGATED').length})
+              {t('planning.activeHazardsTab', 'Active Hazards')} ({(relevantHazards || []).filter((h) => h?.mitigation_status !== 'MITIGATED')?.length ?? 0})
             </button>
             <button
               onClick={() => setActiveTab('MITIGATED')}
@@ -157,7 +158,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {t('planning.mitigatedTab', 'Mitigated')} ({relevantHazards.filter((h) => h.mitigation_status === 'MITIGATED').length})
+              {t('planning.mitigatedTab', 'Mitigated')} ({(relevantHazards || []).filter((h) => h?.mitigation_status === 'MITIGATED')?.length ?? 0})
             </button>
             <button
               onClick={() => setActiveTab('ALL')}
@@ -167,7 +168,7 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              {t('planning.allRecordsTab', 'All Records')} ({relevantHazards.length})
+              {t('planning.allRecordsTab', 'All Records')} ({relevantHazards?.length ?? 0})
             </button>
           </div>
 
@@ -266,14 +267,14 @@ export const HazardWarningModule: React.FC<HazardWarningModuleProps> = ({
           )}
 
           {/* List of Hazards */}
-          {displayedHazards.length === 0 ? (
+          {(displayedHazards?.length ?? 0) === 0 ? (
             <div className="py-16 text-center text-slate-500 space-y-2">
               <ShieldCheck className="w-12 h-12 mx-auto text-emerald-500/40" />
               <p className="text-sm font-medium">No hazards in this category.</p>
               <p className="text-xs text-slate-600">All associated execution milestones have mitigated risk profiles.</p>
             </div>
           ) : (
-            displayedHazards.map((hazard) => {
+            (displayedHazards || []).map((hazard) => {
               const isMitigated = hazard.mitigation_status === 'MITIGATED';
               const isEditing = editingHazardId === hazard.id;
 

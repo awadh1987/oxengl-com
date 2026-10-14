@@ -93,10 +93,10 @@ function normalizeProjectStatusKey(status?: string): string {
 }
 
 function computeSimulatedUtilizationPct(proj: CoreProjectRecord): number {
-  const hash = proj.project_code
+  const hash = (proj?.project_code || '')
     .split('')
     .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  const normStatus = normalizeProjectStatusKey(proj.status);
+  const normStatus = normalizeProjectStatusKey(proj?.status);
   if (normStatus === 'draft' || normStatus === 'planning') return 12;
   if (normStatus === 'completed' || normStatus === 'closed' || normStatus === 'audited') return 96;
   return 38 + (hash % 52);
@@ -128,8 +128,19 @@ export const PlanningHubView: React.FC = () => {
         },
         currentCompanyId || undefined
       );
-      if (Array.isArray(data) && data.length > 0) {
-        setProjects(data);
+      if (Array.isArray(data) && (data?.length ?? 0) > 0) {
+        const normalized: CoreProjectRecord[] = data.map((p: any) => ({
+          ...p,
+          project_code: p?.project_code || 'PRJ-UNKNOWN',
+          name: p?.name || p?.project_code || 'Untitled Project',
+          project_type: p?.project_type || 'logistics',
+          status: p?.status || 'active',
+          total_budget: Number(p?.total_budget ?? p?.financial_envelope ?? 0),
+          metadata_json: p?.metadata_json || {},
+          esg_metrics: p?.esg_metrics || {},
+          telemetry_data: p?.telemetry_data || {},
+        }));
+        setProjects(normalized);
       } else if (!selectedType || selectedType === 'ALL') {
         setProjects(FALLBACK_ACTIVE_PROJECTS);
       }
@@ -145,8 +156,14 @@ export const PlanningHubView: React.FC = () => {
   }, [fetchProjects]);
 
   const filteredProjects = useMemo(() => {
-    return projects.filter((proj) => {
-      if (selectedType !== 'ALL' && proj.project_type.toLowerCase() !== selectedType.toLowerCase()) return false;
+    return (projects || []).filter((proj) => {
+      if (!proj) return false;
+      if (
+        selectedType !== 'ALL' &&
+        (proj.project_type || '').toLowerCase() !== selectedType.toLowerCase()
+      ) {
+        return false;
+      }
       if (
         selectedStatus !== 'ALL' &&
         normalizeProjectStatusKey(proj.status) !== normalizeProjectStatusKey(selectedStatus)
@@ -156,8 +173,8 @@ export const PlanningHubView: React.FC = () => {
       if (rootOnly && proj.parent_project_id) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        const inCode = proj.project_code.toLowerCase().includes(q);
-        const inName = proj.name.toLowerCase().includes(q);
+        const inCode = (proj.project_code || '').toLowerCase().includes(q);
+        const inName = (proj.name || '').toLowerCase().includes(q);
         const inMeta = JSON.stringify(proj.metadata_json || {})
           .toLowerCase()
           .includes(q);
@@ -168,21 +185,22 @@ export const PlanningHubView: React.FC = () => {
   }, [projects, selectedType, selectedStatus, rootOnly, searchQuery]);
 
   const portfolioStats = useMemo(() => {
-    const totalBudget = filteredProjects.reduce(
-      (sum, p) => sum + Number(p.total_budget || 0),
+    const safeFiltered = filteredProjects || [];
+    const totalBudget = safeFiltered.reduce(
+      (sum, p) => sum + Number(p?.total_budget ?? (p as any)?.financial_envelope ?? 0),
       0
     );
-    const totalCo2 = filteredProjects.reduce(
-      (sum, p) => sum + Number(p.esg_metrics?.co2_emissions_kg || 0),
+    const totalCo2 = safeFiltered.reduce(
+      (sum, p) => sum + Number(p?.esg_metrics?.co2_emissions_kg || 0),
       0
     );
+    const count = safeFiltered?.length ?? 0;
     const avgUtilization =
-      filteredProjects.length > 0
-        ? filteredProjects.reduce((sum, p) => sum + computeSimulatedUtilizationPct(p), 0) /
-          filteredProjects.length
+      count > 0
+        ? safeFiltered.reduce((sum, p) => sum + computeSimulatedUtilizationPct(p), 0) / count
         : 0;
     return {
-      count: filteredProjects.length,
+      count,
       totalBudget,
       totalCo2,
       avgUtilization,
@@ -414,125 +432,146 @@ export const PlanningHubView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
-              {filteredProjects.map((proj) => {
-                const badge = getProjectTypeBadge(proj.project_type);
-                const BadgeIcon = badge.icon;
-                const utilPct = computeSimulatedUtilizationPct(proj);
-                const utilizedAmount = Math.round((Number(proj.total_budget || 0) * utilPct) / 100);
-                const metaEntries = Object.entries(proj.metadata_json || {}).slice(0, 2);
+              {loading && (filteredProjects?.length ?? 0) === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-10 px-4 text-center text-xs text-slate-400">
+                    {isAr
+                      ? 'جاري تحميل مشاريع العمود الفقري...'
+                      : 'Loading Core Projects Spine directory...'}
+                  </td>
+                </tr>
+              ) : (filteredProjects?.length ?? 0) === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-10 px-4 text-center text-xs text-slate-400">
+                    {isAr
+                      ? 'لا توجد مشاريع مطابقة لمعايير البحث أو التصفية الحالية.'
+                      : 'No core projects match the current filter criteria.'}
+                  </td>
+                </tr>
+              ) : (
+                (filteredProjects || []).map((proj) => {
+                  const badge = getProjectTypeBadge(proj?.project_type);
+                  const BadgeIcon = badge.icon;
+                  const utilPct = computeSimulatedUtilizationPct(proj);
+                  const budgetAmount = Number(
+                    proj?.total_budget ?? (proj as any)?.financial_envelope ?? 0
+                  );
+                  const utilizedAmount = Math.round((budgetAmount * utilPct) / 100);
+                  const metaEntries = Object.entries(proj?.metadata_json || {}).slice(0, 2);
 
-                return (
-                  <tr
-                    key={proj.id}
-                    onClick={() => setActiveCommandProject(proj)}
-                    className="hover:bg-slate-50/90 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
-                  >
-                    <td className="py-4 px-4 align-top">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 group-hover:underline">
-                          {proj.project_code}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <span
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
-                            proj.parent_project_id
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                          }`}
-                        >
-                          {proj.parent_project_id ? 'SUB-WBS' : 'ROOT WBS'}
-                        </span>
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] uppercase">
-                          {proj.status}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-4 align-top">
-                      <div className="font-black text-slate-900 dark:text-white text-sm">
-                        {proj.name}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                        {metaEntries.map(([k, v]) => (
-                          <span
-                            key={k}
-                            className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300"
-                          >
-                            {k}: {Array.isArray(v) ? v.join(', ') : String(v)}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-4 align-top">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-black ${badge.cls}`}
-                      >
-                        <BadgeIcon className="w-3.5 h-3.5" />
-                        {badge.label}
-                      </span>
-                    </td>
-
-                    <td className="py-4 px-4 align-top font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                      <div>Start: {proj.start_date}</div>
-                      <div>End: {proj.end_date || 'Continuous'}</div>
-                    </td>
-
-                    <td className="py-4 px-4 align-top text-right font-mono">
-                      <div className="text-sm font-black text-slate-900 dark:text-white">
-                        {Number(proj.total_budget || 0).toLocaleString('en-US')}
-                      </div>
-                      <div className="text-[10px] text-slate-400">{proj.currency_id || 'SAR'}</div>
-                    </td>
-
-                    <td className="py-4 px-4 align-top">
-                      <div className="flex items-center justify-between text-[11px] font-mono mb-1">
-                        <span className="font-bold text-slate-700 dark:text-slate-200">
-                          {utilPct}% Utilized
-                        </span>
-                        <span className="text-slate-400">
-                          {utilizedAmount.toLocaleString('en-US')} {proj.currency_id}
-                        </span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            utilPct > 85
-                              ? 'bg-rose-500'
-                              : utilPct > 70
-                              ? 'bg-amber-500'
-                              : 'bg-emerald-500'
-                          }`}
-                          style={{ width: `${Math.min(100, utilPct)}%` }}
-                        />
-                      </div>
-                    </td>
-
-                    <td className="py-4 px-4 align-top text-center">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-black">
-                        <Leaf className="w-3 h-3" />
-                        {proj.esg_metrics?.sustainability_score ?? 90}
-                      </span>
-                    </td>
-
-                    <td
-                      className="py-4 px-4 align-top text-right"
-                      onClick={(e) => e.stopPropagation()}
+                  return (
+                    <tr
+                      key={proj?.id || proj?.project_code}
+                      onClick={() => setActiveCommandProject(proj)}
+                      className="hover:bg-slate-50/90 dark:hover:bg-slate-800/50 cursor-pointer transition-colors group"
                     >
-                      <Button
-                        variant="primary"
-                        size="xs"
-                        icon={Radar}
-                        data-testid={`open-command-center-${proj.project_code}`}
-                        onClick={() => setActiveCommandProject(proj)}
+                      <td className="py-4 px-4 align-top">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-black text-indigo-600 dark:text-indigo-400 group-hover:underline">
+                            {proj?.project_code}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                              proj?.parent_project_id
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
+                            }`}
+                          >
+                            {proj?.parent_project_id ? 'SUB-WBS' : 'ROOT WBS'}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] uppercase">
+                            {proj?.status}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4 align-top">
+                        <div className="font-black text-slate-900 dark:text-white text-sm">
+                          {proj?.name || proj?.project_code || 'Untitled Project'}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                          {(metaEntries || []).map(([k, v]) => (
+                            <span
+                              key={k}
+                              className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-mono text-slate-600 dark:text-slate-300"
+                            >
+                              {k}: {Array.isArray(v) ? v.join(', ') : String(v)}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4 align-top">
+                        <span
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-[10px] font-mono font-black ${badge.cls}`}
+                        >
+                          <BadgeIcon className="w-3.5 h-3.5" />
+                          {badge.label}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4 align-top font-mono text-[11px] text-slate-500 dark:text-slate-400">
+                        <div>Start: {proj?.start_date}</div>
+                        <div>End: {proj?.end_date || 'Continuous'}</div>
+                      </td>
+
+                      <td className="py-4 px-4 align-top text-right font-mono">
+                        <div className="text-sm font-black text-slate-900 dark:text-white">
+                          {budgetAmount.toLocaleString('en-US')}
+                        </div>
+                        <div className="text-[10px] text-slate-400">{proj?.currency_id || 'SAR'}</div>
+                      </td>
+
+                      <td className="py-4 px-4 align-top">
+                        <div className="flex items-center justify-between text-[11px] font-mono mb-1">
+                          <span className="font-bold text-slate-700 dark:text-slate-200">
+                            {utilPct}% Utilized
+                          </span>
+                          <span className="text-slate-400">
+                            {utilizedAmount.toLocaleString('en-US')} {proj?.currency_id || 'SAR'}
+                          </span>
+                        </div>
+                        <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              utilPct > 85
+                                ? 'bg-rose-500'
+                                : utilPct > 70
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${Math.min(100, utilPct)}%` }}
+                          />
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4 align-top text-center">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono text-xs font-black">
+                          <Leaf className="w-3 h-3" />
+                          {proj?.esg_metrics?.sustainability_score ?? 90}
+                        </span>
+                      </td>
+
+                      <td
+                        className="py-4 px-4 align-top text-right"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        {isAr ? 'غرفة القيادة' : 'Telemetry'}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
+                        <Button
+                          variant="primary"
+                          size="xs"
+                          icon={Radar}
+                          data-testid={`open-command-center-${proj?.project_code}`}
+                          onClick={() => setActiveCommandProject(proj)}
+                        >
+                          {isAr ? 'غرفة القيادة' : 'Telemetry'}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
@@ -541,9 +580,9 @@ export const PlanningHubView: React.FC = () => {
       <ProjectCreationModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        existingProjects={projects}
+        existingProjects={projects || []}
         onCreated={(newProj) => {
-          setProjects((prev) => [newProj, ...prev]);
+          setProjects((prev) => [newProj, ...(prev || [])]);
         }}
       />
     </div>

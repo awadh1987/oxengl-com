@@ -54,18 +54,26 @@ export const PlanningDepartmentView: React.FC = () => {
         if (!res.ok) throw new Error('Failed to fetch project charters');
         data = await res.json();
       }
-      const charterList: ProjectCharterItem[] = Array.isArray(data) ? data : (data?.charters || []);
+      const charterList: ProjectCharterItem[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.charters)
+        ? data.charters
+        : [];
       setCharters(charterList);
 
-      if (charterList && charterList.length > 0) {
-        const activeId = selectedCharterId || charterList[0].id;
+      if ((charterList?.length ?? 0) > 0) {
+        const activeId = selectedCharterId || charterList[0]?.id || null;
         setSelectedCharterId(activeId);
-        fetchCharterDetails(activeId);
+        if (activeId) {
+          fetchCharterDetails(activeId);
+        } else {
+          setLoading(false);
+        }
       } else {
         setLoading(false);
       }
     } catch (err: any) {
-      setError(err.message || 'Error loading planning data');
+      setError(err?.message || 'Error loading planning data');
       setLoading(false);
     }
   };
@@ -80,12 +88,17 @@ export const PlanningDepartmentView: React.FC = () => {
         if (!res.ok) throw new Error('Failed to fetch charter details');
         data = await res.json();
       }
-      setCurrentTasks(data?.tasks || []);
+      const tasksList: ExecutionTaskItem[] = Array.isArray(data?.tasks)
+        ? data.tasks
+        : Array.isArray(data)
+        ? data
+        : [];
+      setCurrentTasks(tasksList);
 
       // Extract all hazards across tasks
       const hazards: StrategicHazardItem[] = [];
-      (data?.tasks || []).forEach((t: any) => {
-        if (t.hazards && Array.isArray(t.hazards)) {
+      (tasksList || []).forEach((t: any) => {
+        if (t?.hazards && Array.isArray(t.hazards)) {
           hazards.push(...t.hazards);
         }
       });
@@ -171,7 +184,7 @@ export const PlanningDepartmentView: React.FC = () => {
             className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center gap-2"
           >
             <ShieldAlert className="w-4 h-4 text-amber-400" />
-            {t('planning.riskCockpit')} ({allHazards.filter((h) => h.mitigation_status !== 'MITIGATED').length})
+            {t('planning.riskCockpit')} ({(allHazards || []).filter((h) => h?.mitigation_status !== 'MITIGATED')?.length ?? 0})
           </button>
         </div>
       </div>
@@ -211,7 +224,7 @@ export const PlanningDepartmentView: React.FC = () => {
           }`}
         >
           <Layers className="w-4 h-4" />
-          {t('planning.tier2')} ({currentTasks.length})
+          {t('planning.tier2')} ({currentTasks?.length ?? 0})
         </button>
 
         <button
@@ -223,7 +236,7 @@ export const PlanningDepartmentView: React.FC = () => {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          {t('planning.tier3')} ({allHazards.length})
+          {t('planning.tier3')} ({allHazards?.length ?? 0})
         </button>
       </div>
 
@@ -241,7 +254,7 @@ export const PlanningDepartmentView: React.FC = () => {
         <div className="space-y-8">
           <PlanningHubView />
           <CharterDashboard
-            charters={charters}
+            charters={charters || []}
             selectedCharterId={selectedCharterId}
             onSelectCharter={handleSelectCharter}
             onCharterCreated={(newCharter) => {
@@ -257,7 +270,7 @@ export const PlanningDepartmentView: React.FC = () => {
 
       {activeTab === 'MATRIX' && (
         <ExecutionMatrixTable
-          tasks={currentTasks}
+          tasks={currentTasks || []}
           charterId={selectedCharterId}
           onTaskUpdated={handleDataRefresh}
           onOpenHazardModal={handleOpenHazardModal}
@@ -277,25 +290,33 @@ export const PlanningDepartmentView: React.FC = () => {
               {t('planning.openFullHazard', 'Open Full Hazard Slide-Over')}
             </button>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {allHazards.map((h) => (
-              <div key={h.id} className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-amber-400">
-                    <bdi>{h.severity}</bdi> {t('planning.severity', 'SEVERITY')}
-                  </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                    <bdi>{h.mitigation_status}</bdi>
-                  </span>
+          {(allHazards?.length ?? 0) === 0 ? (
+            <div className="p-8 bg-slate-900/40 rounded-2xl border border-slate-800/80 text-center text-xs text-slate-400">
+              {loading
+                ? t('planning.loadingHazards', 'Loading strategic hazards...')
+                : t('planning.noHazards', 'No proactive strategic hazards recorded for active execution tasks.')}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {(allHazards || []).map((h, idx) => (
+                <div key={h?.id || `hazard-${idx}`} className="p-5 bg-slate-900/60 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-amber-400">
+                      <bdi>{h?.severity}</bdi> {t('planning.severity', 'SEVERITY')}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono">
+                      <bdi>{h?.mitigation_status}</bdi>
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold text-white">{h?.desired_outcome}</p>
+                  <p className="text-xs text-slate-400">{h?.potential_hazard_description}</p>
+                  <div className="pt-2 border-t border-slate-800 text-xs text-slate-500">
+                    {t('planning.planLabel', 'Plan:')} {h?.mitigation_plan || t('planning.planPending', 'Pending mitigation plan formulation')}
+                  </div>
                 </div>
-                <p className="text-sm font-semibold text-white">{h.desired_outcome}</p>
-                <p className="text-xs text-slate-400">{h.potential_hazard_description}</p>
-                <div className="pt-2 border-t border-slate-800 text-xs text-slate-500">
-                  {t('planning.planLabel', 'Plan:')} {h.mitigation_plan || t('planning.planPending', 'Pending mitigation plan formulation')}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

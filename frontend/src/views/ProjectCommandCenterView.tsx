@@ -120,14 +120,14 @@ function buildFallbackWbs(project: CoreProjectRecord): CoreProjectWBSResponse {
       sub_projects: [
         {
           ...project,
-          id: `${project.id.slice(0, 24)}000000000099`,
-          parent_project_id: project.id,
-          project_code: `${project.project_code}-WBS1`,
-          name: `${project.name} — Phase I Field Execution`,
-          total_budget: Math.round(Number(project.total_budget || 0) * 0.25),
-          rolled_up_budget: Math.round(Number(project.total_budget || 0) * 0.25),
+          id: `${(project?.id || '').slice(0, 24)}000000000099`,
+          parent_project_id: project?.id || null,
+          project_code: `${project?.project_code || 'PRJ'}-WBS1`,
+          name: `${project?.name || 'Master Project'} — Phase I Field Execution`,
+          total_budget: Math.round(Number(project?.total_budget || 0) * 0.25),
+          rolled_up_budget: Math.round(Number(project?.total_budget || 0) * 0.25),
           depth: 1,
-          wbs_path: `${project.project_code} / ${project.project_code}-WBS1`,
+          wbs_path: `${project?.project_code || 'PRJ'} / ${project?.project_code || 'PRJ'}-WBS1`,
           sub_projects: [],
         },
       ],
@@ -158,11 +158,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
     try {
       const [telemetryRes, wbsRes] = await Promise.all([
         erpApi.getCoreProjectTelemetry(
-          project.id,
+          project?.id,
           includeSubProjects,
           currentCompanyId || undefined
         ),
-        erpApi.getCoreProjectWBS(project.id, currentCompanyId || undefined),
+        erpApi.getCoreProjectWBS(project?.id, currentCompanyId || undefined),
       ]);
       if (telemetryRes) setTelemetry(telemetryRes);
       if (wbsRes) setWbsTree(wbsRes);
@@ -180,70 +180,75 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
 
   const linkedOperations = useMemo(
     () =>
-      operations
-        .filter((op) => !op.is_deleted && (!op.project_id || op.project_id === project.id))
+      (operations || [])
+        .filter((op) => op && !op.is_deleted && (!op.project_id || op.project_id === project?.id))
         .slice(0, 6),
-    [operations, project.id]
+    [operations, project?.id]
   );
 
   const linkedVouchers = useMemo(
     () =>
-      vouchers
-        .filter((v) => !v.project_id || v.project_id === project.id)
+      (vouchers || [])
+        .filter((v) => v && (!v.project_id || v.project_id === project?.id))
         .slice(0, 6),
-    [vouchers, project.id]
+    [vouchers, project?.id]
   );
 
-  const bva = telemetry.budget_vs_actual;
-  const fleet = telemetry.active_fleet;
-  const stock = telemetry.stock_reservations;
-  const esg = telemetry.esg_and_iot;
-  const currency = telemetry.currency_id || project.currency_id || 'SAR';
+  const fallbackTelemetry = useMemo(() => buildFallbackTelemetry(project), [project]);
+  const bva = telemetry?.budget_vs_actual || fallbackTelemetry.budget_vs_actual;
+  const fleet = telemetry?.active_fleet || fallbackTelemetry.active_fleet;
+  const stock = telemetry?.stock_reservations || fallbackTelemetry.stock_reservations;
+  const esg = telemetry?.esg_and_iot || fallbackTelemetry.esg_and_iot;
+  const currency = telemetry?.currency_id || project?.currency_id || 'SAR';
+  const includedNodesCount = telemetry?.included_project_ids?.length ?? 1;
 
-  const renderWbsNode = (node: CoreProjectWBSNode) => (
-    <div key={node.id} className="space-y-2">
-      <div
-        onClick={() => onSelectSubProject && node.id !== project.id && onSelectSubProject(node.id)}
-        className={`p-3.5 rounded-xl border transition-all flex flex-wrap items-center justify-between gap-3 ${
-          node.id === project.id
-            ? 'bg-indigo-500/10 border-indigo-500/40'
-            : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 cursor-pointer'
-        }`}
-        style={{ marginLeft: `${node.depth * 20}px` }}
-      >
-        <div className="flex items-center gap-3">
-          <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-[10px] font-black">
-            L{node.depth}
-          </span>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs font-black text-indigo-500 dark:text-indigo-400">
-                {node.project_code}
-              </span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">
-                {node.name}
-              </span>
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                {node.status}
-              </span>
+  const renderWbsNode = (node?: CoreProjectWBSNode | null) => {
+    if (!node) return null;
+    return (
+      <div key={node.id || node.project_code} className="space-y-2">
+        <div
+          onClick={() => onSelectSubProject && node.id !== project?.id && onSelectSubProject(node.id)}
+          className={`p-3.5 rounded-xl border transition-all flex flex-wrap items-center justify-between gap-3 ${
+            node.id === project?.id
+              ? 'bg-indigo-500/10 border-indigo-500/40'
+              : 'bg-slate-50/70 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 hover:border-indigo-500/40 cursor-pointer'
+          }`}
+          style={{ marginLeft: `${(node.depth || 0) * 20}px` }}
+        >
+          <div className="flex items-center gap-3">
+            <span className="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 font-mono text-[10px] font-black">
+              L{node.depth ?? 0}
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-black text-indigo-500 dark:text-indigo-400">
+                  {node.project_code}
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white">
+                  {node.name}
+                </span>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                  {node.status}
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                WBS Path: {node.wbs_path}
+              </p>
             </div>
-            <p className="text-[10px] font-mono text-slate-400 mt-0.5">
-              WBS Path: {node.wbs_path}
-            </p>
+          </div>
+          <div className="text-right font-mono">
+            <div className="text-xs font-black text-slate-900 dark:text-white">
+              {Number(node.rolled_up_budget || 0).toLocaleString('en-US')} {node.currency_id || currency}
+            </div>
+            <div className="text-[10px] text-slate-400">
+              Direct: {Number(node.total_budget || 0).toLocaleString('en-US')} {node.currency_id || currency}
+            </div>
           </div>
         </div>
-        <div className="text-right font-mono">
-          <div className="text-xs font-black text-slate-900 dark:text-white">
-            {Number(node.rolled_up_budget || 0).toLocaleString('en-US')} {node.currency_id}
-          </div>
-          <div className="text-[10px] text-slate-400">
-            Direct: {Number(node.total_budget || 0).toLocaleString('en-US')} {node.currency_id}
-          </div>
-        </div>
+        {(node.sub_projects || []).map((child) => renderWbsNode(child))}
       </div>
-      {node.sub_projects?.map((child) => renderWbsNode(child))}
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6" data-testid="project-command-center-view">
@@ -266,13 +271,13 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2.5 py-1 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 font-mono text-xs font-black">
-                  {project.project_code}
+                  {project?.project_code}
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[11px] font-bold uppercase">
-                  {project.status}
+                  {project?.status}
                 </span>
                 <span className="px-2.5 py-1 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono text-[11px] font-bold uppercase">
-                  {project.project_type}
+                  {project?.project_type}
                 </span>
                 <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
                   <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
@@ -280,11 +285,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                 </span>
               </div>
               <h1 className="text-xl md:text-2xl font-black tracking-tight text-white mt-2">
-                {project.name}
+                {project?.name || project?.project_code}
               </h1>
               <p className="text-xs text-slate-400 font-mono mt-1">
-                Schedule: {project.start_date} → {project.end_date || 'OPEN'} • WBS Scope:{' '}
-                {telemetry.included_project_ids.length} Node(s)
+                Schedule: {project?.start_date} → {project?.end_date || 'OPEN'} • WBS Scope:{' '}
+                {includedNodesCount} Node(s)
               </p>
             </div>
           </div>
@@ -319,22 +324,22 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <DollarSign className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-xl font-black font-mono text-white mt-1.5">
-              {bva.utilization_pct.toFixed(1)}%
+              {Number(bva?.utilization_pct || 0).toFixed(1)}%
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
               <div
                 className={`h-full rounded-full ${
-                  bva.utilization_pct > 90
+                  Number(bva?.utilization_pct || 0) > 90
                     ? 'bg-rose-500'
-                    : bva.utilization_pct > 75
+                    : Number(bva?.utilization_pct || 0) > 75
                     ? 'bg-amber-500'
                     : 'bg-emerald-500'
                 }`}
-                style={{ width: `${Math.min(100, bva.utilization_pct)}%` }}
+                style={{ width: `${Math.min(100, Number(bva?.utilization_pct || 0))}%` }}
               />
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-1.5">
-              Rem: {Number(bva.remaining_budget || 0).toLocaleString('en-US')} {currency}
+              Rem: {Number(bva?.remaining_budget || 0).toLocaleString('en-US')} {currency}
             </p>
           </div>
 
@@ -344,11 +349,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <Truck className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-xl font-black font-mono text-cyan-400 mt-1.5">
-              {fleet.active_trips} Active / {fleet.total_trips} Trips
+              {fleet?.active_trips ?? 0} Active / {fleet?.total_trips ?? 0} Trips
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
-              Hauled: {Number(fleet.total_net_weight_tons || 0).toLocaleString('en-US')} MT •{' '}
-              {Number(fleet.total_distance_km || 0).toLocaleString('en-US')} KM
+              Hauled: {Number(fleet?.total_net_weight_tons || 0).toLocaleString('en-US')} MT •{' '}
+              {Number(fleet?.total_distance_km || 0).toLocaleString('en-US')} KM
             </p>
           </div>
 
@@ -358,10 +363,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <Boxes className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-xl font-black font-mono text-amber-400 mt-1.5">
-              {stock.active_pickings_count} Active Pickings
+              {stock?.active_pickings_count ?? 0} Active Pickings
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
-              Committed POs: {Number(bva.committed_po_amount || 0).toLocaleString('en-US')}{' '}
+              Committed POs: {Number(bva?.committed_po_amount || 0).toLocaleString('en-US')}{' '}
               {currency}
             </p>
           </div>
@@ -372,11 +377,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <Leaf className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-xl font-black font-mono text-emerald-400 mt-1.5">
-              {Number(esg.estimated_scope1_co2_kg || 0).toLocaleString('en-US')} kg CO₂e
+              {Number(esg?.estimated_scope1_co2_kg || 0).toLocaleString('en-US')} kg CO₂e
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
-              ESG Rating: {esg.esg_metrics?.sustainability_score ?? 91}/100 • Fuel:{' '}
-              {Number(fleet.total_fuel_liters || 0).toLocaleString('en-US')} L
+              ESG Rating: {esg?.esg_metrics?.sustainability_score ?? 91}/100 • Fuel:{' '}
+              {Number(fleet?.total_fuel_liters || 0).toLocaleString('en-US')} L
             </p>
           </div>
         </div>
@@ -552,11 +557,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
 
             <Card
               title={isAr ? 'شجرة هيكل تجزئة العمل (WBS Tree)' : 'Hierarchical WBS Roll-up Tree'}
-              subtitle={`Total Nodes: ${wbsTree.total_nodes} • Max Depth: ${wbsTree.max_depth}`}
+              subtitle={`Total Nodes: ${wbsTree?.total_nodes ?? 1} • Max Depth: ${wbsTree?.max_depth ?? 0}`}
               icon={GitBranch}
             >
               <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
-                {renderWbsNode(wbsTree.tree)}
+                {wbsTree?.tree ? renderWbsNode(wbsTree.tree) : null}
               </div>
             </Card>
           </div>
@@ -581,41 +586,49 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-xs">
-                  {linkedVouchers.map((v) => (
-                    <tr
-                      key={v.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      <td className="py-3 px-4 font-mono font-bold text-indigo-500">
-                        {v.voucherNumber}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            v.type === 'Payment'
-                              ? 'bg-rose-500/10 text-rose-400'
-                              : 'bg-emerald-500/10 text-emerald-400'
-                          }`}
-                        >
-                          {v.type}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
-                        {v.partyName}
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 truncate max-w-xs">
-                        {v.purpose}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                        {Number(v.amount || 0).toLocaleString('en-US')}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px]">
-                          {v.status}
-                        </span>
+                  {(linkedVouchers?.length ?? 0) === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 px-4 text-center text-xs text-slate-400">
+                        No financial vouchers linked to this project node yet.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    (linkedVouchers || []).map((v) => (
+                      <tr
+                        key={v?.id || v?.voucherNumber}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-mono font-bold text-indigo-500">
+                          {v?.voucherNumber}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              v?.type === 'Payment'
+                                ? 'bg-rose-500/10 text-rose-400'
+                                : 'bg-emerald-500/10 text-emerald-400'
+                            }`}
+                          >
+                            {v?.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
+                          {v?.partyName}
+                        </td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                          {v?.purpose}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                          {Number(v?.amount || 0).toLocaleString('en-US')}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px]">
+                            {v?.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -645,13 +658,13 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                         PRIMARY CORRIDOR SATELLITE LOCK
                       </div>
                       <div className="text-lg font-black font-mono">
-                        LAT {esg.telemetry_data?.last_known_lat ?? 24.7136}° N • LNG{' '}
-                        {esg.telemetry_data?.last_known_lng ?? 46.6753}° E
+                        LAT {esg?.telemetry_data?.last_known_lat ?? 24.7136}° N • LNG{' '}
+                        {esg?.telemetry_data?.last_known_lng ?? 46.6753}° E
                       </div>
                     </div>
                   </div>
                   <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-xs font-bold">
-                    {fleet.active_trips} IN-TRANSIT UNITS
+                    {fleet?.active_trips ?? 0} IN-TRANSIT UNITS
                   </span>
                 </div>
 
@@ -661,7 +674,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Total Distance
                     </span>
                     <div className="text-sm font-black font-mono text-white mt-0.5">
-                      {Number(fleet.total_distance_km || 0).toLocaleString('en-US')} KM
+                      {Number(fleet?.total_distance_km || 0).toLocaleString('en-US')} KM
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -669,7 +682,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Net Cargo Hauled
                     </span>
                     <div className="text-sm font-black font-mono text-cyan-400 mt-0.5">
-                      {Number(fleet.total_net_weight_tons || 0).toLocaleString('en-US')} MT
+                      {Number(fleet?.total_net_weight_tons || 0).toLocaleString('en-US')} MT
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -677,7 +690,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Diesel Consumed
                     </span>
                     <div className="text-sm font-black font-mono text-amber-400 mt-0.5">
-                      {Number(fleet.total_fuel_liters || 0).toLocaleString('en-US')} L
+                      {Number(fleet?.total_fuel_liters || 0).toLocaleString('en-US')} L
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -685,7 +698,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Direct Trip Cost
                     </span>
                     <div className="text-sm font-black font-mono text-rose-400 mt-0.5">
-                      {Number(fleet.total_trip_expenses || 0).toLocaleString('en-US')} {currency}
+                      {Number(fleet?.total_trip_expenses || 0).toLocaleString('en-US')} {currency}
                     </div>
                   </div>
                 </div>
@@ -694,11 +707,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
 
             <Card
               title="Dynamic Industry Metadata"
-              subtitle={`Validated [${project.project_type.toUpperCase()}] attributes`}
+              subtitle={`Validated [${(project?.project_type || 'logistics').toUpperCase()}] attributes`}
               icon={Globe}
             >
               <div className="space-y-2.5">
-                {Object.entries(project.metadata_json || {}).map(([key, val]) => (
+                {Object.entries(project?.metadata_json || {}).map(([key, val]) => (
                   <div
                     key={key}
                     className="flex items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/70 border border-slate-200/70 dark:border-slate-800 text-xs"
@@ -734,29 +747,37 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70 text-xs">
-                  {linkedOperations.map((op) => (
-                    <tr
-                      key={op.id}
-                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      <td className="py-3 px-4 font-mono text-slate-500">{op.loading_date}</td>
-                      <td className="py-3 px-4 font-mono font-black text-indigo-500">
-                        {op.truck_no}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
-                        {op.transporter_name}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
-                        {op.loading_source} → {op.destination_customer}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">
-                        {op.material_type}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                        {Number(op.qty_delivered || 0).toLocaleString('en-US')} {op.uom || 'MT'}
+                  {(linkedOperations?.length ?? 0) === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 px-4 text-center text-xs text-slate-400">
+                        No fleet dispatch operations anchored to this project node yet.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    (linkedOperations || []).map((op) => (
+                      <tr
+                        key={op?.id || op?.truck_no}
+                        className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-mono text-slate-500">{op?.loading_date}</td>
+                        <td className="py-3 px-4 font-mono font-black text-indigo-500">
+                          {op?.truck_no}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-800 dark:text-slate-200">
+                          {op?.transporter_name}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300">
+                          {op?.loading_source} → {op?.destination_customer}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-cyan-600 dark:text-cyan-400">
+                          {op?.material_type}
+                        </td>
+                        <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                          {Number(op?.qty_delivered || 0).toLocaleString('en-US')} {op?.uom || 'MT'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

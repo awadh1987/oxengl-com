@@ -4,6 +4,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AppProvider } from '../context/AppContext';
 import { PlanningHubView } from './PlanningHubView';
+import { PlanningDepartmentView } from './planning/PlanningDepartmentView';
 import { ProjectSelector } from '../components/common/ProjectSelector';
 import { erpApi } from '../services/api';
 
@@ -17,6 +18,9 @@ vi.mock('../services/api', async (importOriginal) => {
       getCoreProjectTelemetry: vi.fn().mockResolvedValue(null),
       getCoreProjectWBS: vi.fn().mockResolvedValue(null),
       getPartners: vi.fn().mockResolvedValue([]),
+      getProjectCharters: vi.fn().mockResolvedValue(undefined),
+      getPlanningTasks: vi.fn().mockResolvedValue(undefined),
+      getPlanningHazards: vi.fn().mockResolvedValue(undefined),
       createCoreProject: vi.fn().mockImplementation(async (payload) => ({
         id: '11111111-2222-4333-8444-555555555599',
         tenant_id: '00000000-0000-0000-0000-000000000001',
@@ -154,5 +158,28 @@ describe('PlanningHubView & Command Center Suite', () => {
     const selectEl = screen.getByTestId('core-project-selector') as HTMLSelectElement;
     expect(selectEl.options.length).toBeGreaterThan(1);
   });
+
+  it('PlanningDepartmentView safely handles undefined or incomplete API payloads without throwing length TypeError', async () => {
+    const mockGetCoreProjects = vi.mocked(erpApi.getCoreProjects);
+    // Simulate backend returning a partial project without project_code, esg_metrics, or telemetry_data
+    mockGetCoreProjects.mockResolvedValueOnce([
+      {
+        id: 'partial-proj-01',
+        name: 'Partial Backend Project',
+        financial_envelope: 500000,
+      } as any,
+    ]);
+
+    render(
+      <AppProvider>
+        <PlanningDepartmentView />
+      </AppProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Partial Backend Project/i)).toBeDefined();
+    });
+  });
 });
+
 
