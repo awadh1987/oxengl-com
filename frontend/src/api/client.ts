@@ -684,8 +684,14 @@ apiClient.interceptors.response.use(
       return Promise.reject(authError);
     }
 
+    const method = (originalRequest?.method || 'GET').toUpperCase();
+    const suppressToast =
+      originalRequest?.headers?.['X-Suppress-Error-Toast'] === 'true' ||
+      originalRequest?.headers?.['x-suppress-error-toast'] === 'true' ||
+      (method === 'GET' && url.includes('/api/v1/planning/projects'));
+
     // Global notifications for 403, 422, 500
-    if (typeof window !== 'undefined' && status) {
+    if (typeof window !== 'undefined' && status && !suppressToast) {
       handleGlobalErrorNotifications(status, error.response?.data);
     }
 

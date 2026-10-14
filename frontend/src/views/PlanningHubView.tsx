@@ -81,12 +81,24 @@ function getProjectTypeBadge(type: CoreProjectType) {
   }
 }
 
+function normalizeProjectStatusKey(status?: string): string {
+  const cleaned = (status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (cleaned === 'active' || cleaned === 'active_execution' || cleaned === 'approved' || cleaned === 'in_progress') {
+    return 'active';
+  }
+  if (cleaned === 'suspended' || cleaned === 'on_hold' || cleaned === 'paused') {
+    return 'on_hold';
+  }
+  return cleaned;
+}
+
 function computeSimulatedUtilizationPct(proj: CoreProjectRecord): number {
   const hash = proj.project_code
     .split('')
     .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  if (proj.status === 'draft' || proj.status === 'planning') return 12;
-  if (proj.status === 'completed' || proj.status === 'closed') return 96;
+  const normStatus = normalizeProjectStatusKey(proj.status);
+  if (normStatus === 'draft' || normStatus === 'planning') return 12;
+  if (normStatus === 'completed' || normStatus === 'closed' || normStatus === 'audited') return 96;
   return 38 + (hash % 52);
 }
 
@@ -134,8 +146,13 @@ export const PlanningHubView: React.FC = () => {
 
   const filteredProjects = useMemo(() => {
     return projects.filter((proj) => {
-      if (selectedType !== 'ALL' && proj.project_type !== selectedType) return false;
-      if (selectedStatus !== 'ALL' && proj.status !== selectedStatus) return false;
+      if (selectedType !== 'ALL' && proj.project_type.toLowerCase() !== selectedType.toLowerCase()) return false;
+      if (
+        selectedStatus !== 'ALL' &&
+        normalizeProjectStatusKey(proj.status) !== normalizeProjectStatusKey(selectedStatus)
+      ) {
+        return false;
+      }
       if (rootOnly && proj.parent_project_id) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();

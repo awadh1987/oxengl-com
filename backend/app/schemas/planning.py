@@ -274,17 +274,68 @@ class CoreProjectBase(BaseModel):
     @field_validator("status", mode="before")
     @classmethod
     def _normalize_status(cls, v: Any) -> ProjectStatus:
-        if isinstance(v, ProjectStatus):
-            return v
-        if isinstance(v, str):
-            cleaned = v.strip()
-            if cleaned.lower() == "active":
-                return ProjectStatus.ACTIVE_EXECUTION
-            for member in ProjectStatus:
-                if member.value.lower() == cleaned.lower() or member.name.lower() == cleaned.lower():
-                    return member
-            return ProjectStatus(cleaned)
-        raise ValueError(f"Invalid status: {v}")
+        return normalize_project_status(v)
+
+
+_STATUS_ALIASES: Dict[str, ProjectStatus] = {
+    "draft": ProjectStatus.DRAFT,
+    "planning": ProjectStatus.PLANNING,
+    "active": ProjectStatus.ACTIVE_EXECUTION,
+    "active execution": ProjectStatus.ACTIVE_EXECUTION,
+    "active_execution": ProjectStatus.ACTIVE_EXECUTION,
+    "in_progress": ProjectStatus.ACTIVE_EXECUTION,
+    "in progress": ProjectStatus.ACTIVE_EXECUTION,
+    "suspended": ProjectStatus.SUSPENDED,
+    "on_hold": ProjectStatus.SUSPENDED,
+    "on hold": ProjectStatus.SUSPENDED,
+    "completed": ProjectStatus.COMPLETED,
+    "closed": ProjectStatus.CLOSED,
+    "cancelled": ProjectStatus.CLOSED,
+    "canceled": ProjectStatus.CLOSED,
+    "audited": ProjectStatus.AUDITED,
+    "approved": ProjectStatus.AUDITED,
+}
+
+
+def normalize_project_status(value: Any) -> ProjectStatus:
+    """
+    Normalize a raw status string or `ProjectStatus` enum case-insensitively.
+    Maps aliases such as `'active'` or `'active execution'` to `ProjectStatus.ACTIVE_EXECUTION`.
+    """
+    if isinstance(value, ProjectStatus):
+        return value
+    if isinstance(value, str):
+        cleaned = value.strip()
+        lowered = cleaned.lower()
+        if lowered in ("active", "active execution"):
+            return ProjectStatus.ACTIVE_EXECUTION
+        if lowered in _STATUS_ALIASES:
+            return _STATUS_ALIASES[lowered]
+        for member in ProjectStatus:
+            if member.value.lower() == lowered or member.name.lower() == lowered:
+                return member
+        return ProjectStatus(cleaned)
+    raise ValueError(f"Invalid status: {value}")
+
+
+def get_status_search_variants(
+    status_enum: ProjectStatus, raw_value: Optional[str] = None
+) -> List[str]:
+    """
+    Return all lowercase string representations that should match `status_enum`
+    when filtering `CoreProject.status` case-insensitively in SQL.
+    """
+    variants = {
+        status_enum.value.lower(),
+        status_enum.name.lower(),
+        status_enum.name.lower().replace("_", " "),
+    }
+    for alias_key, mapped in _STATUS_ALIASES.items():
+        if mapped == status_enum:
+            variants.add(alias_key.lower())
+    if raw_value and raw_value.strip():
+        variants.add(raw_value.strip().lower())
+    return sorted(variants)
 
 
 class CoreProjectCreate(CoreProjectBase):
@@ -338,17 +389,7 @@ class CoreProjectUpdate(BaseModel):
     def _normalize_status(cls, v: Any) -> Optional[ProjectStatus]:
         if v is None:
             return None
-        if isinstance(v, ProjectStatus):
-            return v
-        if isinstance(v, str):
-            cleaned = v.strip()
-            if cleaned.lower() == "active":
-                return ProjectStatus.ACTIVE_EXECUTION
-            for member in ProjectStatus:
-                if member.value.lower() == cleaned.lower() or member.name.lower() == cleaned.lower():
-                    return member
-            return ProjectStatus(cleaned)
-        raise ValueError(f"Invalid status: {v}")
+        return normalize_project_status(v)
 
     @model_validator(mode="after")
     def _validate_polymorphic_metadata_if_type_present(self) -> "CoreProjectUpdate":
@@ -384,6 +425,11 @@ class CoreProjectRead(BaseModel):
     beneficiary: Optional[PartnerBrief] = None
     sub_project_count: int = 0
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def _normalize_status(cls, v: Any) -> ProjectStatus:
+        return normalize_project_status(v)
+
 
 # ==============================================================================
 # 3. Hierarchical WBS Schemas (`GET /api/v1/planning/projects/{project_id}/wbs`)
@@ -418,6 +464,11 @@ class CoreProjectWBSNode(BaseModel):
     created_at: datetime
     updated_at: datetime
     sub_projects: List["CoreProjectWBSNode"] = Field(default_factory=list)
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _normalize_status(cls, v: Any) -> ProjectStatus:
+        return normalize_project_status(v)
 
 
 class CoreProjectWBSResponse(CoreProjectWBSNode):
@@ -536,10 +587,17 @@ class ProjectTelemetryResponse(BaseModel):
 
     generated_at: datetime
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def _normalize_status(cls, v: Any) -> ProjectStatus:
+        return normalize_project_status(v)
+
 
 __all__ = [
     "ProjectType",
     "ProjectStatus",
+    "normalize_project_status",
+    "get_status_search_variants",
     "LogisticsMetadata",
     "SupplyChainMetadata",
     "HumanitarianSupplyMetadata",

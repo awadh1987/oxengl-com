@@ -628,3 +628,114 @@ def test_wbs_hierarchy_and_telemetry_command_center_aggregator(seeded_tenants):
     rls_list = client.get("/api/v1/planning/projects", headers=headers_b)
     assert rls_list.status_code == 200
     assert rls_list.json() == []
+
+
+def test_list_projects_status_normalization_and_case_insensitive_db_filter(seeded_tenants):
+    """
+    Verifies that `GET /api/v1/planning/projects?status=...` normalizes `'active'`,
+    `'active execution'`, and case variations to `ProjectStatus.ACTIVE_EXECUTION`
+    (and other statuses case-insensitively), and matches DB rows regardless of
+    casing variations (`'Active Execution'` vs `'active'`).
+    """
+    client = TestClient(app)
+    tenant_a = seeded_tenants["tenant_a"]
+    headers = {"X-Tenant-ID": str(tenant_a)}
+
+    # 1. Create an active project via POST (stored as 'Active Execution')
+    resp_active_1 = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "project_name": "Canonical Active Project",
+            "project_type": "SUPPLY_CHAIN",
+            "status": "Active Execution",
+            "total_budget": "250000.00",
+        },
+    )
+    assert resp_active_1.status_code == 201, resp_active_1.text
+    p1_id = resp_active_1.json()["id"]
+
+    # 2. Create a second project and update its raw DB status to lowercase 'active'
+    resp_active_2 = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "project_name": "Legacy Lowercase Active Project",
+            "project_type": "SUPPLY_CHAIN",
+            "status": "active",
+            "total_budget": "180000.00",
+        },
+    )
+    assert resp_active_2.status_code == 201, resp_active_2.text
+    p2_id = resp_active_2.json()["id"]
+
+    db = SessionLocal()
+    try:
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tid, false), "
+                "set_config('app.current_company_id', :tid, false)"
+            ),
+            {"tid": str(tenant_a)},
+        )
+        db.execute(
+            text("UPDATE core_projects SET status = 'active' WHERE id = :pid"),
+            {"pid": p2_id},
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    # 3. Create a Draft project
+    resp_draft = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "project_name": "Draft Pipeline Project",
+            "project_type": "SUPPLY_CHAIN",
+            "status": "draft",
+            "total_budget": "90000.00",
+        },
+    )
+    assert resp_draft.status_code == 201, resp_draft.text
+    draft_id = resp_draft.json()["id"]
+
+    # 4. Query with ?status=active (previously threw 422 in production)
+    list_active = client.get("/api/v1/planning/projects?status=active", headers=headers)
+    assert list_active.status_code == 200, list_active.text
+    active_ids = {item["id"] for item in list_active.json()}
+    assert p1_id in active_ids
+    assert p2_id in active_ids
+    assert draft_id not in active_ids
+
+    # 5. Query with ?status=Active Execution
+    list_canonical = client.get(
+        "/api/v1/planning/projects",
+        params={"status": "Active Execution"},
+        headers=headers,
+    )
+    assert list_canonical.status_code == 200, list_canonical.text
+    canonical_ids = {item["id"] for item in list_canonical.json()}
+    assert p1_id in canonical_ids
+    assert p2_id in canonical_ids
+    assert draft_id not in canonical_ids
+
+    # 6. Query with case-insensitive ?status=draft and ?status=DRAFT
+    for q_status in ("draft", "DRAFT", "Draft"):
+        list_draft = client.get(
+            "/api/v1/planning/projects",
+            params={"status": q_status},
+            headers=headers,
+        )
+        assert list_draft.status_code == 200, list_draft.text
+        draft_ids = {item["id"] for item in list_draft.json()}
+        assert draft_id in draft_ids
+        assert p1_id not in draft_ids
+
+    # 7. Invalid status still returns 422
+    bad_status = client.get(
+        "/api/v1/planning/projects?status=not_a_valid_status",
+        headers=headers,
+    )
+    assert bad_status.status_code == 422
+

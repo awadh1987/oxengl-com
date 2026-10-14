@@ -875,6 +875,13 @@ export type CoreProjectType =
   | 'commercial_agribusiness';
 
 export type CoreProjectStatus =
+  | 'Draft'
+  | 'Planning'
+  | 'Active Execution'
+  | 'Suspended'
+  | 'Completed'
+  | 'Closed'
+  | 'Audited'
   | 'draft'
   | 'planning'
   | 'approved'

@@ -64,6 +64,15 @@ class ProjectType(str, enum.Enum):
     OIL_GAS = "oil_gas"
     COMMERCIAL_AGRIBUSINESS = "commercial_agribusiness"
 
+    @classmethod
+    def _missing_(cls, value: object) -> Optional["ProjectType"]:
+        if isinstance(value, str):
+            cleaned = value.strip().lower().replace("-", "_").replace(" ", "_")
+            for member in cls:
+                if member.value.lower() == cleaned or member.name.lower() == cleaned:
+                    return member
+        return None
+
 
 class ProjectStatus(str, enum.Enum):
     """Lifecycle states for a CoreProject."""
@@ -74,6 +83,22 @@ class ProjectStatus(str, enum.Enum):
     COMPLETED = "Completed"
     CLOSED = "Closed"
     AUDITED = "Audited"
+
+    @classmethod
+    def _missing_(cls, value: object) -> Optional["ProjectStatus"]:
+        if isinstance(value, str):
+            raw_lower = value.strip().lower()
+            if raw_lower in ("active", "active execution", "active_execution", "in_progress", "in progress", "approved"):
+                return cls.ACTIVE_EXECUTION
+            if raw_lower in ("on_hold", "on hold", "paused", "suspended"):
+                return cls.SUSPENDED
+            if raw_lower in ("cancelled", "canceled", "closed"):
+                return cls.CLOSED
+            cleaned = raw_lower.replace("-", "_").replace(" ", "_")
+            for member in cls:
+                if member.value.lower() == raw_lower or member.name.lower() == cleaned:
+                    return member
+        return None
 
 
 class CoreProject(Base):

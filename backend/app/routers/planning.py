@@ -90,6 +90,8 @@ try:
         PartnerBrief,
         ProjectTelemetryResponse,
         StockReservationTelemetry,
+        get_status_search_variants,
+        normalize_project_status,
         validate_metadata_for_project_type,
     )
 except ImportError:
@@ -105,6 +107,8 @@ except ImportError:
         PartnerBrief,
         ProjectTelemetryResponse,
         StockReservationTelemetry,
+        get_status_search_variants,
+        normalize_project_status,
         validate_metadata_for_project_type,
     )
 
@@ -259,7 +263,7 @@ def _serialize_project_read(project: CoreProject, sub_project_count: Optional[in
         project_type=ProjectType(project.project_type),
         client_id=project.client_id,
         beneficiary_id=project.beneficiary_id,
-        status=ProjectStatus(project.status),
+        status=normalize_project_status(project.status),
         financial_envelope=Decimal(str(project.financial_envelope or 0)),
         metadata_json=dict(project.metadata_json or {}),
         telemetry_data=dict(project.telemetry_data or {}),
@@ -354,7 +358,7 @@ async def _verify_no_wbs_cycle(
 )
 async def list_projects(
     project_type: Optional[ProjectType] = Query(default=None),
-    project_status: Optional[ProjectStatus] = Query(default=None, alias="status"),
+    status: Optional[str] = Query(None),
     parent_project_id: Optional[uuid.UUID] = Query(default=None),
     root_only: bool = Query(
         default=False,
@@ -382,9 +386,25 @@ async def list_projects(
     )
 
     if project_type is not None:
-        stmt = stmt.where(CoreProject.project_type == project_type.value)
-    if project_status is not None:
-        stmt = stmt.where(CoreProject.status == project_status.value)
+        stmt = stmt.where(func.lower(CoreProject.project_type) == project_type.value.lower())
+
+    if status is not None and status.strip():
+        raw_status = status.strip()
+        if raw_status.lower() in ("active", "active execution"):
+            normalized_status = ProjectStatus.ACTIVE_EXECUTION
+        else:
+            try:
+                normalized_status = normalize_project_status(raw_status)
+            except ValueError as exc:
+                valid_statuses = [m.value for m in ProjectStatus]
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid project status '{raw_status}'. Expected one of {valid_statuses}.",
+                ) from exc
+
+        status_variants = get_status_search_variants(normalized_status, raw_status)
+        stmt = stmt.where(func.lower(CoreProject.status).in_(status_variants))
+
     if root_only:
         stmt = stmt.where(CoreProject.parent_project_id.is_(None))
     elif parent_project_id is not None:

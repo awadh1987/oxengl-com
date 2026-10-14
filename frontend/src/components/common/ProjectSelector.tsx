@@ -140,11 +140,16 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
   const currentCompanyId = currentCompany?.id;
   const [projects, setProjects] = useState<CoreProjectRecord[]>(FALLBACK_ACTIVE_PROJECTS);
   const [loading, setLoading] = useState(false);
+  const [fallbackMessage, setFallbackMessage] = useState<string | null>(null);
 
   const loadActiveProjects = async () => {
     setLoading(true);
+    setFallbackMessage(null);
     try {
-      const data = await erpApi.getCoreProjects({ status: 'active' }, currentCompanyId || undefined);
+      const data = await erpApi.getCoreProjects(
+        { status: 'Active Execution' },
+        currentCompanyId || undefined
+      );
       if (Array.isArray(data) && data.length > 0) {
         setProjects(data);
         if (autoSelectDefault && !value) {
@@ -158,6 +163,11 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
       }
     } catch {
       setProjects(FALLBACK_ACTIVE_PROJECTS);
+      setFallbackMessage(
+        isAr
+          ? 'تم تحميل قائمة المشاريع النشطة الاحتياطية مؤقتاً.'
+          : 'Loaded offline Core Spine directory fallback.'
+      );
       if (autoSelectDefault && !value) {
         onChange(FALLBACK_ACTIVE_PROJECTS[0].id, FALLBACK_ACTIVE_PROJECTS[0]);
       }
@@ -205,6 +215,7 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
 
       <div className="relative">
         <select
+          id={id}
           aria-label={label || 'Core Spine Project'}
           data-testid="core-project-selector"
           value={value}
@@ -235,6 +246,16 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({
           ))}
         </select>
       </div>
+
+      {fallbackMessage && (
+        <div
+          data-testid="project-selector-fallback-notice"
+          className="flex items-center gap-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400"
+        >
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>{fallbackMessage}</span>
+        </div>
+      )}
 
       {selectedProject ? (
         <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-indigo-500/5 dark:bg-indigo-950/30 border border-indigo-500/20 text-[11px]">

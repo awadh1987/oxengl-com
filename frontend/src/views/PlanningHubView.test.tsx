@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AppProvider } from '../context/AppContext';
 import { PlanningHubView } from './PlanningHubView';
+import { ProjectSelector } from '../components/common/ProjectSelector';
+import { erpApi } from '../services/api';
 
 vi.mock('../services/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../services/api')>();
@@ -23,7 +25,7 @@ vi.mock('../services/api', async (importOriginal) => {
         project_code: payload.project_code,
         name: payload.name,
         project_type: payload.project_type,
-        status: payload.status || 'active',
+        status: payload.status || 'Active Execution',
         client_id: payload.client_id || null,
         start_date: payload.start_date || '2026-01-01',
         end_date: payload.end_date || '2026-12-31',
@@ -104,4 +106,32 @@ describe('PlanningHubView & Command Center Suite', () => {
       expect(screen.getByText(/Drilling Rig Code/i)).toBeDefined();
     });
   });
+
+  it('ProjectSelector queries status="Active Execution" and shows clean fallback notice when API fails', async () => {
+    const mockGetCoreProjects = vi.mocked(erpApi.getCoreProjects);
+    mockGetCoreProjects.mockClear();
+    mockGetCoreProjects.mockRejectedValueOnce(new Error('422 Unprocessable Entity'));
+
+    const onChange = vi.fn();
+    render(
+      <AppProvider>
+        <ProjectSelector value="" onChange={onChange} />
+      </AppProvider>
+    );
+
+    await waitFor(() => {
+      expect(mockGetCoreProjects).toHaveBeenCalledWith(
+        { status: 'Active Execution' },
+        undefined
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('project-selector-fallback-notice')).toBeDefined();
+    });
+
+    const selectEl = screen.getByTestId('core-project-selector') as HTMLSelectElement;
+    expect(selectEl.options.length).toBeGreaterThan(1);
+  });
 });
+
