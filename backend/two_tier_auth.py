@@ -429,6 +429,7 @@ class AuthTokenResponse(BaseModel):
     token_type: Optional[str] = "bearer"
     tier: Optional[str] = None
     role: Optional[str] = None
+    iam_role: Optional[str] = None
     tenant_id: Optional[str] = None
     tenant_slug: Optional[str] = None
     user: Optional[dict] = None
@@ -439,6 +440,21 @@ class AuthTokenResponse(BaseModel):
     must_change_password: Optional[bool] = None
     scope: Optional[str] = None
     invitation_status: Optional[str] = None
+
+
+def _to_tenant_user_role(role_val: Optional[str], iam_role_val: Optional[str] = None) -> str:
+    """Normalize any legacy or standardized IAM role into a value permitted by ck_tenant_user_role."""
+    r = str(iam_role_val or role_val or "").strip().lower()
+    legacy = str(role_val or "").strip().lower()
+    if r in ("owner", "company_owner", "tenant_owner", "workspace_owner") or legacy in ("owner", "company_owner", "tenant_owner"):
+        return "Owner"
+    if r in ("super_admin", "ceo") or legacy in ("ceo", "super_admin"):
+        return "ceo"
+    if r in ("admin", "system_admin", "operations_admin", "finance_admin", "general_manager", "company_admin", "managing_director") or legacy == "admin":
+        return "Admin"
+    if r in ("guest", "guest_user", "external_auditor", "customer_portal_user", "supplier_portal_user", "transporter_driver") or legacy in ("guest", "guest_user"):
+        return "guest_user"
+    return "user"
 
 
 # ==============================================================================
@@ -878,7 +894,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                     with tenant_db.begin_nested():
                         res = tenant_db.execute(
                             text(
-                                "SELECT id, email, phone, password_hash, full_name as name, role, is_active "
+                                "SELECT id, email, phone, password_hash, full_name as name, role, iam_role, is_active "
                                 "FROM res_users WHERE company_id = :tenant_id "
                                 "AND deleted_at IS NULL "
                                 "AND (LOWER(email) = :val OR phone = :val) LIMIT 1"
@@ -902,7 +918,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                     first_name=first_name,
                     last_name=last_name,
                     password_hash=found_user_row["password_hash"],
-                    role=str(found_user_row.get("role", "admin")).lower(),
+                    role=_to_tenant_user_role(found_user_row.get("role", "admin"), found_user_row.get("iam_role")),
                     is_active=found_user_row.get("is_active") is not False,
                 )
                 tenant_db.merge(user)
@@ -973,66 +989,7 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         user.last_login_at = datetime.now(timezone.utc)
         tenant_db.commit()
 
-        # Invited/temporary-credential accounts live in res_users; surface the first-login flag and
-        # refuse accounts that were soft-deleted or deactivated there.
-        must_change_password = False
-        try:
-            with tenant_db.begin_nested():
-                flags = tenant_db.execute(
-                    text(
-                        "SELECT must_change_password, is_active, deleted_at FROM res_users "
-                        "WHERE id = :uid AND company_id = :cid"
-                    ),
-                    {"uid": user.id, "cid": tenant.id},
-                ).mappings().first()
-            if flags:
-                if flags["deleted_at"] is not None or flags["is_active"] is False:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="User account is inactive. Contact tenant administrator.",
-                    )
-                must_change_password = bool(flags["must_change_password"])
-        except HTTPException:
-            raise
-        except Exception:
-            logger.warning("Could not resolve must_change_password flag", exc_info=True)
-
-        # [TEMPORARY BYPASS] Two-Factor Authentication (2FA) check is temporarily disabled
-        # so users can sign in directly with email and password without triggering 2FA_REQUIRED.
-        #
-        # is_tfa_enabled = getattr(user, "tfa_enabled", False)
-        # if not is_tfa_enabled:
-        #     for s in target_schemas:
-        #         try:
-        #             tbl = tenant_db.execute(text("SELECT to_regclass(:t)"), {"t": f'"{s}".users'}).scalar()
-        #             if tbl:
-        #                 chk = tenant_db.execute(
-        #                     text(f'SELECT tfa_enabled FROM "{s}".users WHERE LOWER(email) = :val LIMIT 1'),
-        #                     {"val": normalized_val},
-        #                 ).scalar()
-        #                 if chk:
-        #                     is_tfa_enabled = True
-        #                     break
-        #         except Exception:
-        #             tenant_db.rollback()
-        #
-        # if is_tfa_enabled:
-        #     handshake_token = issue_2fa_handshake_token(
-        #         user_id=user.id,
-        #         identity=user.email,
-        #         role=user.role,
-        #         tenant_id=tenant.id,
-        #         tenant_slug=tenant.slug,
-        #     )
-        #     return JSONResponse(
-        #         status_code=status.HTTP_200_OK,
-        #         content={
-        #             "status": "2FA_REQUIRED",
-        #             "two_factor_token": handshake_token,
-        #         },
-        #     )
-
-        # Resolve canonical company ID from ResCompany
+        # Resolve canonical company ID from ResCompany before checking res_users
         canonical_cid = tenant.id
         try:
             comp_filter = (
@@ -1059,12 +1016,69 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
         except Exception:
             pass
 
+        # Invited/temporary-credential accounts live in res_users; surface the first-login flag,
+        # reconcile canonical role / iam_role, and refuse accounts that were soft-deleted or deactivated.
+        must_change_password = False
+        effective_role = user.role
+        effective_iam_role: Optional[str] = None
+        try:
+            with tenant_db.begin_nested():
+                flags = tenant_db.execute(
+                    text(
+                        "SELECT id, role, iam_role, must_change_password, is_active, deleted_at FROM res_users "
+                        "WHERE (id = :uid OR LOWER(email) = :email) AND company_id IN (:tid, :cid) "
+                        "ORDER BY CASE WHEN id = :uid THEN 0 ELSE 1 END LIMIT 1"
+                    ),
+                    {
+                        "uid": user.id,
+                        "email": (user.email or "").strip().lower(),
+                        "tid": tenant.id,
+                        "cid": canonical_cid,
+                    },
+                ).mappings().first()
+            if flags:
+                if flags.get("deleted_at") is not None or flags.get("is_active") is False:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="User account is inactive. Contact tenant administrator.",
+                    )
+                must_change_password = bool(flags.get("must_change_password"))
+                ru_role = flags.get("role")
+                ru_iam_role = flags.get("iam_role")
+                if ru_iam_role or ru_role:
+                    effective_iam_role = str(ru_iam_role or ru_role)
+                    effective_role = str(ru_role or ru_iam_role)
+                    healed_mirror_role = _to_tenant_user_role(ru_role, ru_iam_role)
+                    if user.role != healed_mirror_role:
+                        try:
+                            user.role = healed_mirror_role
+                            tenant_db.commit()
+                        except Exception:
+                            tenant_db.rollback()
+        except HTTPException:
+            raise
+        except Exception:
+            logger.warning("Could not resolve must_change_password / role flags", exc_info=True)
+
+        # If tenant owner email matches this user and role is still generic admin, promote to Owner
+        if (
+            getattr(tenant, "owner_email", None)
+            and user.email
+            and user.email.strip().lower() == tenant.owner_email.strip().lower()
+            and str(effective_role or "").strip().lower() in {"admin", "owner", "company_owner", "tenant_owner"}
+        ):
+            effective_role = "Owner"
+            effective_iam_role = effective_iam_role or "Owner"
+
+        # [TEMPORARY BYPASS] Two-Factor Authentication (2FA) check is temporarily disabled
+        # so users can sign in directly with email and password without triggering 2FA_REQUIRED.
+
         scope = "password_change" if must_change_password else "full"
         token = issue_two_tier_jwt(
             tier="tenant",
             user_id=user.id,
             identity=user.email,
-            role=user.role,
+            role=effective_role,
             tenant_id=canonical_cid,
             tenant_slug=tenant.slug,
             must_change_password=must_change_password,
@@ -1075,7 +1089,8 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
             "access_token": token,
             "token_type": "bearer",
             "tier": "tenant",
-            "role": user.role,
+            "role": effective_role,
+            "iam_role": effective_iam_role or effective_role,
             "company_id": str(canonical_cid),
             "tenant_id": str(canonical_cid),
             "tenant_slug": tenant.slug,
@@ -1088,7 +1103,8 @@ def tenant_login(request: Request, payload: TenantLoginRequest, master_db: Sessi
                 "email": user.email,
                 "mobile": user.mobile_number,
                 "fullName": f"{user.first_name} {user.last_name}",
-                "role": user.role,
+                "role": effective_role,
+                "iam_role": effective_iam_role or effective_role,
                 "company_id": str(canonical_cid),
                 "tenant_id": str(canonical_cid),
                 "tenant_slug": tenant.slug,
@@ -1201,7 +1217,8 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
             phone=norm_mobile,
             password_hash=pwd_context.hash(payload.password),
             company_id=tenant.id,
-            role="Admin",
+            role="Owner",
+            iam_role="Owner",
             is_active=True,
         )
         master_db.add(res_user)
@@ -1217,12 +1234,13 @@ def register_tenant(payload: TenantRegistrationRequest, master_db: Session = Dep
         Base.metadata.create_all(bind=conn_mgr.get_engine(tenant.id, db=master_db))
 
         admin_user = TenantUser(
+            id=res_user.id,
             email=norm_email,
             mobile_number=norm_mobile,
             first_name=first_name,
             last_name=last_name,
             password_hash=pwd_context.hash(payload.password),
-            role="admin",
+            role="Owner",
             is_active=True,
         )
         tenant_db.add(admin_user)

@@ -331,10 +331,23 @@ def require_iam_admin(
     if user_id is not None:
         row = db.execute(
             select(
-                ResUser.role, ResUser.iam_role, ResUser.is_superuser, ResUser.is_active,
+                ResUser.id, ResUser.role, ResUser.iam_role, ResUser.is_superuser, ResUser.is_active,
                 ResUser.company_id, ResUser.email,
             ).where(ResUser.id == user_id)
         ).first()
+        if row is None and getattr(current_user, "email", None):
+            email_val = str(getattr(current_user, "email", "")).strip().lower()
+            cid_val = getattr(current_user, "company_id", None)
+            stmt = select(
+                ResUser.id, ResUser.role, ResUser.iam_role, ResUser.is_superuser, ResUser.is_active,
+                ResUser.company_id, ResUser.email,
+            ).where(func.lower(ResUser.email) == email_val, ResUser.deleted_at.is_(None))
+            if cid_val is not None:
+                row = db.execute(stmt.where(ResUser.company_id == cid_val)).first()
+            if row is None:
+                row = db.execute(stmt).first()
+            if row is not None:
+                user_id = row.id
         # get_current_user overwrites the in-memory role with a normalised/token role; make sure that
         # never gets flushed back to the database by a later commit in this request.
         try:
@@ -473,12 +486,20 @@ def _revoke_sessions(db: Session, user_id: uuid.UUID, reason: str) -> None:
 
 def _mirror_role(iam_role: str, legacy_role: str) -> str:
     """Value for the legacy tenant_users.role column (restricted by ck_tenant_user_role)."""
-    if legacy_role == "Guest":
+    if legacy_role == "Guest" or iam_role in (
+        "Guest",
+        "External_Auditor",
+        "Customer_Portal_User",
+        "Supplier_Portal_User",
+        "Transporter_Driver",
+    ):
         return "guest_user"
-    if iam_role == "Owner":
+    if iam_role == "Owner" or legacy_role == "Owner":
         return "Owner"
-    if iam_role in PRIVILEGED_IAM_ROLES:
+    if iam_role in PRIVILEGED_IAM_ROLES or legacy_role in ("CEO", "Super_Admin"):
         return "ceo"
+    if iam_role in ("Admin", "System_Admin", "Operations_Admin", "Finance_Admin", "General_Manager") or legacy_role == "Admin":
+        return "Admin"
     return "user"
 
 
@@ -630,6 +651,16 @@ def _load_own_profile(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authenticated user is unavailable.")
 
     target = db.query(ResUser).filter(ResUser.id == user_id).first()
+    if target is None and getattr(current_user, "email", None):
+        email_val = str(getattr(current_user, "email", "")).strip().lower()
+        cid_val = getattr(current_user, "company_id", None)
+        q = db.query(ResUser).filter(func.lower(ResUser.email) == email_val, ResUser.deleted_at.is_(None))
+        if cid_val is not None:
+            target = q.filter(ResUser.company_id == cid_val).first()
+        if target is None:
+            target = q.first()
+        if target is not None:
+            user_id = target.id
     identifier = (target.email if target else getattr(current_user, "email", None)) or f"user:{user_id}"
     audit = build_audit_context(request, actor_id=user_id, actor_identifier=identifier)
     if target is None:
@@ -1116,9 +1147,12 @@ async def invite_tenant_user(
             ))
 
         mirror = db.query(TenantUser).filter(TenantUser.id == target_user.id).first()
+        if mirror is None and email_clean:
+            mirror = db.query(TenantUser).filter(func.lower(TenantUser.email) == email_clean.lower()).first()
         if mirror is not None:
             mirror.is_active = True
             mirror.password_hash = password_hash
+            mirror.role = _mirror_role(iam_role, legacy_role)
             parts = full_name.split()
             mirror.first_name = parts[0] if parts else "External"
             mirror.last_name = " ".join(parts[1:]) if len(parts) > 1 else ""
@@ -1303,6 +1337,8 @@ def update_tenant_user_role(
     target.abac_context = abac
 
     mirror = db.query(TenantUser).filter(TenantUser.id == target.id).first()
+    if mirror is None and target.email:
+        mirror = db.query(TenantUser).filter(func.lower(TenantUser.email) == target.email.strip().lower()).first()
     if mirror is not None:
         mirror.role = _mirror_role(new_role, legacy)
 

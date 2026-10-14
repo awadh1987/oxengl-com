@@ -100,15 +100,47 @@ function decodeJwt(token: string): DecodedTwoTierJwt | null {
   }
 }
 
-function mapBackendRoleToFrontend(role?: string): UserRole {
-  const r = (role || '').toLowerCase();
-  if (r === 'super_admin' || r === 'master' || r === 'root') return 'Super_Admin';
-  if (r === 'owner' || r === 'tenant_owner' || r === 'company_owner') return 'Owner';
-  if (r === 'admin' || r === 'platform_admin' || r === 'ceo' || r === 'executive') return 'Admin';
-  if (r === 'coo') return 'COO';
-  if (r === 'accountant') return 'Accountant';
-  if (r === 'data_entry' || r === 'user') return 'Data_Entry';
-  if (r === 'guest_user' || r === 'guest') return 'Guest';
+function mapBackendRoleToFrontend(role?: string | null): UserRole {
+  const r = (role || '').trim().toLowerCase();
+  if (r === 'super_admin' || r === 'superadmin' || r === 'master' || r === 'root') return 'Super_Admin';
+  if (r === 'owner' || r === 'tenant_owner' || r === 'company_owner' || r === 'workspace_owner') return 'Owner';
+  if (
+    r === 'admin' ||
+    r === 'platform_admin' ||
+    r === 'ceo' ||
+    r === 'executive' ||
+    r === 'system_admin' ||
+    r === 'operations_admin' ||
+    r === 'finance_admin' ||
+    r === 'general_manager' ||
+    r === 'managing_director' ||
+    r === 'company_admin'
+  ) {
+    return 'Admin';
+  }
+  if (r === 'coo' || r === 'ops_manager' || r === 'operations_manager') return 'COO';
+  if (
+    r === 'accountant' ||
+    r === 'finance_manager' ||
+    r === 'finance_editor' ||
+    r === 'cfo' ||
+    r === 'auditor'
+  ) {
+    return 'Accountant';
+  }
+  if (
+    r === 'data_entry' ||
+    r === 'user' ||
+    r === 'staff' ||
+    r === 'member' ||
+    r === 'ops_editor' ||
+    r === 'dispatcher' ||
+    r === 'fleet_coordinator' ||
+    r === 'weighbridge_operator'
+  ) {
+    return 'Data_Entry';
+  }
+  if (r === 'guest_user' || r === 'guest' || r === 'external_auditor' || r === 'viewer') return 'Guest';
   return 'Guest'; // Least-privilege fallback
 }
 
@@ -127,7 +159,7 @@ function sanitizeUserSession(rawUser: any): User {
   if (!rawUser || typeof rawUser !== 'object') {
     return DEFAULT_FALLBACK_USER;
   }
-  const role = mapBackendRoleToFrontend(rawUser?.role);
+  const role = mapBackendRoleToFrontend(rawUser?.iamRole || rawUser?.iam_role || rawUser?.role);
   return {
     id: rawUser.id || '',
     username: rawUser.username || (rawUser.email ? String(rawUser.email).split('@')[0] : 'user'),
@@ -136,6 +168,7 @@ function sanitizeUserSession(rawUser: any): User {
     email: rawUser.email || '',
     phone: rawUser.phone || rawUser.mobile || '',
     role: role || 'Guest',
+    iamRole: rawUser.iamRole ?? rawUser.iam_role ?? null,
     status: rawUser.status || 'Pending',
     companyId: rawUser.companyId || rawUser.company_id,
     assignedCustomerId: rawUser.assignedCustomerId,
@@ -1277,7 +1310,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('company_id', activeTenantId);
     }
 
-    const mappedRole = mapBackendRoleToFrontend(res?.role ?? res?.user?.role);
+    const rawEffectiveRole =
+      (res as any)?.iam_role ??
+      (res?.user as any)?.iam_role ??
+      res?.role ??
+      res?.user?.role;
+    const mappedRole = mapBackendRoleToFrontend(rawEffectiveRole);
     const userObj = res?.user;
     const email = userObj?.email ?? (payload.identity.includes('@') ? payload.identity : `${payload.identity}@${slug}.com`);
     const newUser: User = {
@@ -1288,6 +1326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       email: email,
       phone: userObj?.mobile ?? '',
       role: mappedRole,
+      iamRole: (res as any)?.iam_role ?? (userObj as any)?.iam_role ?? mappedRole,
       companyId: activeTenantId || undefined,
       status: 'Active',
       mustChangePassword: !!(res?.must_change_password ?? (userObj as any)?.must_change_password),
@@ -1360,7 +1399,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('company_id', activeTenantId);
       }
 
-      const mappedRole = mapBackendRoleToFrontend(res?.role ?? res?.user?.role);
+      const rawEffectiveRole =
+        (res as any)?.iam_role ??
+        (res?.user as any)?.iam_role ??
+        res?.role ??
+        res?.user?.role;
+      const mappedRole = mapBackendRoleToFrontend(rawEffectiveRole);
       const userObj = res?.user;
       const email = userObj?.email ?? (payload.email || `user@${slug}.com`);
       const newUser: User = {
@@ -1371,6 +1415,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         email: email,
         phone: userObj?.mobile ?? '',
         role: mappedRole,
+        iamRole: (res as any)?.iam_role ?? (userObj as any)?.iam_role ?? mappedRole,
         companyId: activeTenantId || undefined,
         status: 'Active',
       };
@@ -2624,6 +2669,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (Array.isArray(apiUsers)) {
         const mapped: User[] = apiUsers.map((u) => {
           const contact = u.email || u.phone || '';
+          const mappedRole = mapBackendRoleToFrontend(u.iam_role || u.role);
           return {
             id: u.id,
             username: contact.includes('@') ? contact.split('@')[0] : contact,
@@ -2633,8 +2679,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             phone: u.phone || '',
             syncReferenceId: u.sync_reference_id ?? null,
             avatar_url: u.avatar_url ?? undefined,
-            role: (u.role as UserRole) || 'Guest',
-            iamRole: u.iam_role ?? null,
+            role: mappedRole || (u.role as UserRole) || 'Guest',
+            iamRole: u.iam_role ?? u.role ?? null,
             mustChangePassword: !!u.must_change_password,
             status: u.is_active ? 'Active' : 'Suspended',
             created_at: u.created_at,
@@ -2642,6 +2688,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         });
         const unique = Array.from(new Map(mapped.map((u) => [u.id, u])).values());
         setUsers(unique.length > 0 || !currentUser?.id ? unique : [currentUser]);
+
+        if (currentUser && (currentUser.id || currentUser.email)) {
+          const normSessionEmail = (currentUser.email || '').trim().toLowerCase();
+          const matchedSelf = unique.find(
+            (u) =>
+              (currentUser.id && u.id === currentUser.id) ||
+              (normSessionEmail && (u.email || '').trim().toLowerCase() === normSessionEmail)
+          );
+          if (
+            matchedSelf &&
+            (matchedSelf.role !== currentUser.role || matchedSelf.iamRole !== currentUser.iamRole)
+          ) {
+            setCurrentUser((prev) => {
+              const updated: User = {
+                ...prev,
+                role: matchedSelf.role,
+                iamRole: matchedSelf.iamRole ?? prev.iamRole,
+              };
+              try {
+                localStorage.setItem('oxengl_user', JSON.stringify(updated));
+                localStorage.setItem('role', updated.role);
+              } catch {
+                // ignore storage write failures
+              }
+              return updated;
+            });
+          }
+        }
       }
     } catch (err) {
       console.warn('Notice loading users from live backend API:', err);
