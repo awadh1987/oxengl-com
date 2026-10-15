@@ -5,6 +5,7 @@ Defines UserSession, RefreshToken, LoginAttempt, and SecurityToken mapped entiti
 
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
@@ -14,6 +15,9 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
+
+sys.modules.setdefault("app.domains.iam.models", sys.modules[__name__])
+sys.modules.setdefault("backend.app.domains.iam.models", sys.modules[__name__])
 
 
 def utcnow() -> datetime:

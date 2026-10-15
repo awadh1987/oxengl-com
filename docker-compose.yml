@@ -30,6 +30,7 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - pg_data_volume:/var/lib/postgresql/data
+      - ./docker/postgres/init-permissions.sql:/docker-entrypoint-initdb.d/init-permissions.sql:ro
     # PostgreSQL parameters specifically tailored for a 2GB RAM host:
     # 128MB shared_buffers + 4MB work_mem capped at 60 connections safely reserves <370MB
     command: >
@@ -86,7 +87,7 @@ services:
     image: localhost/oxen-gl_backend:latest
     container_name: oxengl_backend_container
     restart: always
-    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
+    command: ["./entrypoint.sh"]
     env_file:
       - .env
     environment:

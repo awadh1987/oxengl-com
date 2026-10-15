@@ -33,8 +33,10 @@ COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy backend application source
+# Copy backend application source and entrypoint script
 COPY . ./backend
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh ./backend/entrypoint.sh
 
 EXPOSE 8000
 
@@ -42,5 +44,5 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')" || exit 1
 
-# Launch uvicorn with 3 workers to stay well within the 2GB host memory budget
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
+# Launch automated migrations and uvicorn via entrypoint script
+CMD ["./entrypoint.sh"]
