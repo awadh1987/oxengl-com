@@ -6,6 +6,8 @@ import {
   setDoc,
   getDocs,
   collection,
+  isFirestoreQuotaExhausted,
+  handleFirestoreQuotaError,
 } from '../firebase';
 import {
   User,
@@ -1203,14 +1205,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Native Authentication & Sync State
   const [isNativeAuthSyncing] = useState<boolean>(false);
+  const hasMountedBrandSyncRef = useRef<boolean>(false);
+  const lastSyncedBrandHashRef = useRef<string>('');
 
-  // Sync BrandConfig to Firestore when updated
+  // Sync BrandConfig to Firestore when explicitly updated (debounced, deduplicated & quota-guarded)
   useEffect(() => {
-    if (db && brandConfig) {
-      try {
-        setDoc(doc(db, 'brand_config', 'default'), brandConfig, { merge: true }).catch(() => {});
-      } catch (e) {}
+    if (!db || !brandConfig || isFirestoreQuotaExhausted()) {
+      return;
     }
+    const serialized = JSON.stringify(brandConfig);
+    if (!hasMountedBrandSyncRef.current) {
+      hasMountedBrandSyncRef.current = true;
+      lastSyncedBrandHashRef.current = serialized;
+      return;
+    }
+    if (serialized === lastSyncedBrandHashRef.current) {
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      if (isFirestoreQuotaExhausted()) return;
+      lastSyncedBrandHashRef.current = serialized;
+      try {
+        setDoc(doc(db, 'brand_config', 'default'), brandConfig, { merge: true }).catch((err) => {
+          handleFirestoreQuotaError(err, 'AppContext.brandConfigSync');
+        });
+      } catch (err) {
+        handleFirestoreQuotaError(err, 'AppContext.brandConfigSync');
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
   }, [brandConfig]);
 
   const logoutUser = async (): Promise<void> => {

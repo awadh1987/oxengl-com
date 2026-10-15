@@ -64,6 +64,10 @@ class LogisticsMetadata(BaseModel):
     sla_target_hours: Optional[float] = Field(default=None, ge=0.0)
     max_payload_tons: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
     cold_chain_required: Optional[bool] = None
+    incoterms: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -90,6 +94,9 @@ class SupplyChainMetadata(BaseModel):
     warehouse_hub: Optional[str] = None
     materials_list: Optional[List[str]] = None
     safety_stock_pct: Optional[float] = Field(default=None, ge=0.0, le=100.0)
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -112,6 +119,10 @@ class HumanitarianSupplyMetadata(BaseModel):
     distribution_camps: Optional[List[str]] = None
     customs_exemption_ref: Optional[str] = None
     last_mile_audit_required: Optional[bool] = True
+    incoterms: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -131,6 +142,10 @@ class EpcMetadata(BaseModel):
     prime_contractor: Optional[str] = None
     subcontractors: Optional[List[str]] = None
     wbs_phases: Optional[List[str]] = None
+    incoterms: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -149,6 +164,10 @@ class OilGasMetadata(BaseModel):
     hse_clearance_level: Optional[str] = None
     well_count: Optional[int] = Field(default=None, ge=0)
     daily_barrel_target: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
+    incoterms: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -167,6 +186,10 @@ class CommercialAgribusinessMetadata(BaseModel):
     cold_chain_max_temp_c: Optional[float] = None
     bom_reference: Optional[str] = None
     expected_yield_tons: Optional[Decimal] = Field(default=None, ge=Decimal("0"))
+    incoterms: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     beneficiary_client_ref: Optional[str] = None
     custom_attributes: Optional[Dict[str, Any]] = None
 
@@ -443,6 +466,10 @@ class CoreProjectRead(BaseModel):
     beneficiary_id: Optional[uuid.UUID] = None
     status: ProjectStatus
     financial_envelope: Decimal
+    total_budget: Optional[Decimal] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    currency_id: Optional[str] = None
     metadata_json: Dict[str, Any] = Field(default_factory=dict)
     telemetry_data: Dict[str, Any] = Field(default_factory=dict)
     esg_metrics: Dict[str, Any] = Field(default_factory=dict)

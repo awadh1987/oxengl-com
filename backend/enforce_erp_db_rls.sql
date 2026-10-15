@@ -53,9 +53,13 @@ BEGIN
                     );
                 WHEN 'invoices' THEN
                     tenant_predicate := format(
-                        'EXISTS (SELECT 1 FROM public.finance_journal_entries parent_row '
+                        '(EXISTS (SELECT 1 FROM public.finance_journal_entries parent_row '
                         'WHERE parent_row.id = invoices.journal_entry_id '
-                        'AND parent_row.tenant_id::text = %s)', tenant_setting
+                        'AND parent_row.tenant_id::text = %s) '
+                        'OR EXISTS (SELECT 1 FROM public.customer_invoices ci '
+                        'WHERE ci.invoice_number = invoices.invoice_number '
+                        'AND ci.company_id::text = %s))',
+                        tenant_setting, tenant_setting
                     );
                 WHEN 'journal_lines' THEN
                     tenant_predicate := format(
@@ -185,6 +189,8 @@ BEGIN
                 WHEN 'platform_settings' THEN
                     tenant_predicate := platform_predicate;
                 WHEN 'platform_master_settings' THEN
+                    tenant_predicate := platform_predicate;
+                WHEN 'platform_payment_gateway_settings' THEN
                     tenant_predicate := platform_predicate;
                 WHEN 'site_settings' THEN
                     tenant_predicate := platform_predicate;

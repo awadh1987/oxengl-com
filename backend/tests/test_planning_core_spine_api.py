@@ -845,3 +845,319 @@ def test_create_project_modal_payloads_and_extra_top_level_fields_ignored(seeded
         assert body["project_type"] == payload["project_type"]
 
 
+def test_project_control_panel_put_and_patch_e2e(seeded_tenants):
+    """
+    Phase 3 E2E Verification:
+    Tests full Project Control Panel metadata updates via both PUT and PATCH on
+    `/api/v1/planning/projects/{id}` and `/api/tenant/planning/projects/{id}`,
+    covering Master Project Title, Sector Archetype transitions, Financial Envelope,
+    Schedule (start_date, end_date), Currency, and IncoTerms.
+    """
+    client = TestClient(app)
+    tenant_a = str(seeded_tenants["tenant_a"])
+    headers = {"X-Tenant-ID": tenant_a, "X-User-Role": "tenant_owner"}
+
+    # 1. Create initial Logistics project
+    create_resp = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "name": "Red Sea Intermodal Freight Spine",
+            "project_type": "logistics",
+            "status": "Planning",
+            "financial_envelope": "1500000.00",
+            "metadata_json": {
+                "origin_hub": "Jeddah Islamic Port",
+                "destination_hub": "Riyadh Dry Port",
+                "transport_mode": "multi_modal",
+                "incoterms": "FOB",
+                "start_date": "2026-03-01",
+                "end_date": "2026-09-30",
+                "currency_id": "SAR",
+                "custom_attributes": {
+                    "incoterms": "FOB",
+                    "start_date": "2026-03-01",
+                    "end_date": "2026-09-30",
+                    "currency_id": "SAR",
+                },
+            },
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    created = create_resp.json()
+    project_id = created["id"]
+    assert created["start_date"] == "2026-03-01"
+    assert created["end_date"] == "2026-09-30"
+    assert created["currency_id"] == "SAR"
+    assert Decimal(str(created["total_budget"])) == Decimal("1500000.00")
+
+    # 2. Partial update via PATCH (modifying schedule, IncoTerms, and envelope without wiping origin_hub/destination_hub)
+    patch_resp = client.patch(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=headers,
+        json={
+            "name": "Red Sea Intermodal Freight Spine — Expanded",
+            "financial_envelope": "2250000.00",
+            "status": "Active Execution",
+            "metadata_json": {
+                "incoterms": "DDP",
+                "start_date": "2026-04-01",
+                "end_date": "2026-12-15",
+                "currency_id": "USD",
+                "custom_attributes": {
+                    "incoterms": "DDP",
+                    "start_date": "2026-04-01",
+                    "end_date": "2026-12-15",
+                    "currency_id": "USD",
+                },
+            },
+        },
+    )
+    assert patch_resp.status_code == 200, patch_resp.text
+    patched = patch_resp.json()
+    assert patched["name"] == "Red Sea Intermodal Freight Spine — Expanded"
+    assert patched["status"] == "Active Execution"
+    assert Decimal(str(patched["financial_envelope"])) == Decimal("2250000.00")
+    assert Decimal(str(patched["total_budget"])) == Decimal("2250000.00")
+    assert patched["start_date"] == "2026-04-01"
+    assert patched["end_date"] == "2026-12-15"
+    assert patched["currency_id"] == "USD"
+    # Existing logistics fields must be preserved across PATCH
+    assert patched["metadata_json"]["origin_hub"] == "Jeddah Islamic Port"
+    assert patched["metadata_json"]["destination_hub"] == "Riyadh Dry Port"
+    assert patched["metadata_json"]["incoterms"] == "DDP"
+
+    # 3. Full update via PUT switching Sector Archetype to supply_chain via /api/tenant/planning mount
+    put_resp = client.put(
+        f"/api/tenant/planning/projects/{project_id}",
+        headers=headers,
+        json={
+            "name": "Red Sea Strategic Supply Chain Hub",
+            "project_type": "supply_chain",
+            "status": "Active Execution",
+            "financial_envelope": "2750000.00",
+            "metadata_json": {
+                "origin_hub": "Jeddah Islamic Port",
+                "destination_hub": "NEOM Oxagon Logistics Park",
+                "commodity_category": "Strategic Construction Materials",
+                "incoterms": "CIF",
+                "lead_time_days": 21,
+                "warehouse_hub": "WH-TABUK-01",
+                "safety_stock_pct": 20.0,
+                "start_date": "2026-05-01",
+                "end_date": "2027-02-28",
+                "currency_id": "USD",
+                "custom_attributes": {
+                    "incoterms": "CIF",
+                    "start_date": "2026-05-01",
+                    "end_date": "2027-02-28",
+                    "currency_id": "USD",
+                },
+            },
+        },
+    )
+    assert put_resp.status_code == 200, put_resp.text
+    updated = put_resp.json()
+    assert updated["project_type"] == "supply_chain"
+    assert updated["metadata_json"]["incoterms"] == "CIF"
+    assert updated["metadata_json"]["warehouse_hub"] == "WH-TABUK-01"
+    assert updated["start_date"] == "2026-05-01"
+    assert updated["end_date"] == "2027-02-28"
+
+
+def test_safe_archiving_execution_lock_and_on_delete_restrict_e2e(seeded_tenants):
+    """
+    Phase 3 E2E Verification:
+    Verifies Safe Archiving (`status -> Closed`), Active Execution Lock protection,
+    and strict `ON DELETE RESTRICT` enforcement when child WBS nodes exist.
+    """
+    client = TestClient(app)
+    tenant_a = str(seeded_tenants["tenant_a"])
+    headers = {"X-Tenant-ID": tenant_a, "X-User-Role": "tenant_owner"}
+
+    # 1. Create Master Root Project in Active Execution
+    parent_resp = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "name": "Master EPC Infrastructure Spine",
+            "project_type": "epc",
+            "status": "Active Execution",
+            "financial_envelope": "8000000.00",
+            "metadata_json": {
+                "site_location": "Dammam Industrial Zone",
+                "contractor_tier": "Tier-1 EPC",
+                "retention_percentage": "10.0",
+                "incoterms": "DAP",
+            },
+        },
+    )
+    assert parent_resp.status_code == 201, parent_resp.text
+    parent_id = parent_resp.json()["id"]
+
+    # 2. Create Child WBS Sub-Project under Master Project
+    child_resp = client.post(
+        "/api/v1/planning/projects",
+        headers=headers,
+        json={
+            "name": "Phase 1: Substation Civil Works",
+            "project_type": "epc",
+            "status": "Planning",
+            "parent_project_id": parent_id,
+            "financial_envelope": "2000000.00",
+            "metadata_json": {
+                "site_location": "Dammam Sector B",
+                "retention_percentage": "5.0",
+            },
+        },
+    )
+    assert child_resp.status_code == 201, child_resp.text
+    child_id = child_resp.json()["id"]
+
+    # 3. Attempting to delete Active Execution project with enforce_execution_lock=true without override -> 409
+    locked_del = client.delete(
+        f"/api/v1/planning/projects/{parent_id}?enforce_execution_lock=true",
+        headers=headers,
+    )
+    assert locked_del.status_code == 409, locked_del.text
+    assert "Active Execution" in locked_del.json()["detail"]
+
+    # 4. Attempting to delete Parent Project (even with override) while child WBS exists -> 409 ON DELETE RESTRICT
+    restrict_del = client.delete(
+        f"/api/v1/planning/projects/{parent_id}?force_override=true",
+        headers=headers,
+    )
+    assert restrict_del.status_code == 409, restrict_del.text
+    assert "ON DELETE RESTRICT" in restrict_del.json()["detail"]
+
+    # Verify child still has parent_project_id intact
+    child_check = client.get(f"/api/v1/planning/projects/{child_id}", headers=headers)
+    assert child_check.status_code == 200
+    assert child_check.json()["parent_project_id"] == parent_id
+
+    # 5. Safe Archiving: transition Parent Project status to "Closed" via PUT
+    archive_resp = client.put(
+        f"/api/v1/planning/projects/{parent_id}",
+        headers=headers,
+        json={"status": "Closed"},
+    )
+    assert archive_resp.status_code == 200, archive_resp.text
+    assert archive_resp.json()["status"] == "Closed"
+
+    # 6. Delete Child Sub-Project first -> 200 OK
+    del_child = client.delete(f"/api/v1/planning/projects/{child_id}", headers=headers)
+    assert del_child.status_code == 200, del_child.text
+    assert del_child.json()["status"] == "deleted"
+
+    # 7. Now permanently delete Parent Project -> 200 OK
+    del_parent = client.delete(f"/api/v1/planning/projects/{parent_id}", headers=headers)
+    assert del_parent.status_code == 200, del_parent.text
+    assert del_parent.json()["status"] == "deleted"
+
+    # 8. Confirm Parent Project is gone (404)
+    gone_resp = client.get(f"/api/v1/planning/projects/{parent_id}", headers=headers)
+    assert gone_resp.status_code == 404
+
+
+def test_rls_cross_tenant_isolation_and_tenant_owner_rbac_mutations(seeded_tenants):
+    """
+    Phase 3 E2E Verification:
+    Verifies strict Row-Level Security (RLS) across Tenant A and Tenant B on
+    PUT, PATCH, and DELETE mutations, as well as RBAC / Tenant Owner role enforcement.
+    """
+    client = TestClient(app)
+    tenant_a = str(seeded_tenants["tenant_a"])
+    tenant_b = str(seeded_tenants["tenant_b"])
+
+    owner_a_headers = {"X-Tenant-ID": tenant_a, "X-User-Role": "tenant_owner"}
+    viewer_a_headers = {"X-Tenant-ID": tenant_a, "X-User-Role": "viewer"}
+    clerk_a_headers = {"X-Tenant-ID": tenant_a, "X-User-Role": "accountant"}
+    owner_b_headers = {"X-Tenant-ID": tenant_b, "X-User-Role": "tenant_owner"}
+
+    # 1. Create project as Tenant A Owner
+    create_resp = client.post(
+        "/api/v1/planning/projects",
+        headers=owner_a_headers,
+        json={
+            "name": "Tenant Alpha Confidential Oil & Gas Spine",
+            "project_type": "oil_gas",
+            "status": "Planning",
+            "financial_envelope": "4200000.00",
+            "metadata_json": {
+                "well_block_id": "BLK-ALPHA-01",
+                "rig_code": "RIG-A1",
+                "hazmat_class": "Class 3",
+                "hse_clearance_level": "TIER-1",
+            },
+        },
+    )
+    assert create_resp.status_code == 201, create_resp.text
+    project_id = create_resp.json()["id"]
+
+    # 2. Viewer role in Tenant A cannot POST, PUT, PATCH, or DELETE (403 Forbidden)
+    viewer_post = client.post(
+        "/api/v1/planning/projects",
+        headers=viewer_a_headers,
+        json={"name": "Unauthorized Project", "project_type": "logistics"},
+    )
+    assert viewer_post.status_code == 403
+
+    viewer_put = client.put(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=viewer_a_headers,
+        json={"name": "Viewer Tamper Attempt"},
+    )
+    assert viewer_put.status_code == 403
+
+    viewer_patch = client.patch(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=viewer_a_headers,
+        json={"status": "Closed"},
+    )
+    assert viewer_patch.status_code == 403
+
+    viewer_del = client.delete(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=viewer_a_headers,
+    )
+    assert viewer_del.status_code == 403
+
+    # 3. Non-Owner / Accountant role cannot DELETE (403 Forbidden - requires Tenant Owner / Project Manager)
+    clerk_del = client.delete(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=clerk_a_headers,
+    )
+    assert clerk_del.status_code == 403
+    assert "Tenant Owner" in clerk_del.json()["detail"]
+
+    # 4. Cross-Tenant RLS Isolation: Tenant B Owner cannot PUT, PATCH, or DELETE Tenant A's project (404)
+    cross_put = client.put(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=owner_b_headers,
+        json={"name": "Cross-Tenant Hijack"},
+    )
+    assert cross_put.status_code == 404
+
+    cross_patch = client.patch(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=owner_b_headers,
+        json={"status": "Closed"},
+    )
+    assert cross_patch.status_code == 404
+
+    cross_del = client.delete(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=owner_b_headers,
+    )
+    assert cross_del.status_code == 404
+
+    # 5. Tenant A Owner can legitimately DELETE the project (200 OK)
+    owner_del = client.delete(
+        f"/api/v1/planning/projects/{project_id}",
+        headers=owner_a_headers,
+    )
+    assert owner_del.status_code == 200
+    assert owner_del.json()["status"] == "deleted"
+
+
+

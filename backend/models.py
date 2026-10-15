@@ -1112,27 +1112,35 @@ class CustomerInvoice(TimestampMixin, Base):
 
     @property
     def public_token(self) -> Optional[str]:
+        deterministic_token = (
+            str(uuid.uuid5(uuid.NAMESPACE_URL, f"oxengl-invoice:{self.company_id}:{self.invoice_number}"))
+            if self.invoice_number
+            else None
+        )
         from sqlalchemy.orm import object_session
         session = object_session(self)
-        if session:
+        if session and self.invoice_number:
             try:
                 InvoiceClass = globals().get("Invoice")
                 if InvoiceClass:
-                    inv = session.query(InvoiceClass).filter(InvoiceClass.invoice_number == self.invoice_number).first()
-                    if inv and inv.public_token:
+                    with session.begin_nested():
+                        inv = session.query(InvoiceClass).filter(InvoiceClass.invoice_number == self.invoice_number).first()
+                        if inv and inv.public_token:
+                            return inv.public_token
+                        inv = InvoiceClass(
+                            invoice_number=self.invoice_number,
+                            total_amount=self.grand_total,
+                            currency="SAR",
+                            payment_status="paid" if self.status in ("Issued", "Paid") else "pending",
+                            journal_entry_id=self.journal_entry_id,
+                            public_token=deterministic_token or str(uuid.uuid4()),
+                        )
+                        session.add(inv)
+                        session.flush()
                         return inv.public_token
-                    inv = InvoiceClass(
-                        invoice_number=self.invoice_number,
-                        total_amount=self.grand_total,
-                        currency="SAR",
-                        payment_status="paid" if self.status in ("Issued", "Paid") else "pending",
-                    )
-                    session.add(inv)
-                    session.flush()
-                    return inv.public_token
             except Exception:
                 pass
-        return None
+        return deterministic_token
 
 
     __table_args__ = (

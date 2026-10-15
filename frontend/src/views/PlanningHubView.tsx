@@ -3,11 +3,13 @@ import {
   Activity,
   Boxes,
   Compass,
+  Edit3,
   Filter,
   Flame,
   FolderKanban,
   FolderPlus,
   GitBranch,
+  Globe,
   HardHat,
   HeartHandshake,
   Layers,
@@ -15,7 +17,9 @@ import {
   Radar,
   RefreshCw,
   Search,
+  Settings,
   Sprout,
+  Trash2,
   Truck,
 } from 'lucide-react';
 import { Card, Button } from '../components/ui';
@@ -29,6 +33,10 @@ import { useAppContext } from '../context/AppContext';
 import { FALLBACK_ACTIVE_PROJECTS } from '../components/common/ProjectSelector';
 import { ProjectCreationModal } from './ProjectCreationModal';
 import { ProjectCommandCenterView } from './ProjectCommandCenterView';
+import {
+  ControlPanelMode,
+  ProjectControlPanelDrawer,
+} from './ProjectControlPanelDrawer';
 
 const TYPE_FILTER_OPTIONS: { value: CoreProjectType | 'ALL'; labelEn: string; labelAr: string }[] = [
   { value: 'ALL', labelEn: 'All Sectors', labelAr: 'جميع القطاعات' },
@@ -121,6 +129,38 @@ export const PlanningHubView: React.FC = () => {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [activeCommandProject, setActiveCommandProject] = useState<CoreProjectRecord | null>(null);
+  const [controlPanelProject, setControlPanelProject] = useState<CoreProjectRecord | null>(null);
+  const [controlPanelMode, setControlPanelMode] = useState<ControlPanelMode>('edit');
+
+  const openControlPanel = useCallback(
+    (project: CoreProjectRecord, mode: ControlPanelMode = 'edit') => {
+      setControlPanelMode(mode);
+      setControlPanelProject(project);
+    },
+    []
+  );
+
+  const handleProjectUpdated = useCallback((updatedProj: CoreProjectRecord) => {
+    setProjects((prev) =>
+      (prev || []).map((item) =>
+        item.id === updatedProj.id || item.project_code === updatedProj.project_code
+          ? updatedProj
+          : item
+      )
+    );
+    setActiveCommandProject((prev) =>
+      prev && (prev.id === updatedProj.id || prev.project_code === updatedProj.project_code)
+        ? updatedProj
+        : prev
+    );
+    setControlPanelProject(updatedProj);
+  }, []);
+
+  const handleProjectDeleted = useCallback((deletedProjectId: string) => {
+    setProjects((prev) => (prev || []).filter((item) => item.id !== deletedProjectId));
+    setActiveCommandProject((prev) => (prev?.id === deletedProjectId ? null : prev));
+    setControlPanelProject(null);
+  }, []);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -135,17 +175,23 @@ export const PlanningHubView: React.FC = () => {
         currentCompanyId || undefined
       );
       if (Array.isArray(data) && (data?.length ?? 0) > 0) {
-        const normalized: CoreProjectRecord[] = data.map((p: any) => ({
-          ...p,
-          project_code: p?.project_code || 'PRJ-UNKNOWN',
-          name: p?.name || p?.project_code || 'Untitled Project',
-          project_type: p?.project_type || 'logistics',
-          status: p?.status || 'active',
-          total_budget: Number(p?.total_budget ?? p?.financial_envelope ?? 0) || 0,
-          metadata_json: p?.metadata_json || {},
-          esg_metrics: p?.esg_metrics || {},
-          telemetry_data: p?.telemetry_data || {},
-        }));
+        const normalized: CoreProjectRecord[] = data.map((p: any) => {
+          const customAttrs = p?.metadata_json?.custom_attributes || {};
+          return {
+            ...p,
+            project_code: p?.project_code || 'PRJ-UNKNOWN',
+            name: p?.name || p?.project_code || 'Untitled Project',
+            project_type: p?.project_type || 'logistics',
+            status: p?.status || 'active',
+            total_budget: Number(p?.total_budget ?? p?.financial_envelope ?? 0) || 0,
+            start_date: p?.start_date || customAttrs?.start_date || '2026-01-01',
+            end_date: p?.end_date || customAttrs?.end_date || undefined,
+            currency_id: p?.currency_id || customAttrs?.currency_id || 'SAR',
+            metadata_json: p?.metadata_json || {},
+            esg_metrics: p?.esg_metrics || {},
+            telemetry_data: p?.telemetry_data || {},
+          };
+        });
         setProjects(normalized);
       } else if (!selectedType || selectedType === 'ALL') {
         setProjects(FALLBACK_ACTIVE_PROJECTS);
@@ -215,14 +261,26 @@ export const PlanningHubView: React.FC = () => {
 
   if (activeCommandProject) {
     return (
-      <ProjectCommandCenterView
-        project={activeCommandProject}
-        onBack={() => setActiveCommandProject(null)}
-        onSelectSubProject={(subId) => {
-          const found = (projects || []).find((p) => p?.id === subId);
-          if (found) setActiveCommandProject(found);
-        }}
-      />
+      <>
+        <ProjectCommandCenterView
+          project={activeCommandProject}
+          onBack={() => setActiveCommandProject(null)}
+          onSelectSubProject={(subId) => {
+            const found = (projects || []).find((p) => p?.id === subId);
+            if (found) setActiveCommandProject(found);
+          }}
+          onOpenControlPanel={(mode = 'edit') => openControlPanel(activeCommandProject, mode)}
+        />
+        <ProjectControlPanelDrawer
+          isOpen={Boolean(controlPanelProject)}
+          project={controlPanelProject}
+          initialMode={controlPanelMode}
+          existingProjects={projects || []}
+          onClose={() => setControlPanelProject(null)}
+          onUpdated={handleProjectUpdated}
+          onDeleted={handleProjectDeleted}
+        />
+      </>
     );
   }
 
@@ -396,6 +454,7 @@ export const PlanningHubView: React.FC = () => {
                 <option value="draft">DRAFT</option>
                 <option value="on_hold">ON HOLD</option>
                 <option value="completed">COMPLETED</option>
+                <option value="Closed">CLOSED (ARCHIVED)</option>
               </select>
             </div>
 
@@ -417,24 +476,26 @@ export const PlanningHubView: React.FC = () => {
         title={isAr ? 'دليل مشاريع العمود الفقري (Core Projects Directory)' : 'Core Projects Spine Directory'}
         subtitle={
           isAr
-            ? 'اضغط على أي مشروع لفتح غرفة القيادة والقياسات الحية (Command Center Telemetry)'
-            : 'Select any project node to launch the real-time multi-ledger Command Center'
+            ? 'تحكم كامل ببيانات المشروع، الجداول الزمنية، شروط التجارة الدولية (IncoTerms)، والأرشفة الآمنة أو افتح غرفة القيادة الحية'
+            : 'Explicit row actions for Project Control Panel (Edit Metadata, Manage Schedule & IncoTerms, Safe Archive/Delete) and live Command Center Telemetry'
         }
         icon={GitBranch}
         noPadding
       >
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse" data-testid="core-projects-spine-table">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-[10px] font-mono uppercase text-slate-500 dark:text-slate-400">
                 <th className="py-3.5 px-4">Project Code & WBS</th>
                 <th className="py-3.5 px-4">Master Project Title & Metadata</th>
                 <th className="py-3.5 px-4">Sector Archetype</th>
-                <th className="py-3.5 px-4">Schedule</th>
+                <th className="py-3.5 px-4">Schedule & IncoTerms</th>
                 <th className="py-3.5 px-4 text-right">Total Envelope</th>
-                <th className="py-3.5 px-4 min-w-[200px]">Envelope Utilization</th>
+                <th className="py-3.5 px-4 min-w-[190px]">Envelope Utilization</th>
                 <th className="py-3.5 px-4 text-center">ESG Score</th>
-                <th className="py-3.5 px-4 text-right">Command Center</th>
+                <th className="py-3.5 px-4 text-right min-w-[290px] sticky right-0 bg-slate-50 dark:bg-slate-900 z-10 border-l border-slate-200 dark:border-slate-800">
+                  {isAr ? 'إجراءات التحكم والقيادة' : 'Actions & Control Panel'}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
@@ -462,7 +523,26 @@ export const PlanningHubView: React.FC = () => {
                   const budgetAmount =
                     Number(proj?.total_budget ?? (proj as any)?.financial_envelope ?? 0) || 0;
                   const utilizedAmount = Math.round((budgetAmount * utilPct) / 100) || 0;
-                  const metaEntries = Object.entries(proj?.metadata_json || {}).slice(0, 2);
+                  const metaEntries = Object.entries(proj?.metadata_json || {})
+                    .filter(
+                      ([k, v]) =>
+                        k !== 'custom_attributes' &&
+                        v !== null &&
+                        v !== undefined &&
+                        (typeof v !== 'object' || Array.isArray(v))
+                    )
+                    .slice(0, 2);
+                  const incotermsCode =
+                    proj?.metadata_json?.incoterms ||
+                    proj?.metadata_json?.custom_attributes?.incoterms ||
+                    'DDP';
+                  const normStatus = normalizeProjectStatusKey(proj?.status);
+                  const statusBadgeCls =
+                    normStatus === 'closed' || normStatus === 'completed'
+                      ? 'bg-slate-500/15 text-slate-400 border border-slate-500/30'
+                      : normStatus === 'on_hold'
+                      ? 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+                      : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
 
                   return (
                     <tr
@@ -476,7 +556,7 @@ export const PlanningHubView: React.FC = () => {
                             {proj?.project_code}
                           </span>
                         </div>
-                        <div className="mt-1 flex items-center gap-1.5">
+                        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                           <span
                             className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                               proj?.parent_project_id
@@ -486,7 +566,9 @@ export const PlanningHubView: React.FC = () => {
                           >
                             {proj?.parent_project_id ? 'SUB-WBS' : 'ROOT WBS'}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] uppercase">
+                          <span
+                            className={`px-1.5 py-0.5 rounded font-mono text-[10px] uppercase ${statusBadgeCls}`}
+                          >
                             {proj?.status}
                           </span>
                         </div>
@@ -518,8 +600,14 @@ export const PlanningHubView: React.FC = () => {
                       </td>
 
                       <td className="py-4 px-4 align-top font-mono text-[11px] text-slate-500 dark:text-slate-400">
-                        <div>Start: {proj?.start_date}</div>
+                        <div>Start: {proj?.start_date || '2026-01-01'}</div>
                         <div>End: {proj?.end_date || 'Continuous'}</div>
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/25 text-cyan-600 dark:text-cyan-400 text-[10px] font-mono font-bold">
+                            <Globe className="w-2.5 h-2.5" />
+                            IncoTerms: {incotermsCode}
+                          </span>
+                        </div>
                       </td>
 
                       <td className="py-4 px-4 align-top text-right font-mono">
@@ -560,18 +648,53 @@ export const PlanningHubView: React.FC = () => {
                       </td>
 
                       <td
-                        className="py-4 px-4 align-top text-right"
+                        className="py-4 px-4 align-top text-right sticky right-0 bg-white dark:bg-[#0b1324] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/90 z-10 border-l border-slate-100 dark:border-slate-800/80"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <Button
-                          variant="primary"
-                          size="xs"
-                          icon={Radar}
-                          data-testid={`open-command-center-${proj?.project_code}`}
-                          onClick={() => setActiveCommandProject(proj)}
-                        >
-                          {isAr ? 'غرفة القيادة' : 'Telemetry'}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            title={isAr ? 'تعديل بيانات المشروع والميزانية' : 'Edit Project Metadata & Envelope'}
+                            data-testid={`edit-project-${proj?.project_code}`}
+                            onClick={() => openControlPanel(proj, 'edit')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-600 dark:text-indigo-300 text-[11px] font-bold transition-colors"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>{isAr ? 'تعديل' : 'Edit'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            title={isAr ? 'إدارة الجدول الزمني وشروط التجارة والقطاع' : 'Manage Schedule, IncoTerms & Sector Schema'}
+                            data-testid={`manage-project-${proj?.project_code}`}
+                            onClick={() => openControlPanel(proj, 'manage')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-700 dark:text-cyan-300 text-[11px] font-bold transition-colors"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                            <span>{isAr ? 'إعدادات' : 'Manage'}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            title={isAr ? 'أرشفة أو حذف آمن للمشروع' : 'Archive or Safe Delete Project'}
+                            data-testid={`delete-project-${proj?.project_code}`}
+                            onClick={() => openControlPanel(proj, 'delete')}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-[11px] font-bold transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>{isAr ? 'حذف' : 'Delete'}</span>
+                          </button>
+
+                          <Button
+                            variant="primary"
+                            size="xs"
+                            icon={Radar}
+                            data-testid={`open-command-center-${proj?.project_code}`}
+                            onClick={() => setActiveCommandProject(proj)}
+                          >
+                            {isAr ? 'غرفة القيادة' : 'Telemetry'}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -589,6 +712,16 @@ export const PlanningHubView: React.FC = () => {
         onCreated={(newProj) => {
           setProjects((prev) => [newProj, ...(prev || [])]);
         }}
+      />
+
+      <ProjectControlPanelDrawer
+        isOpen={Boolean(controlPanelProject)}
+        project={controlPanelProject}
+        initialMode={controlPanelMode}
+        existingProjects={projects || []}
+        onClose={() => setControlPanelProject(null)}
+        onUpdated={handleProjectUpdated}
+        onDeleted={handleProjectDeleted}
       />
     </div>
   );

@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../context/AppContext';
 import { CustomerInvoice, InvoiceItem, OperationRecord, DocumentAttachment } from '../types';
 import { erpApi, ApiCustomerInvoice, ApiJournalEntry } from '../services/api';
+import { handleFirestoreQuotaError, isResourceExhaustedError } from '../firebase';
 import {
   FileText,
   Printer,
@@ -224,14 +225,34 @@ export const CustomerInvoicingView: React.FC = () => {
     return tafqeetEnglish(grandTotal, 'Saudi Riyals', 'Halalas');
   }, [grandTotal]);
 
+  const resolveInvoiceErrorMessage = useCallback(
+    (err: unknown, fallbackAr: string, fallbackEn: string): string => {
+      if (isResourceExhaustedError(err)) {
+        handleFirestoreQuotaError(err, 'CustomerInvoicingView');
+        return isAr
+          ? 'تنبيه: تم تجاوز حصة الكتابة اليومية لـ Firebase (resource-exhausted). تم إيقاف المزامنة السحابية الثانوية مؤقتاً مع استمرار العمل عبر الخادم المركزي بأمان.'
+          : 'Notice: Firebase daily write quota reached (resource-exhausted). Secondary cloud sync paused; primary backend persistence remains active.';
+      }
+      const rawMsg = err instanceof Error ? err.message : String((err as any)?.detail || err || '');
+      if (rawMsg.includes('500') || rawMsg.toLowerCase().includes('internal server error')) {
+        return isAr
+          ? 'حدث خطأ في الخادم أثناء معالجة الفواتير (500). تم تفعيل وضع الحماية المحلي دون فقدان بيانات العرض — يرجى المحاولة مرة أخرى.'
+          : 'Server error while processing customer invoices (500). UI fallback active; please retry.';
+      }
+      return rawMsg || (isAr ? fallbackAr : fallbackEn);
+    },
+    [isAr]
+  );
+
   // Backend synchronization
   const loadBackendInvoices = useCallback(async () => {
     if (!currentCompany?.id) return;
     setIsLoadingBackend(true);
     try {
       const list = await erpApi.getCustomerInvoices(currentCompany.id);
-      setBackendInvoices(list);
-      const match = list.find(
+      const safeList = Array.isArray(list) ? list : [];
+      setBackendInvoices(safeList);
+      const match = safeList.find(
         (inv) =>
           inv.invoice_number === invoiceNumber ||
           (inv.partner_id === selectedCustomerId &&
@@ -261,10 +282,17 @@ export const CustomerInvoicingView: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to load customer invoices from backend:', err);
+      setBackendInvoices((prev) => (Array.isArray(prev) ? prev : []));
+      const friendlyMsg = resolveInvoiceErrorMessage(
+        err,
+        'تعذر مزامنة سجل الفواتير من الخادم المركزي مؤقتاً. يتم عرض البيانات المحسوبة محلياً.',
+        'Unable to synchronize customer invoices from backend; displaying locally computed invoice data.'
+      );
+      setFeedback((prev) => prev || { type: 'error', message: friendlyMsg });
     } finally {
       setIsLoadingBackend(false);
     }
-  }, [currentCompany?.id, invoiceNumber, selectedCustomerId, selectedMonth, selectedYear, brandConfig.ceoNameAr]);
+  }, [currentCompany?.id, invoiceNumber, selectedCustomerId, selectedMonth, selectedYear, brandConfig.ceoNameAr, resolveInvoiceErrorMessage]);
 
   useEffect(() => {
     loadBackendInvoices();
@@ -418,7 +446,7 @@ export const CustomerInvoicingView: React.FC = () => {
     } catch (err: any) {
       setFeedback({
         type: 'error',
-        message: err.message || (isAr ? 'فشل حفظ المسودة في الخادم' : 'Failed to save draft invoice.'),
+        message: resolveInvoiceErrorMessage(err, 'فشل حفظ المسودة في الخادم', 'Failed to save draft invoice.'),
       });
     } finally {
       setActionLoading(false);
@@ -511,7 +539,7 @@ export const CustomerInvoicingView: React.FC = () => {
     } catch (err: any) {
       setFeedback({
         type: 'error',
-        message: err.message || (isAr ? 'فشل اعتماد وتوقيع الفاتورة' : 'Failed to approve invoice.'),
+        message: resolveInvoiceErrorMessage(err, 'فشل اعتماد وتوقيع الفاتورة', 'Failed to approve invoice.'),
       });
     } finally {
       setActionLoading(false);
@@ -591,7 +619,7 @@ export const CustomerInvoicingView: React.FC = () => {
       });
       await loadBackendInvoices();
     } catch (err: any) {
-      const errMsg = err.message || (isAr ? 'فشل إصدار الفاتورة وترحيل القيد' : 'Failed to issue invoice to ledger.');
+      const errMsg = resolveInvoiceErrorMessage(err, 'فشل إصدار الفاتورة وترحيل القيد', 'Failed to issue invoice to ledger.');
       setFeedback({
         type: 'error',
         message: errMsg,
@@ -661,7 +689,7 @@ export const CustomerInvoicingView: React.FC = () => {
 
       await loadBackendInvoices();
     } catch (err: any) {
-      const errMsg = err?.message || (isAr ? 'فشل ترحيل الفاتورة إلى دفتر الأستاذ العام' : 'Failed to post invoice to ledger.');
+      const errMsg = resolveInvoiceErrorMessage(err, 'فشل ترحيل الفاتورة إلى دفتر الأستاذ العام', 'Failed to post invoice to ledger.');
       setFeedback({ type: 'error', message: errMsg });
       showToast(errMsg, 'error');
     } finally {

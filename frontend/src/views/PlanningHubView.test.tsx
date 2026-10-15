@@ -41,6 +41,25 @@ vi.mock('../services/api', async (importOriginal) => {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })),
+      updateCoreProject: vi.fn().mockImplementation(async (projectId, payload) => ({
+        id: projectId,
+        tenant_id: '00000000-0000-0000-0000-000000000001',
+        company_id: null,
+        parent_project_id: payload.parent_project_id || null,
+        project_code: payload.project_code || 'PRJ-LOG-2026-001',
+        name: payload.name || 'Updated Project Title',
+        project_type: payload.project_type || 'logistics',
+        status: payload.status || 'Active Execution',
+        client_id: payload.client_id || null,
+        total_budget: payload.total_budget ?? payload.financial_envelope ?? 1500000,
+        financial_envelope: payload.financial_envelope ?? payload.total_budget ?? 1500000,
+        metadata_json: payload.metadata_json || {},
+        esg_metrics: payload.esg_metrics || { co2_emissions_kg: 0, fuel_consumed_liters: 0 },
+        telemetry_data: payload.telemetry_data || { active_alerts: [] },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })),
+      deleteCoreProject: vi.fn().mockResolvedValue(undefined),
     },
   };
 });
@@ -258,7 +277,120 @@ describe('PlanningHubView & Command Center Suite', () => {
     expect(screen.getByTestId('tab-panel-esg-metrics')).toBeDefined();
     expect(screen.getByText(/0\.00 Metric Tons CO₂e/i)).toBeDefined();
   });
+
+  it('renders explicit row action buttons (Edit, Manage, Delete, Telemetry) and updates project metadata, schedule, and IncoTerms via ProjectControlPanelDrawer', async () => {
+    const mockUpdate = vi.mocked(erpApi.updateCoreProject);
+    mockUpdate.mockClear();
+
+    render(
+      <AppProvider>
+        <PlanningHubView />
+      </AppProvider>
+    );
+
+    // Verify explicit action buttons exist on the Core Projects Spine Directory row
+    const editBtn = screen.getByTestId('edit-project-PRJ-LOG-2026-001');
+    const manageBtn = screen.getByTestId('manage-project-PRJ-LOG-2026-001');
+    const deleteBtn = screen.getByTestId('delete-project-PRJ-LOG-2026-001');
+    const telemetryBtn = screen.getByTestId('open-command-center-PRJ-LOG-2026-001');
+
+    expect(editBtn).toBeDefined();
+    expect(manageBtn).toBeDefined();
+    expect(deleteBtn).toBeDefined();
+    expect(telemetryBtn).toBeDefined();
+
+    // Click Edit to open the Project Control Panel Drawer in 'edit' mode
+    fireEvent.click(editBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('project-control-panel-drawer')).toBeDefined();
+      expect(screen.getByTestId('control-panel-form-edit')).toBeDefined();
+    });
+
+    // Update Master Project Title and Financial Envelope
+    fireEvent.change(screen.getByTestId('cp-project-name-input'), {
+      target: { value: 'Red Sea & Central Corridor — Phase II Expansion' },
+    });
+    fireEvent.change(screen.getByTestId('cp-budget-input'), {
+      target: { value: '18500000' },
+    });
+
+    // Switch to Manage tab (Schedule, IncoTerms & Sector Schema)
+    fireEvent.click(screen.getByTestId('control-panel-tab-manage'));
+    expect(screen.getByTestId('control-panel-form-manage')).toBeDefined();
+
+    // Update Schedule and select CIF IncoTerms
+    fireEvent.change(screen.getByTestId('cp-start-date-input'), {
+      target: { value: '2026-02-01' },
+    });
+    fireEvent.change(screen.getByTestId('cp-end-date-input'), {
+      target: { value: '2027-06-30' },
+    });
+    fireEvent.change(screen.getByTestId('cp-incoterms-select'), {
+      target: { value: 'CIF' },
+    });
+
+    // Save changes
+    fireEvent.click(screen.getByTestId('cp-save-changes-btn'));
+
+    await waitFor(() => {
+      expect(mockUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    const [updatedId, updatePayload] = mockUpdate.mock.calls[0];
+    expect(updatedId).toBe('11111111-2222-4333-8444-555555555501');
+    expect(updatePayload.name).toBe('Red Sea & Central Corridor — Phase II Expansion');
+    expect(updatePayload.financial_envelope).toBe(18500000);
+    expect(updatePayload.metadata_json?.custom_attributes?.incoterms).toBe('CIF');
+    expect(updatePayload.metadata_json?.custom_attributes?.start_date).toBe('2026-02-01');
+    expect(updatePayload.metadata_json?.custom_attributes?.end_date).toBe('2027-06-30');
+  });
+
+  it('enforces RLS, WBS child dependency locks, and Active Execution Lock checks in the Safe Deletion & Archive dialog before allowing permanent deletion', async () => {
+    const mockUpdate = vi.mocked(erpApi.updateCoreProject);
+    const mockDelete = vi.mocked(erpApi.deleteCoreProject);
+    mockUpdate.mockClear();
+    mockDelete.mockClear();
+
+    render(
+      <AppProvider>
+        <PlanningHubView />
+      </AppProvider>
+    );
+
+    // Click Delete button on row PRJ-HUM-2026-003 (status 'active', no child sub-projects)
+    fireEvent.click(screen.getByTestId('delete-project-PRJ-HUM-2026-003'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('control-panel-delete-dialog')).toBeDefined();
+    });
+
+    // Confirm button should be disabled initially because confirmation code and execution lock override are not set
+    const confirmDeleteBtn = screen.getByTestId('cp-confirm-permanent-delete-btn') as HTMLButtonElement;
+    expect(confirmDeleteBtn.disabled).toBe(true);
+
+    // Enter matching project code, still disabled until active execution lock override is checked
+    fireEvent.change(screen.getByTestId('cp-confirm-delete-code-input'), {
+      target: { value: 'PRJ-HUM-2026-003' },
+    });
+    expect(confirmDeleteBtn.disabled).toBe(true);
+
+    // Check execution lock override checkbox -> button becomes enabled
+    fireEvent.click(screen.getByTestId('cp-override-execution-lock-checkbox'));
+    expect(confirmDeleteBtn.disabled).toBe(false);
+
+    // Trigger permanent deletion
+    fireEvent.click(confirmDeleteBtn);
+
+    await waitFor(() => {
+      expect(mockDelete).toHaveBeenCalledWith(
+        '11111111-2222-4333-8444-555555555503',
+        undefined
+      );
+    });
+  });
 });
+
 
 
 

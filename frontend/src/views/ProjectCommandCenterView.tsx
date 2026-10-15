@@ -16,6 +16,7 @@ import {
   PackageCheck,
   Radar,
   RefreshCw,
+  Settings,
   ShieldAlert,
   TrendingUp,
   Truck,
@@ -30,11 +31,13 @@ import {
 } from '../types';
 import { erpApi } from '../services/api';
 import { useAppContext } from '../context/AppContext';
+import { ControlPanelMode } from './ProjectControlPanelDrawer';
 
 export interface ProjectCommandCenterViewProps {
   project: CoreProjectRecord;
   onBack?: () => void;
   onSelectSubProject?: (projectId: string) => void;
+  onOpenControlPanel?: (mode?: ControlPanelMode) => void;
 }
 
 type CommandTab = 'financial_ledger' | 'logistics_radar' | 'supply_chain' | 'esg_metrics';
@@ -393,6 +396,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
   project,
   onBack,
   onSelectSubProject,
+  onOpenControlPanel,
 }) => {
   const { lang, currentCompanyId, operations, vouchers } = useAppContext();
   const isAr = lang === 'ar';
@@ -559,7 +563,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
             <label className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-bold text-slate-300 cursor-pointer">
               <input
                 type="checkbox"
@@ -569,6 +573,18 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               />
               <span>{isAr ? 'تضمين المشاريع الفرعية (WBS Roll-up)' : 'Roll-up Sub-Projects (WBS)'}</span>
             </label>
+            {onOpenControlPanel && (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={Settings}
+                data-testid="command-center-open-control-panel-btn"
+                onClick={() => onOpenControlPanel('edit')}
+                className="!bg-indigo-600/20 !text-indigo-200 !border-indigo-500/40 hover:!bg-indigo-600/30"
+              >
+                {isAr ? 'لوحة التحكم بالمشروع' : 'Control Panel'}
+              </Button>
+            )}
             <Button
               variant="primary"
               size="sm"

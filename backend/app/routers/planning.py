@@ -158,6 +158,95 @@ async def _apply_tenant_rls_guc(db: Session, tenant_uuid: uuid.UUID) -> None:
     )
 
 
+TENANT_OWNER_DELETE_ROLES: Set[str] = {
+    "super_admin",
+    "superadmin",
+    "owner",
+    "tenant_owner",
+    "company_owner",
+    "admin",
+    "ceo",
+    "executive",
+    "project_manager",
+    "planning_manager",
+    "cfo",
+}
+
+READ_ONLY_OR_RESTRICTED_MUTATION_ROLES: Set[str] = {
+    "viewer",
+    "read_only",
+    "readonly",
+    "auditor",
+    "guest",
+    "driver",
+    "cashier",
+    "external_vendor",
+}
+
+
+def _extract_jwt_claims(request: Request) -> Dict[str, Any]:
+    """Extracts decoded JWT claims from cookies or Authorization header if present."""
+    raw_token = request.cookies.get("access_token") or request.cookies.get("oxengl_session")
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if not raw_token and auth_header and auth_header.startswith("Bearer "):
+        raw_token = auth_header.split(" ", 1)[1].strip()
+    if raw_token:
+        try:
+            try:
+                from backend.app.dependencies import decode_jwt_token
+            except ImportError:
+                from app.dependencies import decode_jwt_token
+            claims = decode_jwt_token(raw_token)
+            if isinstance(claims, dict):
+                return claims
+        except Exception:
+            pass
+    return {}
+
+
+def _enforce_project_mutation_role(request: Request, action: str = "update") -> None:
+    """
+    Enforces RBAC and Tenant Owner permissions on WBS project mutations (`POST`, `PUT`, `PATCH`, `DELETE`).
+    - When a user role is supplied via session/JWT or `X-User-Role` header:
+      - `delete` requires a Tenant Owner / Admin / Executive / Project Manager role.
+      - `create` / `update` blocks read-only and non-planning roles (`viewer`, `auditor`, `driver`, etc.).
+    """
+    current_user = getattr(request.state, "current_user", None)
+    if current_user and getattr(current_user, "is_super_admin", False):
+        return
+
+    claims = _extract_jwt_claims(request)
+    if claims.get("is_super_admin") is True:
+        return
+
+    raw_role = (
+        getattr(current_user, "role", None)
+        or claims.get("role")
+        or claims.get("user_role")
+        or request.headers.get("X-User-Role")
+        or request.headers.get("x-user-role")
+    )
+    if not raw_role:
+        return
+
+    role_norm = str(raw_role).strip().lower().replace("-", "_").replace(" ", "_")
+    if action == "delete":
+        if role_norm not in TENANT_OWNER_DELETE_ROLES:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Tenant Owner or Project Manager permission required to delete projects "
+                    f"(current role: '{raw_role}')."
+                ),
+            )
+    else:
+        if role_norm in READ_ONLY_OR_RESTRICTED_MUTATION_ROLES:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions: role '{raw_role}' cannot modify WBS projects.",
+            )
+
+
 async def get_planning_tenant_db(
     request: Request,
     tenant_id: Optional[str] = Query(
@@ -169,21 +258,38 @@ async def get_planning_tenant_db(
     db: Session = Depends(get_db),
 ) -> Tuple[Session, uuid.UUID]:
     """
-    Resolves the authoritative tenant UUID from the request/session context and
+    Resolves the authoritative tenant UUID from the request/session context,
+    prevents cross-tenant header spoofing against authenticated sessions, and
     enforces strict `app.current_tenant_id` GUC propagation on the database session.
     """
-    jwt_tenant_claim: Optional[Any] = None
-    raw_token = request.cookies.get("access_token") or request.cookies.get("oxengl_session")
-    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
-    if not raw_token and auth_header and auth_header.startswith("Bearer "):
-        raw_token = auth_header.split(" ", 1)[1].strip()
-    if raw_token:
+    claims = _extract_jwt_claims(request)
+    jwt_tenant_claim: Optional[Any] = claims.get("tenant_id") or claims.get("company_id")
+    current_user = getattr(request.state, "current_user", None)
+    user_company_id = getattr(current_user, "company_id", None) if current_user else None
+    is_super_admin = bool(
+        (current_user and getattr(current_user, "is_super_admin", False))
+        or claims.get("is_super_admin") is True
+        or str(claims.get("role") or "").strip().lower() in ("super_admin", "superadmin")
+    )
+
+    auth_tenant_raw = user_company_id or jwt_tenant_claim
+    explicit_requested_raw = (
+        x_tenant_id
+        or x_company_id
+        or tenant_id
+        or request.headers.get("x-tenant-id")
+        or request.headers.get("x-company-id")
+    )
+    if auth_tenant_raw and explicit_requested_raw and not is_super_admin:
         try:
-            from backend.app.dependencies import decode_jwt_token
-            claims = decode_jwt_token(raw_token)
-            if claims:
-                jwt_tenant_claim = claims.get("tenant_id") or claims.get("company_id")
-        except Exception:
+            auth_uuid = uuid.UUID(str(auth_tenant_raw).strip())
+            req_uuid = uuid.UUID(str(explicit_requested_raw).strip())
+            if auth_uuid != req_uuid:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cross-tenant access denied: session tenant does not match requested tenant scope.",
+                )
+        except ValueError:
             pass
 
     candidates: List[Any] = [
@@ -191,7 +297,7 @@ async def get_planning_tenant_db(
         getattr(request.state, "tenant_company_id", None),
         getattr(request.state, "tenant_id", None),
         getattr(request.state, "company_id", None),
-        getattr(getattr(request.state, "current_user", None), "company_id", None),
+        user_company_id,
         jwt_tenant_claim,
         x_tenant_id,
         x_company_id,
@@ -253,6 +359,13 @@ def _serialize_project_read(project: CoreProject, sub_project_count: Optional[in
     client_obj = project.__dict__.get("client")
     beneficiary_obj = project.__dict__.get("beneficiary")
 
+    meta = dict(project.metadata_json or {})
+    custom_attrs = meta.get("custom_attributes") if isinstance(meta.get("custom_attributes"), dict) else {}
+    envelope_dec = Decimal(str(project.financial_envelope or 0))
+    start_date_val = meta.get("start_date") or custom_attrs.get("start_date")
+    end_date_val = meta.get("end_date") or custom_attrs.get("end_date")
+    currency_val = meta.get("currency_id") or custom_attrs.get("currency_id")
+
     return CoreProjectRead(
         id=project.id,
         tenant_id=project.tenant_id,
@@ -264,8 +377,12 @@ def _serialize_project_read(project: CoreProject, sub_project_count: Optional[in
         client_id=project.client_id,
         beneficiary_id=project.beneficiary_id,
         status=normalize_project_status(project.status),
-        financial_envelope=Decimal(str(project.financial_envelope or 0)),
-        metadata_json=dict(project.metadata_json or {}),
+        financial_envelope=envelope_dec,
+        total_budget=envelope_dec,
+        start_date=str(start_date_val) if start_date_val else None,
+        end_date=str(end_date_val) if end_date_val else None,
+        currency_id=str(currency_val) if currency_val else None,
+        metadata_json=meta,
         telemetry_data=dict(project.telemetry_data or {}),
         esg_metrics=dict(project.esg_metrics or {}),
         created_at=project.created_at,
@@ -433,6 +550,7 @@ async def list_projects(
     summary="Create a Core Project with Dynamic Polymorphic Metadata Validation",
 )
 async def create_project(
+    request: Request,
     payload: CoreProjectCreate,
     ctx: Tuple[Session, uuid.UUID] = Depends(get_planning_tenant_db),
 ) -> CoreProjectRead:
@@ -441,6 +559,7 @@ async def create_project(
     Dynamically validates `metadata_json` based on `project_type`.
     """
     db, tenant_uuid = ctx
+    _enforce_project_mutation_role(request, action="create")
 
     # Explicitly validate metadata_json against project_type
     try:
@@ -574,19 +693,21 @@ async def get_project(
     "/projects/{project_id}",
     response_model=CoreProjectRead,
     status_code=status.HTTP_200_OK,
-    include_in_schema=False,
+    summary="Partially Update a Core Project (PATCH) with Dynamic Metadata Validation",
 )
 async def update_project(
+    request: Request,
     project_id: uuid.UUID,
     payload: CoreProjectUpdate,
     ctx: Tuple[Session, uuid.UUID] = Depends(get_planning_tenant_db),
 ) -> CoreProjectRead:
     """
-    Updates an existing `CoreProject`.
+    Updates an existing `CoreProject` via `PUT` or `PATCH`.
     Dynamically validates `metadata_json` against the effective `project_type`
     (either the incoming `payload.project_type` or the existing project's `project_type`).
     """
     db, tenant_uuid = ctx
+    _enforce_project_mutation_role(request, action="update")
 
     stmt = (
         select(CoreProject)
@@ -606,19 +727,34 @@ async def update_project(
         )
 
     update_fields = payload.model_fields_set
+    existing_type = ProjectType(project.project_type)
     effective_type = (
         payload.project_type
         if payload.project_type is not None
-        else ProjectType(project.project_type)
+        else existing_type
     )
+    is_patch = request.method.upper() == "PATCH"
 
     # Dynamic validation of metadata_json whenever metadata_json or project_type is updated
     if "metadata_json" in update_fields or "project_type" in update_fields:
-        candidate_metadata = (
-            payload.metadata_json
-            if "metadata_json" in update_fields and payload.metadata_json is not None
-            else dict(project.metadata_json or {})
-        )
+        existing_meta = dict(project.metadata_json or {})
+        if "metadata_json" in update_fields and payload.metadata_json is not None:
+            incoming_meta = dict(payload.metadata_json)
+            if is_patch and effective_type == existing_type:
+                merged_meta = {**existing_meta, **incoming_meta}
+                if isinstance(existing_meta.get("custom_attributes"), dict) and isinstance(
+                    incoming_meta.get("custom_attributes"), dict
+                ):
+                    merged_meta["custom_attributes"] = {
+                        **existing_meta["custom_attributes"],
+                        **incoming_meta["custom_attributes"],
+                    }
+                candidate_metadata = merged_meta
+            else:
+                candidate_metadata = incoming_meta
+        else:
+            candidate_metadata = existing_meta
+
         try:
             validated_metadata = validate_metadata_for_project_type(
                 effective_type, candidate_metadata
@@ -698,17 +834,28 @@ async def update_project(
 @router.delete(
     "/projects/{project_id}",
     status_code=status.HTTP_200_OK,
-    summary="Delete a Core Project (Enforces ON DELETE RESTRICT)",
+    summary="Delete a Core Project (Enforces ON DELETE RESTRICT & Execution Lock)",
 )
 async def delete_project(
+    request: Request,
     project_id: uuid.UUID,
+    force_override: Optional[bool] = Query(
+        default=None,
+        description="Explicit Tenant Owner override for deleting an Active Execution project.",
+    ),
+    enforce_execution_lock: bool = Query(
+        default=False,
+        description="If true, blocks deleting projects in 'Active Execution' unless force_override=true.",
+    ),
     ctx: Tuple[Session, uuid.UUID] = Depends(get_planning_tenant_db),
 ) -> Dict[str, Any]:
     """
     Deletes a `CoreProject` if no sub-projects or downstream financial/operational
-    records reference it (`ON DELETE RESTRICT`).
+    records reference it (`ON DELETE RESTRICT`) and verifies Tenant Owner permissions
+    and optional Active Execution lock overrides.
     """
     db, tenant_uuid = ctx
+    _enforce_project_mutation_role(request, action="delete")
 
     res = await db.execute(
         select(CoreProject).where(
@@ -722,6 +869,56 @@ async def delete_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Project {project_id} not found.",
         )
+
+    # Check Active Execution Lock when requested or when force_override=False is explicitly passed
+    normalized_status = normalize_project_status(project.status)
+    if normalized_status == ProjectStatus.ACTIVE_EXECUTION:
+        if force_override is False or (enforce_execution_lock and not force_override):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Cannot delete project in 'Active Execution' state without explicit "
+                    "Tenant Owner execution lock override or safe archiving."
+                ),
+            )
+
+    # Explicit ON DELETE RESTRICT enforcement (prevents SQLAlchemy ORM from nulling child FKs)
+    child_count_res = await db.execute(
+        select(func.count(CoreProject.id)).where(
+            CoreProject.parent_project_id == project_id,
+            CoreProject.tenant_id == tenant_uuid,
+        )
+    )
+    child_count = int(child_count_res.scalar() or 0)
+    if child_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot delete project because it has {child_count} dependent WBS sub-project(s) "
+                "(ON DELETE RESTRICT)."
+            ),
+        )
+
+    # Check anchored GL, Procurement, Sales, Fleet, and Inventory transactions
+    dependency_checks = [
+        ("GL journal lines", select(func.count(AccountMoveLine.id)).where(AccountMoveLine.project_id == project_id)),
+        ("purchase orders", select(func.count(PurchaseOrder.id)).where(PurchaseOrder.project_id == project_id)),
+        ("sale orders", select(func.count(SaleOrder.id)).where(SaleOrder.project_id == project_id)),
+        ("logistics trips", select(func.count(LogisticsTrip.id)).where(LogisticsTrip.project_id == project_id)),
+        ("stock pickings", select(func.count(StockPicking.id)).where(StockPicking.project_id == project_id)),
+        ("stock movements", select(func.count(StockMovement.id)).where(StockMovement.project_id == project_id)),
+    ]
+    for label, check_stmt in dependency_checks:
+        dep_res = await db.execute(check_stmt)
+        dep_count = int(dep_res.scalar() or 0)
+        if dep_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    f"Cannot delete project because it has {dep_count} anchored {label} "
+                    "(ON DELETE RESTRICT)."
+                ),
+            )
 
     try:
         db.delete(project)

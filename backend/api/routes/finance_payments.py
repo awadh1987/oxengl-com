@@ -299,7 +299,6 @@ def post_invoice_to_ledger(
                 is_posted=False,
             )
             db.add(invoice)
-            db.flush()
 
     if not invoice and not customer_invoice:
         raise HTTPException(

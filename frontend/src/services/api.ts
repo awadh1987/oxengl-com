@@ -2466,6 +2466,16 @@ export const erpApi = {
       body: JSON.stringify(payload),
     }),
 
+  patchCoreProject: (
+    projectId: string,
+    payload: Partial<import('../types').CoreProjectUpdatePayload>,
+    companyId?: string
+  ) =>
+    request<import('../types').CoreProjectRecord>(`/api/v1/planning/projects/${projectId}`, companyId, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   deleteCoreProject: (projectId: string, companyId?: string) =>
     request<void>(`/api/v1/planning/projects/${projectId}`, companyId, {
       method: 'DELETE',

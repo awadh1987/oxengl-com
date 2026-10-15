@@ -24,7 +24,7 @@ try:
 except (ImportError, ValueError):
 	from rate_limiter import limiter
 from sqlalchemy import and_, extract, func, or_, select, text
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, aliased
 
 try:
@@ -2804,9 +2804,35 @@ def post_account_move(move_id: uuid.UUID, company_id: uuid.UUID = Depends(get_ac
 	return move
 
 
+customer_invoice_logger = logging.getLogger("oxengl.customer_invoices")
+
+
 @app.get("/api/customer-invoices", response_model=list[CustomerInvoiceRead], tags=["Customer Invoices"])
 def list_customer_invoices(company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
-	return database.scalars(select(models.CustomerInvoice).where(models.CustomerInvoice.company_id == company_id).order_by(models.CustomerInvoice.created_at.desc()).limit(100)).all()
+	try:
+		rows = database.scalars(
+			select(models.CustomerInvoice)
+			.where(models.CustomerInvoice.company_id == company_id)
+			.order_by(models.CustomerInvoice.created_at.desc())
+			.limit(100)
+		).all()
+		return [CustomerInvoiceRead.model_validate(inv) for inv in rows]
+	except HTTPException:
+		raise
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error listing customer invoices for company_id=%s", company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while loading customer invoices. Please retry.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error listing customer invoices for company_id=%s", company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to load customer invoices at this time.",
+		) from error
 
 
 def calculate_trip_totals_for_invoice(
@@ -2900,113 +2926,148 @@ def calculate_trip_totals_for_invoice(
 
 @app.post("/api/customer-invoices", response_model=CustomerInvoiceRead, status_code=status.HTTP_201_CREATED, tags=["Customer Invoices"])
 def create_customer_invoice(payload: CustomerInvoiceCreate, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
-	partner = None
-	if payload.partner_id:
-		partner = database.scalar(select(models.ResPartner).where(models.ResPartner.id == payload.partner_id, models.ResPartner.company_id == company_id))
-		if partner is None:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer partner was not found")
-
-	issue_date = payload.issue_date or datetime.now(timezone.utc)
-	due_date = payload.due_date or (issue_date + timedelta(days=30))
-	cust_name = partner.name if partner else payload.customer_name
-	cust_tax = partner.tax_number if partner else payload.customer_tax_number
-
-	# Strict Math Enforcement: Ignore subtotal, vat_amount, and grand_total in payload.
-	calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
-		database=database,
-		company_id=company_id,
-		partner_id=payload.partner_id,
-		customer_name=cust_name,
-		issue_date=issue_date,
-	)
-
-	# Idempotency safety check: return or gracefully update existing Draft invoice for that cycle
-	existing_query = select(models.CustomerInvoice).where(
-		models.CustomerInvoice.company_id == company_id,
-		extract("year", models.CustomerInvoice.issue_date) == issue_date.year,
-		extract("month", models.CustomerInvoice.issue_date) == issue_date.month,
-	)
-	if payload.partner_id:
-		existing_query = existing_query.where(models.CustomerInvoice.partner_id == payload.partner_id)
-	elif cust_name:
-		existing_query = existing_query.where(models.CustomerInvoice.customer_name == cust_name)
-
-	existing_invoice = database.scalar(existing_query.order_by(models.CustomerInvoice.created_at.desc()))
-
-	if not existing_invoice and payload.invoice_number:
-		existing_invoice = database.scalar(
-			select(models.CustomerInvoice).where(
-				models.CustomerInvoice.company_id == company_id,
-				models.CustomerInvoice.invoice_number == payload.invoice_number,
-			)
-		)
-
-	if existing_invoice:
-		if existing_invoice.status == "Draft":
-			existing_invoice.subtotal = calc_subtotal
-			existing_invoice.vat_amount = calc_vat
-			existing_invoice.grand_total = calc_grand
-			if payload.customer_name:
-				existing_invoice.customer_name = payload.customer_name
-			if payload.customer_tax_number:
-				existing_invoice.customer_tax_number = payload.customer_tax_number
-			if payload.due_date:
-				existing_invoice.due_date = payload.due_date
-			if payload.custom_attributes:
-				existing_invoice.custom_attributes = {**(existing_invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
-			database.commit()
-			database.refresh(existing_invoice)
-			return existing_invoice
-		return existing_invoice
-
-	database.rollback()
 	try:
-		tx_ctx = database.begin_nested() if database.in_transaction() else database.begin()
-		with tx_ctx:
-			journal = journal_by_code(database, company_id, "INV", "Sales Invoices", "sale", "INV")
-			inv_num_input = (payload.invoice_number or "").strip()
-			if not inv_num_input or "auto" in inv_num_input.lower() or "توليد" in inv_num_input or inv_num_input.startswith("INV/"):
-				invoice_number = SequenceService.get_next_sequence(database, company_id, "customer_invoice")
-			else:
-				invoice_number = inv_num_input
-			journal.next_sequence += 1
-			invoice = models.CustomerInvoice(
-				company_id=company_id,
-				partner_id=payload.partner_id,
-				invoice_number=invoice_number,
-				customer_name=cust_name,
-				customer_tax_number=cust_tax,
-				issue_date=issue_date,
-				due_date=due_date,
-				subtotal=calc_subtotal,
-				vat_amount=calc_vat,
-				grand_total=calc_grand,
-				status="Draft",
-				custom_attributes=sanitize_attributes(payload.custom_attributes),
-			)
-			database.add(invoice)
-		database.commit()
-		database.refresh(invoice)
-	except IntegrityError:
-		database.rollback()
-		fallback = database.scalar(
-			select(models.CustomerInvoice).where(
-				models.CustomerInvoice.company_id == company_id,
-				models.CustomerInvoice.invoice_number == (payload.invoice_number or invoice_number),
-			)
+		partner = None
+		if payload.partner_id:
+			partner = database.scalar(select(models.ResPartner).where(models.ResPartner.id == payload.partner_id, models.ResPartner.company_id == company_id))
+			if partner is None:
+				raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer partner was not found")
+
+		issue_date = payload.issue_date or datetime.now(timezone.utc)
+		due_date = payload.due_date or (issue_date + timedelta(days=30))
+		cust_name = partner.name if partner else payload.customer_name
+		cust_tax = partner.tax_number if partner else payload.customer_tax_number
+
+		# Strict Math Enforcement: Ignore subtotal, vat_amount, and grand_total in payload.
+		calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
+			database=database,
+			company_id=company_id,
+			partner_id=payload.partner_id,
+			customer_name=cust_name,
+			issue_date=issue_date,
 		)
-		if fallback:
-			return fallback
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Unable to create customer invoice")
-	return invoice
+
+		# Idempotency safety check: return or gracefully update existing Draft invoice for that cycle
+		existing_query = select(models.CustomerInvoice).where(
+			models.CustomerInvoice.company_id == company_id,
+			extract("year", models.CustomerInvoice.issue_date) == issue_date.year,
+			extract("month", models.CustomerInvoice.issue_date) == issue_date.month,
+		)
+		if payload.partner_id:
+			existing_query = existing_query.where(models.CustomerInvoice.partner_id == payload.partner_id)
+		elif cust_name:
+			existing_query = existing_query.where(models.CustomerInvoice.customer_name == cust_name)
+
+		existing_invoice = database.scalar(existing_query.order_by(models.CustomerInvoice.created_at.desc()))
+
+		if not existing_invoice and payload.invoice_number:
+			existing_invoice = database.scalar(
+				select(models.CustomerInvoice).where(
+					models.CustomerInvoice.company_id == company_id,
+					models.CustomerInvoice.invoice_number == payload.invoice_number,
+				)
+			)
+
+		if existing_invoice:
+			if existing_invoice.status == "Draft":
+				existing_invoice.subtotal = calc_subtotal
+				existing_invoice.vat_amount = calc_vat
+				existing_invoice.grand_total = calc_grand
+				if payload.customer_name:
+					existing_invoice.customer_name = payload.customer_name
+				if payload.customer_tax_number:
+					existing_invoice.customer_tax_number = payload.customer_tax_number
+				if payload.due_date:
+					existing_invoice.due_date = payload.due_date
+				if payload.custom_attributes:
+					existing_invoice.custom_attributes = {**(existing_invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
+				database.commit()
+				database.refresh(existing_invoice)
+				return CustomerInvoiceRead.model_validate(existing_invoice)
+			return CustomerInvoiceRead.model_validate(existing_invoice)
+
+		database.rollback()
+		invoice_number = (payload.invoice_number or "").strip()
+		try:
+			tx_ctx = database.begin_nested() if database.in_transaction() else database.begin()
+			with tx_ctx:
+				journal = journal_by_code(database, company_id, "INV", "Sales Invoices", "sale", "INV")
+				inv_num_input = (payload.invoice_number or "").strip()
+				if not inv_num_input or "auto" in inv_num_input.lower() or "توليد" in inv_num_input or inv_num_input.startswith("INV/"):
+					invoice_number = SequenceService.get_next_sequence(database, company_id, "customer_invoice")
+				else:
+					invoice_number = inv_num_input
+				journal.next_sequence += 1
+				invoice = models.CustomerInvoice(
+					company_id=company_id,
+					partner_id=payload.partner_id,
+					invoice_number=invoice_number,
+					customer_name=cust_name,
+					customer_tax_number=cust_tax,
+					issue_date=issue_date,
+					due_date=due_date,
+					subtotal=calc_subtotal,
+					vat_amount=calc_vat,
+					grand_total=calc_grand,
+					status="Draft",
+					custom_attributes=sanitize_attributes(payload.custom_attributes),
+				)
+				database.add(invoice)
+			database.commit()
+			database.refresh(invoice)
+		except IntegrityError:
+			database.rollback()
+			fallback = database.scalar(
+				select(models.CustomerInvoice).where(
+					models.CustomerInvoice.company_id == company_id,
+					models.CustomerInvoice.invoice_number == (payload.invoice_number or invoice_number),
+				)
+			)
+			if fallback:
+				return CustomerInvoiceRead.model_validate(fallback)
+			raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Unable to create customer invoice due to a duplicate invoice number")
+		return CustomerInvoiceRead.model_validate(invoice)
+	except HTTPException:
+		raise
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error creating customer invoice for company_id=%s", company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while saving customer invoice. Please retry.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error creating customer invoice for company_id=%s", company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to create customer invoice at this time.",
+		) from error
 
 
 @app.get("/api/customer-invoices/{invoice_id}", response_model=CustomerInvoiceRead, tags=["Customer Invoices"])
 def get_customer_invoice(invoice_id: uuid.UUID, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
-	invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
-	if invoice is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
-	return invoice
+	try:
+		invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
+		if invoice is None:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
+		return CustomerInvoiceRead.model_validate(invoice)
+	except HTTPException:
+		raise
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error fetching customer invoice %s for company_id=%s", invoice_id, company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while retrieving customer invoice.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error fetching customer invoice %s for company_id=%s", invoice_id, company_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to retrieve customer invoice.",
+		) from error
 
 
 @app.patch("/api/customer-invoices/{invoice_id}", response_model=CustomerInvoiceRead, tags=["Customer Invoices"])
@@ -3018,125 +3079,180 @@ def update_customer_invoice(
 	current_user: models.ResUser = Depends(get_authenticated_user),
 	database: Session = Depends(get_db),
 ):
-	invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
-	if invoice is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
+	try:
+		invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
+		if invoice is None:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
 
-	if payload.status is not None:
-		if payload.status == "Approved":
-			if invoice.status == "Draft":
-				invoice.status = "Approved"
-				invoice.approved_by = current_user.email
-				invoice.approved_at = datetime.now(timezone.utc)
-			elif invoice.status == "Approved":
-				pass
-			else:
-				raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot approve invoice in '{invoice.status}' status")
-		elif payload.status != invoice.status:
-			if invoice.status != "Draft":
-				raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be modified")
-			invoice.status = payload.status
-	elif invoice.status != "Draft":
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be modified")
+		if payload.status is not None:
+			if payload.status == "Approved":
+				if invoice.status == "Draft":
+					invoice.status = "Approved"
+					invoice.approved_by = current_user.email
+					invoice.approved_at = datetime.now(timezone.utc)
+				elif invoice.status == "Approved":
+					pass
+				else:
+					raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"Cannot approve invoice in '{invoice.status}' status")
+			elif payload.status != invoice.status:
+				if invoice.status != "Draft":
+					raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be modified")
+				invoice.status = payload.status
+		elif invoice.status != "Draft":
+			raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be modified")
 
-	if payload.partner_id is not None:
-		partner = database.scalar(select(models.ResPartner).where(models.ResPartner.id == payload.partner_id, models.ResPartner.company_id == company_id))
-		if partner is None:
-			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner was not found")
-		invoice.partner_id = payload.partner_id
-	if payload.customer_name is not None:
-		invoice.customer_name = payload.customer_name
-	if payload.customer_tax_number is not None:
-		invoice.customer_tax_number = payload.customer_tax_number
-	if payload.issue_date is not None:
-		invoice.issue_date = payload.issue_date
-	if payload.due_date is not None:
-		invoice.due_date = payload.due_date
-	if payload.custom_attributes is not None:
-		invoice.custom_attributes = {**(invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
+		if payload.partner_id is not None:
+			partner = database.scalar(select(models.ResPartner).where(models.ResPartner.id == payload.partner_id, models.ResPartner.company_id == company_id))
+			if partner is None:
+				raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Partner was not found")
+			invoice.partner_id = payload.partner_id
+		if payload.customer_name is not None:
+			invoice.customer_name = payload.customer_name
+		if payload.customer_tax_number is not None:
+			invoice.customer_tax_number = payload.customer_tax_number
+		if payload.issue_date is not None:
+			invoice.issue_date = payload.issue_date
+		if payload.due_date is not None:
+			invoice.due_date = payload.due_date
+		if payload.custom_attributes is not None:
+			invoice.custom_attributes = {**(invoice.custom_attributes or {}), **sanitize_attributes(payload.custom_attributes)}
 
-	# Strict Math Enforcement: Ignore client subtotal, vat_amount, and grand_total.
-	# Query trips for that month/partner, calculate accurate totals using Decimal.
-	calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
-		database=database,
-		company_id=company_id,
-		partner_id=invoice.partner_id,
-		customer_name=invoice.customer_name,
-		issue_date=invoice.issue_date,
-	)
-	invoice.subtotal = calc_subtotal
-	invoice.vat_amount = calc_vat
-	invoice.grand_total = calc_grand
+		# Strict Math Enforcement: Ignore client subtotal, vat_amount, and grand_total.
+		# Query trips for that month/partner, calculate accurate totals using Decimal.
+		calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
+			database=database,
+			company_id=company_id,
+			partner_id=invoice.partner_id,
+			customer_name=invoice.customer_name,
+			issue_date=invoice.issue_date,
+		)
+		invoice.subtotal = calc_subtotal
+		invoice.vat_amount = calc_vat
+		invoice.grand_total = calc_grand
 
-	database.commit()
-	database.refresh(invoice)
-	return invoice
+		database.commit()
+		database.refresh(invoice)
+		return CustomerInvoiceRead.model_validate(invoice)
+	except HTTPException:
+		raise
+	except IntegrityError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Integrity error updating customer invoice %s", invoice_id)
+		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invoice update conflicted with existing records.") from error
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error updating customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while updating customer invoice. Please retry.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error updating customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to update customer invoice at this time.",
+		) from error
 
 
 @app.delete("/api/customer-invoices/{invoice_id}", status_code=status.HTTP_204_NO_CONTENT, tags=["Customer Invoices"])
 def delete_customer_invoice(invoice_id: uuid.UUID, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
-	invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
-	if invoice is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
-	if invoice.status != "Draft":
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be deleted")
-	database.delete(invoice)
-	database.commit()
-	return Response(status_code=status.HTTP_204_NO_CONTENT)
+	try:
+		invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
+		if invoice is None:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
+		if invoice.status != "Draft":
+			raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be deleted")
+		database.delete(invoice)
+		database.commit()
+		return Response(status_code=status.HTTP_204_NO_CONTENT)
+	except HTTPException:
+		raise
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error deleting customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while deleting customer invoice.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error deleting customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to delete customer invoice.",
+		) from error
 
 
 @app.post("/api/customer-invoices/{invoice_id}/approve", response_model=CustomerInvoiceRead, tags=["Customer Invoices"])
 def approve_customer_invoice(invoice_id: uuid.UUID, company_id: uuid.UUID = Depends(get_active_company_id), current_user: models.ResUser = Depends(get_authenticated_user), database: Session = Depends(get_db)):
-	invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
-	if invoice is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
-	if invoice.status == "Approved":
-		if invoice.subtotal == Decimal("0.00") or invoice.grand_total == Decimal("0.00"):
-			calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
-				database=database,
-				company_id=company_id,
-				partner_id=invoice.partner_id,
-				customer_name=invoice.customer_name,
-				issue_date=invoice.issue_date,
-			)
-			invoice.subtotal = calc_subtotal
-			invoice.vat_amount = calc_vat
-			invoice.grand_total = calc_grand
-			database.commit()
-			database.refresh(invoice)
-		return invoice
-	if invoice.status != "Draft":
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be approved")
-	calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
-		database=database,
-		company_id=company_id,
-		partner_id=invoice.partner_id,
-		customer_name=invoice.customer_name,
-		issue_date=invoice.issue_date,
-	)
-	invoice.subtotal = calc_subtotal
-	invoice.vat_amount = calc_vat
-	invoice.grand_total = calc_grand
-	invoice.status = "Approved"
-	invoice.approved_by = current_user.email
-	invoice.approved_at = datetime.now(timezone.utc)
-	database.commit()
-	database.refresh(invoice)
-	return invoice
+	try:
+		invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
+		if invoice is None:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
+		if invoice.status == "Approved":
+			if invoice.subtotal == Decimal("0.00") or invoice.grand_total == Decimal("0.00"):
+				calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
+					database=database,
+					company_id=company_id,
+					partner_id=invoice.partner_id,
+					customer_name=invoice.customer_name,
+					issue_date=invoice.issue_date,
+				)
+				invoice.subtotal = calc_subtotal
+				invoice.vat_amount = calc_vat
+				invoice.grand_total = calc_grand
+				database.commit()
+				database.refresh(invoice)
+			return CustomerInvoiceRead.model_validate(invoice)
+		if invoice.status != "Draft":
+			raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only draft invoices can be approved")
+		calc_subtotal, calc_vat, calc_grand = calculate_trip_totals_for_invoice(
+			database=database,
+			company_id=company_id,
+			partner_id=invoice.partner_id,
+			customer_name=invoice.customer_name,
+			issue_date=invoice.issue_date,
+		)
+		invoice.subtotal = calc_subtotal
+		invoice.vat_amount = calc_vat
+		invoice.grand_total = calc_grand
+		invoice.status = "Approved"
+		invoice.approved_by = current_user.email
+		invoice.approved_at = datetime.now(timezone.utc)
+		database.commit()
+		database.refresh(invoice)
+		return CustomerInvoiceRead.model_validate(invoice)
+	except HTTPException:
+		raise
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error approving customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while approving customer invoice.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error approving customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to approve customer invoice.",
+		) from error
 
 
 @app.post("/api/customer-invoices/{invoice_id}/issue", response_model=CustomerInvoiceRead, tags=["Customer Invoices"])
 def issue_customer_invoice(invoice_id: uuid.UUID, company_id: uuid.UUID = Depends(get_active_company_id), database: Session = Depends(get_db)):
-	invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
-	if invoice is None:
-		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
-	if invoice.status != "Approved":
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved invoices can be issued")
-	if abs((invoice.subtotal + invoice.vat_amount) - invoice.grand_total) <= Decimal("0.05"):
-		invoice.grand_total = (invoice.subtotal + invoice.vat_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-	elif invoice.subtotal + invoice.vat_amount != invoice.grand_total:
-		raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invoice totals are unbalanced: subtotal plus VAT must equal grand total")
 	try:
+		invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id))
+		if invoice is None:
+			raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer invoice was not found")
+		if invoice.status != "Approved":
+			raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Only approved invoices can be issued")
+		if abs((invoice.subtotal + invoice.vat_amount) - invoice.grand_total) <= Decimal("0.05"):
+			invoice.grand_total = (invoice.subtotal + invoice.vat_amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+		elif invoice.subtotal + invoice.vat_amount != invoice.grand_total:
+			raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invoice totals are unbalanced: subtotal plus VAT must equal grand total")
 		tx_ctx = database.begin_nested() if database.in_transaction() else database.begin()
 		with tx_ctx:
 			invoice = database.scalar(select(models.CustomerInvoice).where(models.CustomerInvoice.id == invoice_id, models.CustomerInvoice.company_id == company_id).with_for_update())
@@ -3167,10 +3283,27 @@ def issue_customer_invoice(invoice_id: uuid.UUID, company_id: uuid.UUID = Depend
 			invoice.move_id = move.id
 		database.commit()
 		database.refresh(invoice)
+		return CustomerInvoiceRead.model_validate(invoice)
+	except HTTPException:
+		raise
 	except IntegrityError as error:
 		database.rollback()
+		customer_invoice_logger.exception("Integrity error issuing customer invoice %s", invoice_id)
 		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Unable to issue customer invoice") from error
-	return invoice
+	except SQLAlchemyError as error:
+		database.rollback()
+		customer_invoice_logger.exception("Database error issuing customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Database error while issuing customer invoice.",
+		) from error
+	except Exception as error:
+		database.rollback()
+		customer_invoice_logger.exception("Unexpected error issuing customer invoice %s", invoice_id)
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Unable to issue customer invoice.",
+		) from error
 
 
 @app.post("/api/settlements/generate", response_model=SupplierSettlementRead, status_code=status.HTTP_201_CREATED, tags=["Supplier Settlements"])
