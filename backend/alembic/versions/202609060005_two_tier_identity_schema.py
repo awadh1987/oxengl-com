@@ -79,6 +79,7 @@ def upgrade() -> None:
         sa.Column('password_hash', sa.String(255), nullable=False),
         sa.Column('role', sa.String(32), server_default='user', nullable=False),
         sa.Column('is_active', sa.Boolean(), server_default='true', nullable=False),
+        sa.Column('is_superuser', sa.Boolean(), server_default='false', nullable=False),
         sa.Column('failed_login_attempts', sa.Integer(), server_default='0', nullable=False),
         sa.Column('locked_until', sa.DateTime(timezone=True), nullable=True),
         sa.Column('last_login_at', sa.DateTime(timezone=True), nullable=True),
@@ -183,7 +184,7 @@ def upgrade() -> None:
     op.execute(
         sa.text(
             """
-            INSERT INTO master_users (id, email, mobile_number, full_name, password_hash, role, is_active)
+            INSERT INTO master_users (id, email, mobile_number, full_name, password_hash, role, is_active, is_superuser)
             VALUES (
                 'a0000000-0000-0000-0000-000000000001',
                 'superadmin@oxengl.com',
@@ -191,6 +192,7 @@ def upgrade() -> None:
                 'OxenGL SaaS Super Administrator',
                 :hash,
                 'super_admin',
+                true,
                 true
             )
             ON CONFLICT (email) DO NOTHING;

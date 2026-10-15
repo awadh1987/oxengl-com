@@ -19,10 +19,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 0. Ensure features_override column exists on res_companies
+    # 0. Ensure features_override and custom_domain columns exist on res_companies
     op.execute("""
         ALTER TABLE res_companies 
         ADD COLUMN IF NOT EXISTS features_override JSONB DEFAULT '{}'::jsonb;
+        ALTER TABLE res_companies 
+        ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255) UNIQUE;
+        CREATE INDEX IF NOT EXISTS ix_res_companies_custom_domain ON res_companies(custom_domain);
     """)
 
     # 1. Create organizations table if not exists

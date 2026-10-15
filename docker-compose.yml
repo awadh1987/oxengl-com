@@ -49,7 +49,7 @@ services:
     mem_limit: 512m
     mem_reservation: 128m
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-erp_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d${DB_NAME:-erp_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -87,8 +87,6 @@ services:
     container_name: oxengl_backend_container
     restart: always
     command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
-    # .env supplies DB_*, REDIS_*, WASL_*, TCP_INGESTION_PORT, NGINX_STREAM_PORT,
-    # JWT_SECRET (and should supply JWT_SECRET_MASTER / JWT_SECRET_TENANT).
     env_file:
       - .env
     environment:
@@ -101,8 +99,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       SYNC_WEBHOOK_SECRETS_JSON: ${SYNC_WEBHOOK_SECRETS_JSON:-}
       PYTHONPATH: "/app"
-    # Live host currently publishes 0.0.0.0:8000; loopback-only is the intended
-    # posture (all public traffic must go through the edge nginx).
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
@@ -141,16 +137,17 @@ services:
     networks:
       - oxengl_net
 
-  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (fronted by host Apache for TLS)
+  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (Direct to Web)
   nginx:
     image: docker.io/library/nginx:alpine
     container_name: oxengl_nginx_container
     restart: always
     ports:
-      - "8080:80"
-      - "4433:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro    # <-- Add this line
     depends_on:
       - frontend
       - backend
@@ -175,11 +172,13 @@ volumes:
     name: oxengl_crypto_keys_volume
 
 networks:
-  # Data plane (compose-managed; carries the `postgres_db` / `redis_cache` aliases).
   oxengl_internal_network:
     name: oxengl_internal_network
     driver: bridge
-  # Edge plane (pre-created outside compose; nginx.conf's resolver = its gateway 10.89.1.1).
   oxengl_net:
     name: oxengl_net
-    external: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.89.1.0/24
+          gateway: 10.89.1.1

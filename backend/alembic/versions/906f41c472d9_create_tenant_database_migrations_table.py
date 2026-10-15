@@ -154,10 +154,17 @@ def upgrade() -> None:
     op.alter_column('master_users', 'mobile_number',
                existing_type=sa.VARCHAR(length=64),
                nullable=True)
-    op.alter_column('master_users', 'is_superuser',
-               existing_type=sa.BOOLEAN(),
-               nullable=False,
-               existing_server_default=sa.text('false'))
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    master_users_cols = [c['name'] for c in inspector.get_columns('master_users')]
+    if 'is_superuser' not in master_users_cols:
+        op.add_column('master_users', sa.Column('is_superuser', sa.Boolean(), server_default='false', nullable=False))
+    else:
+        op.execute(sa.text("UPDATE master_users SET is_superuser = false WHERE is_superuser IS NULL"))
+        op.alter_column('master_users', 'is_superuser',
+                   existing_type=sa.BOOLEAN(),
+                   nullable=False,
+                   existing_server_default=sa.text('false'))
     op.create_foreign_key(None, 'materials', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
     op.alter_column('organizations', 'created_at',
                existing_type=postgresql.TIMESTAMP(timezone=True),
@@ -193,17 +200,47 @@ def upgrade() -> None:
     op.create_foreign_key(None, 'product_products', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
     op.drop_constraint(op.f('purchase_orders_company_id_fkey'), 'purchase_orders', type_='foreignkey')
     op.create_foreign_key(None, 'purchase_orders', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
-    op.drop_constraint(op.f('res_companies_custom_domain_key'), 'res_companies', type_='unique')
-    op.drop_index(op.f('ix_res_companies_custom_domain'), table_name='res_companies')
+    op.execute("ALTER TABLE res_companies ADD COLUMN IF NOT EXISTS custom_domain VARCHAR(255);")
+    op.execute("ALTER TABLE res_companies DROP CONSTRAINT IF EXISTS res_companies_custom_domain_key;")
+    op.execute("DROP INDEX IF EXISTS ix_res_companies_custom_domain;")
     op.create_index(op.f('ix_res_companies_custom_domain'), 'res_companies', ['custom_domain'], unique=True)
     op.drop_constraint(op.f('res_partners_company_id_fkey'), 'res_partners', type_='foreignkey')
     op.create_foreign_key(None, 'res_partners', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
+    op.execute("ALTER TABLE res_users ADD COLUMN IF NOT EXISTS is_superuser BOOLEAN DEFAULT FALSE;")
+    op.execute("UPDATE res_users SET is_superuser = FALSE WHERE is_superuser IS NULL;")
     op.alter_column('res_users', 'is_superuser',
                existing_type=sa.BOOLEAN(),
                nullable=False,
                existing_server_default=sa.text('false'))
     op.drop_constraint(op.f('res_users_company_id_fkey'), 'res_users', type_='foreignkey')
     op.create_foreign_key(None, 'res_users', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
+
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    saas_cols = [c['name'] for c in inspector.get_columns('saas_invoices')]
+    if 'subtotal_sar' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('subtotal_sar', sa.Numeric(precision=18, scale=4), server_default='0', nullable=False))
+    if 'tax_sar' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('tax_sar', sa.Numeric(precision=18, scale=4), server_default='0', nullable=False))
+    if 'vat_sar' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('vat_sar', sa.Numeric(), server_default='0', nullable=False))
+    if 'total_sar' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('total_sar', sa.Numeric(), server_default='0', nullable=False))
+    if 'currency' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('currency', sa.String(length=10), server_default=sa.text("'SAR'"), nullable=False))
+    if 'payment_method' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('payment_method', sa.String(length=64), server_default=sa.text("'stripe_card'"), nullable=False))
+    if 'payment_reference' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('payment_reference', sa.String(length=255), nullable=True))
+    if 'po_number' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('po_number', sa.String(length=100), nullable=True))
+    if 'notes' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('notes', sa.Text(), nullable=True))
+    if 'plan_id' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('plan_id', sa.UUID(), sa.ForeignKey('subscription_plans.id', ondelete='SET NULL'), nullable=True))
+    if 'subscription_id' not in saas_cols:
+        op.add_column('saas_invoices', sa.Column('subscription_id', sa.UUID(), sa.ForeignKey('tenant_subscriptions.id', ondelete='SET NULL'), nullable=True))
+
     op.alter_column('saas_invoices', 'subtotal_sar',
                existing_type=sa.NUMERIC(precision=18, scale=4),
                nullable=False,
@@ -246,6 +283,26 @@ def upgrade() -> None:
     op.create_foreign_key(None, 'stock_pickings', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
     op.drop_constraint(op.f('stock_quants_company_id_fkey'), 'stock_quants', type_='foreignkey')
     op.create_foreign_key(None, 'stock_quants', 'res_companies', ['company_id'], ['id'], ondelete='CASCADE')
+    op.execute("""
+        ALTER TABLE subscription_plans ALTER COLUMN stripe_price_id DROP NOT NULL;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_name VARCHAR(100) DEFAULT 'Standard Plan';
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS description TEXT;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS annual_price NUMERIC(10, 2) DEFAULT 0.00;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'SAR';
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS stripe_product_id VARCHAR(255);
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_storage_gb INTEGER DEFAULT 10;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS max_monthly_transactions INTEGER DEFAULT 1000;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_external_database BOOLEAN DEFAULT FALSE;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_custom_domain BOOLEAN DEFAULT FALSE;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS allow_dedicated_ssl BOOLEAN DEFAULT FALSE;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS features JSON DEFAULT '[]'::json;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS display_features JSON NOT NULL DEFAULT '[]'::json;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT FALSE;
+        ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0;
+    """)
     op.alter_column('subscription_plans', 'display_name',
                existing_type=sa.VARCHAR(length=100),
                nullable=False,
@@ -331,6 +388,21 @@ def upgrade() -> None:
     op.create_index(op.f('ix_tenant_branding_tenant_id'), 'tenant_branding', ['tenant_id'], unique=True)
     op.drop_constraint(op.f('tenant_databases_tenant_id_fkey'), 'tenant_databases', type_='foreignkey')
     op.create_foreign_key(None, 'tenant_databases', 'master_tenants', ['tenant_id'], ['id'], ondelete='CASCADE')
+    op.execute("""
+        ALTER TABLE tenant_subscriptions ALTER COLUMN stripe_customer_id DROP NOT NULL;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS billing_cycle VARCHAR(32) DEFAULT 'monthly';
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS payment_method_type VARCHAR(64) DEFAULT 'card';
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS stripe_subscription_id VARCHAR(255);
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_storage_mb_used INTEGER DEFAULT 0;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS current_period_start TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS cancel_at_period_end BOOLEAN DEFAULT FALSE;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS canceled_at TIMESTAMPTZ;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMPTZ;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS custom_limits JSON;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS notes TEXT;
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+        ALTER TABLE tenant_subscriptions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+    """)
     op.alter_column('tenant_subscriptions', 'billing_cycle',
                existing_type=sa.VARCHAR(length=32),
                nullable=False,
