@@ -39,27 +39,36 @@ export interface ProjectCommandCenterViewProps {
 
 type CommandTab = 'financial_ledger' | 'logistics_radar' | 'supply_chain' | 'esg_metrics';
 
-function buildFallbackTelemetry(project: CoreProjectRecord): ProjectTelemetryResponse {
-  const budget = Number(project.total_budget || 1500000);
+function toSafeNumber(val: unknown, fallback = 0): number {
+  const num = Number(val ?? fallback);
+  return Number.isFinite(num) ? num : fallback;
+}
+
+function buildFallbackTelemetry(project?: CoreProjectRecord | null): ProjectTelemetryResponse {
+  const budget = toSafeNumber(
+    project?.total_budget ?? (project as any)?.financial_envelope,
+    1500000
+  );
   const actualGlExpenses = Math.round(budget * 0.42);
   const committedPo = Math.round(budget * 0.21);
   const actualGlRevenue = Math.round(budget * 0.68);
   const contractedSo = Math.round(budget * 1.15);
   const utilized = actualGlExpenses + committedPo;
   const remaining = budget - utilized;
-  const utilizationPct = budget > 0 ? Number(((utilized / budget) * 100).toFixed(2)) : 0;
+  const rawUtilPct = budget > 0 ? (utilized / budget) * 100 : 0;
+  const utilizationPct = Number((rawUtilPct || 0).toFixed(2));
 
-  const fuelLiters = Number(project.esg_metrics?.fuel_consumed_liters || 6870);
-  const scope1Co2 = Number((fuelLiters * 2.68).toFixed(2));
+  const fuelLiters = toSafeNumber(project?.esg_metrics?.fuel_consumed_liters, 6870);
+  const scope1Co2 = Number((fuelLiters * 2.68 || 0).toFixed(2));
 
   return {
-    project_id: project.id,
-    project_code: project.project_code,
-    project_name: project.name,
-    project_type: project.project_type,
-    status: project.status,
-    currency_id: project.currency_id || 'SAR',
-    included_project_ids: [project.id],
+    project_id: project?.id || '',
+    project_code: project?.project_code || 'PRJ-000',
+    project_name: project?.name || project?.project_code || 'Untitled Project',
+    project_type: project?.project_type || 'logistics',
+    status: project?.status || 'active',
+    currency_id: project?.currency_id || 'SAR',
+    included_project_ids: project?.id ? [project.id] : [],
     budget_vs_actual: {
       allocated_budget: budget,
       rolled_up_wbs_budget: budget,
@@ -92,14 +101,16 @@ function buildFallbackTelemetry(project: CoreProjectRecord): ProjectTelemetryRes
     },
     esg_and_iot: {
       esg_metrics: {
-        co2_emissions_kg: project.esg_metrics?.co2_emissions_kg ?? scope1Co2,
+        co2_emissions_kg: toSafeNumber(project?.esg_metrics?.co2_emissions_kg, scope1Co2),
         fuel_consumed_liters: fuelLiters,
-        sustainability_score: project.esg_metrics?.sustainability_score ?? 91,
+        sustainability_score: toSafeNumber(project?.esg_metrics?.sustainability_score, 91),
       },
       telemetry_data: {
-        last_known_lat: project.telemetry_data?.last_known_lat ?? 24.7136,
-        last_known_lng: project.telemetry_data?.last_known_lng ?? 46.6753,
-        active_alerts: project.telemetry_data?.active_alerts ?? [],
+        last_known_lat: toSafeNumber(project?.telemetry_data?.last_known_lat, 24.7136),
+        last_known_lng: toSafeNumber(project?.telemetry_data?.last_known_lng, 46.6753),
+        active_alerts: Array.isArray(project?.telemetry_data?.active_alerts)
+          ? project.telemetry_data.active_alerts
+          : [],
       },
       estimated_scope1_co2_kg: scope1Co2,
     },
@@ -107,31 +118,274 @@ function buildFallbackTelemetry(project: CoreProjectRecord): ProjectTelemetryRes
   };
 }
 
-function buildFallbackWbs(project: CoreProjectRecord): CoreProjectWBSResponse {
+function normalizeTelemetryResponse(
+  raw: any,
+  project?: CoreProjectRecord | null
+): ProjectTelemetryResponse {
+  const fallback = buildFallbackTelemetry(project);
+  if (!raw || typeof raw !== 'object') return fallback;
+
+  const rawBva = raw.budget_vs_actual || {};
+  const rawFleet = raw.active_fleet || {};
+  const rawStock = raw.stock_reservations || {};
+  const rawEsg = raw.esg_and_iot || {};
+
+  const allocatedBudget = toSafeNumber(
+    rawBva.allocated_budget ?? rawBva.direct_budget ?? raw.total_budget,
+    fallback.budget_vs_actual.allocated_budget
+  );
+  const rolledUpBudget = toSafeNumber(
+    rawBva.rolled_up_wbs_budget ?? rawBva.total_budget ?? allocatedBudget,
+    fallback.budget_vs_actual.rolled_up_wbs_budget
+  );
+  const actualGlExpenses = toSafeNumber(
+    rawBva.actual_gl_expenses ?? rawBva.total_actual_expenses ?? raw.actual_expenses,
+    0
+  );
+  const actualGlRevenue = toSafeNumber(
+    rawBva.actual_gl_revenue ?? rawBva.actual_gl_credit ?? rawBva.sale_order_revenue,
+    0
+  );
+  const committedPoAmount = toSafeNumber(
+    rawBva.committed_po_amount ?? raw.committed_po_amount,
+    0
+  );
+  const contractedSoAmount = toSafeNumber(
+    rawBva.contracted_so_amount ?? rawBva.sale_order_revenue,
+    0
+  );
+  const remainingBudget = toSafeNumber(
+    rawBva.remaining_budget ?? raw.remaining_budget,
+    Math.max(0, rolledUpBudget - actualGlExpenses - committedPoAmount)
+  );
+  const computedUtilPct =
+    rolledUpBudget > 0
+      ? Number((((actualGlExpenses + committedPoAmount) / rolledUpBudget) * 100 || 0).toFixed(2))
+      : 0;
+  const utilizationPct = toSafeNumber(
+    rawBva.utilization_pct ?? rawBva.budget_utilization_pct ?? raw.budget_utilization_pct,
+    computedUtilPct
+  );
+
+  const totalFuelLiters = toSafeNumber(
+    rawFleet.total_fuel_liters ??
+      rawFleet.total_fuel_consumed_liters ??
+      rawEsg.esg_metrics?.fuel_consumed_liters,
+    0
+  );
+  const estimatedScope1Co2Kg = toSafeNumber(
+    rawEsg.estimated_scope1_co2_kg ??
+      rawEsg.esg_metrics?.co2_emissions_kg ??
+      rawEsg.esg_metrics?.co2_kg ??
+      rawEsg.esg_metrics?.carbon_footprint_kg,
+    Number((totalFuelLiters * 2.68 || 0).toFixed(2))
+  );
+
+  const includedIds = Array.isArray(raw.included_project_ids)
+    ? raw.included_project_ids
+    : Array.isArray(raw.scoped_project_ids)
+    ? raw.scoped_project_ids
+    : fallback.included_project_ids;
+
   return {
-    root_project_id: project.id,
+    project_id: raw.project_id || fallback.project_id,
+    project_code: raw.project_code || fallback.project_code,
+    project_name: raw.project_name || raw.name || fallback.project_name,
+    project_type: raw.project_type || fallback.project_type,
+    status: raw.status || fallback.status,
+    currency_id: raw.currency_id || fallback.currency_id,
+    included_project_ids: includedIds,
+    budget_vs_actual: {
+      allocated_budget: allocatedBudget,
+      rolled_up_wbs_budget: rolledUpBudget,
+      actual_gl_expenses: actualGlExpenses,
+      actual_gl_revenue: actualGlRevenue,
+      committed_po_amount: committedPoAmount,
+      contracted_so_amount: contractedSoAmount,
+      remaining_budget: remainingBudget,
+      utilization_pct: utilizationPct,
+      journal_lines_count: toSafeNumber(
+        rawBva.journal_lines_count ?? rawBva.journal_entry_count,
+        0
+      ),
+      purchase_orders_count: toSafeNumber(
+        rawBva.purchase_orders_count ?? rawBva.purchase_order_count,
+        0
+      ),
+      sale_orders_count: toSafeNumber(
+        rawBva.sale_orders_count ?? rawBva.sale_order_count,
+        0
+      ),
+    },
+    active_fleet: {
+      total_trips: toSafeNumber(rawFleet.total_trips, 0),
+      active_trips: toSafeNumber(rawFleet.active_trips ?? raw.active_fleet_trips, 0),
+      completed_trips: toSafeNumber(rawFleet.completed_trips, 0),
+      total_distance_km: toSafeNumber(rawFleet.total_distance_km, 0),
+      total_fuel_liters: totalFuelLiters,
+      total_net_weight_tons: toSafeNumber(
+        rawFleet.total_net_weight_tons ?? rawFleet.total_planned_weight_tons,
+        0
+      ),
+      total_trip_expenses: toSafeNumber(
+        rawFleet.total_trip_expenses ?? rawBva.actual_trip_costs,
+        0
+      ),
+    },
+    stock_reservations: {
+      stock_pickings_count: toSafeNumber(
+        rawStock.stock_pickings_count ?? rawStock.total_pickings,
+        0
+      ),
+      active_pickings_count: toSafeNumber(
+        rawStock.active_pickings_count ??
+          rawStock.active_reservations ??
+          raw.stock_reservations_count,
+        0
+      ),
+      completed_pickings_count: toSafeNumber(
+        rawStock.completed_pickings_count ?? rawStock.completed_pickings,
+        0
+      ),
+      stock_movements_count: toSafeNumber(
+        rawStock.stock_movements_count ?? rawStock.stock_movement_count,
+        0
+      ),
+      reserved_or_moved_qty: toSafeNumber(
+        rawStock.reserved_or_moved_qty ??
+          rawStock.reserved_quantity ??
+          rawStock.stock_movement_quantity,
+        0
+      ),
+      reserved_or_moved_value: toSafeNumber(
+        rawStock.reserved_or_moved_value ?? rawStock.stock_movement_valuation,
+        0
+      ),
+    },
+    esg_and_iot: {
+      esg_metrics: {
+        ...(rawEsg.esg_metrics || {}),
+        co2_emissions_kg: toSafeNumber(
+          rawEsg.esg_metrics?.co2_emissions_kg ??
+            rawEsg.esg_metrics?.co2_kg ??
+            rawEsg.esg_metrics?.carbon_footprint_kg,
+          estimatedScope1Co2Kg
+        ),
+        fuel_consumed_liters: toSafeNumber(
+          rawEsg.esg_metrics?.fuel_consumed_liters,
+          totalFuelLiters
+        ),
+        sustainability_score: toSafeNumber(
+          rawEsg.esg_metrics?.sustainability_score,
+          toSafeNumber(project?.esg_metrics?.sustainability_score, 91)
+        ),
+      },
+      telemetry_data: {
+        ...(rawEsg.telemetry_data || {}),
+        last_known_lat: toSafeNumber(
+          rawEsg.telemetry_data?.last_known_lat,
+          fallback.esg_and_iot.telemetry_data.last_known_lat
+        ),
+        last_known_lng: toSafeNumber(
+          rawEsg.telemetry_data?.last_known_lng,
+          fallback.esg_and_iot.telemetry_data.last_known_lng
+        ),
+        active_alerts: Array.isArray(rawEsg.telemetry_data?.active_alerts)
+          ? rawEsg.telemetry_data.active_alerts
+          : fallback.esg_and_iot.telemetry_data.active_alerts || [],
+      },
+      estimated_scope1_co2_kg: estimatedScope1Co2Kg,
+    },
+    generated_at: raw.generated_at || fallback.generated_at,
+  };
+}
+
+function buildFallbackWbs(project?: CoreProjectRecord | null): CoreProjectWBSResponse {
+  const baseBudget = toSafeNumber(
+    project?.total_budget ?? (project as any)?.financial_envelope,
+    0
+  );
+  return {
+    root_project_id: project?.id || '',
     total_nodes: 2,
     max_depth: 1,
     tree: {
-      ...project,
-      rolled_up_budget: Number(project.total_budget || 0) * 1.25,
+      ...(project || ({} as CoreProjectRecord)),
+      id: project?.id || 'root-node',
+      project_code: project?.project_code || 'PRJ',
+      name: project?.name || project?.project_code || 'Master Project',
+      total_budget: baseBudget,
+      rolled_up_budget: baseBudget * 1.25,
       depth: 0,
-      wbs_path: project.project_code,
+      wbs_path: project?.project_code || 'PRJ',
       sub_projects: [
         {
-          ...project,
+          ...(project || ({} as CoreProjectRecord)),
           id: `${(project?.id || '').slice(0, 24)}000000000099`,
           parent_project_id: project?.id || null,
           project_code: `${project?.project_code || 'PRJ'}-WBS1`,
           name: `${project?.name || 'Master Project'} — Phase I Field Execution`,
-          total_budget: Math.round(Number(project?.total_budget || 0) * 0.25),
-          rolled_up_budget: Math.round(Number(project?.total_budget || 0) * 0.25),
+          total_budget: Math.round(baseBudget * 0.25),
+          rolled_up_budget: Math.round(baseBudget * 0.25),
           depth: 1,
           wbs_path: `${project?.project_code || 'PRJ'} / ${project?.project_code || 'PRJ'}-WBS1`,
           sub_projects: [],
         },
       ],
     },
+  };
+}
+
+function normalizeWbsNode(rawNode: any, defaultCurrency = 'SAR'): CoreProjectWBSNode {
+  const directBudget = toSafeNumber(
+    rawNode?.total_budget ??
+      rawNode?.direct_financial_envelope ??
+      rawNode?.financial_envelope,
+    0
+  );
+  const rolledUpBudget = toSafeNumber(
+    rawNode?.rolled_up_budget ??
+      rawNode?.rolled_up_financial_envelope ??
+      directBudget,
+    directBudget
+  );
+  const wbsPath = Array.isArray(rawNode?.wbs_path)
+    ? rawNode.wbs_path.join(' / ')
+    : rawNode?.wbs_path || rawNode?.project_code || '';
+
+  return {
+    ...rawNode,
+    id: rawNode?.id || '',
+    project_code: rawNode?.project_code || 'PRJ',
+    name: rawNode?.name || rawNode?.project_code || 'Untitled Node',
+    status: rawNode?.status || 'active',
+    currency_id: rawNode?.currency_id || defaultCurrency,
+    total_budget: directBudget,
+    rolled_up_budget: rolledUpBudget,
+    depth: toSafeNumber(rawNode?.depth ?? rawNode?.wbs_level, 0),
+    wbs_path: wbsPath,
+    sub_projects: Array.isArray(rawNode?.sub_projects)
+      ? rawNode.sub_projects.map((child: any) => normalizeWbsNode(child, defaultCurrency))
+      : [],
+  };
+}
+
+function normalizeWbsResponse(
+  raw: any,
+  project?: CoreProjectRecord | null
+): CoreProjectWBSResponse {
+  const fallback = buildFallbackWbs(project);
+  if (!raw || typeof raw !== 'object') return fallback;
+
+  const defaultCurrency = project?.currency_id || 'SAR';
+  const rawTree = raw.tree || (raw.id || raw.project_code ? raw : null);
+  if (!rawTree) return fallback;
+
+  return {
+    root_project_id: raw.root_project_id || raw.id || fallback.root_project_id,
+    total_nodes: toSafeNumber(raw.total_nodes ?? raw.total_tree_nodes, 1),
+    max_depth: toSafeNumber(raw.max_depth, 0),
+    tree: normalizeWbsNode(rawTree, defaultCurrency),
   };
 }
 
@@ -164,8 +418,16 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
         ),
         erpApi.getCoreProjectWBS(project?.id, currentCompanyId || undefined),
       ]);
-      if (telemetryRes) setTelemetry(telemetryRes);
-      if (wbsRes) setWbsTree(wbsRes);
+      if (telemetryRes) {
+        setTelemetry(normalizeTelemetryResponse(telemetryRes, project));
+      } else {
+        setTelemetry(buildFallbackTelemetry(project));
+      }
+      if (wbsRes) {
+        setWbsTree(normalizeWbsResponse(wbsRes, project));
+      } else {
+        setWbsTree(buildFallbackWbs(project));
+      }
     } catch {
       setTelemetry(buildFallbackTelemetry(project));
       setWbsTree(buildFallbackWbs(project));
@@ -194,13 +456,16 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
     [vouchers, project?.id]
   );
 
-  const fallbackTelemetry = useMemo(() => buildFallbackTelemetry(project), [project]);
-  const bva = telemetry?.budget_vs_actual || fallbackTelemetry.budget_vs_actual;
-  const fleet = telemetry?.active_fleet || fallbackTelemetry.active_fleet;
-  const stock = telemetry?.stock_reservations || fallbackTelemetry.stock_reservations;
-  const esg = telemetry?.esg_and_iot || fallbackTelemetry.esg_and_iot;
-  const currency = telemetry?.currency_id || project?.currency_id || 'SAR';
-  const includedNodesCount = telemetry?.included_project_ids?.length ?? 1;
+  const normalizedTelemetry = useMemo(
+    () => normalizeTelemetryResponse(telemetry, project),
+    [telemetry, project]
+  );
+  const bva = normalizedTelemetry.budget_vs_actual;
+  const fleet = normalizedTelemetry.active_fleet;
+  const stock = normalizedTelemetry.stock_reservations;
+  const esg = normalizedTelemetry.esg_and_iot;
+  const currency = normalizedTelemetry.currency_id || project?.currency_id || 'SAR';
+  const includedNodesCount = normalizedTelemetry.included_project_ids?.length ?? 1;
 
   const renderWbsNode = (node?: CoreProjectWBSNode | null) => {
     if (!node) return null;
@@ -238,10 +503,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
           </div>
           <div className="text-right font-mono">
             <div className="text-xs font-black text-slate-900 dark:text-white">
-              {Number(node.rolled_up_budget || 0).toLocaleString('en-US')} {node.currency_id || currency}
+              {toSafeNumber(node.rolled_up_budget, 0).toLocaleString('en-US')} {node.currency_id || currency}
             </div>
             <div className="text-[10px] text-slate-400">
-              Direct: {Number(node.total_budget || 0).toLocaleString('en-US')} {node.currency_id || currency}
+              Direct: {toSafeNumber(node.total_budget, 0).toLocaleString('en-US')} {node.currency_id || currency}
             </div>
           </div>
         </div>
@@ -324,22 +589,22 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <DollarSign className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-xl font-black font-mono text-white mt-1.5">
-              {Number(bva?.utilization_pct || 0).toFixed(1)}%
+              {(Number(bva?.utilization_pct ?? 0) || 0).toFixed(1)}%
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
               <div
                 className={`h-full rounded-full ${
-                  Number(bva?.utilization_pct || 0) > 90
+                  (Number(bva?.utilization_pct ?? 0) || 0) > 90
                     ? 'bg-rose-500'
-                    : Number(bva?.utilization_pct || 0) > 75
+                    : (Number(bva?.utilization_pct ?? 0) || 0) > 75
                     ? 'bg-amber-500'
                     : 'bg-emerald-500'
                 }`}
-                style={{ width: `${Math.min(100, Number(bva?.utilization_pct || 0))}%` }}
+                style={{ width: `${Math.min(100, Number(bva?.utilization_pct ?? 0) || 0)}%` }}
               />
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-1.5">
-              Rem: {Number(bva?.remaining_budget || 0).toLocaleString('en-US')} {currency}
+              Rem: {(Number(bva?.remaining_budget ?? 0) || 0).toLocaleString('en-US')} {currency}
             </p>
           </div>
 
@@ -352,8 +617,8 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               {fleet?.active_trips ?? 0} Active / {fleet?.total_trips ?? 0} Trips
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
-              Hauled: {Number(fleet?.total_net_weight_tons || 0).toLocaleString('en-US')} MT •{' '}
-              {Number(fleet?.total_distance_km || 0).toLocaleString('en-US')} KM
+              Hauled: {(Number(fleet?.total_net_weight_tons ?? 0) || 0).toLocaleString('en-US')} MT •{' '}
+              {(Number(fleet?.total_distance_km ?? 0) || 0).toLocaleString('en-US')} KM
             </p>
           </div>
 
@@ -366,7 +631,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               {stock?.active_pickings_count ?? 0} Active Pickings
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
-              Committed POs: {Number(bva?.committed_po_amount || 0).toLocaleString('en-US')}{' '}
+              Committed POs: {(Number(bva?.committed_po_amount ?? 0) || 0).toLocaleString('en-US')}{' '}
               {currency}
             </p>
           </div>
@@ -377,11 +642,11 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
               <Leaf className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-xl font-black font-mono text-emerald-400 mt-1.5">
-              {Number(esg?.estimated_scope1_co2_kg || 0).toLocaleString('en-US')} kg CO₂e
+              {(Number(esg?.estimated_scope1_co2_kg ?? 0) || 0).toLocaleString('en-US')} kg CO₂e
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-2">
               ESG Rating: {esg?.esg_metrics?.sustainability_score ?? 91}/100 • Fuel:{' '}
-              {Number(fleet?.total_fuel_liters || 0).toLocaleString('en-US')} L
+              {(Number(fleet?.total_fuel_liters ?? 0) || 0).toLocaleString('en-US')} L
             </p>
           </div>
         </div>
@@ -457,23 +722,23 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     Rolled-Up WBS Budget
                   </span>
                   <div className="text-base font-black font-mono text-slate-900 dark:text-white mt-1">
-                    {Number(bva.rolled_up_wbs_budget || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.rolled_up_wbs_budget ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
                   <span className="text-[10px] font-mono uppercase text-rose-400">
-                    Actual GL Expenses ({bva.journal_lines_count} lines)
+                    Actual GL Expenses ({bva?.journal_lines_count ?? 0} lines)
                   </span>
                   <div className="text-base font-black font-mono text-rose-500 mt-1">
-                    {Number(bva.actual_gl_expenses || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.actual_gl_expenses ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
                   <span className="text-[10px] font-mono uppercase text-amber-400">
-                    Committed POs ({bva.purchase_orders_count})
+                    Committed POs ({bva?.purchase_orders_count ?? 0})
                   </span>
                   <div className="text-base font-black font-mono text-amber-500 mt-1">
-                    {Number(bva.committed_po_amount || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.committed_po_amount ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
@@ -481,15 +746,15 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     Actual GL Revenue
                   </span>
                   <div className="text-base font-black font-mono text-emerald-500 mt-1">
-                    {Number(bva.actual_gl_revenue || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.actual_gl_revenue ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
                 <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800">
                   <span className="text-[10px] font-mono uppercase text-cyan-400">
-                    Contracted SOs ({bva.sale_orders_count})
+                    Contracted SOs ({bva?.sale_orders_count ?? 0})
                   </span>
                   <div className="text-base font-black font-mono text-cyan-500 mt-1">
-                    {Number(bva.contracted_so_amount || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.contracted_so_amount ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
                 <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30">
@@ -497,7 +762,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     Remaining Unencumbered
                   </span>
                   <div className="text-base font-black font-mono text-indigo-400 mt-1">
-                    {Number(bva.remaining_budget || 0).toLocaleString('en-US')} {currency}
+                    {(Number(bva?.remaining_budget ?? 0) || 0).toLocaleString('en-US')} {currency}
                   </div>
                 </div>
               </div>
@@ -509,7 +774,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     Financial Envelope Consumption Breakdown
                   </span>
                   <span className="font-mono text-indigo-500">
-                    {bva.utilization_pct.toFixed(2)}% Utilized
+                    {(Number(bva?.utilization_pct ?? 0) || 0).toFixed(2)}% Utilized
                   </span>
                 </div>
                 <div className="w-full h-3 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden flex">
@@ -519,8 +784,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     style={{
                       width: `${Math.min(
                         100,
-                        bva.rolled_up_wbs_budget > 0
-                          ? (bva.actual_gl_expenses / bva.rolled_up_wbs_budget) * 100
+                        (Number(bva?.rolled_up_wbs_budget ?? 0) || 0) > 0
+                          ? ((Number(bva?.actual_gl_expenses ?? 0) || 0) /
+                              (Number(bva?.rolled_up_wbs_budget ?? 0) || 1)) *
+                              100
                           : 0
                       )}%`,
                     }}
@@ -531,8 +798,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                     style={{
                       width: `${Math.min(
                         100,
-                        bva.rolled_up_wbs_budget > 0
-                          ? (bva.committed_po_amount / bva.rolled_up_wbs_budget) * 100
+                        (Number(bva?.rolled_up_wbs_budget ?? 0) || 0) > 0
+                          ? ((Number(bva?.committed_po_amount ?? 0) || 0) /
+                              (Number(bva?.rolled_up_wbs_budget ?? 0) || 1)) *
+                              100
                           : 0
                       )}%`,
                     }}
@@ -619,7 +888,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                           {v?.purpose}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                          {Number(v?.amount || 0).toLocaleString('en-US')}
+                          {(Number(v?.amount ?? 0) || 0).toLocaleString('en-US')}
                         </td>
                         <td className="py-3 px-4">
                           <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px]">
@@ -674,7 +943,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Total Distance
                     </span>
                     <div className="text-sm font-black font-mono text-white mt-0.5">
-                      {Number(fleet?.total_distance_km || 0).toLocaleString('en-US')} KM
+                      {(Number(fleet?.total_distance_km ?? 0) || 0).toLocaleString('en-US')} KM
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -682,7 +951,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Net Cargo Hauled
                     </span>
                     <div className="text-sm font-black font-mono text-cyan-400 mt-0.5">
-                      {Number(fleet?.total_net_weight_tons || 0).toLocaleString('en-US')} MT
+                      {(Number(fleet?.total_net_weight_tons ?? 0) || 0).toLocaleString('en-US')} MT
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -690,7 +959,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Diesel Consumed
                     </span>
                     <div className="text-sm font-black font-mono text-amber-400 mt-0.5">
-                      {Number(fleet?.total_fuel_liters || 0).toLocaleString('en-US')} L
+                      {(Number(fleet?.total_fuel_liters ?? 0) || 0).toLocaleString('en-US')} L
                     </div>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -698,7 +967,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                       Direct Trip Cost
                     </span>
                     <div className="text-sm font-black font-mono text-rose-400 mt-0.5">
-                      {Number(fleet?.total_trip_expenses || 0).toLocaleString('en-US')} {currency}
+                      {(Number(fleet?.total_trip_expenses ?? 0) || 0).toLocaleString('en-US')} {currency}
                     </div>
                   </div>
                 </div>
@@ -773,7 +1042,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                           {op?.material_type}
                         </td>
                         <td className="py-3 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
-                          {Number(op?.qty_delivered || 0).toLocaleString('en-US')} {op?.uom || 'MT'}
+                          {(Number(op?.qty_delivered ?? 0) || 0).toLocaleString('en-US')} {op?.uom || 'MT'}
                         </td>
                       </tr>
                     ))
@@ -800,10 +1069,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Total Committed PO Value
                 </div>
                 <div className="text-2xl font-black font-mono text-amber-400 mt-1">
-                  {Number(bva.committed_po_amount || 0).toLocaleString('en-US')} {currency}
+                  {(Number(bva?.committed_po_amount ?? 0) || 0).toLocaleString('en-US')} {currency}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  Across {bva.purchase_orders_count} active purchase orders
+                  Across {bva?.purchase_orders_count ?? 0} active purchase orders
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/20">
@@ -811,10 +1080,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Contracted Sales Orders
                 </div>
                 <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
-                  {Number(bva.contracted_so_amount || 0).toLocaleString('en-US')} {currency}
+                  {(Number(bva?.contracted_so_amount ?? 0) || 0).toLocaleString('en-US')} {currency}
                 </div>
                 <div className="text-xs text-slate-400 mt-1">
-                  Across {bva.sale_orders_count} customer off-take agreements
+                  Across {bva?.sale_orders_count ?? 0} customer off-take agreements
                 </div>
               </div>
             </div>
@@ -833,7 +1102,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Total Stock Pickings
                 </span>
                 <div className="text-xl font-black font-mono text-slate-900 dark:text-white mt-1">
-                  {stock.stock_pickings_count}
+                  {stock?.stock_pickings_count ?? 0}
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -841,7 +1110,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Pending / Active Pickings
                 </span>
                 <div className="text-xl font-black font-mono text-amber-400 mt-1">
-                  {stock.active_pickings_count}
+                  {stock?.active_pickings_count ?? 0}
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -849,7 +1118,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Completed Pickings
                 </span>
                 <div className="text-xl font-black font-mono text-emerald-400 mt-1">
-                  {stock.completed_pickings_count}
+                  {stock?.completed_pickings_count ?? 0}
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -857,7 +1126,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Inventory Movements
                 </span>
                 <div className="text-xl font-black font-mono text-indigo-400 mt-1">
-                  {stock.stock_movements_count}
+                  {stock?.stock_movements_count ?? 0}
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -865,7 +1134,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Reserved / Dispatched Qty
                 </span>
                 <div className="text-xl font-black font-mono text-cyan-400 mt-1">
-                  {Number(stock.reserved_or_moved_qty || 0).toLocaleString('en-US')} Units
+                  {(Number(stock?.reserved_or_moved_qty ?? 0) || 0).toLocaleString('en-US')} Units
                 </div>
               </div>
               <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -873,7 +1142,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   Inventory Valuation
                 </span>
                 <div className="text-xl font-black font-mono text-emerald-400 mt-1">
-                  {Number(stock.reserved_or_moved_value || 0).toLocaleString('en-US')} {currency}
+                  {(Number(stock?.reserved_or_moved_value ?? 0) || 0).toLocaleString('en-US')} {currency}
                 </div>
               </div>
             </div>
@@ -898,10 +1167,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   <Leaf className="w-4 h-4" />
                 </div>
                 <div className="text-2xl font-black font-mono text-emerald-400 mt-2">
-                  {Number(esg.estimated_scope1_co2_kg || 0).toLocaleString('en-US')} kg
+                  {(Number(esg?.estimated_scope1_co2_kg ?? 0) || 0).toLocaleString('en-US')} kg
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  {(Number(esg.estimated_scope1_co2_kg || 0) / 1000).toFixed(2)} Metric Tons CO₂e
+                  {((Number(esg?.estimated_scope1_co2_kg ?? 0) || 0) / 1000).toFixed(2)} Metric Tons CO₂e
                 </p>
               </div>
 
@@ -911,10 +1180,10 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   <Fuel className="w-4 h-4" />
                 </div>
                 <div className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-2">
-                  {Number(fleet.total_fuel_liters || 0).toLocaleString('en-US')} L
+                  {(Number(fleet?.total_fuel_liters ?? 0) || 0).toLocaleString('en-US')} L
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Verified across {fleet.total_trips} fleet dispatches
+                  Verified across {fleet?.total_trips ?? 0} fleet dispatches
                 </p>
               </div>
 
@@ -924,7 +1193,7 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div className="text-2xl font-black font-mono text-indigo-400 mt-2">
-                  {esg.esg_metrics?.sustainability_score ?? 91} / 100
+                  {esg?.esg_metrics?.sustainability_score ?? 91} / 100
                 </div>
                 <p className="text-[11px] text-slate-400 mt-1">
                   Compliant with Vision 2030 Green Initiative
@@ -939,9 +1208,9 @@ export const ProjectCommandCenterView: React.FC<ProjectCommandCenterViewProps> =
             icon={ShieldAlert}
           >
             <div className="space-y-3">
-              {Array.isArray(esg.telemetry_data?.active_alerts) &&
-              esg.telemetry_data.active_alerts.length > 0 ? (
-                esg.telemetry_data.active_alerts.map((alert: string, idx: number) => (
+              {Array.isArray(esg?.telemetry_data?.active_alerts) &&
+              (esg?.telemetry_data?.active_alerts?.length ?? 0) > 0 ? (
+                (esg?.telemetry_data?.active_alerts || []).map((alert: string, idx: number) => (
                   <div
                     key={idx}
                     className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-bold text-amber-400 flex items-center gap-2"

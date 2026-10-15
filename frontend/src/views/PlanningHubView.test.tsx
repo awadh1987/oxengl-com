@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { AppProvider } from '../context/AppContext';
 import { PlanningHubView } from './PlanningHubView';
 import { PlanningDepartmentView } from './planning/PlanningDepartmentView';
@@ -46,6 +46,10 @@ vi.mock('../services/api', async (importOriginal) => {
 });
 
 describe('PlanningHubView & Command Center Suite', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('renders PlanningHubView directory, filters by project type, and opens ProjectCommandCenterView tabs', async () => {
     render(
       <AppProvider>
@@ -180,6 +184,81 @@ describe('PlanningHubView & Command Center Suite', () => {
       expect(screen.getByText(/Partial Backend Project/i)).toBeDefined();
     });
   });
+
+  it('ProjectCommandCenterView safely defaults undefined telemetry numeric metrics to 0 without throwing toFixed TypeError', async () => {
+    const mockGetCoreProjects = vi.mocked(erpApi.getCoreProjects);
+    const mockGetTelemetry = vi.mocked(erpApi.getCoreProjectTelemetry);
+    const mockGetWbs = vi.mocked(erpApi.getCoreProjectWBS);
+
+    mockGetCoreProjects.mockResolvedValueOnce([
+      {
+        id: 'new-proj-001',
+        project_code: 'PRJ-NEW-2026-001',
+        name: 'Newly Created Project Node',
+        project_type: 'logistics',
+        status: 'Active Execution',
+        financial_envelope: 250000,
+      } as any,
+    ]);
+
+    // Simulate backend response where utilization_pct is undefined (or sent as budget_utilization_pct)
+    // and several nested metrics are missing/undefined on a brand-new project
+    mockGetTelemetry.mockResolvedValueOnce({
+      project: {
+        id: 'new-proj-001',
+        project_code: 'PRJ-NEW-2026-001',
+        name: 'Newly Created Project Node',
+        project_type: 'logistics',
+        status: 'Active Execution',
+        financial_envelope: 250000,
+      },
+      included_project_ids: ['new-proj-001'],
+      budget_vs_actual: {
+        direct_budget: 250000,
+        total_budget: 250000,
+        // Notice: utilization_pct is intentionally undefined to reproduce the production crash
+        budget_utilization_pct: undefined,
+      },
+      active_fleet: {},
+      stock_reservations: {},
+      esg_and_iot: {},
+    } as any);
+
+    mockGetWbs.mockResolvedValueOnce({
+      root_project_id: 'new-proj-001',
+      total_nodes: 1,
+      tree: {
+        id: 'new-proj-001',
+        project_code: 'PRJ-NEW-2026-001',
+        name: 'Newly Created Project Node',
+        project_type: 'logistics',
+        status: 'Active Execution',
+      },
+    } as any);
+
+    render(
+      <AppProvider>
+        <PlanningDepartmentView />
+      </AppProvider>
+    );
+
+    const telemetryBtn = await screen.findByTestId('open-command-center-PRJ-NEW-2026-001');
+    fireEvent.click(telemetryBtn);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('project-command-center-view')).toBeDefined();
+    });
+
+    // Verify 0.0% and 0.00% Utilized render cleanly without throwing toFixed TypeError
+    expect(screen.getByText('0.0%')).toBeDefined();
+    expect(screen.getByText('0.00% Utilized')).toBeDefined();
+
+    // Navigate through all tabs to ensure ESG, Fleet, and Supply Chain metrics also render safely
+    fireEvent.click(screen.getByTestId('cmd-tab-esg_metrics'));
+    expect(screen.getByTestId('tab-panel-esg-metrics')).toBeDefined();
+    expect(screen.getByText(/0\.00 Metric Tons CO₂e/i)).toBeDefined();
+  });
 });
+
 
 

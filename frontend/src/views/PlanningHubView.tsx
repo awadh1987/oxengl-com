@@ -40,8 +40,8 @@ const TYPE_FILTER_OPTIONS: { value: CoreProjectType | 'ALL'; labelEn: string; la
   { value: 'commercial_agribusiness', labelEn: 'Agribusiness', labelAr: 'الأعمال الزراعية' },
 ];
 
-function getProjectTypeBadge(type: CoreProjectType) {
-  switch (type) {
+function getProjectTypeBadge(type?: CoreProjectType | string) {
+  switch ((type || 'logistics').toLowerCase()) {
     case 'logistics':
       return {
         icon: Truck,
@@ -77,6 +77,12 @@ function getProjectTypeBadge(type: CoreProjectType) {
         icon: Sprout,
         cls: 'bg-lime-500/15 text-lime-400 border-lime-500/30',
         label: 'AGRIBUSINESS',
+      };
+    default:
+      return {
+        icon: Truck,
+        cls: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30',
+        label: 'LOGISTICS',
       };
   }
 }
@@ -135,7 +141,7 @@ export const PlanningHubView: React.FC = () => {
           name: p?.name || p?.project_code || 'Untitled Project',
           project_type: p?.project_type || 'logistics',
           status: p?.status || 'active',
-          total_budget: Number(p?.total_budget ?? p?.financial_envelope ?? 0),
+          total_budget: Number(p?.total_budget ?? p?.financial_envelope ?? 0) || 0,
           metadata_json: p?.metadata_json || {},
           esg_metrics: p?.esg_metrics || {},
           telemetry_data: p?.telemetry_data || {},
@@ -187,23 +193,23 @@ export const PlanningHubView: React.FC = () => {
   const portfolioStats = useMemo(() => {
     const safeFiltered = filteredProjects || [];
     const totalBudget = safeFiltered.reduce(
-      (sum, p) => sum + Number(p?.total_budget ?? (p as any)?.financial_envelope ?? 0),
+      (sum, p) => sum + (Number(p?.total_budget ?? (p as any)?.financial_envelope ?? 0) || 0),
       0
     );
     const totalCo2 = safeFiltered.reduce(
-      (sum, p) => sum + Number(p?.esg_metrics?.co2_emissions_kg || 0),
+      (sum, p) => sum + (Number(p?.esg_metrics?.co2_emissions_kg ?? 0) || 0),
       0
     );
     const count = safeFiltered?.length ?? 0;
     const avgUtilization =
       count > 0
-        ? safeFiltered.reduce((sum, p) => sum + computeSimulatedUtilizationPct(p), 0) / count
+        ? safeFiltered.reduce((sum, p) => sum + (computeSimulatedUtilizationPct(p) || 0), 0) / count
         : 0;
     return {
       count,
-      totalBudget,
-      totalCo2,
-      avgUtilization,
+      totalBudget: totalBudget || 0,
+      totalCo2: totalCo2 || 0,
+      avgUtilization: Number.isFinite(avgUtilization) ? avgUtilization : 0,
     };
   }, [filteredProjects]);
 
@@ -213,7 +219,7 @@ export const PlanningHubView: React.FC = () => {
         project={activeCommandProject}
         onBack={() => setActiveCommandProject(null)}
         onSelectSubProject={(subId) => {
-          const found = projects.find((p) => p.id === subId);
+          const found = (projects || []).find((p) => p?.id === subId);
           if (found) setActiveCommandProject(found);
         }}
       />
@@ -284,7 +290,7 @@ export const PlanningHubView: React.FC = () => {
               <Layers className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-2xl font-black font-mono text-white mt-1">
-              {portfolioStats.count}
+              {portfolioStats?.count ?? 0}
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-1">
               Multi-level WBS hierarchy nodes
@@ -297,7 +303,7 @@ export const PlanningHubView: React.FC = () => {
               <Compass className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
-              {portfolioStats.totalBudget.toLocaleString('en-US')} SAR
+              {(Number(portfolioStats?.totalBudget ?? 0) || 0).toLocaleString('en-US')} SAR
             </div>
             <p className="text-[11px] font-mono text-slate-400 mt-1">
               Allocated across active programs
@@ -310,12 +316,12 @@ export const PlanningHubView: React.FC = () => {
               <Radar className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
-              {portfolioStats.avgUtilization.toFixed(1)}%
+              {(Number(portfolioStats?.avgUtilization ?? 0) || 0).toFixed(1)}%
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden mt-2">
               <div
                 className="h-full bg-cyan-500 rounded-full"
-                style={{ width: `${Math.min(100, portfolioStats.avgUtilization)}%` }}
+                style={{ width: `${Math.min(100, Number(portfolioStats?.avgUtilization ?? 0) || 0)}%` }}
               />
             </div>
           </div>
@@ -326,7 +332,7 @@ export const PlanningHubView: React.FC = () => {
               <Leaf className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-2xl font-black font-mono text-white mt-1">
-              {portfolioStats.totalCo2.toLocaleString('en-US')} kg
+              {(Number(portfolioStats?.totalCo2 ?? 0) || 0).toLocaleString('en-US')} kg
             </div>
             <p className="text-[11px] font-mono text-emerald-400 mt-1">
               ESG Telemetry Active
@@ -452,11 +458,10 @@ export const PlanningHubView: React.FC = () => {
                 (filteredProjects || []).map((proj) => {
                   const badge = getProjectTypeBadge(proj?.project_type);
                   const BadgeIcon = badge.icon;
-                  const utilPct = computeSimulatedUtilizationPct(proj);
-                  const budgetAmount = Number(
-                    proj?.total_budget ?? (proj as any)?.financial_envelope ?? 0
-                  );
-                  const utilizedAmount = Math.round((budgetAmount * utilPct) / 100);
+                  const utilPct = Number(computeSimulatedUtilizationPct(proj) ?? 0) || 0;
+                  const budgetAmount =
+                    Number(proj?.total_budget ?? (proj as any)?.financial_envelope ?? 0) || 0;
+                  const utilizedAmount = Math.round((budgetAmount * utilPct) / 100) || 0;
                   const metaEntries = Object.entries(proj?.metadata_json || {}).slice(0, 2);
 
                   return (
