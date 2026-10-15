@@ -154,23 +154,74 @@ async def get_current_user(
 
     user: Optional[User] = None
 
-    # 1. Look up user by UUID in res_users
-    if sub:
-        try:
-            user_uuid = uuid.UUID(str(sub))
-            user = db.query(ResUser).filter(ResUser.id == user_uuid).first()
-        except (ValueError, TypeError):
-            pass
+    is_master_tier = (
+        payload.get("tier") == "master"
+        or str(payload.get("iss", "")).endswith("control-plane")
+        or str(payload.get("role", "")).lower() in ("super_admin", "superadmin")
+    )
 
-    # 2. Look up user by email in res_users
-    if not user and email:
-        user = db.query(ResUser).filter(ResUser.email.ilike(email.strip())).first()
+    def _lookup_master(session) -> Optional[Any]:
+        from backend.models import MasterUser
+        found = None
+        if sub:
+            try:
+                found = session.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
+            except (ValueError, TypeError):
+                pass
+        if not found and email:
+            found = session.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
+        return found
+
+    def _resolve_master() -> Optional[Any]:
+        try:
+            found = _lookup_master(db)
+            if found:
+                return found
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        try:
+            from backend.database import PlatformSessionLocal
+            if PlatformSessionLocal is not None:
+                with PlatformSessionLocal() as p_db:
+                    found = _lookup_master(p_db)
+                    if found:
+                        p_db.expunge(found)
+                        return found
+        except Exception:
+            pass
+        return None
+
+    # Master-plane superadmins are authoritative in master_users; res_users is never required for them.
+    if is_master_tier:
+        master_user = _resolve_master()
+        if master_user is not None and getattr(master_user, "is_superuser", False) is True:
+            user = master_user
+        elif master_user is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Master account lacks superadmin privileges.",
+            )
+
+    # Tenant-scoped users: res_users lookup is only required here.
+    if not user and not is_master_tier:
+        if sub:
+            try:
+                user_uuid = uuid.UUID(str(sub))
+                user = db.query(ResUser).filter(ResUser.id == user_uuid).first()
+            except (ValueError, TypeError):
+                pass
+
+        if not user and email:
+            user = db.query(ResUser).filter(ResUser.email.ilike(email.strip())).first()
 
     # SECURITY (2026-10-04, incident Addendum C): no account is ever created -- persisted or
     # in-memory -- for a token whose subject is not a registered res_users account. Previously this
     # dependency (a) bridged tenant_users rows into res_users with a header-chosen company and
     # (b) returned an in-memory "envelope" user with the token's role for any unknown subject.
-    if not user and sub and not email:
+    if not user and not is_master_tier and sub and not email:
         # Read-only compatibility: a tenant_users id may be mapped to its existing res_users account.
         try:
             t_user = db.query(TenantUser).filter(TenantUser.id == uuid.UUID(str(sub))).first()
@@ -179,52 +230,12 @@ async def get_current_user(
         if t_user is not None and t_user.email:
             user = db.query(ResUser).filter(ResUser.email.ilike(t_user.email.strip())).first()
 
-    is_master_tier = (
-        payload.get("tier") == "master"
-        or str(payload.get("iss", "")).endswith("control-plane")
-        or str(payload.get("role", "")).lower() in ("super_admin", "superadmin")
-    )
-
-    # Master Tier / Platform Control Plane resolution
-    if not user and is_master_tier:
-        try:
-            from backend.models import MasterUser
-            if sub:
-                try:
-                    user = db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
-                except (ValueError, TypeError):
-                    pass
-            if not user and email:
-                user = db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
-
-            if not user:
-                from backend.database import PlatformSessionLocal
-                if PlatformSessionLocal is not None:
-                    with PlatformSessionLocal() as p_db:
-                        if sub:
-                            try:
-                                user = p_db.query(MasterUser).filter(MasterUser.id == uuid.UUID(str(sub))).first()
-                            except (ValueError, TypeError):
-                                pass
-                        if not user and email:
-                            user = p_db.query(MasterUser).filter(func.lower(MasterUser.email) == email.strip().lower()).first()
-                        if user:
-                            p_db.expunge(user)
-        except Exception:
-            pass
-
-    # Fallback for valid master tier token whose subject is verified by cryptographically signed JWT
-    if not user and is_master_tier and (sub or email):
-        from backend.models import MasterUser
-        user = MasterUser(
-            id=uuid.UUID(str(sub)) if sub and len(str(sub)) == 36 else uuid.uuid4(),
-            email=str(email or "superadmin@oxengl.com").strip().lower(),
-            full_name=payload.get("fullName") or payload.get("full_name") or "Super Administrator",
-            password_hash="",
-            role="super_admin",
-            is_active=True,
-            is_superuser=True,
-        )
+    # Untagged tokens of a master superadmin still bypass the tenant user requirement.
+    if not user and not is_master_tier:
+        master_user = _resolve_master()
+        if master_user is not None and getattr(master_user, "is_superuser", False) is True:
+            user = master_user
+            is_master_tier = True
 
     if not user:
         raise HTTPException(

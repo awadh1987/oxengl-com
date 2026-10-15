@@ -874,7 +874,35 @@ def get_authenticated_user(request: Request, database: Session = Depends(get_db)
 			except Exception:
 				pass
 
-	user = database.scalar(select(models.ResUser).where(models.ResUser.email == email, models.ResUser.is_active.is_(True)))
+	user = None
+	if master_tier:
+		# Global superadmins live in master_users; no tenant res_users row is required for them.
+		master_user = None
+		try:
+			master_user = database.scalar(select(models.MasterUser).where(func.lower(models.MasterUser.email) == email))
+		except Exception:
+			try:
+				database.rollback()
+			except Exception:
+				pass
+		if master_user is None:
+			try:
+				from backend.database import PlatformSessionLocal
+				if PlatformSessionLocal is not None:
+					with PlatformSessionLocal() as p_db:
+						master_user = p_db.scalar(select(models.MasterUser).where(func.lower(models.MasterUser.email) == email))
+						if master_user is not None:
+							p_db.expunge(master_user)
+			except Exception:
+				master_user = None
+		if master_user is not None:
+			if not master_user.is_active or master_user.is_superuser is not True:
+				raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Master account is inactive or lacks superadmin privileges")
+			setattr(master_user, "company_id", None)
+			setattr(master_user, "must_change_password", False)
+			user = master_user
+	if user is None:
+		user = database.scalar(select(models.ResUser).where(models.ResUser.email == email, models.ResUser.is_active.is_(True)))
 	if user is None:
 		# SECURITY (2026-10-04, incident Addendum C): a validly signed token whose subject is not a
 		# registered, active res_users account is REJECTED. Accounts are never provisioned by the auth
