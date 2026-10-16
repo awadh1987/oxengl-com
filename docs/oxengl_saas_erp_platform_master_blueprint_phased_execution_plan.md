@@ -1,4 +1,4 @@
-# OxenGL SaaS ERP Platform: Comprehensive Fixes & Enhancements Blueprint
+podman exec -it oxengl_postgres_container psql -U postgres -d erp_db -c "ALTER TABLE alembic_version NO FORCE ROW LEVEL SECURITY;"# OxenGL SaaS ERP Platform: Comprehensive Fixes & Enhancements Blueprint
 
 This blueprint outlines the complete system architecture changes, UI/UX refinements, API security error resolutions, and feature integrations required across the OxenGL SaaS ERP platform, admin console, registration flow, and authentication portals.
 

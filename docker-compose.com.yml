@@ -1,0 +1,171 @@
+# ==============================================================================
+# OxenGL Enterprise Production Compose Orchestration (Isolated .com Environment)
+# ==============================================================================
+
+services:
+  # 1. High-Precision Multi-Tenant PostgreSQL Ledger Engine (.com Instance)
+  postgres_db:
+    image: docker.io/pgvector/pgvector:pg15
+    container_name: oxengl_com_postgres_container
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set in .env}
+      POSTGRES_DB: erp_db_com
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      PLATFORM_DB_USER: ${PLATFORM_DB_USER}
+      PLATFORM_DB_PASSWORD: ${PLATFORM_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pg_com_data_volume:/var/lib/postgresql/data
+      - ./backend/scripts/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+    command: >
+      postgres
+      -c max_connections=60
+      -c shared_buffers=128MB
+      -c effective_cache_size=384MB
+      -c maintenance_work_mem=32MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=4MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=100MB
+      -c max_wal_size=1GB
+    mem_limit: 512m
+    mem_reservation: 128m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d erp_db_com"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - oxengl_com_internal_network
+      - oxengl_com_net
+
+  # 2. High-Velocity Cache & State Broker (.com Instance)
+  redis_cache:
+    image: docker.io/library/redis:7-alpine
+    container_name: oxengl_com_redis_container
+    restart: always
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save ""
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis_com_data_volume:/data
+    mem_limit: 128m
+    mem_reservation: 32m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - oxengl_com_internal_network
+      - oxengl_com_net
+
+  # 3. OxenGL Enterprise Core Backend API Engine (.com Instance)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: localhost/oxen-gl_com_backend:latest
+    container_name: oxengl_com_backend_container
+    restart: always
+    command: ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "3", "--limit-concurrency", "100"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: "postgresql+psycopg2://${APP_DB_USER:?APP_DB_USER must be set in .env}:${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}@postgres_db:5432/erp_db_com"
+      PLATFORM_DATABASE_URL: "postgresql+psycopg2://${PLATFORM_DB_USER:?PLATFORM_DB_USER must be set in .env}:${PLATFORM_DB_PASSWORD:?PLATFORM_DB_PASSWORD must be set in .env}@postgres_db:5432/erp_db_com"
+      DB_NAME: "erp_db_com"
+      REDIS_URL: "redis://redis_cache:6379/0"
+      POSTGRES_HOST: postgres_db
+      DB_USER: ${APP_DB_USER:?APP_DB_USER must be set in .env}
+      DB_PASSWORD: ${APP_DB_PASSWORD:?APP_DB_PASSWORD must be set in .env}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      SYNC_WEBHOOK_SECRETS_JSON: ${SYNC_WEBHOOK_SECRETS_JSON:-}
+      PYTHONPATH: "/app"
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ./backend/alembic:/app/backend/alembic:ro
+      - avatar_com_files_volume:/app/backend/static/avatars
+      - uploads_com_files_volume:/app/backend/static/uploads
+      - crypto_com_keys_volume:/var/crypto/oxengl
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_cache:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8000/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - oxengl_com_internal_network
+      - oxengl_com_net
+
+  # 4. OxenGL React Frontend (.com Instance)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: localhost/oxen-gl_com_frontend:latest
+    container_name: oxengl_com_frontend_container
+    restart: always
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - oxengl_com_net
+
+  # 5. OxenGL Edge Nginx Reverse Proxy Gateway (.com Instance)
+  nginx:
+    image: docker.io/library/nginx:alpine
+    container_name: oxengl_com_nginx_container
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/api/v1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - oxengl_com_net
+
+volumes:
+  pg_com_data_volume:
+    name: oxengl_com_pg_data_volume
+  redis_com_data_volume:
+    name: oxengl_com_redis_data_volume
+  avatar_com_files_volume:
+    name: oxengl_com_avatar_files_volume
+  uploads_com_files_volume:
+    name: oxengl_com_uploads_files_volume
+  crypto_com_keys_volume:
+    name: oxengl_com_crypto_com_keys_volume
+
+networks:
+  oxengl_com_internal_network:
+    name: oxengl_com_internal_network
+    driver: bridge
+  oxengl_com_net:
+    name: oxengl_com_net
+    driver: bridge
