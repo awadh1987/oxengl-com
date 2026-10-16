@@ -179,7 +179,7 @@ BEGIN
                 WHEN 'master_password_resets' THEN
                     tenant_predicate := platform_predicate;
                 WHEN 'master_tenants' THEN
-                    tenant_predicate := platform_predicate;
+                    tenant_predicate := format('id::text = %s', tenant_setting);
                 WHEN 'master_users' THEN
                     tenant_predicate := platform_predicate;
                 WHEN 'platform_settings' THEN

@@ -43,6 +43,13 @@ import { ExportPrintModal } from '../components/ExportPrintModal';
 import { OfficialLetterheadHeader } from '../components/OfficialLetterheadHeader';
 import { DynamicFieldRenderer } from '../components/DynamicFieldRenderer';
 import { BulkImportModal } from '../components/BulkImportModal';
+import {
+  ColumnDrilldownModal,
+  OxenActiveFiltersBar,
+  OxenColumnDef,
+  OxenColumnHeader,
+  useOxenColumnFilter,
+} from '../components/common/ColumnDrilldownModal';
 import { OfficialLetterheadFooter } from '../components/OfficialLetterheadFooter';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { ActionsMenu } from '../components/ActionsMenu';
@@ -186,13 +193,110 @@ export const CustomerInvoicingView: React.FC = () => {
     });
   }, [matchingTrips]);
 
-  const subtotal = roundHalala(invoiceItems.reduce((acc, item) => acc + item.subtotal, 0));
-  const totalVat = roundHalala(invoiceItems.reduce((acc, item) => acc + item.vatAmount, 0));
+  const invoiceItemColumns = useMemo<OxenColumnDef<InvoiceItem>[]>(
+    () => [
+      {
+        key: 'material',
+        label: isAr ? 'نوع المادة / البند' : 'Material Description',
+        type: 'categorical',
+        getValue: (item) => item.materialType,
+        getTonnage: (item) => item.deliveredWeight,
+        getRevenue: (item) => item.total,
+      },
+      {
+        key: 'trips',
+        label: isAr ? 'عدد الرحلات' : 'Trips',
+        type: 'numeric',
+        align: 'center',
+        getValue: (item) => item.tripsCount,
+        getNumericValue: (item) => item.tripsCount,
+      },
+      {
+        key: 'loaded_mt',
+        label: isAr ? 'الوزن المحمل (MT طن)' : 'Loaded (MT)',
+        type: 'numeric',
+        align: 'center',
+        unit: 'MT',
+        getValue: (item) => item.loadedWeight,
+        getNumericValue: (item) => item.loadedWeight,
+      },
+      {
+        key: 'delivered_mt',
+        label: isAr ? 'الوزن الصافي (MT طن)' : 'Delivered (MT)',
+        type: 'numeric',
+        align: 'center',
+        unit: 'MT',
+        getValue: (item) => item.deliveredWeight,
+        getNumericValue: (item) => item.deliveredWeight,
+      },
+      {
+        key: 'loss_mt',
+        label: isAr ? 'الفاقد (MT طن)' : 'Loss (MT)',
+        type: 'numeric',
+        align: 'center',
+        unit: 'MT',
+        getValue: (item) => item.wastageWeight,
+        getNumericValue: (item) => item.wastageWeight,
+      },
+      {
+        key: 'rate',
+        label: isAr ? 'سعر الوحدة (ر.س/MT طن)' : 'Rate / MT',
+        type: 'numeric',
+        align: 'right',
+        unit: 'SAR',
+        getValue: (item) => item.unitPrice,
+        getNumericValue: (item) => item.unitPrice,
+      },
+      {
+        key: 'subtotal',
+        label: isAr ? 'المبلغ (بدون ضريبة)' : 'Amount',
+        type: 'numeric',
+        align: 'right',
+        unit: 'SAR',
+        getValue: (item) => item.subtotal,
+        getNumericValue: (item) => item.subtotal,
+      },
+      {
+        key: 'vat',
+        label: isAr ? 'الضريبة 15%' : 'VAT 15%',
+        type: 'numeric',
+        align: 'right',
+        unit: 'SAR',
+        getValue: (item) => item.vatAmount,
+        getNumericValue: (item) => item.vatAmount,
+      },
+      {
+        key: 'total',
+        label: isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)',
+        type: 'numeric',
+        align: 'right',
+        unit: 'SAR',
+        getValue: (item) => item.total,
+        getNumericValue: (item) => item.total,
+      },
+    ],
+    [isAr]
+  );
+
+  const {
+    columnFilters: invoiceColumnFilters,
+    filteredData: filteredInvoiceItems,
+    activeDrilldownColumn: activeInvoiceDrilldownColumn,
+    openDrilldown: openInvoiceDrilldown,
+    closeDrilldown: closeInvoiceDrilldown,
+    setColumnFilter: setInvoiceColumnFilter,
+    clearAllColumnFilters: clearAllInvoiceColumnFilters,
+    isColumnFiltered: isInvoiceColumnFiltered,
+    getColumnDef: getInvoiceColumnDef,
+  } = useOxenColumnFilter(invoiceItems, invoiceItemColumns);
+
+  const subtotal = roundHalala(filteredInvoiceItems.reduce((acc, item) => acc + item.subtotal, 0));
+  const totalVat = roundHalala(filteredInvoiceItems.reduce((acc, item) => acc + item.vatAmount, 0));
   const grandTotal = roundHalala(subtotal + totalVat);
-  const totalTrips = invoiceItems.reduce((acc, item) => acc + item.tripsCount, 0);
-  const totalLoaded = invoiceItems.reduce((acc, item) => acc + item.loadedWeight, 0);
-  const totalDelivered = invoiceItems.reduce((acc, item) => acc + item.deliveredWeight, 0);
-  const totalWastage = invoiceItems.reduce((acc, item) => acc + item.wastageWeight, 0);
+  const totalTrips = filteredInvoiceItems.reduce((acc, item) => acc + item.tripsCount, 0);
+  const totalLoaded = filteredInvoiceItems.reduce((acc, item) => acc + item.loadedWeight, 0);
+  const totalDelivered = filteredInvoiceItems.reduce((acc, item) => acc + item.deliveredWeight, 0);
+  const totalWastage = filteredInvoiceItems.reduce((acc, item) => acc + item.wastageWeight, 0);
 
   // Financial balance validation rule (BR-001)
   const isUnbalanced = useMemo(() => {
@@ -1224,20 +1328,93 @@ Myon Economic Contracting Co. Ltd.`;
         </div>
 
         {/* Aggregate Items Table */}
+        <div className="mb-3">
+          <OxenActiveFiltersBar
+            columns={invoiceItemColumns}
+            columnFilters={invoiceColumnFilters}
+            onOpenColumn={openInvoiceDrilldown}
+            onClearColumn={(key) => setInvoiceColumnFilter(key, null)}
+            onClearAll={clearAllInvoiceColumnFilters}
+            totalCount={invoiceItems.length}
+            filteredCount={filteredInvoiceItems.length}
+          />
+        </div>
         <div className="w-full overflow-x-auto">
           <table className="w-full text-start text-xs">
             <thead>
-              <tr className="border-y-2 border-slate-900 bg-slate-100 font-bold text-slate-900">
+              <tr className="border-y-2 border-slate-900 bg-slate-950 font-bold text-slate-100">
                 <th className="py-3 px-3 text-start">#</th>
-                <th className="py-3 px-3 text-start">{isAr ? 'نوع المادة / البند' : 'Material Description'}</th>
-                <th className="py-3 px-3 text-center">{isAr ? 'عدد الرحلات' : 'Trips'}</th>
-                <th className="py-3 px-3 text-center">{isAr ? 'الوزن المحمل (MT طن)' : 'Loaded (MT)'}</th>
-                <th className="py-3 px-3 text-center">{isAr ? 'الوزن الصافي (MT طن)' : 'Delivered (MT)'}</th>
-                <th className="py-3 px-3 text-center">{isAr ? 'الفاقد (MT طن)' : 'Loss (MT)'}</th>
-                <th className="py-3 px-3 text-end">{isAr ? 'سعر الوحدة (ر.س/MT طن)' : 'Rate / MT'}</th>
-                <th className="py-3 px-3 text-end">{isAr ? 'المبلغ (بدون ضريبة)' : 'Amount'}</th>
-                <th className="py-3 px-3 text-end">{isAr ? 'الضريبة 15%' : 'VAT 15%'}</th>
-                <th className="py-3 px-3 text-end">{isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'}</th>
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('material')}
+                  className="py-3 px-3 text-start"
+                  isFiltered={isInvoiceColumnFiltered('material')}
+                  onOpen={() => openInvoiceDrilldown('material')}
+                  onClear={() => setInvoiceColumnFilter('material', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('trips')}
+                  align="center"
+                  className="py-3 px-3 text-center"
+                  isFiltered={isInvoiceColumnFiltered('trips')}
+                  onOpen={() => openInvoiceDrilldown('trips')}
+                  onClear={() => setInvoiceColumnFilter('trips', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('loaded_mt')}
+                  align="center"
+                  className="py-3 px-3 text-center"
+                  isFiltered={isInvoiceColumnFiltered('loaded_mt')}
+                  onOpen={() => openInvoiceDrilldown('loaded_mt')}
+                  onClear={() => setInvoiceColumnFilter('loaded_mt', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('delivered_mt')}
+                  align="center"
+                  className="py-3 px-3 text-center"
+                  isFiltered={isInvoiceColumnFiltered('delivered_mt')}
+                  onOpen={() => openInvoiceDrilldown('delivered_mt')}
+                  onClear={() => setInvoiceColumnFilter('delivered_mt', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('loss_mt')}
+                  align="center"
+                  className="py-3 px-3 text-center"
+                  isFiltered={isInvoiceColumnFiltered('loss_mt')}
+                  onOpen={() => openInvoiceDrilldown('loss_mt')}
+                  onClear={() => setInvoiceColumnFilter('loss_mt', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('rate')}
+                  align="right"
+                  className="py-3 px-3 text-end"
+                  isFiltered={isInvoiceColumnFiltered('rate')}
+                  onOpen={() => openInvoiceDrilldown('rate')}
+                  onClear={() => setInvoiceColumnFilter('rate', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('subtotal')}
+                  align="right"
+                  className="py-3 px-3 text-end"
+                  isFiltered={isInvoiceColumnFiltered('subtotal')}
+                  onOpen={() => openInvoiceDrilldown('subtotal')}
+                  onClear={() => setInvoiceColumnFilter('subtotal', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('vat')}
+                  align="right"
+                  className="py-3 px-3 text-end"
+                  isFiltered={isInvoiceColumnFiltered('vat')}
+                  onOpen={() => openInvoiceDrilldown('vat')}
+                  onClear={() => setInvoiceColumnFilter('vat', null)}
+                />
+                <OxenColumnHeader
+                  column={getInvoiceColumnDef('total')}
+                  align="right"
+                  className="py-3 px-3 text-end"
+                  isFiltered={isInvoiceColumnFiltered('total')}
+                  onOpen={() => openInvoiceDrilldown('total')}
+                  onClear={() => setInvoiceColumnFilter('total', null)}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -1256,14 +1433,14 @@ Myon Economic Contracting Co. Ltd.`;
                     <td className="py-3 px-3 text-end"><div className="h-4 bg-slate-200 rounded w-24 ms-auto" /></td>
                   </tr>
                 ))
-              ) : invoiceItems.length === 0 ? (
+              ) : filteredInvoiceItems.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-8 text-center text-slate-400">
                     {isAr ? 'لا توجد رحلات مسجلة لهذا العميل في الشهر المحدد' : 'No trips found for this customer and month'}
                   </td>
                 </tr>
               ) : (
-                invoiceItems.map((item, idx) => (
+                filteredInvoiceItems.map((item, idx) => (
                   <tr key={idx} className="hover:bg-slate-50">
                     <td className="py-3 px-3 font-mono">{idx + 1}</td>
                     <td className="py-3 px-3 font-bold text-slate-900">{item.materialType}</td>
@@ -1448,6 +1625,20 @@ Myon Economic Contracting Co. Ltd.`;
         isOpen={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
         defaultCategory="operations"
+      />
+
+      {/* Interactive Column Drill-Down & Analytics Modal (Phase 3) */}
+      <ColumnDrilldownModal
+        isOpen={Boolean(activeInvoiceDrilldownColumn)}
+        column={activeInvoiceDrilldownColumn}
+        data={invoiceItems}
+        currentFilter={
+          activeInvoiceDrilldownColumn
+            ? invoiceColumnFilters[activeInvoiceDrilldownColumn.key]
+            : null
+        }
+        onApply={setInvoiceColumnFilter}
+        onClose={closeInvoiceDrilldown}
       />
     </div>
   );

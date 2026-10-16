@@ -213,7 +213,7 @@ const initialForm = (): EmployeeFormState => ({
   departmentType: 'OPERATIONS',
   jobTitle: '',
   managerName: '',
-  hireDate: new Date().toISOString().slice(0, 10),
+  hireDate: '',
   contractType: 'FIXED_TERM',
   contractDurationMonths: '12',
   probationPeriodDays: '90',
@@ -502,11 +502,11 @@ export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       </span>
       <input
         type={options.type || 'text'}
-        value={form[key] as string}
+        value={(form[key] as string) || ''}
         required={options.required}
         min={options.min}
         step={options.step}
-        placeholder={options.placeholder}
+        placeholder={options.placeholder || (options.type === 'date' ? 'YYYY-MM-DD' : undefined)}
         onChange={(event) => update(key, event.target.value as never)}
         className={fieldClass(isDark)}
       />

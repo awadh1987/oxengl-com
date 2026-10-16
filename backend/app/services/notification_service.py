@@ -99,11 +99,43 @@ async def dispatch_temporary_credentials(
         ) from None
 
 
+import time as _time
+
+
 class VerificationService:
     OTP_TTL = timedelta(minutes=5)
     # SECURITY (Addendum D): an OTP is destroyed after this many wrong guesses (anti brute force).
     MAX_OTP_ATTEMPTS = 5
     PAYLOAD_TTL = timedelta(minutes=15)
+    _MEMORY_STORE: dict[str, tuple[Any, float]] = {}
+
+    @classmethod
+    def _mem_set(cls, key: str, value: Any, ttl_seconds: int) -> None:
+        cls._MEMORY_STORE[key] = (value, _time.time() + ttl_seconds)
+
+    @classmethod
+    def _mem_get(cls, key: str) -> Optional[Any]:
+        entry = cls._MEMORY_STORE.get(key)
+        if not entry:
+            return None
+        val, expires_at = entry
+        if _time.time() > expires_at:
+            cls._MEMORY_STORE.pop(key, None)
+            return None
+        return val
+
+    @classmethod
+    def _mem_delete(cls, key: str) -> None:
+        cls._MEMORY_STORE.pop(key, None)
+
+    @classmethod
+    def _mem_incr(cls, key: str, ttl_seconds: int) -> int:
+        current = cls._mem_get(key)
+        next_val = (int(current) if current is not None else 0) + 1
+        entry = cls._MEMORY_STORE.get(key)
+        expires_at = entry[1] if entry and _time.time() <= entry[1] else (_time.time() + ttl_seconds)
+        cls._MEMORY_STORE[key] = (next_val, expires_at)
+        return next_val
 
     @classmethod
     async def _safe_call(cls, func, *args, **kwargs):
@@ -127,38 +159,82 @@ class VerificationService:
         ttl_seconds: Optional[int] = None,
         expire_seconds: Optional[int] = None,
     ) -> str:
-        """Generates a 6-digit numeric OTP and stores it in Redis with a 5-minute default TTL."""
+        """Generates a 6-digit numeric OTP and stores it in Redis (with in-memory fallback) with a 5-minute default TTL."""
         norm_id = identifier.strip().lower()
         otp = f"{secrets.randbelow(900000) + 100000}"  # CSPRNG (was random.randint)
         key = f"otp:{norm_id}"
         ttl = ttl_seconds or expire_seconds or int(cls.OTP_TTL.total_seconds())
-        await cls._safe_call(redis_client.set, key, otp, ex=ttl)
+        cls._mem_set(key, otp, ttl)
+        cls._mem_delete(f"otp_attempts:{norm_id}")
+        try:
+            await cls._safe_call(redis_client.set, key, otp, ex=ttl)
+        except Exception as exc:
+            logger.warning("Redis set fallback activated for OTP key (%s)", type(exc).__name__)
         logger.info("Generated secure OTP (recipient=%s)", _mask_identifier(norm_id))
         return otp
 
     @classmethod
-    async def verify_otp(cls, identifier: str, provided_otp: str) -> bool:
-        """Verifies the supplied OTP against Redis and invalidates it upon match to prevent replay attacks."""
+    async def verify_otp(cls, identifier: str, provided_otp: str, consume: bool = True) -> bool:
+        """Verifies the supplied OTP against Redis (or fallback store) and invalidates it upon match when consume=True."""
         norm_id = identifier.strip().lower()
         key = f"otp:{norm_id}"
-        stored_otp = await cls._safe_call(redis_client.get, key)
+        attempts_key = f"otp_attempts:{norm_id}"
+        ttl = int(cls.OTP_TTL.total_seconds())
+
+        stored_otp = None
+        redis_available = True
+        try:
+            stored_otp = await cls._safe_call(redis_client.get, key)
+        except Exception:
+            redis_available = False
+
+        if not stored_otp and not redis_available:
+            stored_otp = cls._mem_get(key)
+        elif not stored_otp:
+            # If Redis is online and key is absent in Redis, ensure memory mirror is also cleared
+            cls._mem_delete(key)
+            return False
+
         if not stored_otp:
             return False
 
         val = stored_otp.decode("utf-8") if isinstance(stored_otp, bytes) else str(stored_otp)
-        attempts_key = f"otp_attempts:{norm_id}"
         if hmac.compare_digest(val.strip().encode(), str(provided_otp).strip().encode()):
-            await cls._safe_call(redis_client.delete, key)
-            await cls._safe_call(redis_client.delete, attempts_key)
+            if consume:
+                cls._mem_delete(key)
+                cls._mem_delete(attempts_key)
+                if redis_available:
+                    try:
+                        await cls._safe_call(redis_client.delete, key)
+                        await cls._safe_call(redis_client.delete, attempts_key)
+                    except Exception:
+                        pass
             return True
-        attempts = await cls._safe_call(redis_client.incr, attempts_key)
-        if attempts == 1:
-            await cls._safe_call(redis_client.expire, attempts_key, int(cls.OTP_TTL.total_seconds()))
+
+        attempts = cls._mem_incr(attempts_key, ttl)
+        if redis_available:
+            try:
+                attempts = await cls._safe_call(redis_client.incr, attempts_key)
+                if attempts == 1:
+                    await cls._safe_call(redis_client.expire, attempts_key, ttl)
+            except Exception:
+                pass
         if attempts >= cls.MAX_OTP_ATTEMPTS:
-            await cls._safe_call(redis_client.delete, key)
-            await cls._safe_call(redis_client.delete, attempts_key)
+            cls._mem_delete(key)
+            cls._mem_delete(attempts_key)
+            if redis_available:
+                try:
+                    await cls._safe_call(redis_client.delete, key)
+                    await cls._safe_call(redis_client.delete, attempts_key)
+                except Exception:
+                    pass
             logger.warning("OTP for recipient %s destroyed after %s failed attempts", _mask_identifier(norm_id), attempts)
         return False
+
+    @classmethod
+    async def peek_otp(cls, identifier: str, provided_otp: str) -> bool:
+        """Verifies the supplied OTP without consuming it on match (still enforces brute-force attempt limit)."""
+        return await cls.verify_otp(identifier, provided_otp, consume=False)
 
     @classmethod
     async def store_registration_payload(
@@ -172,19 +248,31 @@ class VerificationService:
         norm_id = identifier.strip().lower()
         key = f"otp_payload:{norm_id}"
         ttl = ttl_seconds or expire_seconds or int(cls.PAYLOAD_TTL.total_seconds())
-        await cls._safe_call(
-            redis_client.set,
-            key,
-            json.dumps(payload_data),
-            ex=ttl,
-        )
+        serialized = json.dumps(payload_data)
+        cls._mem_set(key, serialized, ttl)
+        try:
+            await cls._safe_call(
+                redis_client.set,
+                key,
+                serialized,
+                ex=ttl,
+            )
+        except Exception as exc:
+            logger.warning("Redis payload cache fallback activated (%s)", type(exc).__name__)
 
     @classmethod
     async def get_registration_payload(cls, identifier: str) -> Optional[Dict[str, Any]]:
-        """Retrieves temporarily cached registration data from Redis."""
+        """Retrieves temporarily cached registration data from Redis (or fallback memory store)."""
         norm_id = identifier.strip().lower()
         key = f"otp_payload:{norm_id}"
-        stored = await cls._safe_call(redis_client.get, key)
+        stored = None
+        redis_available = True
+        try:
+            stored = await cls._safe_call(redis_client.get, key)
+        except Exception:
+            redis_available = False
+        if not stored and not redis_available:
+            stored = cls._mem_get(key)
         if stored:
             val = stored.decode("utf-8") if isinstance(stored, bytes) else str(stored)
             return json.loads(val)
@@ -195,7 +283,11 @@ class VerificationService:
         """Deletes temporarily cached registration data once successfully provisioned."""
         norm_id = identifier.strip().lower()
         key = f"otp_payload:{norm_id}"
-        await cls._safe_call(redis_client.delete, key)
+        cls._mem_delete(key)
+        try:
+            await cls._safe_call(redis_client.delete, key)
+        except Exception:
+            pass
 
     @staticmethod
     async def dispatch_email_otp(email: str, otp: str, company_name: str, tenant_id: Any = None) -> None:

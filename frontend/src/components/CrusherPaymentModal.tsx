@@ -29,11 +29,17 @@ export const CrusherPaymentModal: React.FC<CrusherPaymentModalProps> = ({
     return crushers[0]?.id || '';
   });
 
-  const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [paymentDate, setPaymentDate] = useState('');
   const [amount, setAmount] = useState<number | ''>(25000);
   const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Cheque' | 'Cash' | 'Credit Memo'>('Bank Transfer');
   const [referenceNo, setReferenceNo] = useState(`TR-SA-${Math.floor(100000 + Math.random() * 900000)}`);
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setPaymentDate('');
+    }
+  }, [isOpen]);
 
   // Handle Escape key
   useEffect(() => {
@@ -56,8 +62,8 @@ export const CrusherPaymentModal: React.FC<CrusherPaymentModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || amount <= 0 || !currentCrusher) {
-      showToast(isAr ? 'يرجى إدخال مبلغ صحيح واختيار الكسارة' : 'Please enter valid amount and crusher', 'warning');
+    if (!paymentDate || !amount || amount <= 0 || !currentCrusher) {
+      showToast(isAr ? 'يرجى تحديد تاريخ السداد وإدخال مبلغ صحيح واختيار الكسارة' : 'Please select a payment date, enter a valid amount, and choose a crusher', 'warning');
       return;
     }
 
@@ -150,7 +156,9 @@ export const CrusherPaymentModal: React.FC<CrusherPaymentModalProps> = ({
               </label>
               <input
                 type="date"
-                value={paymentDate}
+                required
+                placeholder="YYYY-MM-DD"
+                value={paymentDate || ''}
                 onChange={(e) => setPaymentDate(e.target.value)}
                 className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/90 px-3 py-2 text-xs text-slate-800 dark:text-slate-100"
               />

@@ -2755,6 +2755,15 @@ def post_account_move(move_id: uuid.UUID, company_id: uuid.UUID = Depends(get_ac
 	move = database.scalar(select(models.AccountMove).where(models.AccountMove.id == move_id, models.AccountMove.company_id == company_id))
 	if move is None:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Journal entry was not found")
+	from backend.app.services.workflow_service import WorkflowEngineService
+	approval_state = (move.custom_attributes or {}).get("approval_status")
+	if approval_state in ("PENDING_APPROVAL", "REJECTED") or WorkflowEngineService.is_document_pending_approval(
+		database, company_id, "FINANCIAL_VOUCHER", move.id
+	):
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail=f"GL Posting Blocked: Financial voucher is {approval_state or 'PENDING_APPROVAL'} and must be approved before posting to the General Ledger.",
+		)
 	if move.state != "posted":
 		move.state = "posted"
 		move.posted_at = datetime.now(timezone.utc)

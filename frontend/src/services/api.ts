@@ -296,6 +296,39 @@ export interface EnterpriseQuoteResponse {
   next_steps: string;
 }
 
+export interface PublicBankInstructionDto {
+  id?: string;
+  bank_name: string;
+  account_name: string;
+  account_number?: string | null;
+  iban?: string | null;
+  swift?: string | null;
+  branch?: string | null;
+  currency?: string | null;
+  is_active: boolean;
+}
+
+export interface PublicWalletInstructionDto {
+  id?: string;
+  provider: string;
+  wallet_number: string;
+  account_name: string;
+  qr_code_url?: string | null;
+  is_active: boolean;
+}
+
+export interface PublicPaymentGatewayDto {
+  is_stripe_enabled: boolean;
+  stripe_mode: 'live' | 'test' | null;
+  stripe_publishable_key: string | null;
+  is_moyasar_enabled: boolean;
+  moyasar_mode: 'live' | 'test' | null;
+  moyasar_publishable_key: string | null;
+  local_bank_instructions: PublicBankInstructionDto[];
+  digital_wallet_instructions: PublicWalletInstructionDto[];
+}
+
+
 export interface CompanyUpdatePayload {
   parent_id?: string | null;
   name?: string;
@@ -1333,6 +1366,8 @@ export const erpApi = {
   // Unified pricing catalog: single source of truth is the subscription_plans table.
   getPricingPlans: () => request<SubscriptionPlanDto[]>('/api/v1/pricing/plans'),
   getSubscriptionPlans: () => request<SubscriptionPlanDto[]>('/api/v1/pricing/plans'),
+  getPublicBillingGateways: () => request<PublicPaymentGatewayDto>('/api/v1/pricing/gateways'),
+  getTenantBillingGateways: (companyId?: string) => request<PublicPaymentGatewayDto>('/api/v1/tenant/billing/gateways', companyId),
   getAdminPricingPlans: () => request<SubscriptionPlanDto[]>('/api/v1/superadmin/billing/plans'),
   updatePricingPlan: (planId: string, payload: SubscriptionPlanUpdatePayload) =>
     request<SubscriptionPlanDto>(`/api/v1/superadmin/billing/plans/${planId}`, undefined, {

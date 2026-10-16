@@ -31,6 +31,7 @@ import {
   TenantSubscriptionDto,
   SaaSInvoiceDto,
   EnterpriseQuoteResponse,
+  PublicPaymentGatewayDto,
 } from '../services/api';
 import { annualMonthlyEquivalent, annualSavingsPercent, formatSar, isFreePlan, VAT_RATE } from '../utils/pricing';
 
@@ -49,6 +50,7 @@ export const TenantBillingView: React.FC = () => {
   const [subscription, setSubscription] = useState<TenantSubscriptionDto | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlanDto[]>([]);
   const [invoices, setInvoices] = useState<SaaSInvoiceDto[]>([]);
+  const [gateways, setGateways] = useState<PublicPaymentGatewayDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
@@ -73,23 +75,33 @@ export const TenantBillingView: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<SaaSInvoiceDto | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  const activeBankDetails = React.useMemo(() => {
+    const firstBank = gateways?.local_bank_instructions?.find((b) => b.is_active !== false);
+    if (firstBank) {
+      return {
+        bankName: firstBank.bank_name || SAUDI_BANK_DETAILS.bankName,
+        accountName: firstBank.account_name || SAUDI_BANK_DETAILS.accountName,
+        iban: firstBank.iban || SAUDI_BANK_DETAILS.iban,
+        swift: firstBank.swift || SAUDI_BANK_DETAILS.swift,
+      };
+    }
+    return SAUDI_BANK_DETAILS;
+  }, [gateways]);
+
+  const activeWallets = React.useMemo(
+    () => (gateways?.digital_wallet_instructions || []).filter((w) => w.is_active !== false),
+    [gateways]
+  );
+
   const fetchBillingData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [subRes, plansRes, invRes] = await Promise.all([
-        erpApi.getTenantSubscription(currentCompany?.id).catch((err) => {
-          console.warn('Subscription fetch warning:', err);
-          return null;
-        }),
-        erpApi.getSubscriptionPlans().catch((err) => {
-          console.warn('Plans fetch warning:', err);
-          return [];
-        }),
-        erpApi.getTenantInvoices(currentCompany?.id).catch((err) => {
-          console.warn('Invoices fetch warning:', err);
-          return [];
-        }),
+      const [subRes, plansRes, invRes, gwRes] = await Promise.all([
+        erpApi.getTenantSubscription(currentCompany?.id).catch(() => null),
+        erpApi.getSubscriptionPlans().catch(() => []),
+        erpApi.getTenantInvoices(currentCompany?.id).catch(() => []),
+        erpApi.getTenantBillingGateways(currentCompany?.id).catch(() => null),
       ]);
 
       if (subRes) setSubscription(subRes);
@@ -98,6 +110,9 @@ export const TenantBillingView: React.FC = () => {
       }
       if (Array.isArray(invRes)) {
         setInvoices(invRes);
+      }
+      if (gwRes) {
+        setGateways(gwRes);
       }
     } catch (err: any) {
       setError(err?.message || 'Failed to load cloud billing configuration.');
@@ -282,6 +297,34 @@ export const TenantBillingView: React.FC = () => {
             <span>{actionSuccess}</span>
           </div>
           <button onClick={() => setActionSuccess(null)} className="text-emerald-300 hover:text-white">✕</button>
+        </div>
+      )}
+
+      {!loading && !subscription && (
+        <div
+          data-testid="workspace-billing-activation-banner"
+          className="rounded-2xl border border-blue-500/30 bg-slate-900/90 p-4 text-xs text-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="h-5 w-5 text-blue-400 shrink-0" />
+            <div>
+              <p className="font-bold text-white">
+                {isAr ? 'مساحة العمل جاهزة لتفعيل ملف الفوترة السحابية' : 'Workspace Billing Profile Ready for Activation'}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {isAr
+                  ? 'تم ربط مساحة العمل بالوضع القياسي (FREE). يمكنك مزامنة حالة الاشتراك أو الترقية إلى باقة أعلى في أي وقت.'
+                  : 'Your tenant workspace is operating on the standard starter profile. Sync telemetry or select a plan below to upgrade.'}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={fetchBillingData}
+            className="rounded-xl bg-blue-600 hover:bg-blue-500 px-4 py-2 text-xs font-bold text-white shrink-0 transition-colors"
+          >
+            {isAr ? 'مزامنة ملف الفوترة' : 'Initialize Workspace Billing'}
+          </button>
         </div>
       )}
 
@@ -1041,27 +1084,27 @@ export const TenantBillingView: React.FC = () => {
                 <div className="rounded-2xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/80 p-5 space-y-3">
                   <h4 className="font-black text-sm text-purple-600 dark:text-purple-400 flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    {isAr ? 'بيانات التحويل البنكي الرسمي (مصرف الإنماء)' : 'Official Saudi Bank Wire Transfer Details'}
+                    {isAr ? `بيانات التحويل البنكي الرسمي (${activeBankDetails.bankName})` : 'Official Saudi Bank Wire Transfer Details'}
                   </h4>
 
                   <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{isAr ? 'اسم المستفيد' : 'Beneficiary'}:</span>
-                      <span className="font-bold">{SAUDI_BANK_DETAILS.accountName}</span>
+                      <span className="font-bold">{activeBankDetails.accountName}</span>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{isAr ? 'اسم البنك' : 'Bank Name'}:</span>
-                      <span className="font-bold">{SAUDI_BANK_DETAILS.bankName}</span>
+                      <span className="font-bold">{activeBankDetails.bankName}</span>
                     </div>
 
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{isAr ? 'رقم الآيبان (IBAN)' : 'IBAN'}:</span>
                       <div className="flex items-center gap-1.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                        <span>{SAUDI_BANK_DETAILS.iban}</span>
+                        <span>{activeBankDetails.iban}</span>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(SAUDI_BANK_DETAILS.iban, 'iban')}
+                          onClick={() => copyToClipboard(activeBankDetails.iban, 'iban')}
                           className="p-1 hover:text-white"
                         >
                           <Copy className="h-3.5 w-3.5" />
@@ -1071,7 +1114,7 @@ export const TenantBillingView: React.FC = () => {
 
                     <div className="flex items-center justify-between">
                       <span className="text-slate-500">{isAr ? 'رمز السويفت (SWIFT/BIC)' : 'SWIFT Code'}:</span>
-                      <span className="font-mono font-bold">{SAUDI_BANK_DETAILS.swift}</span>
+                      <span className="font-mono font-bold">{activeBankDetails.swift}</span>
                     </div>
 
                     <div className="flex items-center justify-between bg-purple-500/10 p-2.5 rounded-xl border border-purple-500/20">
@@ -1095,6 +1138,23 @@ export const TenantBillingView: React.FC = () => {
                       </div>
                     </div>
                   </div>
+
+                  {activeWallets.length > 0 && (
+                    <div className="pt-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      <p className="text-[11px] font-bold text-slate-400">
+                        {isAr ? 'المحافظ الرقمية الإقليمية المعتمدة:' : 'Approved Regional Digital Wallets:'}
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {activeWallets.map((w, idx) => (
+                          <div key={w.id || idx} className="rounded-xl border border-slate-800 bg-slate-950/60 p-2.5 text-[11px]">
+                            <div className="font-bold text-white">{w.provider}</div>
+                            <div className="font-mono text-blue-400">{w.wallet_number}</div>
+                            <div className="text-slate-400 text-[10px]">{w.account_name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {copiedField && (
                     <p className="text-[10px] text-emerald-400 font-bold text-center">
@@ -1197,7 +1257,7 @@ export const TenantBillingView: React.FC = () => {
                 <div className="rounded-xl bg-slate-800/60 p-3 border border-slate-700 space-y-1">
                   <p className="font-bold text-[11px] text-amber-400">{isAr ? 'بيانات التحويل البنكي:' : 'Wire Memo Reference:'}</p>
                   <p className="font-mono text-[10px] text-slate-300">
-                    IBAN: {SAUDI_BANK_DETAILS.iban} | SWIFT: {SAUDI_BANK_DETAILS.swift}
+                    IBAN: {activeBankDetails.iban} | SWIFT: {activeBankDetails.swift}
                   </p>
                   {selectedInvoice.payment_reference && (
                     <p className="font-mono text-[10px] text-amber-300 font-bold">

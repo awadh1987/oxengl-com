@@ -66,8 +66,8 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // 1. User Input Fields State
-  const [loadingDate, setLoadingDate] = useState(new Date().toISOString().slice(0, 10));
+  // 1. User Input Fields State (Zero-Default-Date Principle: date starts blank)
+  const [loadingDate, setLoadingDate] = useState('');
   const [truckNo, setTruckNo] = useState('');
   const [transporterName, setTransporterName] = useState('');
   const [loadingSource, setLoadingSource] = useState('');
@@ -76,12 +76,12 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
   const [receiptInvoiceNo, setReceiptInvoiceNo] = useState('');
   const [materialType, setMaterialType] = useState('');
   const [uom, setUom] = useState<UOMType>((initialData?.uom as UOMType) || 'MT طن');
-  const [qtyLoaded, setQtyLoaded] = useState<number | ''>(42.5);
-  const [qtyDelivered, setQtyDelivered] = useState<number | ''>(42.0);
+  const [qtyLoaded, setQtyLoaded] = useState<number | ''>('');
+  const [qtyDelivered, setQtyDelivered] = useState<number | ''>('');
   const [scaleTicketNo, setScaleTicketNo] = useState('');
-  const [salesAmountInput, setSalesAmountInput] = useState<number | ''>(1848.0);
-  const [crusherPurchaseCostInput, setCrusherPurchaseCostInput] = useState<number | ''>(1062.5);
-  const [crusherPaymentInput, setCrusherPaymentInput] = useState<number | ''>(0);
+  const [salesAmountInput, setSalesAmountInput] = useState<number | ''>('');
+  const [crusherPurchaseCostInput, setCrusherPurchaseCostInput] = useState<number | ''>('');
+  const [crusherPaymentInput, setCrusherPaymentInput] = useState<number | ''>('');
   const [notes, setNotes] = useState('');
   const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
   const [attachments, setAttachments] = useState<DocumentAttachment[]>([]);
@@ -167,8 +167,20 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
       setScaleTicketAttachment(initialData.scale_ticket_attachment || '');
       setAttachments(initialData.attachments || []);
     } else {
+      setLoadingDate('');
       setCustomAttributes({});
-      // Set sensible initial defaults
+      setQtyLoaded('');
+      setQtyDelivered('');
+      setSalesAmountInput('');
+      setCrusherPurchaseCostInput('');
+      setCrusherPaymentInput('');
+      setScaleTicketNo('');
+      setLoadingInvoiceNo('');
+      setReceiptInvoiceNo('');
+      setNotes('');
+      setScaleTicketAttachment('');
+      setAttachments([]);
+      // Set sensible entity selectors
       if (customers.length > 0) setDestinationCustomer(customers[0].customerName);
       if (crushers.length > 0) setLoadingSource(crushers[0].crusherName);
       if (transporters.length > 0) {
@@ -179,33 +191,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
         setMaterialType(materials[0].nameAr);
         setSellingUnitPrice(materials[0].defaultSellingPrice);
         setPurchaseUnitPrice(materials[0].defaultPurchasePrice);
-        const initLoaded = 42.5;
-        const initDelivered = 42.0;
-        setQtyLoaded(initLoaded);
-        setQtyDelivered(initDelivered);
-        setSalesAmountInput(Number((initDelivered * materials[0].defaultSellingPrice).toFixed(2)));
-        setCrusherPurchaseCostInput(Number((initLoaded * materials[0].defaultPurchasePrice).toFixed(2)));
       }
-      const randomTicket = `ST-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-      const randomCR = `CR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      const randomREC = `REC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-      setScaleTicketNo(randomTicket);
-      setLoadingInvoiceNo(randomCR);
-      setReceiptInvoiceNo(randomREC);
-      setCrusherPaymentInput(0);
-      setScaleTicketAttachment('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80');
-      setAttachments([
-        {
-          id: 'att-init-1',
-          fileName: 'Scale_Ticket_Scan.pdf',
-          fileSize: '1.2 MB',
-          fileType: 'application/pdf',
-          docCategory: 'Scale Ticket',
-          uploadedAt: new Date().toISOString(),
-          uploadedBy: currentUser?.fullName || 'Admin',
-          fileData: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop&q=80',
-        },
-      ]);
     }
   }, [initialData, isOpen, customers, crushers, transporters, materials, currentUser]);
 
@@ -216,10 +202,14 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
     if (found) {
       setSellingUnitPrice(found.defaultSellingPrice);
       setPurchaseUnitPrice(found.defaultPurchasePrice);
-      const del = Number(qtyDelivered) || 0;
-      const load = Number(qtyLoaded) || 0;
-      setSalesAmountInput(Number((del * found.defaultSellingPrice).toFixed(2)));
-      setCrusherPurchaseCostInput(Number((load * found.defaultPurchasePrice).toFixed(2)));
+      if (qtyDelivered !== '') {
+        const del = Number(qtyDelivered) || 0;
+        setSalesAmountInput(Number((del * found.defaultSellingPrice).toFixed(2)));
+      }
+      if (qtyLoaded !== '') {
+        const load = Number(qtyLoaded) || 0;
+        setCrusherPurchaseCostInput(Number((load * found.defaultPurchasePrice).toFixed(2)));
+      }
     }
   };
 
@@ -274,17 +264,17 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
   const paidToCrusher = Number(crusherPaymentInput) || 0;
 
   // الشهر: Extracted automatically from Loading Date
-  const dateObj = useMemo(() => new Date(loadingDate || new Date().toISOString().slice(0, 10)), [loadingDate]);
-  const opMonth = dateObj.getMonth() + 1;
-  const opYear = dateObj.getFullYear();
-  const monthLabel = getMonthName(opMonth, language);
+  const dateObj = useMemo(() => (loadingDate ? new Date(loadingDate) : null), [loadingDate]);
+  const opMonth = dateObj && !Number.isNaN(dateObj.getTime()) ? dateObj.getMonth() + 1 : 0;
+  const opYear = dateObj && !Number.isNaN(dateObj.getTime()) ? dateObj.getFullYear() : 0;
+  const monthLabel = opMonth ? getMonthName(opMonth, language) : '—';
 
   const isExcessLoss = wastagePercentage > 2.0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!truckNo || !transporterName || !destinationCustomer || !loadingSource) {
+    if (!loadingDate || !truckNo || !transporterName || !destinationCustomer || !loadingSource) {
       showToast(isAr ? 'يرجى تعبئة كافة الحقول الإلزامية المطلوبة' : 'Please fill all required fields', 'warning');
       return;
     }
@@ -369,7 +359,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   {tripId}
                 </span>
                 <span className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[11px] font-bold text-slate-700 dark:text-slate-300">
-                  {isAr ? `شهر ${opMonth} (${monthLabel})` : `Month: ${monthLabel}`}
+                  {opMonth ? (isAr ? `شهر ${opMonth} (${monthLabel})` : `Month: ${monthLabel}`) : (isAr ? 'الشهر: —' : 'Month: —')}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -461,7 +451,9 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                 <input
                   id="loading-date-input"
                   type="date"
-                  value={loadingDate}
+                  required
+                  placeholder="YYYY-MM-DD"
+                  value={loadingDate || ''}
                   onChange={(e) => setLoadingDate(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-bold text-slate-800 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
                 />
@@ -694,6 +686,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   type="number"
                   step="0.01"
                   min="0.01"
+                  placeholder="0.00"
                   value={qtyLoaded}
                   onChange={(e) => {
                     const val = e.target.value === '' ? '' : Number(e.target.value);
@@ -716,6 +709,7 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
                   type="number"
                   step="0.01"
                   min="0.01"
+                  placeholder="0.00"
                   value={qtyDelivered}
                   onChange={(e) => {
                     const val = e.target.value === '' ? '' : Number(e.target.value);
@@ -746,13 +740,15 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               {/* 12. قيمة المبيعات بدون ضريبة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="sales-amount-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'قيمة المبيعات بدون ضريبة (ر.س) *' : 'Sales Amount Excl. VAT (SAR) *'}
                 </label>
                 <input
+                  id="sales-amount-input"
                   type="number"
                   step="0.01"
                   min="0"
+                  placeholder="0.00"
                   value={salesAmountInput}
                   onChange={(e) => setSalesAmountInput(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-orange-950 dark:text-orange-300 focus:border-orange-500 focus:outline-none"
@@ -761,13 +757,15 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 13. تكلفة الشراء من الكسارة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="crusher-purchase-cost-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'تكلفة الشراء من مورد المواد الخام (ر.س) *' : 'Raw Materials Supplier Cost (SAR) *'}
                 </label>
                 <input
+                  id="crusher-purchase-cost-input"
                   type="number"
                   step="0.01"
                   min="0"
+                  placeholder="0.00"
                   value={crusherPurchaseCostInput}
                   onChange={(e) => setCrusherPurchaseCostInput(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"
@@ -776,14 +774,15 @@ export const DailyOperationsModal: React.FC<DailyOperationsModalProps> = ({
 
               {/* 14. المسدد للكسارة */}
               <div>
-                <label className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
+                <label htmlFor="crusher-payment-input" className="mb-1 block text-xs font-bold text-slate-700 dark:text-slate-300">
                   {isAr ? 'المسدد لمورد المواد الخام (ر.س)' : 'Paid to Raw Materials Supplier (SAR)'}
                 </label>
                 <input
+                  id="crusher-payment-input"
                   type="number"
                   step="0.01"
                   min="0"
-                  placeholder={isAr ? '0' : '0'}
+                  placeholder="0.00"
                   value={crusherPaymentInput}
                   onChange={(e) => setCrusherPaymentInput(e.target.value === '' ? '' : Number(e.target.value))}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-none"

@@ -159,6 +159,25 @@ LEGACY_TIER_ALIASES: dict[str, str] = {
 }
 
 
+def _set_tenant_rls_context(db: Session, tenant_id: uuid.UUID | str | None) -> None:
+    """Sets transaction-local PostgreSQL RLS context for tenant-scoped billing tables."""
+    if not tenant_id:
+        return
+    try:
+        from sqlalchemy import text
+        tid_str = str(tenant_id)
+        db.info["tenant_id"] = tid_str
+        db.execute(
+            text(
+                "SELECT set_config('app.current_tenant_id', :tid, true), "
+                "set_config('app.current_company_id', :tid, true)"
+            ),
+            {"tid": tid_str},
+        )
+    except Exception:
+        pass
+
+
 def normalize_tier_name(tier_name: str) -> str:
     """Normalizes legacy or mixed-case tier names to canonical plan names ('FREE', 'PROFESSIONAL', 'ENTERPRISE')."""
     raw = (tier_name or "").strip().lower()
@@ -175,32 +194,49 @@ def seed_default_subscription_plans(db: Session) -> list[SubscriptionPlan]:
     Only missing plans are inserted; presentation fields added later (display_features,
     sort_order, is_featured) are back-filled once while still empty.
     """
-    seeded_plans: list[SubscriptionPlan] = []
-    for plan_spec in DEFAULT_TIER_PLANS:
-        name = plan_spec["name"]
-        presentation = DEFAULT_PLAN_PRESENTATION.get(name, {})
-        plan = db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.name == name))
-        if not plan:
-            plan = SubscriptionPlan(
-                id=uuid.uuid4(),
-                **plan_spec,
-                display_features=list(presentation.get("display_features", [])),
-                sort_order=presentation.get("sort_order", 0),
-                is_featured=presentation.get("is_featured", False),
-            )
-            db.add(plan)
-            logger.info("Created new subscription plan: %s (%s)", name, plan_spec["display_name"])
-        elif not plan.display_features:
-            plan.display_features = list(presentation.get("display_features", []))
-            plan.sort_order = presentation.get("sort_order", plan.sort_order or 0)
-            plan.is_featured = presentation.get("is_featured", False)
-            logger.info("Back-filled catalog presentation for plan %s", name)
-        seeded_plans.append(plan)
+    from backend.database import PlatformSessionLocal, engine as app_engine
 
-    db.commit()
-    for p in seeded_plans:
-        db.refresh(p)
-    return seeded_plans
+    use_platform_writer = PlatformSessionLocal is not None and getattr(db, "bind", None) is app_engine
+    writer_db = PlatformSessionLocal() if use_platform_writer else db
+    try:
+        seeded_plans: list[SubscriptionPlan] = []
+        dirty = False
+        for plan_spec in DEFAULT_TIER_PLANS:
+            name = plan_spec["name"]
+            presentation = DEFAULT_PLAN_PRESENTATION.get(name, {})
+            plan = writer_db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.name == name))
+            if not plan:
+                plan = SubscriptionPlan(
+                    id=uuid.uuid4(),
+                    **plan_spec,
+                    display_features=list(presentation.get("display_features", [])),
+                    sort_order=presentation.get("sort_order", 0),
+                    is_featured=presentation.get("is_featured", False),
+                )
+                writer_db.add(plan)
+                dirty = True
+                logger.info("Created new subscription plan: %s (%s)", name, plan_spec["display_name"])
+            elif not plan.display_features:
+                plan.display_features = list(presentation.get("display_features", []))
+                plan.sort_order = presentation.get("sort_order", plan.sort_order or 0)
+                plan.is_featured = presentation.get("is_featured", False)
+                dirty = True
+                logger.info("Back-filled catalog presentation for plan %s", name)
+            seeded_plans.append(plan)
+
+        if dirty or not use_platform_writer:
+            writer_db.commit()
+            for p in seeded_plans:
+                writer_db.refresh(p)
+        if use_platform_writer:
+            return [
+                db.scalar(select(SubscriptionPlan).where(SubscriptionPlan.name == spec["name"]))
+                for spec in DEFAULT_TIER_PLANS
+            ]
+        return seeded_plans
+    finally:
+        if use_platform_writer:
+            writer_db.close()
 
 
 def list_catalog_plans(db: Session, include_inactive: bool = False) -> list[SubscriptionPlan]:
@@ -236,13 +272,14 @@ def get_or_create_tenant_subscription(
     """
     Retrieves or establishes a tenant subscription contract record in the control plane.
     """
+    _set_tenant_rls_context(db, tenant_id)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id))
     canonical_name = normalize_tier_name(plan_name)
     plan = get_plan_by_name(db, canonical_name)
     if not plan:
         # Guarantee fallback to FREE
         plans = seed_default_subscription_plans(db)
-        plan = next((p for p in plans if p.name == canonical_name), plans[0])
+        plan = next((p for p in plans if p and p.name == canonical_name), plans[0])
 
     now = datetime.now(timezone.utc)
     if not sub:
@@ -307,6 +344,7 @@ def create_subscription_invoice(
     notes: Optional[str] = None,
 ) -> SaaSInvoice:
     """Creates a formal SaaS invoice record associated with the tenant and plan."""
+    _set_tenant_rls_context(db, tenant_id)
     plan = db.get(SubscriptionPlan, plan_id)
     tier_name = plan.name if plan else "standard"
     if amount_sar is None:
@@ -360,18 +398,9 @@ def verify_tenant_entitlement(
     - 'allow_custom_domain'
     - 'allow_dedicated_ssl'
     """
-    tenant = db.get(MasterTenant, tenant_id)
-    comp = None
-    if not tenant:
-        # Fallback for tenant_id matching ResCompany directly
-        comp = db.get(ResCompany, tenant_id)
-        if comp:
-            tenant = db.query(MasterTenant).filter(
-                (MasterTenant.id == comp.id) |
-                (MasterTenant.slug == comp.domain_slug) |
-                (MasterTenant.slug == comp.slug)
-            ).first()
-
+    _set_tenant_rls_context(db, tenant_id)
+    tenant = _lookup_master_tenant(db, tenant_id, allow_lazy_provision=False)
+    comp = db.get(ResCompany, tenant_id)
     if tenant and not comp:
         comp = db.query(ResCompany).filter(
             (ResCompany.id == tenant.id) |
@@ -400,8 +429,10 @@ def verify_tenant_entitlement(
 
     # Inspect linked subscription first
     target_id = tenant.id if tenant else comp.id
+    _set_tenant_rls_context(db, target_id)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == target_id))
     if not sub and comp and comp.id != target_id:
+        _set_tenant_rls_context(db, comp.id)
         sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == comp.id))
 
     # 1b. Check custom override in sub.custom_limits if present
@@ -457,7 +488,7 @@ def enforce_tenant_entitlement(
     """
     allowed, message = verify_tenant_entitlement(db, tenant_id, entitlement_key)
     if not allowed:
-        tenant = db.get(MasterTenant, tenant_id)
+        tenant = _lookup_master_tenant(db, tenant_id, allow_lazy_provision=False)
         current_tier = tenant.subscription_tier if tenant else "FREE"
         upgrade_target = "ENTERPRISE"
         checkout_url = f"/api/v1/tenant/billing/checkout?plan={upgrade_target}"
@@ -480,18 +511,12 @@ def verify_tenant_seat_limit(
     """
     Verifies if the tenant has available seat capacity under their current subscription plan.
     """
-    tenant = db.get(MasterTenant, tenant_id)
-    comp = None
-    if not tenant:
-        comp = db.get(ResCompany, tenant_id)
-        if comp:
-            tenant = db.query(MasterTenant).filter(
-                (MasterTenant.id == comp.id) |
-                (MasterTenant.slug == comp.domain_slug) |
-                (MasterTenant.slug == comp.slug)
-            ).first()
+    _set_tenant_rls_context(db, tenant_id)
+    tenant = _lookup_master_tenant(db, tenant_id, allow_lazy_provision=False)
+    comp = db.get(ResCompany, tenant_id)
 
     target_id = tenant.id if tenant else (comp.id if comp else tenant_id)
+    _set_tenant_rls_context(db, target_id)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == target_id))
 
     plan: Optional[SubscriptionPlan] = None
@@ -541,10 +566,12 @@ def verify_tenant_seat_limit(
 
 def increment_tenant_seat_usage(db: Session, tenant_id: uuid.UUID) -> None:
     """Updates the cached current_seats_used count in TenantSubscription."""
+    _set_tenant_rls_context(db, tenant_id)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id))
     if not sub:
-        tenant = db.get(MasterTenant, tenant_id)
+        tenant = _lookup_master_tenant(db, tenant_id, allow_lazy_provision=False)
         if tenant:
+            _set_tenant_rls_context(db, tenant.id)
             sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant.id))
     if sub:
         sub.current_seats_used = (sub.current_seats_used or 0) + 1
@@ -583,11 +610,12 @@ def activate_tenant_subscription(
     Activates or upgrades a tenant's subscription contract to an active paid plan.
     Synchronizes the MasterTenant tier and activates enterprise capabilities immediately.
     """
+    _set_tenant_rls_context(db, tenant_id)
     canonical_name = normalize_tier_name(plan_name)
     plan = get_plan_by_name(db, canonical_name)
     if not plan:
         plans = seed_default_subscription_plans(db)
-        plan = next((p for p in plans if p.name == canonical_name), plans[0])
+        plan = next((p for p in plans if p and p.name == canonical_name), plans[0])
 
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_id))
     now = datetime.now(timezone.utc)
@@ -628,10 +656,25 @@ def activate_tenant_subscription(
         sub.canceled_at = None
         sub.cancel_at_period_end = False
 
-    # Synchronize MasterTenant subscription_tier
+    # Synchronize MasterTenant & ResCompany subscription_tier
     tenant = db.get(MasterTenant, tenant_id)
     if tenant:
         tenant.subscription_tier = canonical_name.lower()
+    comp = db.get(ResCompany, tenant_id)
+    if comp:
+        comp.subscription_tier = canonical_name.lower()
+
+    if tenant is None:
+        try:
+            from backend.database import PlatformSessionLocal
+            if PlatformSessionLocal is not None:
+                with PlatformSessionLocal() as plat_db:
+                    pt = plat_db.get(MasterTenant, tenant_id)
+                    if pt:
+                        pt.subscription_tier = canonical_name.lower()
+                        plat_db.commit()
+        except Exception:
+            pass
 
     db.commit()
     db.refresh(sub)
@@ -739,6 +782,71 @@ def verify_stripe_webhook_signature(
         return False
 
 
+def _resolve_webhook_subscription(
+    db: Session,
+    *,
+    sub_id: Optional[str] = None,
+    cust_id: Optional[str] = None,
+    tenant_id_str: Optional[str] = None,
+) -> Optional[TenantSubscription]:
+    """Locates a TenantSubscription for a webhook event, setting RLS context automatically."""
+    if tenant_id_str:
+        try:
+            _set_tenant_rls_context(db, uuid.UUID(str(tenant_id_str)))
+        except Exception:
+            pass
+
+    def _query_on(session: Session) -> Optional[TenantSubscription]:
+        found = None
+        if sub_id:
+            found = session.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
+        if not found and cust_id:
+            found = session.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
+        if not found and tenant_id_str:
+            try:
+                found = session.scalar(
+                    select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str)))
+                )
+            except Exception:
+                pass
+        return found
+
+    sub = _query_on(db)
+    if sub is not None:
+        _set_tenant_rls_context(db, sub.tenant_id)
+        return sub
+
+    try:
+        from backend.database import PlatformSessionLocal
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as pdb:
+                plat_sub = _query_on(pdb)
+                if plat_sub is not None:
+                    _set_tenant_rls_context(db, plat_sub.tenant_id)
+                    return _query_on(db)
+    except Exception:
+        pass
+    return None
+
+
+def _sync_master_tenant_tier(db: Session, tenant_id: uuid.UUID, tier_lower: str) -> None:
+    """Updates subscription_tier on MasterTenant across current or platform session."""
+    tenant = db.get(MasterTenant, tenant_id)
+    if tenant is not None:
+        tenant.subscription_tier = tier_lower
+        return
+    try:
+        from backend.database import PlatformSessionLocal
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as pdb:
+                pt = pdb.get(MasterTenant, tenant_id)
+                if pt is not None:
+                    pt.subscription_tier = tier_lower
+                    pdb.commit()
+    except Exception:
+        pass
+
+
 def handle_stripe_checkout_completed(
     db: Session,
     session_data: dict[str, Any],
@@ -753,6 +861,7 @@ def handle_stripe_checkout_completed(
         raise ValueError("Missing tenant_id / client_reference_id in Stripe checkout session.")
 
     tenant_id = uuid.UUID(str(client_ref))
+    _set_tenant_rls_context(db, tenant_id)
     plan_name = metadata.get("plan_name", "PROFESSIONAL")
     billing_cycle = metadata.get("billing_cycle", "monthly")
     stripe_customer_id = session_data.get("customer")
@@ -800,14 +909,9 @@ def handle_stripe_invoice_paid(
     Advances tenant subscription renewal dates and issues a paid invoice.
     """
     sub_id = invoice_data.get("subscription")
-    sub = None
-    if sub_id:
-        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
-
-    if not sub:
-        cust_id = invoice_data.get("customer")
-        if cust_id:
-            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
+    cust_id = invoice_data.get("customer")
+    tenant_id_str = (invoice_data.get("metadata") or {}).get("tenant_id")
+    sub = _resolve_webhook_subscription(db, sub_id=sub_id, cust_id=cust_id, tenant_id_str=tenant_id_str)
 
     if not sub:
         raise ValueError(f"No tenant subscription located for Stripe sub: {sub_id}")
@@ -849,23 +953,9 @@ def handle_stripe_invoice_failed(
     Marks subscription past_due and triggers a grace period.
     """
     sub_id = invoice_data.get("subscription")
-    sub = None
-    if sub_id:
-        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
-
-    if not sub:
-        cust_id = invoice_data.get("customer")
-        if cust_id:
-            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
-
-    if not sub:
-        metadata = invoice_data.get("metadata", {})
-        tenant_id_str = metadata.get("tenant_id")
-        if tenant_id_str:
-            try:
-                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
-            except Exception:
-                pass
+    cust_id = invoice_data.get("customer")
+    tenant_id_str = (invoice_data.get("metadata") or {}).get("tenant_id")
+    sub = _resolve_webhook_subscription(db, sub_id=sub_id, cust_id=cust_id, tenant_id_str=tenant_id_str)
 
     if sub:
         sub.status = "past_due"
@@ -884,23 +974,9 @@ def handle_stripe_subscription_deleted(
     Cancels subscription and reverts tenant to Free evaluation grade.
     """
     sub_id = sub_data.get("id")
-    sub = None
-    if sub_id:
-        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
-
-    if not sub:
-        cust_id = sub_data.get("customer")
-        if cust_id:
-            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
-
-    if not sub:
-        metadata = sub_data.get("metadata", {})
-        tenant_id_str = metadata.get("tenant_id")
-        if tenant_id_str:
-            try:
-                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
-            except Exception:
-                pass
+    cust_id = sub_data.get("customer")
+    tenant_id_str = (sub_data.get("metadata") or {}).get("tenant_id")
+    sub = _resolve_webhook_subscription(db, sub_id=sub_id, cust_id=cust_id, tenant_id_str=tenant_id_str)
 
     if sub:
         free_plan = get_plan_by_name(db, "FREE")
@@ -908,9 +984,7 @@ def handle_stripe_subscription_deleted(
         sub.canceled_at = datetime.now(timezone.utc)
         if free_plan:
             sub.plan_id = free_plan.id
-        tenant = db.get(MasterTenant, sub.tenant_id)
-        if tenant:
-            tenant.subscription_tier = "free"
+        _sync_master_tenant_tier(db, sub.tenant_id, "free")
         db.commit()
         db.refresh(sub)
         logger.info("Tenant %s subscription canceled and reverted to FREE grade (Sub: %s).", sub.tenant_id, sub_id)
@@ -926,23 +1000,9 @@ def handle_stripe_subscription_updated(
     Updates subscription status, current period, renewal flags, and plan tier.
     """
     sub_id = sub_data.get("id")
-    sub = None
-    if sub_id:
-        sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_subscription_id == sub_id))
-
-    if not sub:
-        cust_id = sub_data.get("customer")
-        if cust_id:
-            sub = db.scalar(select(TenantSubscription).where(TenantSubscription.stripe_customer_id == cust_id))
-
-    if not sub:
-        metadata = sub_data.get("metadata", {})
-        tenant_id_str = metadata.get("tenant_id")
-        if tenant_id_str:
-            try:
-                sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == uuid.UUID(str(tenant_id_str))))
-            except Exception:
-                pass
+    cust_id = sub_data.get("customer")
+    tenant_id_str = (sub_data.get("metadata") or {}).get("tenant_id")
+    sub = _resolve_webhook_subscription(db, sub_id=sub_id, cust_id=cust_id, tenant_id_str=tenant_id_str)
 
     if sub:
         stripe_status = sub_data.get("status")
@@ -967,9 +1027,7 @@ def handle_stripe_subscription_updated(
             plan = get_plan_by_name(db, plan_name)
             if plan:
                 sub.plan_id = plan.id
-                tenant = db.get(MasterTenant, sub.tenant_id)
-                if tenant:
-                    tenant.subscription_tier = plan.name.lower()
+                _sync_master_tenant_tier(db, sub.tenant_id, plan.name.lower())
 
         db.commit()
         db.refresh(sub)
@@ -991,6 +1049,7 @@ def create_enterprise_po_quote(
     Creates an Enterprise Purchase Order / Bank Wire invoice pending manual settlement.
     Returns invoice data and corporate banking wire instructions.
     """
+    _set_tenant_rls_context(db, tenant_id)
     require_master_tenant(db, tenant_id)
     plan = get_plan_by_name(db, plan_name) or get_plan_by_name(db, "ENTERPRISE")
     amount_sar = plan.annual_price if billing_cycle in ("annual", "yearly") else plan.monthly_price
@@ -1045,8 +1104,20 @@ def verify_and_settle_invoice(
     """
     invoice = db.get(SaaSInvoice, invoice_id)
     if not invoice:
+        try:
+            from backend.database import PlatformSessionLocal
+            if PlatformSessionLocal is not None:
+                with PlatformSessionLocal() as pdb:
+                    plat_inv = pdb.get(SaaSInvoice, invoice_id)
+                    if plat_inv is not None:
+                        _set_tenant_rls_context(db, plat_inv.tenant_id)
+                        invoice = db.get(SaaSInvoice, invoice_id)
+        except Exception:
+            pass
+    if not invoice:
         raise ValueError(f"SaaS Invoice '{invoice_id}' not found.")
 
+    _set_tenant_rls_context(db, invoice.tenant_id)
     if invoice.status == "paid":
         return {
             "invoice": invoice.to_dict(),
@@ -1094,6 +1165,7 @@ def update_tenant_custom_limits(
     """
     Allows SuperAdmin to set custom contractual limits or feature overrides.
     """
+    _set_tenant_rls_context(db, tenant_id)
     sub = get_or_create_tenant_subscription(db, tenant_id=tenant_id)
     current = sub.custom_limits or {}
     if isinstance(current, dict):
@@ -1114,6 +1186,7 @@ def update_tenant_custom_limits(
 
 def list_tenant_invoices_scoped(db: Session, *, tenant_id: uuid.UUID) -> list[SaaSInvoice]:
     """All SaaS invoices that belong to ``tenant_id``, newest first."""
+    _set_tenant_rls_context(db, tenant_id)
     return list(
         db.scalars(
             select(SaaSInvoice)
@@ -1129,6 +1202,7 @@ def get_tenant_invoice(db: Session, *, tenant_id: uuid.UUID, invoice_id: uuid.UU
     The tenant filter is part of the query itself, so an invoice owned by another tenant is
     indistinguishable from a non-existent one (callers return 404 and leak nothing).
     """
+    _set_tenant_rls_context(db, tenant_id)
     return db.scalar(
         select(SaaSInvoice).where(
             SaaSInvoice.id == invoice_id,
@@ -1138,13 +1212,148 @@ def get_tenant_invoice(db: Session, *, tenant_id: uuid.UUID, invoice_id: uuid.UU
 
 
 # ==============================================================================
-# Caller-scoped tenant resolution (anti-IDOR)
+# Caller-scoped tenant resolution & Lazy Auto-Provisioning (anti-IDOR)
 # ==============================================================================
+
+_VALID_MASTER_TENANT_TIERS = {"starter", "standard", "growth", "enterprise", "free", "professional"}
+
+
+def _lookup_master_tenant(
+    db: Session,
+    company_id: uuid.UUID,
+    user: Any = None,
+    allow_lazy_provision: bool = True,
+) -> Optional[MasterTenant]:
+    """
+    Resolves the control-plane MasterTenant for ``company_id``.
+    Because ``master_tenants`` enforces control-plane RLS (`CURRENT_USER = 'oxengl_platform'`),
+    this helper safely consults ``PlatformSessionLocal`` when ``db`` is an app-role session,
+    and lazily provisions a ``MasterTenant`` + ``TenantSubscription`` record when an existing
+    or legacy ``ResCompany`` workspace lacks a control-plane billing record.
+    """
+    import re
+    _set_tenant_rls_context(db, company_id)
+
+    # 1. Direct lookup on the current session (succeeds when db is PlatformSessionLocal)
+    tenant = db.get(MasterTenant, company_id)
+    if tenant is not None:
+        return tenant
+
+    company = db.get(ResCompany, company_id)
+    if company is not None:
+        candidate_slugs = [s for s in (company.domain_slug, company.slug) if s]
+        for s in candidate_slugs:
+            tenant = db.scalar(select(MasterTenant).where(MasterTenant.slug == s))
+            if tenant is not None:
+                _set_tenant_rls_context(db, tenant.id)
+                return tenant
+        if company.custom_domain:
+            tenant = db.scalar(select(MasterTenant).where(MasterTenant.custom_domain == company.custom_domain))
+            if tenant is not None:
+                _set_tenant_rls_context(db, tenant.id)
+                return tenant
+
+    # 2. Control-plane lookup & lazy provisioning via PlatformSessionLocal
+    try:
+        from backend.database import PlatformSessionLocal
+        if PlatformSessionLocal is not None:
+            with PlatformSessionLocal() as pdb:
+                pt = pdb.get(MasterTenant, company_id)
+                if pt is None:
+                    if company is None:
+                        company = pdb.get(ResCompany, company_id)
+                    if company is not None:
+                        candidate_slugs = [s for s in (company.domain_slug, company.slug) if s]
+                        for s in candidate_slugs:
+                            pt = pdb.scalar(select(MasterTenant).where(MasterTenant.slug == s))
+                            if pt is not None:
+                                break
+                        if pt is None and company.custom_domain:
+                            pt = pdb.scalar(
+                                select(MasterTenant).where(MasterTenant.custom_domain == company.custom_domain)
+                            )
+
+                        if pt is None and allow_lazy_provision:
+                            raw_slug = (company.slug or company.domain_slug or f"ws-{str(company.id)[:8]}").lower()
+                            clean_slug = re.sub(r"[^a-z0-9-]", "-", raw_slug).strip("-")[:50] or f"ws-{str(company.id)[:8]}"
+                            existing_slug = pdb.scalar(select(MasterTenant).where(MasterTenant.slug == clean_slug))
+                            if existing_slug is not None:
+                                clean_slug = f"{clean_slug}-{str(company.id)[:8]}"[:64]
+
+                            custom_dom = company.custom_domain
+                            if custom_dom:
+                                existing_dom = pdb.scalar(
+                                    select(MasterTenant).where(MasterTenant.custom_domain == custom_dom)
+                                )
+                                if existing_dom is not None:
+                                    custom_dom = None
+
+                            raw_tier = (company.subscription_tier or "professional").strip().lower()
+                            tier_val = raw_tier if raw_tier in _VALID_MASTER_TENANT_TIERS else "professional"
+                            canonical_plan = normalize_tier_name(tier_val)
+
+                            owner_name = (
+                                getattr(user, "full_name", None)
+                                or getattr(user, "username", None)
+                                or f"{company.name or 'Workspace'} Admin"
+                            )[:255]
+                            owner_email = (
+                                getattr(user, "email", None)
+                                or f"billing-{str(company.id)[:8]}@oxengl.local"
+                            )[:255]
+                            owner_mobile = (
+                                getattr(user, "phone", None)
+                                or getattr(user, "mobile_number", None)
+                                or f"+966500{str(company.id.int)[:6]}"
+                            )[:64]
+
+                            pt = MasterTenant(
+                                id=company.id,
+                                name=(company.name or f"Workspace {str(company.id)[:8]}")[:255],
+                                slug=clean_slug,
+                                custom_domain=custom_dom,
+                                owner_full_name=owner_name,
+                                owner_email=owner_email,
+                                owner_mobile=owner_mobile,
+                                status="active",
+                                subscription_tier=tier_val,
+                                subscription_plan=canonical_plan,
+                                subscription_status="active" if canonical_plan != "FREE" else "trialing",
+                                max_users=10,
+                                max_storage_gb=25,
+                                is_active=True,
+                            )
+                            pdb.add(pt)
+                            pdb.commit()
+                            pdb.refresh(pt)
+                            logger.info(
+                                "Auto-provisioned missing MasterTenant billing workspace for company %s (%s)",
+                                company.id,
+                                clean_slug,
+                            )
+                            get_or_create_tenant_subscription(
+                                pdb,
+                                tenant_id=pt.id,
+                                plan_name=canonical_plan,
+                            )
+
+                if pt is not None:
+                    _set_tenant_rls_context(db, pt.id)
+                    bound = db.get(MasterTenant, pt.id)
+                    if bound is not None:
+                        return bound
+                    pdb.expunge(pt)
+                    return pt
+    except Exception as exc:
+        logger.warning("Control-plane MasterTenant lookup/provision encountered error for %s: %s", company_id, exc)
+
+    return None
+
 
 def require_master_tenant(db: Session, tenant_id: uuid.UUID) -> MasterTenant:
     """Return the control-plane tenant or raise: billing side effects must never be created
     for an unknown / fabricated tenant id."""
-    tenant = db.get(MasterTenant, tenant_id)
+    tenant = _lookup_master_tenant(db, tenant_id, allow_lazy_provision=True)
     if tenant is None:
         raise ValueError(f"Unknown tenant {tenant_id}.")
     return tenant
@@ -1156,18 +1365,22 @@ def resolve_billing_tenant(db: Session, user: Any) -> MasterTenant:
     SECURITY: derived ONLY from the authenticated user's own ``company_id`` (the account the
     signed session token resolves to). Client-supplied tenant headers (``X-Tenant-ID``,
     ``X-Tenant-Slug``, ``X-Company-ID``) and ``?tenant_id=`` are deliberately not consulted.
-    Raises 403 when the account has no billable tenant workspace (e.g. platform accounts).
+    Lazily provisions the control-plane ``MasterTenant`` and ``TenantSubscription`` record
+    if the user belongs to an existing ``ResCompany`` workspace that lacked a billing record.
+    Raises 403 when the account has no billable tenant workspace (e.g. orphan/platform accounts).
     """
     company_id = getattr(user, "company_id", None)
     if not company_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tenant workspace is associated with this account.")
-    tenant = db.get(MasterTenant, company_id)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tenant workspace is associated with this account.",
+        )
+    tenant = _lookup_master_tenant(db, company_id, user=user, allow_lazy_provision=True)
     if tenant is None:
-        company = db.get(ResCompany, company_id)
-        slug = (company.domain_slug or company.slug) if company else None
-        if slug:
-            tenant = db.scalar(select(MasterTenant).where(MasterTenant.slug == slug))
-    if tenant is None:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This account has no billable tenant workspace.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This account has no billable tenant workspace.",
+        )
     return tenant
+
 

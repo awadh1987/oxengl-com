@@ -1345,6 +1345,17 @@ def reset_password(request: Request, payload: PasswordResetCompleteRequest, mast
             user.locked_until = None
             reset.is_used = True
             master_db.commit()
+            try:
+                from backend.app.api.v1.auth import synchronize_user_credentials_across_portals
+                synchronize_user_credentials_across_portals(
+                    master_db,
+                    norm_email=user.email,
+                    argon2_hash=new_hash,
+                    raw_slug="master",
+                    request=request,
+                )
+            except Exception:
+                pass
     else:
         slug = (payload.workspace_slug or getattr(payload, "tenant_slug", "") or "").lower().strip()
         raw_target = slug
@@ -1415,6 +1426,17 @@ def reset_password(request: Request, payload: PasswordResetCompleteRequest, mast
                 user.locked_until = None
                 reset.is_used = True
                 tenant_db.commit()
+                try:
+                    from backend.app.api.v1.auth import synchronize_user_credentials_across_portals
+                    synchronize_user_credentials_across_portals(
+                        master_db,
+                        norm_email=user.email,
+                        argon2_hash=new_hash,
+                        raw_slug=slug,
+                        request=request,
+                    )
+                except Exception:
+                    pass
 
     return {"message": "Password reset successfully. You can now log in with your new credentials."}
 

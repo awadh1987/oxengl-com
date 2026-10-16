@@ -27,6 +27,8 @@ for _name in ("JWT_SECRET", "JWT_SECRET_MASTER", "JWT_SECRET_TENANT", "DATA_RESI
     _os.environ.setdefault(_name, _secrets.token_hex(32))
 
 from backend.app.main import app
+import backend.app.main
+sys.modules["backend.main"] = sys.modules["backend.app.main"]
 from backend.database import SessionLocal
 import backend.app.domains.procurement.models
 sys.modules["app.domains.procurement.models"] = sys.modules["backend.app.domains.procurement.models"]

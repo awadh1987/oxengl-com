@@ -39,10 +39,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
   // Form State
   const [projectName, setProjectName] = useState('');
   const [managerName, setManagerName] = useState('Eng. Faisal Al-Otaibi');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(
-    new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-  );
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [totalBudget, setTotalBudget] = useState('1250000');
   const [scopeText, setScopeText] = useState('');
   const [formError, setFormError] = useState('');
@@ -53,6 +51,10 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
     e.preventDefault();
     if (!projectName.trim()) {
       setFormError('Project name is required');
+      return;
+    }
+    if (!startDate || !endDate) {
+      setFormError('Start date and end date are required');
       return;
     }
     if (new Date(endDate) < new Date(startDate)) {
@@ -460,7 +462,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
                   <input
                     type="date"
                     required
-                    value={startDate}
+                    placeholder="YYYY-MM-DD"
+                    value={startDate || ''}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
                   />
@@ -470,7 +473,8 @@ export const CharterDashboard: React.FC<CharterDashboardProps> = ({
                   <input
                     type="date"
                     required
-                    value={endDate}
+                    placeholder="YYYY-MM-DD"
+                    value={endDate || ''}
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
                   />

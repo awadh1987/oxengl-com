@@ -1,7 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Kufi+Arabic:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap');
 @import "tailwindcss";
 
-@custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *, .dark, .dark *));
+@custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *, .dark, .dark *, .platform-dark, .platform-dark *));
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
 .fixed.inset-0 {
   align-items: flex-start;

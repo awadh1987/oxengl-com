@@ -41,7 +41,7 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
   const [description, setDescription] = useState(
     isAr ? 'تسوية مسيرات الرواتب الشهرية والبدلات - HRMS' : 'Monthly Biometric HRMS Payroll Settlement'
   );
-  const [entryDate, setEntryDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [entryDate, setEntryDate] = useState('');
   const [referenceNo, setReferenceNo] = useState('HRMS-2026-09');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [postedVouchers, setPostedVouchers] = useState<BalancedJournalVoucher[]>([]);
@@ -235,6 +235,16 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
   };
 
   const handlePostVoucher = async () => {
+    if (!entryDate) {
+      if (showToast) {
+        showToast(
+          isAr ? 'يرجى تحديد تاريخ القيد المحاسبي' : 'Please select a posting date',
+          'warning'
+        );
+      }
+      return;
+    }
+
     if (!isBalanced) {
       if (showToast) {
         showToast(
@@ -357,7 +367,8 @@ export const BalancedVoucherGrid: React.FC<BalancedVoucherGridProps> = ({ onVouc
             </label>
             <input
               type="date"
-              value={entryDate}
+              placeholder="YYYY-MM-DD"
+              value={entryDate || ''}
               onChange={(e) => setEntryDate(e.target.value)}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-indigo-500 focus:bg-white dark:focus:bg-slate-800 focus:outline-hidden"
             />

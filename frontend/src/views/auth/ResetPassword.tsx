@@ -32,7 +32,17 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
   const initialEmail = searchParams?.get('email') || '';
   const initialOtp = searchParams?.get('otp') || searchParams?.get('otp_code') || searchParams?.get('code') || '';
   const initialToken = searchParams?.get('token') || '';
-  const initialSlug = searchParams?.get('slug') || searchParams?.get('workspace_slug') || 'master';
+  const initialSlug = (() => {
+    const paramSlug = searchParams?.get('slug') || searchParams?.get('workspace_slug');
+    if (paramSlug) return paramSlug.trim().toLowerCase();
+    if (typeof window !== 'undefined') {
+      const host = window.location.hostname.toLowerCase();
+      if (host && !['localhost', '127.0.0.1', 'oxengl.me', 'oxengl.com', 'app.oxengl.me'].includes(host)) {
+        return host;
+      }
+    }
+    return 'master';
+  })();
 
   const [email, setEmail] = useState(initialEmail);
   const [workspaceSlug, setWorkspaceSlug] = useState(initialSlug);
@@ -127,8 +137,13 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
   // Handle keyboard backspace and arrows
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
-      if (!otpDigits[index] && index > 0) {
-        // Move back and clear previous
+      if (otpDigits[index]) {
+        e.preventDefault();
+        const updated = [...otpDigits];
+        updated[index] = '';
+        setOtpDigits(updated);
+      } else if (index > 0) {
+        e.preventDefault();
         const updated = [...otpDigits];
         updated[index - 1] = '';
         setOtpDigits(updated);
@@ -151,10 +166,10 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
     }
   };
 
-  // Handle Paste
+  // Handle Paste on ANY of the 6 OTP inputs
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData('text').trim();
+    const pasteData = (e.clipboardData?.getData('text') || '').trim();
     handlePastedCode(pasteData);
   };
 
@@ -184,10 +199,20 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
     setResendMessage(null);
 
     try {
+      const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+      const resolvedTenantDomain =
+        host && !['localhost', '127.0.0.1', 'oxengl.me', 'oxengl.com', 'app.oxengl.me'].includes(host)
+          ? host
+          : workspaceSlug.trim() || host || 'master';
+
       const response = await fetch('/api/v1/auth/forgot-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Domain': resolvedTenantDomain,
+        },
         body: JSON.stringify({
+          email: cleanEmail,
           identifier: cleanEmail,
           workspace_slug: workspaceSlug.trim() || 'master',
         }),
@@ -202,11 +227,19 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
         );
       }
 
+      const returnedOtp = data?.otp_code || data?.otp;
+      if (returnedOtp && typeof returnedOtp === 'string' && /^\d{6}$/.test(returnedOtp)) {
+        setOtpDigits(returnedOtp.split(''));
+      }
+
       setResendCooldown(60);
       setResendMessage(
-        isAr
-          ? 'تم إرسال رمز تحقق جديد بنجاح إلى بريدك الإلكتروني.'
-          : 'A new 6-digit OTP code has been dispatched to your email.'
+        returnedOtp
+          ? `${data?.message || (isAr ? 'تم إرسال رمز تحقق جديد.' : 'A new 6-digit OTP code has been dispatched to your email.')} (${returnedOtp})`
+          : data?.message ||
+              (isAr
+                ? 'تم إرسال رمز تحقق جديد بنجاح إلى بريدك الإلكتروني.'
+                : 'A new 6-digit OTP code has been dispatched to your email.')
       );
     } catch (err: any) {
       setError(err?.message || (isAr ? 'حدث خطأ أثناء إعادة الإرسال.' : 'Failed to resend verification code.'));
@@ -257,13 +290,23 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
 
     setLoading(true);
     try {
+      const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+      const resolvedTenantDomain =
+        host && !['localhost', '127.0.0.1', 'oxengl.me', 'oxengl.com', 'app.oxengl.me'].includes(host)
+          ? host
+          : workspaceSlug.trim() || host || 'master';
+
       const payload: Record<string, any> = {
         new_password: newPassword,
       };
 
       if (showLegacyTokenMode) {
         payload.token = cleanToken;
+        if (workspaceSlug) {
+          payload.workspace_slug = workspaceSlug;
+        }
       } else {
+        payload.email = cleanEmail;
         payload.identifier = cleanEmail;
         payload.otp_code = cleanOtp;
         if (workspaceSlug) {
@@ -273,7 +316,10 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
 
       const response = await fetch('/api/v1/auth/reset-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Domain': resolvedTenantDomain,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -305,7 +351,9 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
   return (
     <div
       dir={isAr ? 'rtl' : 'ltr'}
-      className="min-h-dvh erp-viewport-root w-full bg-[#0a0d17] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
+      data-theme-mode="dark"
+      data-testid="reset-password-view"
+      className="platform-dark dark min-h-dvh erp-viewport-root w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
     >
       {/* Background Ambience */}
       <div
@@ -334,6 +382,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
 
         <button
           type="button"
+          data-testid="reset-lang-toggle"
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
           className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition shadow-sm"
         >
@@ -344,7 +393,10 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
 
       {/* Main Card */}
       <main className="relative z-10 mx-auto w-full max-w-md my-auto py-6">
-        <div className="relative rounded-3xl border border-slate-800/90 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-white/5">
+        <div
+          data-testid="reset-password-card"
+          className="relative rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-white/5"
+        >
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-500" />
 
           {/* Header */}
@@ -416,8 +468,11 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                         <Mail className="h-4 w-4" />
                       </div>
                       <input
-                        type="text" inputMode="email" autoComplete="username"
+                        type="text"
+                        inputMode="email"
+                        autoComplete="username"
                         required
+                        data-testid="reset-email-input"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder={isAr ? 'admin@oxengl.com' : 'admin@oxengl.com'}
@@ -432,6 +487,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                       <span>{isAr ? 'رمز التحقق (6 أرقام)' : '6-Digit Verification Code'}</span>
                       <button
                         type="button"
+                        data-testid="resend-otp-btn"
                         onClick={handleResendOtp}
                         disabled={resendCooldown > 0 || resending}
                         className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 disabled:text-slate-500 transition"
@@ -452,7 +508,11 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                     </div>
 
                     {/* 6 Segmented Inputs */}
-                    <div className="flex items-center justify-between gap-1.5 sm:gap-2" dir="ltr">
+                    <div
+                      data-testid="otp-boxes-container"
+                      className="flex items-center justify-between gap-1.5 sm:gap-2"
+                      dir="ltr"
+                    >
                       {otpDigits.map((digit, idx) => (
                         <input
                           key={idx}
@@ -463,17 +523,23 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                           inputMode="numeric"
                           pattern="[0-9]*"
                           maxLength={1}
+                          aria-label={`OTP digit ${idx + 1}`}
+                          data-testid={`otp-input-${idx}`}
                           value={digit}
                           onChange={(e) => handleDigitChange(idx, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(idx, e)}
-                          onPaste={idx === 0 ? handlePaste : undefined}
+                          onPaste={handlePaste}
                           className="h-12 w-full max-w-[48px] rounded-xl border border-slate-800 bg-slate-950 text-center font-mono text-lg font-black text-emerald-400 shadow-inner outline-none transition focus:border-indigo-500 focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20"
                         />
                       ))}
                     </div>
 
                     {resendMessage && (
-                      <p className="mt-1.5 text-[11px] text-emerald-400 flex items-center gap-1">
+                      <p
+                        role="status"
+                        data-testid="resend-toast-banner"
+                        className="mt-1.5 text-[11px] text-emerald-400 flex items-center gap-1"
+                      >
                         <CheckCircle2 className="h-3 w-3" />
                         <span>{resendMessage}</span>
                       </p>
@@ -487,6 +553,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                     <span>{isAr ? 'رمز الأمان المشفر (Reset Token)' : 'Cryptographic Reset Token'}</span>
                     <button
                       type="button"
+                      data-testid="switch-to-otp-btn"
                       onClick={() => setShowLegacyTokenMode(false)}
                       className="text-[10px] text-indigo-400 hover:underline"
                     >
@@ -500,6 +567,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                     <input
                       type="text"
                       required
+                      data-testid="legacy-token-input"
                       value={legacyToken}
                       onChange={(e) => setLegacyToken(e.target.value)}
                       placeholder={isAr ? 'رمز إعادة التعيين (32 حرف)' : '32-byte cryptographic token'}
@@ -522,6 +590,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
+                    data-testid="new-password-input"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder={isAr ? '••••••••••••' : '••••••••••••'}
@@ -549,6 +618,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     required
+                    data-testid="confirm-password-input"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder={isAr ? '••••••••••••' : '••••••••••••'}
@@ -569,6 +639,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
                 <div className="flex justify-end">
                   <button
                     type="button"
+                    data-testid="switch-to-legacy-token-btn"
                     onClick={() => setShowLegacyTokenMode(true)}
                     className="text-[11px] text-slate-500 hover:text-slate-400 transition"
                   >
@@ -579,7 +650,11 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
 
               {/* Error Message */}
               {error && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-200">
+                <div
+                  role="alert"
+                  data-testid="reset-error-banner"
+                  className="flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-950/40 p-3 text-xs text-rose-200"
+                >
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-400 mt-0.5" />
                   <div className="flex-1 font-medium">{error}</div>
                 </div>
@@ -588,6 +663,7 @@ export const ResetPassword: React.FC<ResetPasswordProps> = ({ onSuccessRedirect 
               {/* Submit Button */}
               <button
                 type="submit"
+                data-testid="submit-reset-password-btn"
                 disabled={loading}
                 className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 px-4 py-3 text-xs font-black text-white shadow-lg shadow-indigo-600/30 transition-all hover:brightness-110 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed"
               >

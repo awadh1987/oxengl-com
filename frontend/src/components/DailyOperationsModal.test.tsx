@@ -118,8 +118,42 @@ describe('DailyOperationsModal Component', () => {
     expect(transporterTrigger).toHaveTextContent('Al-Majd Transport');
   });
 
+  it('enforces Zero-Default-Date Principle and clean initial numeric/ticket states on a new trip entry', () => {
+    render(<DailyOperationsModal isOpen={true} onClose={vi.fn()} />);
+
+    const loadingDateInput = screen.getByLabelText(/Loading Date/i) as HTMLInputElement;
+    expect(loadingDateInput).toBeInTheDocument();
+    expect(loadingDateInput.value).toBe('');
+    expect(loadingDateInput).toHaveAttribute('placeholder', 'YYYY-MM-DD');
+
+    // Verify numeric fields initialize cleanly without stale dummy values
+    expect((screen.getByLabelText(/Loaded Weight/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Received Weight/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Sales Amount Excl\. VAT/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Raw Materials Supplier Cost/i) as HTMLInputElement).value).toBe('');
+
+    // Verify ticket/invoice numbers initialize cleanly
+    expect((screen.getByLabelText(/Scale Ticket Number/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Loading Invoice Number/i) as HTMLInputElement).value).toBe('');
+    expect((screen.getByLabelText(/Receipt Invoice Number/i) as HTMLInputElement).value).toBe('');
+
+    // Attempt submit without entering a loading date
+    const submitBtn = screen.getByRole('button', { name: /Register Trip Entry/i });
+    fireEvent.click(submitBtn);
+
+    expect(mockAddOperation).not.toHaveBeenCalled();
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.stringMatching(/Please fill all required fields/i),
+      'warning'
+    );
+  });
+
   it('submits form with updated user-entered values in payload', async () => {
     render(<DailyOperationsModal isOpen={true} onClose={vi.fn()} />);
+
+    // Enter explicit Loading Date (required under Zero-Default-Date Principle)
+    const loadingDateInput = screen.getByLabelText(/Loading Date/i);
+    fireEvent.change(loadingDateInput, { target: { value: '2026-05-15' } });
 
     // Update truck number
     const truckInput = screen.getByLabelText(/Truck Number/i);
@@ -144,9 +178,13 @@ describe('DailyOperationsModal Component', () => {
     expect(mockAddOperation).toHaveBeenCalledTimes(1);
     const submittedPayload = mockAddOperation.mock.calls[0][0];
 
+    expect(submittedPayload.loading_date).toBe('2026-05-15');
+    expect(submittedPayload.operation_month).toBe(5);
+    expect(submittedPayload.operation_year).toBe(2026);
     expect(submittedPayload.truck_no).toBe('9999-XYZ');
     expect(submittedPayload.scale_ticket_no).toBe('MY-SCALE-TICKET-01');
     expect(submittedPayload.loading_invoice_no).toBe('MY-LOAD-INV-01');
     expect(submittedPayload.receipt_invoice_no).toBe('MY-REC-INV-01');
   });
 });
+

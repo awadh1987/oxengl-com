@@ -42,6 +42,12 @@ class TenantRegistrationPayload(BaseModel):
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
     phone_number: Optional[str] = Field(None, max_length=30)
+    subscription_tier: Optional[str] = Field(default=None, max_length=64)
+    plan_name: Optional[str] = Field(default=None, max_length=64)
+    billing_cycle: Optional[str] = Field(default="monthly", max_length=32)
+    payment_method: Optional[str] = Field(default="card", max_length=64)
+    payment_reference: Optional[str] = Field(default=None, max_length=128)
+    po_number: Optional[str] = Field(default=None, max_length=128)
     use_external_db: Optional[bool] = Field(default=False)
     external_db_host: Optional[str] = Field(default=None, max_length=255)
     external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
@@ -62,6 +68,12 @@ class RegisterInitRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
+    subscription_tier: Optional[str] = Field(default=None, max_length=64)
+    plan_name: Optional[str] = Field(default=None, max_length=64)
+    billing_cycle: Optional[str] = Field(default="monthly", max_length=32)
+    payment_method: Optional[str] = Field(default="card", max_length=64)
+    payment_reference: Optional[str] = Field(default=None, max_length=128)
+    po_number: Optional[str] = Field(default=None, max_length=128)
     use_external_db: Optional[bool] = Field(default=False)
     external_db_host: Optional[str] = Field(default=None, max_length=255)
     external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
@@ -93,6 +105,12 @@ class RegisterVerifyRequest(BaseModel):
     phone: Optional[str] = Field(None, max_length=30)
     admin_password: Optional[str] = Field(None, min_length=6, max_length=128)
     password: Optional[str] = Field(None, min_length=6, max_length=128)
+    subscription_tier: Optional[str] = Field(default=None, max_length=64)
+    plan_name: Optional[str] = Field(default=None, max_length=64)
+    billing_cycle: Optional[str] = Field(default=None, max_length=32)
+    payment_method: Optional[str] = Field(default=None, max_length=64)
+    payment_reference: Optional[str] = Field(default=None, max_length=128)
+    po_number: Optional[str] = Field(default=None, max_length=128)
     use_external_db: Optional[bool] = Field(default=False)
     external_db_host: Optional[str] = Field(default=None, max_length=255)
     external_db_port: Optional[int] = Field(default=5432, ge=1, le=65535)
@@ -612,10 +630,18 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
         except Exception:
             pass
 
-        # 4d. Synchronize master_tenants and tenant_users for multi-plane consistency
+        # 4d. Synchronize master_tenants, tenant_subscriptions, and tenant_users for multi-plane consistency
+        unique_mobile = phone_number or f"+9665{uuid.uuid4().int % 90000000 + 10000000:08d}"
+        raw_tier = (payload_data.get("plan_name") or payload_data.get("subscription_tier") or "standard").strip().lower()
+        valid_mt_tiers = {"starter", "standard", "growth", "enterprise", "free", "professional"}
+        mt_tier = raw_tier if raw_tier in valid_mt_tiers else "standard"
+        billing_cycle_val = (payload_data.get("billing_cycle") or "monthly").strip().lower()
+        if billing_cycle_val not in ("monthly", "annual", "yearly"):
+            billing_cycle_val = "monthly"
+        payment_method_val = (payload_data.get("payment_method") or "card").strip().lower()
+
         try:
             with db.begin_nested():
-                unique_mobile = phone_number or f"+9665{uuid.uuid4().int % 90000000 + 10000000:08d}"
                 existing_mt = db.query(MasterTenant).filter(
                     (MasterTenant.id == company_uuid) | (MasterTenant.slug == slug_cleaned)
                 ).first()
@@ -629,7 +655,7 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
                         owner_email=norm_email,
                         owner_mobile=unique_mobile,
                         status="active",
-                        subscription_tier="standard",
+                        subscription_tier=mt_tier,
                         max_users=10,
                         max_storage_gb=25,
                     )
@@ -642,6 +668,25 @@ def execute_tenant_provisioning(db: Session, payload_data: Dict[str, Any]) -> Di
                     existing_mt.custom_domain = clean_custom_domain or existing_mt.custom_domain
                     existing_mt.status = "active"
                     existing_mt.is_active = True
+                db.flush()
+        except Exception as mt_err:
+            logger.warning(f"MasterTenant savepoint warning for {company_uuid}: {mt_err}")
+
+        try:
+            from backend.app.services.billing_service import get_or_create_tenant_subscription, normalize_tier_name
+            with db.begin_nested():
+                get_or_create_tenant_subscription(
+                    db,
+                    tenant_id=company_uuid,
+                    plan_name=normalize_tier_name(mt_tier),
+                    billing_cycle="annual" if billing_cycle_val in ("annual", "yearly") else "monthly",
+                    payment_method=payment_method_val,
+                )
+        except Exception as sub_err:
+            logger.warning(f"TenantSubscription provisioning warning for {company_uuid}: {sub_err}")
+
+        try:
+            with db.begin_nested():
                 db.execute(text('''
                     INSERT INTO tenant_users (id, email, mobile_number, first_name, last_name, password_hash, role, is_active)
                     VALUES (:id, :email, :mobile, :first_name, :last_name, :pwd, 'admin', true)
@@ -840,6 +885,12 @@ async def initiate_tenant_registration(req: RegisterInitRequest, background_task
         "admin_email": norm_email,
         "phone_number": req.resolved_phone,
         "admin_password": req.admin_password or req.password or "OxenGL2026!Secure",
+        "subscription_tier": req.subscription_tier,
+        "plan_name": req.plan_name,
+        "billing_cycle": req.billing_cycle,
+        "payment_method": req.payment_method,
+        "payment_reference": req.payment_reference,
+        "po_number": req.po_number,
         "use_external_db": req.use_external_db,
         "external_db_host": req.external_db_host,
         "external_db_port": req.external_db_port,

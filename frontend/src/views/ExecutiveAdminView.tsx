@@ -32,6 +32,7 @@ import {
 import { formatCurrency, formatDate, formatNumber, formatTonnage } from '../utils/formatters';
 import { EditApprovalRequest, BrandConfig } from '../types';
 import { ImportSystemResourceModal } from '../components/ImportSystemResourceModal';
+import { EnterpriseApprovalEnginePanel } from '../components/approvals/EnterpriseApprovalEnginePanel';
 
 export const ExecutiveAdminView: React.FC = () => {
   const {
@@ -48,6 +49,7 @@ export const ExecutiveAdminView: React.FC = () => {
     editRequests,
     approveEditRequest,
     rejectEditRequest,
+    workflowRequests,
     brandConfig,
     updateBrandConfig,
     resetBrandConfig,
@@ -72,7 +74,7 @@ export const ExecutiveAdminView: React.FC = () => {
   >('approvals');
 
   // Approvals tab sub-filter
-  const [approvalsSubTab, setApprovalsSubTab] = useState<'edits' | 'signatures'>('edits');
+  const [approvalsSubTab, setApprovalsSubTab] = useState<'workflow' | 'edits' | 'signatures'>('workflow');
   const [rejectionNotes, setRejectionNotes] = useState<Record<string, string>>({});
   const [rejectingId, setRejectingId] = useState<string | null>(null);
 
@@ -155,14 +157,14 @@ export const ExecutiveAdminView: React.FC = () => {
   // Security gate check (Executive Admin: Admin/CEO & COO)
   if (!isAdmin && !isCOO) {
     return (
-      <div className="flex min-h-[500px] flex-col items-center justify-center rounded-3xl border border-rose-200 bg-rose-50/50 p-8 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
+      <div className="flex min-h-[500px] flex-col items-center justify-center rounded-3xl border border-rose-500/30 bg-slate-900 p-8 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/20 text-rose-400">
           <Lock className="h-8 w-8" />
         </div>
-        <h2 className="mt-4 text-lg font-black text-rose-900">
+        <h2 className="mt-4 text-lg font-black text-rose-200">
           {isAr ? 'منطقة محظورة - مخصصة للإدارة التنفيذية فقط' : 'Restricted Area - Executive Admin Only'}
         </h2>
-        <p className="mt-2 max-w-md text-xs text-rose-700">
+        <p className="mt-2 max-w-md text-xs text-slate-400">
           {isAr
             ? 'هذه اللوحة مخصصة للإدارة التنفيذية (CEO & COO) لاعتماد التعديلات، مراجعة سجلات التدقيق، والتحكم في سير العمليات.'
             : 'This console is strictly reserved for the Chief Executive Officer and Chief Operating Officer.'}
@@ -173,6 +175,8 @@ export const ExecutiveAdminView: React.FC = () => {
 
   // Pending counts
   const pendingEditsCount = editRequests.filter((r) => r.status === 'Pending').length;
+  const pendingWorkflowCount = (workflowRequests || []).filter((r) => r.status === 'PENDING_APPROVAL').length;
+  const totalPendingApprovals = pendingEditsCount + pendingWorkflowCount;
 
   // Filtered Grid rows
   const filteredGridRows = useMemo(() => {
@@ -242,9 +246,9 @@ export const ExecutiveAdminView: React.FC = () => {
   const softDeletedUsers = users.filter((u) => !!u.is_deleted);
 
   return (
-    <div className="space-y-6" id="executive-admin-view">
+    <div className="space-y-6 bg-slate-950 text-slate-100 rounded-3xl p-4 sm:p-6" id="executive-admin-view">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-200/80 bg-gradient-to-r from-slate-900 via-neutral-950 to-slate-900 p-6 text-white shadow-xl sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-3xl border border-slate-800 bg-gradient-to-r from-slate-900 via-neutral-950 to-slate-900 p-6 text-white shadow-xl sm:flex-row sm:items-center">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/20 text-orange-300 border border-orange-400/30 backdrop-blur-xs">
             <Shield className="h-6 w-6" />
@@ -252,7 +256,7 @@ export const ExecutiveAdminView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-black">
-                {isAr ? 'لوحة الإدارة التنفيذية والتحكم الشامل' : 'Executive Admin Console & Control Panel'}
+                {isAr ? 'لوحة الإدارة التنفيذية ومحرك الاعتمادات الشامل' : 'Executive Governance & Approvals Engine'}
               </h1>
               <span className="rounded-full bg-orange-500/30 px-2.5 py-0.5 text-[10px] font-bold text-orange-200 border border-orange-400/30">
                 {isAr ? 'صلاحيات المدير العام' : 'CEO Clearance'}
@@ -260,8 +264,8 @@ export const ExecutiveAdminView: React.FC = () => {
             </div>
             <p className="text-xs text-slate-300 mt-1">
               {isAr
-                ? 'إدارة محرك الاعتمادات والتوقيع الرقمي، محرّر قاعدة البيانات المباشر، وتخصيص الهوية البصرية للشركة'
-                : 'Approval workflows, digital signing, live database overrides, and white-label customization'}
+                ? 'إدارة مصفوفة الصلاحيات والحدود المالية، صندوق الاعتمادات الموحد، التوقيع الرقمي، وتخصيص الهوية'
+                : 'Multi-step threshold approval matrix, unified workflow inbox, digital signing, and live overrides'}
             </p>
           </div>
         </div>
@@ -278,11 +282,11 @@ export const ExecutiveAdminView: React.FC = () => {
             <span>{isAr ? 'جسر البيانات التاريخية (System Resource)' : 'Import System Resource (.xlsx)'}</span>
           </button>
 
-          {pendingEditsCount > 0 && (
+          {totalPendingApprovals > 0 && (
             <div className="flex items-center gap-2 rounded-2xl bg-amber-500/20 px-3.5 py-2 border border-amber-400/30 text-amber-200 text-xs font-bold">
               <Clock className="h-4 w-4 text-amber-400 animate-spin" />
               <span>
-                {pendingEditsCount} {isAr ? 'طلبات بانتظار الاعتماد' : 'Pending Approvals'}
+                {totalPendingApprovals} {isAr ? 'طلبات بانتظار الاعتماد' : 'Pending Approvals'}
               </span>
             </div>
           )}
@@ -290,14 +294,14 @@ export const ExecutiveAdminView: React.FC = () => {
       </div>
 
       {/* Main Top Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+      <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-3">
         {[
           {
             id: 'approvals',
-            labelAr: `محرك الاعتمادات والموافقات (${pendingEditsCount})`,
-            labelEn: `Approvals Engine (${pendingEditsCount})`,
+            labelAr: `محرك الاعتمادات والمصفوفة (${totalPendingApprovals})`,
+            labelEn: `Approvals Engine & Matrix (${totalPendingApprovals})`,
             icon: CheckCircle2,
-            badge: pendingEditsCount > 0,
+            badge: totalPendingApprovals > 0,
           },
           {
             id: 'global-grid',
@@ -332,8 +336,8 @@ export const ExecutiveAdminView: React.FC = () => {
               onClick={() => setActiveTab(tab.id as any)}
               className={`relative flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all ${
                 isActive
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'bg-white text-slate-600 border border-slate-200/80 hover:bg-slate-50'
+                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40 shadow-md'
+                  : 'bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800 hover:text-slate-200'
               }`}
             >
               <Icon className="h-4 w-4" />
@@ -352,28 +356,50 @@ export const ExecutiveAdminView: React.FC = () => {
       {activeTab === 'approvals' && (
         <div className="space-y-6">
           {/* Sub Navigation */}
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-3">
             <button
+              type="button"
+              onClick={() => setApprovalsSubTab('workflow')}
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                approvalsSubTab === 'workflow'
+                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+              }`}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+              <span>
+                {isAr
+                  ? 'محرك الاعتمادات ومصفوفة الحدود المالية'
+                  : 'Workflow Inbox & Threshold Matrix'}
+              </span>
+              <span className="rounded-full bg-orange-500/30 px-2 py-0.5 text-[10px] text-orange-200">
+                {pendingWorkflowCount}
+              </span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setApprovalsSubTab('edits')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                 approvalsSubTab === 'edits'
-                  ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               <Edit3 className="h-3.5 w-3.5" />
               <span>{isAr ? 'طلبات تعديل البيانات والرحلات' : 'Data Edit Requests'}</span>
-              <span className="rounded-full bg-orange-200 px-1.5 py-0.2 text-[10px] text-orange-950">
+              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] text-slate-300">
                 {pendingEditsCount}
               </span>
             </button>
 
             <button
+              type="button"
               onClick={() => setApprovalsSubTab('signatures')}
-              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all ${
+              className={`flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                 approvalsSubTab === 'signatures'
-                  ? 'bg-orange-50 text-orange-700 border border-orange-200'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
               <Stamp className="h-3.5 w-3.5" />
@@ -381,15 +407,20 @@ export const ExecutiveAdminView: React.FC = () => {
             </button>
           </div>
 
+          {/* Sub-tab 1.0: Enterprise Workflow Inbox & Approval Matrix */}
+          {approvalsSubTab === 'workflow' && (
+            <EnterpriseApprovalEnginePanel initialSubTab="inbox" showHeader={false} />
+          )}
+
           {/* Sub-tab 1.1: Data Edit Requests (Side-by-side diff) */}
           {approvalsSubTab === 'edits' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-black text-slate-900">
+                  <h3 className="text-sm font-black text-slate-100">
                     {isAr ? 'طلبات تغيير وتعديل السجلات المالية والتشغيلية (Change Management)' : 'Data Edit Approval Requests'}
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-slate-400">
                     {isAr
                       ? 'مراجعة الفروقات بين القيم القديمة والجديدة واعتماد تطبيقها فوراً على قاعدة البيانات'
                       : 'Review side-by-side diffs of proposed changes before committing them to records'}
@@ -398,9 +429,9 @@ export const ExecutiveAdminView: React.FC = () => {
               </div>
 
               {editRequests.length === 0 ? (
-                <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xs">
+                <div className="rounded-3xl border border-slate-800 bg-slate-900 p-8 text-center shadow-xs">
                   <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
-                  <p className="mt-2 text-xs font-bold text-slate-700">
+                  <p className="mt-2 text-xs font-bold text-slate-300">
                     {isAr ? 'لا توجد طلبات تعديل بانتظار المراجعة' : 'No edit approval requests'}
                   </p>
                 </div>

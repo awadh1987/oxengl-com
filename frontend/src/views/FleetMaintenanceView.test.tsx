@@ -92,4 +92,27 @@ describe('FleetMaintenanceView Component', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByTestId('bulk-import-modal-mock')).toBeInTheDocument();
   });
+
+  it('initializes maintenance scheduled date and fuel transaction date inputs to blank state by default', () => {
+    render(<FleetMaintenanceView />);
+
+    // Open New Order modal
+    const newOrderBtn = screen.getByRole('button', { name: /New Order/i });
+    fireEvent.click(newOrderBtn);
+
+    const scheduledDateInput = document.getElementById('maintenance-scheduled-date-input') as HTMLInputElement;
+    expect(scheduledDateInput).toBeInTheDocument();
+    expect(scheduledDateInput.value).toBe('');
+    expect(scheduledDateInput).toHaveAttribute('placeholder', 'YYYY-MM-DD');
+
+    // Close New Order modal and open Log Fuel modal
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Log Fuel/i }));
+
+    const fuelDateInput = document.getElementById('fuel-transaction-date-input') as HTMLInputElement;
+    expect(fuelDateInput).toBeInTheDocument();
+    expect(fuelDateInput.value).toBe('');
+    expect(fuelDateInput).toHaveAttribute('placeholder', 'YYYY-MM-DD');
+  });
 });
+

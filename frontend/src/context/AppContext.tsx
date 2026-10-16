@@ -28,6 +28,11 @@ import {
   FinancialVoucher,
   VoucherType,
   VoucherCategory,
+  ApprovalModuleType,
+  TenantApprovalRule,
+  WorkflowApprovalRequest,
+  WorkflowApprovalStep,
+  ApprovalAuditEntry,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -216,6 +221,39 @@ interface AppContextType {
   createEditRequest: (req: Omit<EditApprovalRequest, 'id' | 'requestedAt' | 'status'>) => void;
   approveEditRequest: (id: string, reviewNotes?: string) => void;
   rejectEditRequest: (id: string, reviewNotes?: string) => void;
+  approvalRules: TenantApprovalRule[];
+  workflowRequests: WorkflowApprovalRequest[];
+  approvalAuditLogs: ApprovalAuditEntry[];
+  refreshApprovalMatrix: () => Promise<void>;
+  addApprovalRule: (rule: Partial<TenantApprovalRule> & { document_type: ApprovalModuleType; min_amount: number; required_role: string }) => Promise<TenantApprovalRule>;
+  updateApprovalRule: (ruleId: string, patch: Partial<TenantApprovalRule>) => Promise<TenantApprovalRule>;
+  deleteApprovalRule: (ruleId: string) => Promise<void>;
+  toggleModuleApproval: (documentType: ApprovalModuleType, isActive: boolean) => Promise<void>;
+  toggleModuleApprovalRules: (documentType: ApprovalModuleType, isActive: boolean) => Promise<void>;
+  evaluateTransactionApproval: (
+    paramsOrDocType:
+      | {
+          documentType: ApprovalModuleType;
+          documentId: string;
+          documentRef: string;
+          title: string;
+          amount: number;
+          department?: string;
+        }
+      | ApprovalModuleType,
+    documentId?: string,
+    documentRef?: string,
+    amount?: number,
+    title?: string,
+    department?: string
+  ) => {
+    requiresApproval: boolean;
+    status: 'APPROVED' | 'PENDING_APPROVAL';
+    request?: WorkflowApprovalRequest;
+  };
+  approveWorkflowRequest: (stepId: string, remarks?: string) => Promise<void>;
+  rejectWorkflowRequest: (stepId: string, reason: string) => Promise<void>;
+  escalateWorkflowRequest: (stepId: string, targetRole: string, reason?: string) => Promise<void>;
   // Brand Configuration & Dynamic Theming
   brandConfig: BrandConfig;
   updateBrandConfig: (config: Partial<BrandConfig>) => void;
@@ -887,6 +925,174 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Workflows & Approvals State
   const [editRequests, setEditRequests] = useState<EditApprovalRequest[]>([]);
+  const [approvalRules, setApprovalRules] = useState<TenantApprovalRule[]>(() => [
+    {
+      id: 'rule-ops-1',
+      name: 'Operations High-Value Dispatch Review',
+      rule_name: 'Operations High-Value Dispatch Review',
+      document_type: 'OPERATIONS',
+      min_amount: 15000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'OPERATIONS',
+      required_role: 'OPERATIONS_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-ops-2',
+      name: 'Operations Executive Sign-Off (> 50k SAR)',
+      rule_name: 'Operations Executive Sign-Off (> 50k SAR)',
+      document_type: 'OPERATIONS',
+      min_amount: 50000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'OPERATIONS',
+      required_role: 'FINANCE_MANAGER',
+      step_order: 2,
+      sequence_order: 2,
+      is_active: true,
+    },
+    {
+      id: 'rule-po-1',
+      name: 'Purchase Order Procurement Manager Review',
+      rule_name: 'Purchase Order Procurement Manager Review',
+      document_type: 'PURCHASE_ORDER',
+      min_amount: 10000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'PROCUREMENT',
+      required_role: 'PROCUREMENT_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-po-2',
+      name: 'Purchase Order Executive CFO Approval',
+      rule_name: 'Purchase Order Executive CFO Approval',
+      document_type: 'PURCHASE_ORDER',
+      min_amount: 50000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'PROCUREMENT',
+      required_role: 'FINANCE_MANAGER',
+      step_order: 2,
+      sequence_order: 2,
+      is_active: true,
+    },
+    {
+      id: 'rule-pr-1',
+      name: 'Purchase Requisition Supervisor Review',
+      rule_name: 'Purchase Requisition Supervisor Review',
+      document_type: 'PURCHASE_REQUISITION',
+      min_amount: 5000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'PROCUREMENT',
+      required_role: 'DEPARTMENT_SUPERVISOR',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-bill-1',
+      name: 'Vendor Bill Finance Controller Review',
+      rule_name: 'Vendor Bill Finance Controller Review',
+      document_type: 'VENDOR_BILL',
+      min_amount: 10000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'FINANCE',
+      required_role: 'FINANCE_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-vch-1',
+      name: 'Financial Voucher Treasury Approval',
+      rule_name: 'Financial Voucher Treasury Approval',
+      document_type: 'FINANCIAL_VOUCHER',
+      min_amount: 10000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'FINANCE',
+      required_role: 'FINANCE_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-vch-2',
+      name: 'Financial Voucher Executive CEO Approval (> 50k SAR)',
+      rule_name: 'Financial Voucher Executive CEO Approval (> 50k SAR)',
+      document_type: 'FINANCIAL_VOUCHER',
+      min_amount: 50000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'FINANCE',
+      required_role: 'CEO',
+      step_order: 2,
+      sequence_order: 2,
+      is_active: true,
+    },
+    {
+      id: 'rule-crusher-1',
+      name: 'Crusher Supplier Settlement Approval',
+      rule_name: 'Crusher Supplier Settlement Approval',
+      document_type: 'CRUSHER_PAYMENT',
+      min_amount: 20000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'FINANCE',
+      required_role: 'FINANCE_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-fleet-1',
+      name: 'Fleet Maintenance Work Order Approval',
+      rule_name: 'Fleet Maintenance Work Order Approval',
+      document_type: 'FLEET_WORK_ORDER',
+      min_amount: 5000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'FLEET',
+      required_role: 'FLEET_MANAGER',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'rule-hrms-1',
+      name: 'HRMS Payroll & Settlement Approval',
+      rule_name: 'HRMS Payroll & Settlement Approval',
+      document_type: 'HRMS',
+      min_amount: 10000,
+      max_amount: null,
+      currency: 'SAR',
+      department: 'HR',
+      required_role: 'HR_DIRECTOR',
+      step_order: 1,
+      sequence_order: 1,
+      is_active: true,
+    },
+  ]);
+  const approvalRulesRef = useRef<TenantApprovalRule[]>(approvalRules);
+  useEffect(() => {
+    approvalRulesRef.current = approvalRules;
+  }, [approvalRules]);
+
+  const [workflowRequests, setWorkflowRequests] = useState<WorkflowApprovalRequest[]>([]);
+  const workflowRequestsRef = useRef<WorkflowApprovalRequest[]>(workflowRequests);
+  useEffect(() => {
+    workflowRequestsRef.current = workflowRequests;
+  }, [workflowRequests]);
+
+  const [approvalAuditLogs, setApprovalAuditLogs] = useState<ApprovalAuditEntry[]>([]);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
@@ -1573,7 +1779,155 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const evaluateTransactionApproval = (
+    paramsOrDocType:
+      | {
+          documentType: ApprovalModuleType;
+          documentId: string;
+          documentRef: string;
+          title: string;
+          amount: number;
+          department?: string;
+        }
+      | ApprovalModuleType,
+    documentId?: string,
+    documentRef?: string,
+    amount?: number,
+    title?: string,
+    department?: string
+  ): {
+    requiresApproval: boolean;
+    status: 'APPROVED' | 'PENDING_APPROVAL';
+    request?: WorkflowApprovalRequest;
+  } => {
+    const params =
+      typeof paramsOrDocType === 'object'
+        ? paramsOrDocType
+        : {
+            documentType: paramsOrDocType,
+            documentId: documentId || '',
+            documentRef: documentRef || '',
+            amount: Number(amount || 0),
+            title: title || `${paramsOrDocType} (${documentRef || documentId || ''})`,
+            department,
+          };
+
+    const evalAmt = Number(params.amount || 0);
+    const activeRules = approvalRulesRef.current
+      .filter(
+        (rule) =>
+          rule.is_active &&
+          rule.document_type === params.documentType &&
+          evalAmt >= Number(rule.min_amount || 0) &&
+          (rule.max_amount == null || evalAmt <= Number(rule.max_amount)) &&
+          (!rule.department || !params.department || rule.department.toUpperCase() === params.department.toUpperCase())
+      )
+      .sort(
+        (a, b) =>
+          Number(a.sequence_order ?? a.step_order ?? 1) - Number(b.sequence_order ?? b.step_order ?? 1) ||
+          Number(a.min_amount || 0) - Number(b.min_amount || 0)
+      );
+
+    if (activeRules.length === 0) {
+      return { requiresApproval: false, status: 'APPROVED' };
+    }
+
+    const now = new Date().toISOString();
+    const instanceId = `wf-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const steps: WorkflowApprovalStep[] = activeRules.map((rule, idx) => {
+      const stepId = `step-${instanceId}-${idx + 1}`;
+      const seq = idx + 1;
+      const rName = rule.rule_name || rule.name;
+      return {
+        id: stepId,
+        step_id: stepId,
+        step_order: seq,
+        sequence_order: seq,
+        required_role: rule.required_role,
+        assigned_role_code: rule.required_role,
+        required_user_id: rule.required_user_id ?? null,
+        status: idx === 0 ? 'PENDING' : 'WAITING',
+        rule_name: rName,
+        min_amount: rule.min_amount,
+        max_amount: rule.max_amount ?? null,
+      };
+    });
+
+    const requesterName = currentUser?.fullNameAr || currentUser?.fullName || 'System User';
+    const request: WorkflowApprovalRequest = {
+      id: instanceId,
+      instance_id: instanceId,
+      step_id: steps[0].step_id,
+      step_order: 1,
+      sequence_order: 1,
+      required_role: steps[0].required_role,
+      required_user_id: steps[0].required_user_id ?? null,
+      document_type: params.documentType,
+      document_id: params.documentId,
+      document_ref: params.documentRef,
+      title: params.title,
+      amount: evalAmt,
+      total_amount: evalAmt,
+      currency: 'SAR',
+      department: params.department || activeRules[0].department || 'GENERAL',
+      requested_by: requesterName,
+      requester_name: requesterName,
+      requested_by_role: currentUser?.role || 'Data_Entry',
+      status: 'PENDING_APPROVAL',
+      current_step_order: 1,
+      current_step_sequence: 1,
+      total_steps: steps.length,
+      steps,
+      created_at: now,
+    };
+
+    const nextRequests = [request, ...workflowRequestsRef.current.filter((w) => w.instance_id !== instanceId)];
+    workflowRequestsRef.current = nextRequests;
+    setWorkflowRequests(nextRequests);
+
+    const auditEntry: ApprovalAuditEntry = {
+      id: `ap-audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      instance_id: instanceId,
+      step_id: steps[0].step_id,
+      document_type: params.documentType,
+      document_id: params.documentId,
+      document_ref: params.documentRef,
+      step_order: 1,
+      sequence_order: 1,
+      step_sequence: 1,
+      action: 'SUBMITTED',
+      required_role: steps[0].required_role,
+      actor_name: requesterName,
+      actor_role: currentUser?.role || 'Data_Entry',
+      actor_id: currentUser?.id || 'system',
+      remarks: `Triggered ${steps.length}-step approval policy (${activeRules[0].rule_name || activeRules[0].name}) for amount ${evalAmt.toLocaleString()} SAR`,
+      total_amount: evalAmt,
+      timestamp: now,
+    };
+    setApprovalAuditLogs((prev) => [auditEntry, ...prev]);
+
+    // Sync with backend approval engine if authenticated
+    if (typeof navigator !== 'undefined' && navigator.onLine && getAuthToken()) {
+      fetch('/api/v1/procurement/approvals/evaluate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${getAuthToken()}`,
+        },
+        body: JSON.stringify({
+          document_type: params.documentType,
+          document_id: params.documentId,
+          total_amount: evalAmt,
+          department: params.department || null,
+        }),
+      }).catch(() => {});
+    }
+
+    return { requiresApproval: true, status: 'PENDING_APPROVAL', request };
+  };
+
   const addOperation = async (opData: Omit<OperationRecord, 'id' | 'created_at' | 'updated_at'>): Promise<void> => {
+    const evalAmount = Number(opData.total_sales || opData.sales_amount || 0);
     if (navigator.onLine && currentCompany) {
       const numGross = Number(opData.qty_loaded) || 1;
       const numDelivered = Number(opData.qty_delivered) || 0;
@@ -1611,8 +1965,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notes: opData.notes,
         custom_attributes: opData.custom_attributes || {},
       });
+      const baseRecord = mapApiOperation(operation);
+      const evalResult = evaluateTransactionApproval({
+        documentType: 'OPERATIONS',
+        documentId: baseRecord.id,
+        documentRef: operation.scale_ticket_attachment || operation.ticket_number || opData.scale_ticket_no || baseRecord.id,
+        title: `Dispatch Trip ${opData.truck_no} — ${opData.destination_customer}`,
+        amount: evalAmount,
+        department: 'OPERATIONS',
+      });
       const serverRecord: OperationRecord = {
-        ...mapApiOperation(operation),
+        ...baseRecord,
         uom: (opData.uom as string) || operation.uom || operation.unit_of_measure || 'MT',
         scale_ticket_no: operation.scale_ticket_attachment || operation.ticket_number || opData.scale_ticket_no,
         loading_invoice_no: operation.loading_invoice_no || opData.loading_invoice_no,
@@ -1626,6 +1989,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notes: opData.notes,
         scale_ticket_attachment: opData.scale_ticket_attachment,
         attachments: opData.attachments,
+        approval_status: evalResult.status,
+        workflow_instance_id: evalResult.request?.instance_id,
       };
       setOperations((previous) => [serverRecord, ...previous.filter((item) => item.id !== serverRecord.id)]);
       logAuditAction({
@@ -1643,6 +2008,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const id = `op-2026-${String(Date.now()).slice(-6)}`;
     const now = new Date().toISOString();
+    const evalResult = evaluateTransactionApproval({
+      documentType: 'OPERATIONS',
+      documentId: id,
+      documentRef: opData.scale_ticket_no || id,
+      title: `Dispatch Trip ${opData.truck_no} — ${opData.destination_customer}`,
+      amount: evalAmount,
+      department: 'OPERATIONS',
+    });
     const newRecord: OperationRecord = {
       ...opData,
       id,
@@ -1651,6 +2024,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       created_at: now,
       updated_at: now,
       created_by: currentUser.fullNameAr || currentUser.fullName,
+      approval_status: evalResult.status,
+      workflow_instance_id: evalResult.request?.instance_id,
     };
     setOperations((prev) => [newRecord, ...prev]);
 
@@ -1883,11 +2258,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Crusher Payments
   const addCrusherPayment = (payment: Omit<CrusherPaymentEntry, 'id' | 'created_at'>) => {
     const id = `pay-${Date.now()}`;
+    const evalResult = evaluateTransactionApproval({
+      documentType: 'CRUSHER_PAYMENT',
+      documentId: id,
+      documentRef: payment.reference_no || id,
+      title: `Crusher Settlement — ${payment.crusher_name}`,
+      amount: Number(payment.amount || 0),
+      department: 'FINANCE',
+    });
     const newPay: CrusherPaymentEntry = {
       ...payment,
       id,
       is_deleted: false,
       created_at: new Date().toISOString(),
+      approval_status: evalResult.status,
+      workflow_instance_id: evalResult.request?.instance_id,
     };
     setCrusherPayments((prev) => [newPay, ...prev]);
 
@@ -1926,12 +2311,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const serial = String(vouchers.length + 1).padStart(4, '0');
     const autoNumber = vchData.voucherNumber || `${prefix}-${year}-${month}-${serial}`;
 
+    const evalResult = evaluateTransactionApproval({
+      documentType: 'FINANCIAL_VOUCHER',
+      documentId: id,
+      documentRef: autoNumber,
+      title: `${vchData.type} Voucher — ${vchData.partyName} (${autoNumber})`,
+      amount: Number(vchData.amount || 0),
+      department: 'FINANCE',
+    });
+
+    const mustAwaitApproval = evalResult.requiresApproval || vchData.status === 'Pending_Approval';
+
     const newVoucher: FinancialVoucher = {
       ...vchData,
       id,
       voucherNumber: autoNumber,
       amountInWordsAr: tafqeetArabic(vchData.amount),
       amountInWordsEn: tafqeetEnglish(vchData.amount),
+      isApproved: mustAwaitApproval ? false : Boolean(vchData.isApproved ?? true),
+      status: mustAwaitApproval ? 'Pending_Approval' : (vchData.status || 'Approved'),
+      approvedBy: mustAwaitApproval ? undefined : vchData.approvedBy,
+      approvedAt: mustAwaitApproval ? undefined : vchData.approvedAt,
       created_at: now,
       updated_at: now,
     };
@@ -2004,7 +2404,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const approveVoucher = async (id: string, reviewNotes?: string): Promise<void> => {
-    if (!isAdmin && !isCOO) return;
+    if (!isAdmin && !isCOO && !canApproveVouchers) return;
     const existing = vouchers.find((v) => v.id === id);
     if (!existing) return;
 
@@ -2067,6 +2467,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setVouchers((prev) => prev.map((v) => (v.id === id ? approvedVoucher : v)));
 
+    // Also mark any matching workflow request for this voucher as APPROVED
+    setWorkflowRequests((prev) => {
+      const updated = prev.map((w) =>
+        w.document_id === id && w.status !== 'APPROVED'
+          ? {
+              ...w,
+              status: 'APPROVED' as const,
+              completed_at: new Date().toISOString(),
+              steps: w.steps.map((s) => ({
+                ...s,
+                status: 'APPROVED' as const,
+                approved_by_name: s.approved_by_name || currentUser.fullNameAr || currentUser.fullName,
+                approved_at: s.approved_at || new Date().toISOString(),
+                comments: s.comments || reviewNotes || 'Executive direct voucher approval',
+              })),
+            }
+          : w
+      );
+      workflowRequestsRef.current = updated;
+      return updated;
+    });
+
     logAuditAction({
       userId: currentUser.id,
       userName: currentUser.fullNameAr || currentUser.fullName,
@@ -2083,6 +2505,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     vchData: Omit<FinancialVoucher, 'id' | 'created_at' | 'updated_at' | 'amountInWordsAr'>
   ): Promise<FinancialVoucher> => {
     const newVoucher = addVoucher(vchData);
+    // Block General Ledger posting when voucher requires approval!
+    if (newVoucher.status === 'Pending_Approval' || !newVoucher.isApproved) {
+      return newVoucher;
+    }
     if (currentCompany) {
       try {
         const accounts = await erpApi.getAccountingAccounts(currentCompany.id);
@@ -2901,6 +3327,622 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const refreshApprovalMatrix = async (): Promise<void> => {
+    const token = getAuthToken();
+    if (!token || typeof navigator === 'undefined' || !navigator.onLine) return;
+    try {
+      const [matrixRes, queueRes, auditRes] = await Promise.all([
+        fetch('/api/v1/procurement/approvals/matrix', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+        fetch('/api/v1/procurement/approvals/queue', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+        fetch('/api/v1/procurement/approvals/audit-logs', {
+          headers: { Authorization: `Bearer ${token}` },
+        }).catch(() => null),
+      ]);
+
+      if (matrixRes?.ok) {
+        const data = await matrixRes.json();
+        if (Array.isArray(data?.rules) && data.rules.length > 0) {
+          approvalRulesRef.current = data.rules;
+          setApprovalRules(data.rules);
+        }
+      }
+
+      if (queueRes?.ok) {
+        const queueData = await queueRes.json();
+        if (Array.isArray(queueData)) {
+          setWorkflowRequests((prev) => {
+            const existingIds = new Set(prev.map((p) => p.instance_id));
+            const serverMapped: WorkflowApprovalRequest[] = queueData
+              .filter((q: any) => !existingIds.has(String(q.instance_id)))
+              .map((q: any) => ({
+                instance_id: String(q.instance_id),
+                step_id: String(q.step_id),
+                step_order: Number(q.step_order || 1),
+                required_role: String(q.required_role || 'FINANCE_MANAGER'),
+                required_user_id: q.required_user_id ?? null,
+                document_type: (q.document_type || 'PURCHASE_ORDER') as ApprovalModuleType,
+                document_id: String(q.document_id),
+                document_ref: String(q.document_id).slice(0, 12),
+                title: `${q.document_type} Approval (${String(q.document_id).slice(0, 8)})`,
+                total_amount: Number(q.total_amount || 0),
+                department: q.department || 'PROCUREMENT',
+                requested_by: 'Tenant User',
+                requested_by_role: 'Accountant',
+                status: 'IN_PROGRESS',
+                current_step_order: Number(q.current_step_order || q.step_order || 1),
+                steps: Array.isArray(q.steps)
+                  ? q.steps
+                  : [
+                      {
+                        step_id: String(q.step_id),
+                        step_order: Number(q.step_order || 1),
+                        required_role: String(q.required_role || 'FINANCE_MANAGER'),
+                        status: 'PENDING',
+                      },
+                    ],
+                created_at: q.created_at || new Date().toISOString(),
+              }));
+            const merged = [...serverMapped, ...prev];
+            workflowRequestsRef.current = merged;
+            return merged;
+          });
+        }
+      }
+
+      if (auditRes?.ok) {
+        const auditData = await auditRes.json();
+        if (Array.isArray(auditData) && auditData.length > 0) {
+          setApprovalAuditLogs((prev) => {
+            const existingIds = new Set(prev.map((a) => a.step_id + ':' + a.action));
+            const newEntries: ApprovalAuditEntry[] = auditData
+              .filter((a: any) => !existingIds.has(`${a.step_id}:${a.status}`))
+              .map((a: any) => ({
+                id: `srv-audit-${a.step_id}-${a.status}`,
+                instance_id: String(a.instance_id),
+                step_id: String(a.step_id),
+                document_type: (a.document_type || 'PURCHASE_ORDER') as ApprovalModuleType,
+                document_id: String(a.document_id),
+                document_ref: String(a.document_id).slice(0, 12),
+                step_order: Number(a.step_order || 1),
+                action: (a.status || 'APPROVED') as ApprovalAuditEntry['action'],
+                required_role: String(a.required_role || 'FINANCE_MANAGER'),
+                actor_name: a.approved_by_user_id ? `User (${String(a.approved_by_user_id).slice(0, 8)})` : (currentUser?.fullName || 'Approver'),
+                actor_id: String(a.approved_by_user_id || ''),
+                remarks: a.comments || a.rejection_reason || '',
+                escalated_to_role: a.escalated_to_role || null,
+                total_amount: Number(a.total_amount || 0),
+                timestamp: a.approved_at || new Date().toISOString(),
+              }));
+            return [...newEntries, ...prev];
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('[ApprovalsEngine] Matrix sync warning:', err);
+    }
+  };
+
+  const addApprovalRule = async (ruleData: Partial<TenantApprovalRule> & { document_type: ApprovalModuleType; min_amount: number; required_role: string }): Promise<TenantApprovalRule> => {
+    const rName = ruleData.rule_name || ruleData.name || `${ruleData.document_type} Approval Rule`;
+    const seq = Number(ruleData.sequence_order ?? ruleData.step_order ?? 1);
+    let createdRule: TenantApprovalRule = {
+      ...ruleData,
+      id: `rule-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      name: rName,
+      rule_name: rName,
+      step_order: seq,
+      sequence_order: seq,
+      currency: ruleData.currency || 'SAR',
+      is_active: ruleData.is_active ?? true,
+    };
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const res = await fetch('/api/v1/procurement/approvals/rules', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(createdRule),
+        });
+        if (res.ok) {
+          const srv = await res.json();
+          if (srv?.id) {
+            createdRule = {
+              ...createdRule,
+              ...srv,
+              name: srv.name || srv.rule_name || rName,
+              rule_name: srv.rule_name || srv.name || rName,
+              step_order: Number(srv.step_order ?? srv.sequence_order ?? seq),
+              sequence_order: Number(srv.sequence_order ?? srv.step_order ?? seq),
+            };
+          }
+        }
+      } catch {
+        // Fallback to local state rule
+      }
+    }
+    const nextRules = [...approvalRulesRef.current, createdRule];
+    approvalRulesRef.current = nextRules;
+    setApprovalRules(nextRules);
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: currentUser.fullNameAr || currentUser.fullName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'CREATE',
+      entityType: 'ApprovalRule' as any,
+      entityId: createdRule.id,
+      summary: `Created approval policy rule "${createdRule.name}" (${createdRule.document_type} >= ${createdRule.min_amount.toLocaleString()} SAR -> ${createdRule.required_role})`,
+      newData: createdRule,
+    });
+    return createdRule;
+  };
+
+  const updateApprovalRule = async (ruleId: string, patch: Partial<TenantApprovalRule>): Promise<TenantApprovalRule> => {
+    const existing = approvalRulesRef.current.find((r) => r.id === ruleId);
+    const merged = existing
+      ? { ...existing, ...patch }
+      : ({
+          id: ruleId,
+          name: 'Updated Rule',
+          rule_name: 'Updated Rule',
+          document_type: 'OPERATIONS',
+          min_amount: 0,
+          required_role: 'OPERATIONS_MANAGER',
+          step_order: 1,
+          sequence_order: 1,
+          is_active: true,
+          ...patch,
+        } as TenantApprovalRule);
+    const rName = patch.rule_name || patch.name || merged.rule_name || merged.name;
+    const seq = Number(patch.sequence_order ?? patch.step_order ?? merged.sequence_order ?? merged.step_order ?? 1);
+    const updatedRule: TenantApprovalRule = {
+      ...merged,
+      name: rName,
+      rule_name: rName,
+      step_order: seq,
+      sequence_order: seq,
+    };
+
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        const res = await fetch(`/api/v1/procurement/approvals/rules/${ruleId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(patch),
+        });
+        if (res.ok) {
+          const srv = await res.json();
+          if (srv?.id) Object.assign(updatedRule, srv);
+        }
+      } catch {
+        // Fallback to local update
+      }
+    }
+
+    const nextRules = approvalRulesRef.current.map((r) => (r.id === ruleId ? updatedRule : r));
+    approvalRulesRef.current = nextRules;
+    setApprovalRules(nextRules);
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: currentUser.fullNameAr || currentUser.fullName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'UPDATE',
+      entityType: 'ApprovalRule' as any,
+      entityId: ruleId,
+      summary: `Updated approval policy rule "${updatedRule.name}" (${updatedRule.document_type})`,
+      oldData: existing,
+      newData: updatedRule,
+    });
+    return updatedRule;
+  };
+
+  const deleteApprovalRule = async (ruleId: string): Promise<void> => {
+    const existing = approvalRulesRef.current.find((r) => r.id === ruleId);
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await fetch(`/api/v1/procurement/approvals/rules/${ruleId}`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch {
+        // Ignore network error
+      }
+    }
+    const nextRules = approvalRulesRef.current.filter((r) => r.id !== ruleId);
+    approvalRulesRef.current = nextRules;
+    setApprovalRules(nextRules);
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: currentUser.fullNameAr || currentUser.fullName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'DELETE',
+      entityType: 'ApprovalRule' as any,
+      entityId: ruleId,
+      summary: `Deleted approval policy rule "${existing?.name || ruleId}"`,
+    });
+  };
+
+  const toggleModuleApproval = async (documentType: ApprovalModuleType, isActive: boolean): Promise<void> => {
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await fetch('/api/v1/procurement/approvals/rules/module-toggle', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ document_type: documentType, is_active: isActive }),
+        });
+      } catch {
+        // Fallback to local state
+      }
+    }
+    const nextRules = approvalRulesRef.current.map((r) =>
+      r.document_type === documentType ? { ...r, is_active: isActive } : r
+    );
+    approvalRulesRef.current = nextRules;
+    setApprovalRules(nextRules);
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: currentUser.fullNameAr || currentUser.fullName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'UPDATE',
+      entityType: 'ApprovalRule' as any,
+      entityId: documentType,
+      summary: `${isActive ? 'Enabled' : 'Disabled'} approval enforcement for module ${documentType}`,
+    });
+  };
+
+  const approveWorkflowRequest = async (stepId: string, remarks?: string): Promise<void> => {
+    const now = new Date().toISOString();
+    const actorName = currentUser?.fullNameAr || currentUser?.fullName || 'Executive Approver';
+    const targetReq = workflowRequestsRef.current.find(
+      (w) =>
+        w.step_id === stepId ||
+        w.id === stepId ||
+        w.instance_id === stepId ||
+        w.steps.some((s) => s.step_id === stepId || s.id === stepId)
+    );
+
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch(`/api/v1/procurement/approvals/steps/${stepId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ comments: remarks || 'Approved via OxenGL Governance Engine' }),
+      }).catch(() => {});
+    }
+
+    if (!targetReq) return;
+
+    const updatedSteps = targetReq.steps.map((s) => {
+      if (s.step_id === stepId || s.id === stepId) {
+        return {
+          ...s,
+          status: 'APPROVED' as const,
+          approved_by_name: actorName,
+          approved_by_user_id: currentUser?.id,
+          approved_at: now,
+          comments: remarks || 'Approved',
+        };
+      }
+      return s;
+    });
+
+    const nextWaitingIdx = updatedSteps.findIndex((s) => s.status === 'WAITING' || s.status === 'PENDING');
+    let nextStatus: WorkflowApprovalRequest['status'] = 'APPROVED';
+    let nextActiveStep = updatedSteps[updatedSteps.length - 1];
+
+    if (nextWaitingIdx !== -1) {
+      updatedSteps[nextWaitingIdx] = {
+        ...updatedSteps[nextWaitingIdx],
+        status: 'PENDING',
+      };
+      nextStatus = 'PENDING_APPROVAL';
+      nextActiveStep = updatedSteps[nextWaitingIdx];
+    }
+
+    const nextSeq = Number(nextActiveStep.sequence_order ?? nextActiveStep.step_order ?? 1);
+    const updatedReq: WorkflowApprovalRequest = {
+      ...targetReq,
+      step_id: nextActiveStep.step_id,
+      step_order: nextSeq,
+      sequence_order: nextSeq,
+      required_role: nextActiveStep.required_role,
+      current_step_order: nextSeq,
+      current_step_sequence: nextSeq,
+      status: nextStatus,
+      steps: updatedSteps,
+      completed_at: nextStatus === 'APPROVED' ? now : undefined,
+    };
+
+    const nextList = workflowRequestsRef.current.map((w) =>
+      w.instance_id === targetReq!.instance_id ? updatedReq : w
+    );
+    workflowRequestsRef.current = nextList;
+    setWorkflowRequests(nextList);
+
+    const approvedStepObj =
+      targetReq.steps.find((s) => s.step_id === stepId || s.id === stepId) || targetReq.steps[0];
+    const approvedSeq = Number(approvedStepObj.sequence_order ?? approvedStepObj.step_order ?? 1);
+
+    const auditEntry: ApprovalAuditEntry = {
+      id: `ap-audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      instance_id: targetReq.instance_id,
+      step_id: stepId,
+      document_type: targetReq.document_type,
+      document_id: targetReq.document_id,
+      document_ref: targetReq.document_ref,
+      step_order: approvedSeq,
+      sequence_order: approvedSeq,
+      step_sequence: approvedSeq,
+      action: 'APPROVED',
+      required_role: approvedStepObj.required_role,
+      actor_name: actorName,
+      actor_role: currentUser?.role || approvedStepObj.required_role,
+      actor_id: currentUser?.id || 'admin',
+      remarks: remarks || 'Approved',
+      total_amount: targetReq.total_amount,
+      timestamp: now,
+    };
+    setApprovalAuditLogs((prev) => [auditEntry, ...prev]);
+
+    // When all steps are approved, unlock the underlying transaction!
+    if (nextStatus === 'APPROVED') {
+      if (targetReq.document_type === 'OPERATIONS') {
+        setOperations((prev) =>
+          prev.map((op) =>
+            op.id === targetReq!.document_id
+              ? { ...op, approval_status: 'APPROVED', updated_at: now }
+              : op
+          )
+        );
+      } else if (targetReq.document_type === 'CRUSHER_PAYMENT') {
+        setCrusherPayments((prev) =>
+          prev.map((p) =>
+            p.id === targetReq!.document_id
+              ? { ...p, approval_status: 'APPROVED' }
+              : p
+          )
+        );
+      } else if (targetReq.document_type === 'FINANCIAL_VOUCHER') {
+        await approveVoucher(targetReq.document_id, remarks || 'Approved via Multi-Step Workflow');
+      }
+    }
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: actorName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'APPROVE',
+      entityType: targetReq.document_type as any,
+      entityId: targetReq.document_id,
+      summary: `Approved Step #${approvedSeq} (${approvedStepObj.required_role}) for ${targetReq.document_ref}${remarks ? ` — Remarks: ${remarks}` : ''}`,
+      newData: updatedReq,
+    });
+  };
+
+  const rejectWorkflowRequest = async (stepId: string, reason: string): Promise<void> => {
+    const now = new Date().toISOString();
+    const actorName = currentUser?.fullNameAr || currentUser?.fullName || 'Executive Approver';
+    const targetReq = workflowRequestsRef.current.find(
+      (w) =>
+        w.step_id === stepId ||
+        w.id === stepId ||
+        w.instance_id === stepId ||
+        w.steps.some((s) => s.step_id === stepId || s.id === stepId)
+    );
+
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch(`/api/v1/procurement/approvals/steps/${stepId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ reason: reason || 'Rejected by approver' }),
+      }).catch(() => {});
+    }
+
+    if (!targetReq) return;
+
+    const updatedSteps = targetReq.steps.map((s) =>
+      s.step_id === stepId || s.id === stepId
+        ? {
+            ...s,
+            status: 'REJECTED' as const,
+            approved_by_name: actorName,
+            approved_by_user_id: currentUser?.id,
+            approved_at: now,
+            rejection_reason: reason,
+          }
+        : s
+    );
+
+    const updatedReq: WorkflowApprovalRequest = {
+      ...targetReq,
+      status: 'REJECTED',
+      steps: updatedSteps,
+      completed_at: now,
+    };
+
+    const nextList = workflowRequestsRef.current.map((w) =>
+      w.instance_id === targetReq.instance_id ? updatedReq : w
+    );
+    workflowRequestsRef.current = nextList;
+    setWorkflowRequests(nextList);
+
+    const rejectedStepObj =
+      targetReq.steps.find((s) => s.step_id === stepId || s.id === stepId) || targetReq.steps[0];
+    const rejectedSeq = Number(rejectedStepObj.sequence_order ?? rejectedStepObj.step_order ?? 1);
+
+    const auditEntry: ApprovalAuditEntry = {
+      id: `ap-audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      instance_id: targetReq.instance_id,
+      step_id: stepId,
+      document_type: targetReq.document_type,
+      document_id: targetReq.document_id,
+      document_ref: targetReq.document_ref,
+      step_order: rejectedSeq,
+      sequence_order: rejectedSeq,
+      step_sequence: rejectedSeq,
+      action: 'REJECTED',
+      required_role: rejectedStepObj.required_role,
+      actor_name: actorName,
+      actor_role: currentUser?.role || rejectedStepObj.required_role,
+      actor_id: currentUser?.id || 'admin',
+      remarks: reason,
+      total_amount: targetReq.total_amount,
+      timestamp: now,
+    };
+    setApprovalAuditLogs((prev) => [auditEntry, ...prev]);
+
+    if (targetReq.document_type === 'OPERATIONS') {
+      setOperations((prev) =>
+        prev.map((op) =>
+          op.id === targetReq.document_id
+            ? { ...op, approval_status: 'REJECTED', updated_at: now }
+            : op
+        )
+      );
+    } else if (targetReq.document_type === 'CRUSHER_PAYMENT') {
+      setCrusherPayments((prev) =>
+        prev.map((p) =>
+          p.id === targetReq.document_id
+            ? { ...p, approval_status: 'REJECTED' }
+            : p
+        )
+      );
+    } else if (targetReq.document_type === 'FINANCIAL_VOUCHER') {
+      setVouchers((prev) =>
+        prev.map((v) =>
+          v.id === targetReq.document_id
+            ? { ...v, isApproved: false, status: 'Rejected', updated_at: now }
+            : v
+        )
+      );
+    }
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: actorName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'REJECT',
+      entityType: targetReq.document_type as any,
+      entityId: targetReq.document_id,
+      summary: `Rejected Step #${rejectedSeq} for ${targetReq.document_ref} — Reason: ${reason}`,
+      newData: updatedReq,
+    });
+  };
+
+  const escalateWorkflowRequest = async (stepId: string, targetRole: string, reason?: string): Promise<void> => {
+    const now = new Date().toISOString();
+    const actorName = currentUser?.fullNameAr || currentUser?.fullName || 'Executive Approver';
+    const targetReq = workflowRequestsRef.current.find(
+      (w) =>
+        w.step_id === stepId ||
+        w.id === stepId ||
+        w.instance_id === stepId ||
+        w.steps.some((s) => s.step_id === stepId || s.id === stepId)
+    );
+
+    const token = getAuthToken();
+    if (token && typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch(`/api/v1/procurement/approvals/steps/${stepId}/escalate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ target_role: targetRole, reason: reason || 'Escalated for executive review' }),
+      }).catch(() => {});
+    }
+
+    if (!targetReq) return;
+
+    const updatedSteps = targetReq.steps.map((s) =>
+      s.step_id === stepId || s.id === stepId
+        ? {
+            ...s,
+            status: 'ESCALATED' as const,
+            escalated_to_role: targetRole,
+            required_role: targetRole,
+            assigned_role_code: targetRole,
+            comments: reason || `Escalated to ${targetRole}`,
+          }
+        : s
+    );
+
+    const updatedReq: WorkflowApprovalRequest = {
+      ...targetReq,
+      required_role: targetRole,
+      steps: updatedSteps,
+    };
+
+    const nextList = workflowRequestsRef.current.map((w) =>
+      w.instance_id === targetReq.instance_id ? updatedReq : w
+    );
+    workflowRequestsRef.current = nextList;
+    setWorkflowRequests(nextList);
+
+    const escalatedStepObj =
+      targetReq.steps.find((s) => s.step_id === stepId || s.id === stepId) || targetReq.steps[0];
+    const escalatedSeq = Number(escalatedStepObj.sequence_order ?? escalatedStepObj.step_order ?? 1);
+
+    const auditEntry: ApprovalAuditEntry = {
+      id: `ap-audit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      instance_id: targetReq.instance_id,
+      step_id: stepId,
+      document_type: targetReq.document_type,
+      document_id: targetReq.document_id,
+      document_ref: targetReq.document_ref,
+      step_order: escalatedSeq,
+      sequence_order: escalatedSeq,
+      step_sequence: escalatedSeq,
+      action: 'ESCALATED',
+      required_role: targetRole,
+      actor_name: actorName,
+      actor_role: currentUser?.role || escalatedStepObj.required_role,
+      actor_id: currentUser?.id || 'admin',
+      remarks: reason || `Escalated to ${targetRole}`,
+      escalated_to_role: targetRole,
+      total_amount: targetReq.total_amount,
+      timestamp: now,
+    };
+    setApprovalAuditLogs((prev) => [auditEntry, ...prev]);
+
+    logAuditAction({
+      userId: currentUser.id,
+      userName: actorName,
+      userRole: currentUser?.role ?? 'Guest',
+      action: 'UPDATE',
+      entityType: targetReq.document_type as any,
+      entityId: targetReq.document_id,
+      summary: `Escalated Step #${escalatedSeq} for ${targetReq.document_ref} to role ${targetRole}`,
+      newData: updatedReq,
+    });
+  };
+
   const resetToDefaults = () => {
     setOperations([]);
     setCustomers([]);
@@ -2910,6 +3952,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers([]);
     setCrusherPayments([]);
     setEditRequests([]);
+    setWorkflowRequests([]);
+    setApprovalAuditLogs([]);
     setAuditLogs([]);
     setBrandConfig(INITIAL_BRAND_CONFIG);
   };
@@ -2933,7 +3977,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .reduce((acc, curr) => acc + (curr.amount || 0), 0);
     const crusherPayableBalance = totalCrusherPurchased - totalCrusherPaid;
 
-    const pendingApprovalsCount = editRequests.filter((r) => r.status === 'Pending').length;
+    const pendingApprovalsCount =
+      editRequests.filter((r) => r.status === 'Pending').length +
+      workflowRequests.filter(
+        (w) => w.status === 'PENDING_APPROVAL' || w.status === 'IN_PROGRESS' || w.status === 'PENDING'
+      ).length;
 
     return {
       totalSales,
@@ -2948,7 +3996,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       crusherPayableBalance,
       pendingApprovalsCount,
     };
-  }, [accessibleOperations, activeOperations, crusherPayments, editRequests]);
+  }, [accessibleOperations, activeOperations, crusherPayments, editRequests, workflowRequests]);
 
   return (
     <AppContext.Provider
@@ -3017,6 +4065,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createEditRequest,
         approveEditRequest,
         rejectEditRequest,
+        approvalRules,
+        workflowRequests,
+        approvalAuditLogs,
+        refreshApprovalMatrix,
+        addApprovalRule,
+        updateApprovalRule,
+        deleteApprovalRule,
+        toggleModuleApproval,
+        toggleModuleApprovalRules: toggleModuleApproval,
+        evaluateTransactionApproval,
+        approveWorkflowRequest,
+        rejectWorkflowRequest,
+        escalateWorkflowRequest,
         brandConfig,
         updateBrandConfig,
         resetBrandConfig,

@@ -19,7 +19,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
-from backend.app.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.models import MasterTenant, ResCompany, ResUser, TenantDatabaseMigration
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (

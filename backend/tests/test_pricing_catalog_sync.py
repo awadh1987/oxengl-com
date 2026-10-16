@@ -18,9 +18,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from backend.app.main import app
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.app.domains.saas.models import SubscriptionPlan
-from backend.app.services.billing_service import seed_default_subscription_plans
+from backend.app.services.billing_service import DEFAULT_PLAN_PRESENTATION, DEFAULT_TIER_PLANS, get_plan_by_name, seed_default_subscription_plans
 from backend.app.api.v1.platform_governance import invalidate_landing_cache
 from backend.tests.auth_helpers import platform_superadmin_headers
 
@@ -40,6 +40,17 @@ def db_session():
         yield db
     finally:
         db.rollback()
+        for p_def in DEFAULT_TIER_PLANS:
+            existing = get_plan_by_name(db, p_def["name"])
+            if existing:
+                existing.display_name = p_def["display_name"]
+                existing.monthly_price = p_def["monthly_price"]
+                existing.annual_price = p_def["annual_price"]
+                pres = DEFAULT_PLAN_PRESENTATION.get(p_def["name"], {})
+                if "display_features" in pres:
+                    existing.display_features = list(pres["display_features"])
+        db.commit()
+        invalidate_landing_cache()
         db.close()
 
 

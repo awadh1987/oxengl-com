@@ -228,6 +228,20 @@ class PaymentGatewaySettingsAdminView(BaseModel):
     encryption_configured: bool
 
 
+class PaymentGatewayPublicView(BaseModel):
+    """Public/tenant-facing payment gateway availability and non-secret instructions."""
+    is_stripe_enabled: bool
+    stripe_mode: Optional[Literal["live", "test"]] = None
+    stripe_publishable_key: Optional[str] = None
+
+    is_moyasar_enabled: bool
+    moyasar_mode: Optional[Literal["live", "test"]] = None
+    moyasar_publishable_key: Optional[str] = None
+
+    local_bank_instructions: list[dict[str, Any]]
+    digital_wallet_instructions: list[dict[str, Any]]
+
+
 # ==============================================================================
 # Persistence helpers
 # ==============================================================================
@@ -261,6 +275,48 @@ def _mode(key: Optional[str]) -> Optional[Literal["live", "test"]]:
     if not key:
         return None
     return "live" if "_live_" in key else "test" if "_test_" in key else None
+
+
+def build_public_gateway_view(row: Optional[PaymentGatewaySettings]) -> PaymentGatewayPublicView:
+    """Build a safe public view of active payment gateways for registration & tenant checkout."""
+    stripe_pub, _ = _decrypt_or_none("stripe_publishable_key", getattr(row, "stripe_publishable_key_encrypted", None) if row else None)
+    stripe_sec, _ = _decrypt_or_none("stripe_secret_key", getattr(row, "stripe_secret_key_encrypted", None) if row else None)
+    moyasar_pub, _ = _decrypt_or_none("moyasar_publishable_key", getattr(row, "moyasar_publishable_key_encrypted", None) if row else None)
+    moyasar_sec, _ = _decrypt_or_none("moyasar_api_key", getattr(row, "moyasar_api_key_encrypted", None) if row else None)
+
+    active_banks = [
+        b for b in (list(row.local_bank_instructions or []) if row else [])
+        if isinstance(b, dict) and b.get("is_active", True)
+    ]
+    if not active_banks:
+        active_banks = [
+            {
+                "id": "default-saudi-corporate-bank",
+                "bank_name": "Al Rajhi Bank (Corporate Treasury)",
+                "account_name": "OxenGL Enterprise Technologies LLC",
+                "iban": "SA4480000000123456789012",
+                "swift": "RJHISARI",
+                "currency": "SAR",
+                "branch": "Riyadh Head Office",
+                "is_active": True,
+            }
+        ]
+
+    active_wallets = [
+        w for w in (list(row.digital_wallet_instructions or []) if row else [])
+        if isinstance(w, dict) and w.get("is_active", True)
+    ]
+
+    return PaymentGatewayPublicView(
+        is_stripe_enabled=bool(row and row.is_stripe_enabled),
+        stripe_mode=_mode(stripe_sec or stripe_pub),
+        stripe_publishable_key=stripe_pub if (row and row.is_stripe_enabled) else None,
+        is_moyasar_enabled=bool(row and row.is_moyasar_enabled),
+        moyasar_mode=_mode(moyasar_sec or moyasar_pub),
+        moyasar_publishable_key=moyasar_pub if (row and row.is_moyasar_enabled) else None,
+        local_bank_instructions=active_banks,
+        digital_wallet_instructions=active_wallets,
+    )
 
 
 def build_admin_view(row: Optional[PaymentGatewaySettings]) -> PaymentGatewaySettingsAdminView:

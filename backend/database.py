@@ -183,7 +183,11 @@ def get_db(request: Request = None):
                     try:
                         claims = decode_jwt_token(raw_token)
                     except HTTPException:
-                        claims = None
+                        try:
+                            from backend.app.main import decode_session_token
+                            claims = decode_session_token(raw_token)
+                        except Exception:
+                            claims = None
 
         if authenticated_user is not None:
             tenant_id = getattr(authenticated_user, "company_id", None)
@@ -225,6 +229,13 @@ def get_db(request: Request = None):
             "/api/v1/tenant/control",
             "/api/tenant/control",
             "/api/v1/tenant-control",
+            "/api/v1/tenant/billing",
+            "/api/tenant/billing",
+            "/api/v1/billing",
+            "/api/billing",
+            "/api/v1/pricing",
+            "/api/pricing",
+            "/api/v1/public/billing-gateways",
             "/api/v1/superadmin",
             "/api/superadmin",
             "/api/v1/platform",

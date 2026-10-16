@@ -107,7 +107,61 @@ class PurchaseRequisitionCreate(BaseModel):
 
 
 class StepDecisionRequest(BaseModel):
+    user_id: Optional[str] = None
     rejection_reason: Optional[str] = None
+    reason: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class StepApproveRequest(BaseModel):
+    user_id: Optional[str] = None
+    remarks: Optional[str] = None
+
+
+class StepEscalateRequest(BaseModel):
+    user_id: Optional[str] = None
+    escalated_to_role: str = "CEO"
+    reason: Optional[str] = None
+
+
+class ApprovalRulePayload(BaseModel):
+    document_type: str
+    min_amount: float = 0.0
+    max_amount: Optional[float] = 999999999.0
+    currency: str = "SAR"
+    sequence_order: Optional[int] = None
+    step_order: Optional[int] = None
+    required_role_code: Optional[str] = None
+    required_role: Optional[str] = None
+    cost_center_id: Optional[str] = None
+    is_active: bool = True
+
+
+class ApprovalRuleUpdatePayload(BaseModel):
+    document_type: Optional[str] = None
+    min_amount: Optional[float] = None
+    max_amount: Optional[float] = None
+    currency: Optional[str] = None
+    sequence_order: Optional[int] = None
+    step_order: Optional[int] = None
+    required_role_code: Optional[str] = None
+    required_role: Optional[str] = None
+    cost_center_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ModuleTogglePayload(BaseModel):
+    document_type: str
+    is_active: bool
+
+
+class EvaluateTransactionPayload(BaseModel):
+    document_type: str
+    document_id: Optional[str] = None
+    total_amount: Optional[float] = None
+    amount: Optional[float] = None
+    requested_by: Optional[str] = None
+    cost_center_id: Optional[str] = None
 
 
 # ==============================================================================
@@ -331,12 +385,15 @@ def create_purchase_requisition(
     if wf_result == "AUTO_APPROVED":
         pr.status = "APPROVED"
         db.commit()
+    else:
+        pr.status = "PENDING_APPROVAL"
+        db.commit()
 
     return {
         "id": str(pr.id),
         "pr_number": pr.pr_number,
         "status": pr.status,
-        "workflow": str(wf_result),
+        "workflow": str(wf_result) if wf_result == "AUTO_APPROVED" else str(wf_result.id),
     }
 
 
@@ -457,46 +514,464 @@ def update_supplier_contract(
 
 
 # ==============================================================================
-# Approval Queue Action Endpoints
+# Approval Matrix Configuration & Queue Action Endpoints
 # ==============================================================================
+
+def _resolve_approval_tenant_id(
+    request: Optional[Request],
+    x_tenant_id: Optional[str],
+    x_company_id: Optional[str],
+) -> uuid.UUID:
+    """
+    Resolves and validates the caller's tenant UUID for approval matrix & queue operations.
+    Enforces strict JWT tenant isolation if a Bearer token is present (rejecting cross-tenant spoofing).
+    """
+    jwt_tid: Optional[str] = None
+    is_super = False
+    if request is not None:
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+            for tier in ("tenant", "master"):
+                try:
+                    claims = verify_two_tier_jwt(token, expected_tier=tier)
+                    if claims:
+                        jwt_tid = str(claims.get("tenant_id") or claims.get("company_id") or "") or None
+                        if claims.get("tier") == "master" or str(claims.get("role", "")).lower() in ("super_admin", "superadmin"):
+                            is_super = True
+                        break
+                except Exception:
+                    continue
+            if not jwt_tid and not is_super:
+                try:
+                    from backend.api.dependencies import decode_jwt_token
+                    claims = decode_jwt_token(token)
+                    if claims:
+                        jwt_tid = str(claims.get("tenant_id") or claims.get("company_id") or "") or None
+                        role_str = str(claims.get("role", "")).lower().replace(" ", "_")
+                        if claims.get("is_super_admin") or claims.get("is_superuser") or role_str in ("super_admin", "superadmin", "master", "root"):
+                            is_super = True
+                except Exception:
+                    pass
+
+    header_tid = x_tenant_id or x_company_id
+    if jwt_tid and not is_super and header_tid:
+        try:
+            if WorkflowEngineService._to_uuid(header_tid) != WorkflowEngineService._to_uuid(jwt_tid):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Multi-tenant isolation violation: Cannot access approval policies or queue of another tenant.",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    effective_raw = (
+        (header_tid if is_super else (jwt_tid or header_tid))
+        or (getattr(request.state, "tenant_id", None) if request is not None and hasattr(request, "state") else None)
+        or (getattr(request.state, "company_id", None) if request is not None and hasattr(request, "state") else None)
+    )
+    if effective_raw:
+        return WorkflowEngineService._to_uuid(effective_raw)
+    return uuid.UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
+
+
+@router.get("/approvals/rules")
+def list_approval_rules(
+    request: Request,
+    document_type: Optional[str] = None,
+    seed_if_empty: bool = True,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+):
+    """Returns the tenant's configured approval matrix rules (auto-seeding defaults if empty)."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    return WorkflowEngineService.list_rules(
+        db=db,
+        tenant_id=tenant_uuid,
+        document_type=document_type,
+        seed_if_empty=seed_if_empty,
+    )
+
+
+@router.get("/approvals/matrix")
+def get_approval_matrix_overview(
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+):
+    """Returns both the tenant's approval matrix rules and supported module metadata."""
+    from backend.app.services.workflow_service import SUPPORTED_APPROVAL_MODULES
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    rules = WorkflowEngineService.list_rules(db=db, tenant_id=tenant_uuid, seed_if_empty=True)
+    return {
+        "tenant_id": str(tenant_uuid),
+        "supported_modules": list(SUPPORTED_APPROVAL_MODULES),
+        "rules": rules,
+    }
+
+
+@router.post("/approvals/rules", status_code=status.HTTP_201_CREATED)
+def create_approval_rule(
+    payload: ApprovalRulePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
+):
+    """Creates a new threshold rule in the tenant's approval matrix."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    role_code = payload.required_role_code or payload.required_role or "FINANCE_MANAGER"
+    seq_order = payload.sequence_order if payload.sequence_order is not None else (payload.step_order or 1)
+    max_amt = payload.max_amount if payload.max_amount is not None else 999999999.0
+    try:
+        rule = WorkflowEngineService.create_rule(
+            db=db,
+            tenant_id=tenant_uuid,
+            document_type=payload.document_type,
+            min_amount=payload.min_amount,
+            max_amount=max_amt,
+            required_role_code=role_code,
+            sequence_order=seq_order,
+            currency=payload.currency,
+            cost_center_id=payload.cost_center_id,
+            is_active=payload.is_active,
+        )
+        rule_dict = WorkflowEngineService.rule_to_dict(rule)
+        rule_dict["required_role"] = rule_dict["required_role_code"]
+        rule_dict["step_order"] = rule_dict["sequence_order"]
+        return {"rule": rule_dict, **rule_dict}
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.put("/approvals/rules/{rule_id}")
+@router.patch("/approvals/rules/{rule_id}")
+def update_approval_rule(
+    rule_id: str,
+    payload: ApprovalRuleUpdatePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
+):
+    """Updates an existing approval matrix rule within the caller's tenant."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    updates = payload.model_dump(exclude_unset=True)
+    if "required_role" in updates and "required_role_code" not in updates:
+        updates["required_role_code"] = updates.pop("required_role")
+    if "step_order" in updates and "sequence_order" not in updates:
+        updates["sequence_order"] = updates.pop("step_order")
+    try:
+        rule = WorkflowEngineService.update_rule(
+            db=db,
+            tenant_id=tenant_uuid,
+            rule_id=rule_id,
+            updates=updates,
+        )
+        rule_dict = WorkflowEngineService.rule_to_dict(rule)
+        rule_dict["required_role"] = rule_dict["required_role_code"]
+        rule_dict["step_order"] = rule_dict["sequence_order"]
+        return {"rule": rule_dict, **rule_dict}
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.delete("/approvals/rules/{rule_id}")
+def delete_approval_rule(
+    rule_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
+):
+    """Deletes an approval matrix rule within the caller's tenant."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    deleted = WorkflowEngineService.delete_rule(
+        db=db,
+        tenant_id=tenant_uuid,
+        rule_id=rule_id,
+    )
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Approval rule {rule_id} not found")
+    return {"status": "deleted", "rule_id": rule_id}
+
+
+@router.post("/approvals/rules/module-toggle")
+def toggle_module_approval_rules(
+    payload: ModuleTogglePayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+    x_user_id: Optional[str] = Header(None),
+):
+    """Enables or disables all approval rules for a module in the caller's tenant."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    updated_count = WorkflowEngineService.toggle_module_rules(
+        db=db,
+        tenant_id=tenant_uuid,
+        document_type=payload.document_type,
+        is_active=payload.is_active,
+    )
+    rules = WorkflowEngineService.list_rules(
+        db=db,
+        tenant_id=tenant_uuid,
+        document_type=payload.document_type,
+        seed_if_empty=False,
+    )
+    return {
+        "document_type": payload.document_type.upper(),
+        "is_active": payload.is_active,
+        "updated_count": updated_count,
+        "rules": rules,
+    }
+
+
+@router.post("/approvals/evaluate")
+def evaluate_transaction_approval(
+    payload: EvaluateTransactionPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+):
+    """
+    Evaluates a module mutation against the tenant's configured approval rules.
+    If the transaction exceeds a configured threshold, initializes a PENDING workflow instance
+    and returns status='PENDING_APPROVAL' along with the generated steps.
+    """
+    from backend.app.domains.procurement.models import WorkflowInstance, WorkflowStep
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    doc_uuid = WorkflowEngineService._to_uuid(payload.document_id) if payload.document_id else uuid.uuid4()
+    effective_amount = payload.total_amount if payload.total_amount is not None else (payload.amount or 0.0)
+    wf_result = WorkflowEngineService.initialize_document_workflow(
+        db=db,
+        tenant_id=tenant_uuid,
+        doc_type=payload.document_type,
+        doc_id=doc_uuid,
+        total_amount=effective_amount,
+        cost_center_id=payload.cost_center_id,
+    )
+    if wf_result == "AUTO_APPROVED":
+        return {
+            "status": "AUTO_APPROVED",
+            "requires_approval": False,
+            "document_type": payload.document_type.upper(),
+            "document_id": str(doc_uuid),
+            "total_amount": effective_amount,
+            "instance_id": None,
+            "steps": [],
+        }
+
+    instance = db.scalar(select(WorkflowInstance).where(WorkflowInstance.id == wf_result))
+    steps = db.scalars(
+        select(WorkflowStep)
+        .where(WorkflowStep.instance_id == wf_result)
+        .order_by(WorkflowStep.sequence_order)
+    ).all()
+    return {
+        "status": "PENDING_APPROVAL",
+        "requires_approval": True,
+        "document_type": instance.document_type if instance else payload.document_type.upper(),
+        "document_id": str(instance.document_id if instance else doc_uuid),
+        "total_amount": effective_amount,
+        "instance_id": str(wf_result),
+        "current_step": instance.current_step if instance else 1,
+        "steps": [
+            {
+                "id": str(s.id),
+                "step_id": str(s.id),
+                "sequence_order": s.sequence_order,
+                "assigned_role_code": s.assigned_role_code,
+                "status": s.status,
+            }
+            for s in steps
+        ],
+    }
+
 
 @router.get("/approvals/queue")
 def get_approval_queue(
+    request: Request = None,
+    include_history: bool = False,
+    role: Optional[str] = None,
     db: Session = Depends(get_db),
     x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
     x_role: Optional[str] = Header(None),
 ):
-    """Returns pending approval queue items."""
-    tenant_uuid = uuid.UUID(x_tenant_id) if x_tenant_id else uuid.UUID("a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
-    roles = [x_role] if x_role else None
-    return WorkflowEngineService.get_pending_queue(db, tenant_uuid, roles)
+    """Returns pending approval queue items (and optional history) for the tenant."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    effective_role = x_role or role
+    roles = [effective_role] if effective_role else None
+    return WorkflowEngineService.get_pending_queue(
+        db=db,
+        tenant_id=tenant_uuid,
+        role_codes=roles,
+        include_history=include_history,
+    )
+
+
+@router.get("/approvals/audit-logs")
+def get_approval_audit_logs(
+    request: Request,
+    document_id: Optional[str] = None,
+    db: Session = Depends(get_db),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+):
+    """Returns the immutable approval audit trail for the tenant."""
+    tenant_uuid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id)
+    entries = WorkflowEngineService.get_audit_trail(
+        db=db,
+        tenant_id=tenant_uuid,
+    )
+    if document_id:
+        target_uuid_str = str(WorkflowEngineService._to_uuid(document_id))
+        entries = [e for e in entries if e["document_id"] in (document_id, target_uuid_str)]
+    return {"audit_logs": entries, "items": entries}
 
 
 @router.post("/approvals/steps/{step_id}/approve")
 def approve_workflow_step(
     step_id: uuid.UUID,
+    payload: Optional[StepApproveRequest] = None,
+    request: Request = None,
     db: Session = Depends(get_db),
     x_user_id: Optional[str] = Header(None),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
 ):
-    """Approves a specific workflow step."""
-    user_uuid = uuid.UUID(x_user_id) if x_user_id else uuid.UUID("00000000-0000-0000-0000-000000000000")
-    instance = WorkflowEngineService.approve_step(db, step_id, user_uuid)
-    return {"status": "SUCCESS", "instance_id": str(instance.id), "instance_status": instance.status}
+    """Approves a specific workflow step with optional remarks and tenant boundary enforcement."""
+    raw_actor = (payload.user_id if payload and payload.user_id else None) or x_user_id
+    user_uuid = WorkflowEngineService._to_uuid(raw_actor) if raw_actor else uuid.UUID("00000000-0000-0000-0000-000000000000")
+    explicit_tid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id) if (x_tenant_id or x_company_id or (request and request.headers.get("Authorization"))) else None
+    remarks = payload.remarks if payload else None
+    try:
+        instance = WorkflowEngineService.approve_step(
+            db=db,
+            step_id=step_id,
+            actioned_by=user_uuid,
+            remarks=remarks,
+            tenant_id=explicit_tid,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return {
+        "status": "SUCCESS",
+        "step_status": "APPROVED",
+        "workflow_status": instance.status,
+        "instance_id": str(instance.id),
+        "instance_status": instance.status,
+        "current_step": instance.current_step,
+        "document_type": instance.document_type,
+        "document_id": str(instance.document_id),
+    }
 
 
 @router.post("/approvals/steps/{step_id}/reject")
 def reject_workflow_step(
     step_id: uuid.UUID,
     payload: StepDecisionRequest,
+    request: Request = None,
     db: Session = Depends(get_db),
     x_user_id: Optional[str] = Header(None),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
 ):
-    """Rejects a workflow step with justification."""
-    if not payload.rejection_reason:
+    """Rejects a workflow step with mandatory justification and tenant boundary enforcement."""
+    reason = payload.rejection_reason or payload.reason or payload.remarks
+    if not reason:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Rejection reason required")
-    user_uuid = uuid.UUID(x_user_id) if x_user_id else uuid.UUID("00000000-0000-0000-0000-000000000000")
-    instance = WorkflowEngineService.reject_step(db, step_id, user_uuid, payload.rejection_reason)
-    return {"status": "REJECTED", "instance_id": str(instance.id), "instance_status": instance.status}
+    raw_actor = payload.user_id or x_user_id
+    user_uuid = WorkflowEngineService._to_uuid(raw_actor) if raw_actor else uuid.UUID("00000000-0000-0000-0000-000000000000")
+    explicit_tid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id) if (x_tenant_id or x_company_id or (request and request.headers.get("Authorization"))) else None
+    try:
+        instance = WorkflowEngineService.reject_step(
+            db=db,
+            step_id=step_id,
+            actioned_by=user_uuid,
+            rejection_reason=reason,
+            tenant_id=explicit_tid,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    return {
+        "status": "REJECTED",
+        "step_status": "REJECTED",
+        "workflow_status": instance.status,
+        "instance_id": str(instance.id),
+        "instance_status": instance.status,
+        "document_type": instance.document_type,
+        "document_id": str(instance.document_id),
+    }
+
+
+@router.post("/approvals/steps/{step_id}/escalate")
+def escalate_workflow_step(
+    step_id: uuid.UUID,
+    payload: StepEscalateRequest,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    x_user_id: Optional[str] = Header(None),
+    x_tenant_id: Optional[str] = Header(None),
+    x_company_id: Optional[str] = Header(None),
+):
+    """Escalates a pending workflow step to a higher executive authority role and logs audit trail."""
+    from backend.app.domains.procurement.models import WorkflowStep
+    raw_actor = payload.user_id or x_user_id
+    user_uuid = WorkflowEngineService._to_uuid(raw_actor) if raw_actor else uuid.UUID("00000000-0000-0000-0000-000000000000")
+    explicit_tid = _resolve_approval_tenant_id(request, x_tenant_id, x_company_id) if (x_tenant_id or x_company_id or (request and request.headers.get("Authorization"))) else None
+    try:
+        instance = WorkflowEngineService.escalate_step(
+            db=db,
+            step_id=step_id,
+            actioned_by=user_uuid,
+            escalated_to_role=payload.escalated_to_role,
+            reason=payload.reason,
+            tenant_id=explicit_tid,
+        )
+    except PermissionError as exc:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+    active_step = db.scalar(
+        select(WorkflowStep).where(
+            WorkflowStep.instance_id == instance.id,
+            WorkflowStep.sequence_order == instance.current_step,
+            WorkflowStep.status == "PENDING",
+        )
+    )
+    return {
+        "status": "ESCALATED",
+        "step_status": "ESCALATED",
+        "workflow_status": instance.status,
+        "instance_id": str(instance.id),
+        "instance_status": instance.status,
+        "current_step": instance.current_step,
+        "escalated_to_role": payload.escalated_to_role.strip().upper(),
+        "escalated_step": {
+            "id": str(active_step.id) if active_step else None,
+            "step_id": str(active_step.id) if active_step else None,
+            "sequence_order": active_step.sequence_order if active_step else instance.current_step,
+            "assigned_role_code": active_step.assigned_role_code if active_step else payload.escalated_to_role.strip().upper(),
+            "status": "PENDING",
+        },
+        "document_type": instance.document_type,
+        "document_id": str(instance.document_id),
+    }
 
 
 @router.post("/purchase-orders", status_code=status.HTTP_201_CREATED)
@@ -508,7 +983,7 @@ def create_purchase_order(
 ):
     """
     Creates and strictly persists a new Purchase Order in PostgreSQL.
-    Enforces db.add(), db.commit(), db.refresh().
+    Enforces db.add(), db.commit(), db.refresh(), and evaluates Purchase Order approval rules.
     """
     comp_raw = payload.get("company_id") or x_company_id or x_tenant_id
     comp_uuid = None
@@ -618,8 +1093,34 @@ def create_purchase_order(
     db.commit()
     db.refresh(new_po)
 
+    # Evaluate against tenant approval matrix rules for PURCHASE_ORDER
+    wf_result = WorkflowEngineService.initialize_document_workflow(
+        db=db,
+        tenant_id=comp_uuid,
+        doc_type="PURCHASE_ORDER",
+        doc_id=new_po.id,
+        total_amount=float(total_val),
+    )
+    approval_status = "AUTO_APPROVED"
+    workflow_instance_id = None
+    if wf_result != "AUTO_APPROVED":
+        approval_status = "PENDING_APPROVAL"
+        workflow_instance_id = str(wf_result.id)
+        new_po.status = "draft"
+        attrs = dict(new_po.custom_attributes or {})
+        attrs["approval_status"] = "PENDING_APPROVAL"
+        attrs["workflow_instance_id"] = workflow_instance_id
+        new_po.custom_attributes = attrs
+        db.commit()
+        db.refresh(new_po)
+
+    effective_status = (
+        "PENDING_APPROVAL"
+        if approval_status == "PENDING_APPROVAL"
+        else ("PENDING" if new_po.status in ["draft", "confirmed"] else new_po.status.upper())
+    )
+
     return {
-        "status": "CREATED",
         "id": str(new_po.id),
         "po_id": str(new_po.id),
         "po_number": new_po.po_number,
@@ -634,7 +1135,9 @@ def create_purchase_order(
         "totalAmount": float(new_po.total_amount),
         "currency": new_po.currency,
         "po_status": new_po.status,
-        "status": "PENDING" if new_po.status in ["draft", "confirmed"] else new_po.status.upper(),
+        "status": effective_status,
+        "approval_status": approval_status,
+        "workflow_instance_id": workflow_instance_id,
         "issueDate": new_po.order_date.strftime("%Y-%m-%d"),
         "deliveryDate": new_po.expected_delivery_date.strftime("%Y-%m-%d") if new_po.expected_delivery_date else new_po.order_date.strftime("%Y-%m-%d"),
         "notes": new_po.notes,
@@ -647,7 +1150,7 @@ def list_purchase_orders(
     x_company_id: Optional[str] = Header(None),
     x_tenant_id: Optional[str] = Header(None),
 ):
-    """Lists persisted purchase orders with partner details."""
+    """Lists persisted purchase orders with partner details and approval states."""
     query = select(core_models.PurchaseOrder).order_by(core_models.PurchaseOrder.order_date.desc())
     if x_company_id or x_tenant_id:
         try:
@@ -660,6 +1163,13 @@ def list_purchase_orders(
     results = []
     for po in orders:
         partner_name = po.partner.name if po.partner else "Vendor"
+        custom_approval = (po.custom_attributes or {}).get("approval_status")
+        if custom_approval in ("PENDING_APPROVAL", "REJECTED"):
+            display_status = custom_approval
+        elif po.status in ["draft", "confirmed"]:
+            display_status = "APPROVED" if custom_approval == "APPROVED" else "PENDING"
+        else:
+            display_status = po.status.upper()
         results.append({
             "id": str(po.id),
             "po_id": str(po.id),
@@ -675,7 +1185,8 @@ def list_purchase_orders(
             "totalAmount": float(po.total_amount),
             "currency": po.currency,
             "po_status": po.status,
-            "status": "PENDING" if po.status in ["draft", "confirmed"] else po.status.upper(),
+            "status": display_status,
+            "approval_status": custom_approval or ("APPROVED" if po.status == "confirmed" else "AUTO_APPROVED"),
             "issueDate": po.order_date.strftime("%Y-%m-%d") if po.order_date else "",
             "deliveryDate": po.expected_delivery_date.strftime("%Y-%m-%d") if po.expected_delivery_date else (po.order_date.strftime("%Y-%m-%d") if po.order_date else ""),
             "notes": po.notes,

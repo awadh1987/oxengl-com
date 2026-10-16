@@ -1125,21 +1125,21 @@ export const Navbar: React.FC<NavbarProps> = ({
       {isProfileOpen && <UserProfilePanel onClose={() => setIsProfileOpen(false)} />}
     </div>
 
-      {/* Bottom Row: Stacked Horizontal Domain Tabs (Phase 2) */}
+      {/* Bottom Row: Unified Responsive Domain Switcher & Sub-Navigation Pills */}
       {!isDriverMode && (
         <div
           id="header-domain-navigation"
-          className="flex w-full flex-col gap-1 border-t border-slate-200/60 dark:border-slate-800/80 pt-1 pb-0.5"
+          className="flex w-full flex-col gap-1 border-t border-slate-200/60 dark:border-slate-800/80 pt-1.5 pb-1"
           dir={isAr ? 'rtl' : 'ltr'}
         >
-          {/* Main Domain Tab 1: Operations & Logistics */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
+          {/* Unified Domain Switcher Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
                 type="button"
                 id="header-domain-tab-ops"
                 onClick={() => handleDomainClick('Operations & Logistics')}
-                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-black transition-all duration-200 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-black transition-all duration-200 cursor-pointer ${
                   activeNavDomain === 'Operations & Logistics'
                     ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-xs hover:shadow-[0_0_12px_rgba(249,115,22,0.4)]'
                     : isDark
@@ -1167,49 +1167,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 />
               </button>
 
-              {activeNavDomain === 'Operations & Logistics' && (
-                <div className="hidden sm:flex items-center gap-1 text-[9.5px] text-orange-400 font-mono">
-                  <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                  <span>{isAr ? 'شاشات التشغيل والأسطول نشطة' : 'Operations & Logistics Active'}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Horizontal Collapsible Sub-Navigation List */}
-            {activeNavDomain === 'Operations & Logistics' && isOpsExpanded && (
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                {opsSubItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => onNavigateTab?.(item.id)}
-                      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
-                        isActive
-                          ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50 shadow-xs'
-                          : isDark
-                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <Icon className="h-2.5 w-2.5 shrink-0" />
-                      <span>{isAr ? item.labelAr : item.labelEn}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Main Domain Tab 2: Finance, Accounting & Control */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
               <button
                 type="button"
                 id="header-domain-tab-finance"
                 onClick={() => handleDomainClick('Finance, Accounting & Control')}
-                className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-0.5 text-[11px] font-black transition-all duration-200 cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-black transition-all duration-200 cursor-pointer ${
                   activeNavDomain === 'Finance, Accounting & Control'
                     ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-xs hover:shadow-[0_0_12px_rgba(139,92,246,0.4)]'
                     : isDark
@@ -1236,41 +1198,73 @@ export const Navbar: React.FC<NavbarProps> = ({
                   }`}
                 />
               </button>
-
-              {activeNavDomain === 'Finance, Accounting & Control' && (
-                <div className="hidden sm:flex items-center gap-1 text-[9.5px] text-violet-400 font-mono">
-                  <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
-                  <span>{isAr ? 'شاشات المالية ودفتر الأستاذ نشطة' : 'Finance & Control Active'}</span>
-                </div>
-              )}
             </div>
 
-            {/* Horizontal Collapsible Sub-Navigation List */}
-            {activeNavDomain === 'Finance, Accounting & Control' && isFinanceExpanded && (
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-                {financeSubItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = activeTab === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      onClick={() => onNavigateTab?.(item.id)}
-                      className={`inline-flex shrink-0 items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
-                        isActive
-                          ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50 shadow-xs'
-                          : isDark
-                          ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
-                      }`}
-                    >
-                      <Icon className="h-2.5 w-2.5 shrink-0" />
-                      <span>{isAr ? item.labelAr : item.labelEn}</span>
-                    </button>
-                  );
-                })}
+            {activeNavDomain === 'Operations & Logistics' ? (
+              <div className="hidden md:flex items-center gap-1 text-[9.5px] text-orange-400 font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                <span>{isAr ? 'شاشات التشغيل والأسطول نشطة' : 'Operations & Logistics Active'}</span>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-1 text-[9.5px] text-violet-400 font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-500 animate-pulse" />
+                <span>{isAr ? 'شاشات المالية ودفتر الأستاذ نشطة' : 'Finance & Control Active'}</span>
               </div>
             )}
           </div>
+
+          {/* Responsive Sub-Navigation Pills (Sleek no-scrollbar mobile scroll + clean desktop wrap) */}
+          {activeNavDomain === 'Operations & Logistics' && isOpsExpanded && (
+            <div className="flex items-center sm:flex-wrap gap-1 overflow-x-auto no-scrollbar py-0.5">
+              {opsSubItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onNavigateTab?.(item.id)}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                      isActive
+                        ? 'bg-orange-500/20 text-orange-400 border border-orange-500/50 shadow-xs'
+                        : isDark
+                        ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Icon className="h-2.5 w-2.5 shrink-0" />
+                    <span>{isAr ? item.labelAr : item.labelEn}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {activeNavDomain === 'Finance, Accounting & Control' && isFinanceExpanded && (
+            <div className="flex items-center sm:flex-wrap gap-1 overflow-x-auto no-scrollbar py-0.5">
+              {financeSubItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => onNavigateTab?.(item.id)}
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold transition-all duration-150 cursor-pointer ${
+                      isActive
+                        ? 'bg-violet-500/20 text-violet-400 border border-violet-500/50 shadow-xs'
+                        : isDark
+                        ? 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/70 border border-transparent'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <Icon className="h-2.5 w-2.5 shrink-0" />
+                    <span>{isAr ? item.labelAr : item.labelEn}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </header>

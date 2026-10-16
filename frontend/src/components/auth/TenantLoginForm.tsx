@@ -61,8 +61,11 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
     if (loading || isSubmittingRef.current) return;
     setError(null);
 
-    const cleanSlug = tenantSlug.trim().toLowerCase();
     const cleanIdentity = identity.trim();
+    const inferredDomainSlug = cleanIdentity.includes('@')
+      ? cleanIdentity.split('@')[1]?.split('.')[0]?.trim().toLowerCase()
+      : '';
+    const cleanSlug = tenantSlug.trim().toLowerCase() || inferredDomainSlug;
 
     if (!cleanSlug) {
       setError(isAr ? 'يرجى إدخال أو تحديد معرف المنشأة (Workspace Slug)' : 'Please enter or select a workspace slug');
@@ -141,8 +144,11 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
       return;
     }
 
-    const cleanSlug = tenantSlug.trim().toLowerCase();
     const cleanIdentity = identity.trim();
+    const inferredDomainSlug = cleanIdentity.includes('@')
+      ? cleanIdentity.split('@')[1]?.split('.')[0]?.trim().toLowerCase()
+      : '';
+    const cleanSlug = tenantSlug.trim().toLowerCase() || inferredDomainSlug;
 
     isVerifyingRef.current = true;
     setVerifyingTwoFactor(true);
@@ -332,7 +338,7 @@ export const TenantLoginForm: React.FC<TenantLoginFormProps> = ({
                 autoFocus
                 value={twoFactorCode}
                 onChange={(e) => setTwoFactorCode(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder={isAr ? 'أدخل رمز التحقق المكون من 6 أرقام' : 'Enter 6-digit verification code'}
+                placeholder={isAr ? 'أدخل رمز التحقق المكون من 6 أرقام (Enter 6-digit code)' : 'Enter 6-digit code'}
                 className="w-full rounded-xl border border-slate-800 bg-slate-900/90 ps-10 pe-4 py-3 font-mono text-center text-lg tracking-[0.4em] text-emerald-300 placeholder-slate-600 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/20"
               />
             </div>

@@ -28,6 +28,14 @@ import { ActionsMenu } from '../components/ActionsMenu';
 import { VehicleVitals, MaintenanceWorkOrder } from '../types';
 import { Upload as BulkUploadIcon } from 'lucide-react';
 import { BulkImportModal } from '../components/BulkImportModal';
+import {
+  ColumnDrilldownModal,
+  OxenActiveFiltersBar,
+  OxenColumnDef,
+  OxenColumnHeader,
+  useOxenColumnFilter,
+} from '../components/common/ColumnDrilldownModal';
+import { InlineApprovalActionBadge } from '../components/approvals/InlineApprovalActionBadge';
 
 type Vehicle = VehicleVitals;
 type MaintenanceOrder = MaintenanceWorkOrder;
@@ -62,7 +70,7 @@ interface InspectionLog {
 
 export const FleetMaintenanceView: React.FC = () => {
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
-  const { currentCompany, language, themeMode } = useApp();
+  const { currentCompany, language, themeMode, evaluateTransactionApproval } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
 
@@ -86,7 +94,7 @@ export const FleetMaintenanceView: React.FC = () => {
     description: '',
     parts_cost: 0,
     labor_cost: 0,
-    scheduled_date: new Date().toISOString().split('T')[0],
+    scheduled_date: '',
   });
 
   const [fuelForm, setFuelForm] = useState({
@@ -96,6 +104,7 @@ export const FleetMaintenanceView: React.FC = () => {
     price_per_liter: 2.35,
     fuel_station: 'SASCO Al-Kharj Highway',
     odometer_reading: 128450,
+    transaction_date: '',
   });
 
   const [statusNotice, setStatusNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -159,13 +168,184 @@ export const FleetMaintenanceView: React.FC = () => {
   const totalFuelCost = fuelLogs.reduce((sum, f) => sum + Number(f.total_amount || 0), 0);
   const avgFuelPrice = totalFuelLiters > 0 ? (totalFuelCost / totalFuelLiters).toFixed(2) : '0.00';
 
+  const orderColumns = useMemo<OxenColumnDef<MaintenanceOrder>[]>(
+    () => [
+      {
+        key: 'order_number',
+        labelEn: 'Order #',
+        labelAr: 'رقم الأمر',
+        type: 'categorical',
+        getStringValue: (o) => o.order_number || '',
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'vehicle',
+        labelEn: 'Vehicle',
+        labelAr: 'المركبة',
+        type: 'categorical',
+        getStringValue: (o) => {
+          const v = vehicleMap.get(o.vehicle_id);
+          return v ? `${v.license_plate} (${v.name})` : o.vehicle_id;
+        },
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'order_type',
+        labelEn: 'Type',
+        labelAr: 'النوع',
+        type: 'categorical',
+        getStringValue: (o) => o.order_type || '',
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'priority',
+        labelEn: 'Priority',
+        labelAr: 'الأولوية',
+        type: 'categorical',
+        getStringValue: (o) => o.priority || '',
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'description',
+        labelEn: 'Description',
+        labelAr: 'الوصف',
+        type: 'categorical',
+        getStringValue: (o) => o.description || '',
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'parts_cost',
+        labelEn: 'Parts (SAR)',
+        labelAr: 'قطع الغيار (ر.س)',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (o) => Number(o.parts_cost) || 0,
+      },
+      {
+        key: 'labor_cost',
+        labelEn: 'Labor (SAR)',
+        labelAr: 'العمالة (ر.س)',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (o) => Number(o.labor_cost) || 0,
+      },
+      {
+        key: 'total_cost',
+        labelEn: 'Total (SAR)',
+        labelAr: 'الإجمالي (ر.س)',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (o) => Number(o.total_cost) || 0,
+      },
+      {
+        key: 'status',
+        labelEn: 'Status',
+        labelAr: 'الحالة',
+        type: 'categorical',
+        getStringValue: (o) => o.status || '',
+        getCurrencyValue: (o) => Number(o.total_cost) || 0,
+      },
+    ],
+    [vehicleMap]
+  );
+
+  const ordersColFilter = useOxenColumnFilter(orders, orderColumns);
+  const filteredOrders = ordersColFilter.filteredRows;
+
+  const fuelColumns = useMemo<OxenColumnDef<FuelLog>[]>(
+    () => [
+      {
+        key: 'transaction_number',
+        labelEn: 'Tx #',
+        labelAr: 'رقم الإيصال',
+        type: 'categorical',
+        getStringValue: (f) => f.transaction_number || '',
+        getCurrencyValue: (f) => Number(f.total_amount) || 0,
+      },
+      {
+        key: 'vehicle',
+        labelEn: 'Vehicle',
+        labelAr: 'المركبة',
+        type: 'categorical',
+        getStringValue: (f) => {
+          const v = vehicleMap.get(f.vehicle_id);
+          return v ? `${v.license_plate} (${v.name})` : f.vehicle_id;
+        },
+        getCurrencyValue: (f) => Number(f.total_amount) || 0,
+      },
+      {
+        key: 'linked_trip',
+        labelEn: 'Linked Trip',
+        labelAr: 'الرحلة المرتبطة',
+        type: 'categorical',
+        getStringValue: (f) => {
+          if (!f.trip_id) return 'Unlinked';
+          const trp = tripMap.get(f.trip_id);
+          return trp ? trp.trip_number : f.trip_id;
+        },
+        getCurrencyValue: (f) => Number(f.total_amount) || 0,
+      },
+      {
+        key: 'liters',
+        labelEn: 'Liters',
+        labelAr: 'الكمية (لتر)',
+        type: 'numeric',
+        unit: 'L',
+        decimals: 2,
+        getNumericValue: (f) => Number(f.liters) || 0,
+      },
+      {
+        key: 'price_per_liter',
+        labelEn: 'Price / L',
+        labelAr: 'سعر اللتر',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (f) => Number(f.price_per_liter) || 0,
+      },
+      {
+        key: 'total_amount',
+        labelEn: 'Total (SAR)',
+        labelAr: 'الإجمالي (ر.س)',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (f) => Number(f.total_amount) || 0,
+      },
+      {
+        key: 'odometer_reading',
+        labelEn: 'Odometer (km)',
+        labelAr: 'العداد (كم)',
+        type: 'numeric',
+        unit: 'km',
+        decimals: 0,
+        getNumericValue: (f) => Number(f.odometer_reading) || 0,
+      },
+      {
+        key: 'fuel_station',
+        labelEn: 'Fuel Station',
+        labelAr: 'محطة الوقود',
+        type: 'categorical',
+        getStringValue: (f) => f.fuel_station || 'Unspecified',
+        getCurrencyValue: (f) => Number(f.total_amount) || 0,
+      },
+    ],
+    [vehicleMap, tripMap]
+  );
+
+  const fuelColFilter = useOxenColumnFilter(fuelLogs, fuelColumns);
+  const filteredFuelLogs = fuelColFilter.filteredRows;
+
   const handleCreateOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany?.id || !orderForm.vehicle_id) return;
     try {
       const parts = Number(orderForm.parts_cost) || 0;
       const labor = Number(orderForm.labor_cost) || 0;
-      await erpApi.createMaintenanceOrder(currentCompany.id, {
+      const created = await erpApi.createMaintenanceOrder(currentCompany.id, {
         vehicle_id: orderForm.vehicle_id,
         order_type: orderForm.order_type,
         priority: orderForm.priority,
@@ -174,6 +354,15 @@ export const FleetMaintenanceView: React.FC = () => {
         labor_cost: labor,
         scheduled_date: orderForm.scheduled_date ? new Date(orderForm.scheduled_date).toISOString() : undefined,
       });
+      const orderId = String(created?.id || `WO-${Date.now().toString().slice(-6)}`);
+      const orderNum = String(created?.work_order_number || orderId);
+      evaluateTransactionApproval(
+        'FLEET_WORK_ORDER',
+        orderId,
+        orderNum,
+        parts + labor,
+        `${orderForm.order_type}: ${orderForm.description}`
+      );
       setShowOrderModal(false);
       setStatusNotice({ type: 'success', message: isAr ? 'تم إنشاء أمر الصيانة بنجاح' : 'Work order created successfully' });
       fetchData();
@@ -196,7 +385,7 @@ export const FleetMaintenanceView: React.FC = () => {
         total_amount: Number((liters * price).toFixed(4)),
         odometer_reading: Number(fuelForm.odometer_reading),
         fuel_station: fuelForm.fuel_station,
-        transaction_date: new Date().toISOString(),
+        transaction_date: fuelForm.transaction_date ? new Date(fuelForm.transaction_date).toISOString() : undefined,
       });
       setShowFuelModal(false);
       setStatusNotice({ type: 'success', message: isAr ? 'تم تسجيل تعبئة الوقود بنجاح' : 'Fuel transaction logged successfully' });
@@ -481,30 +670,38 @@ export const FleetMaintenanceView: React.FC = () => {
         <div className={`rounded-3xl border p-6 shadow-xs ${
           isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}>
+          <OxenActiveFiltersBar
+            columns={orderColumns}
+            filters={ordersColFilter.filters}
+            isAr={isAr}
+            onOpenColumn={ordersColFilter.openColumnDrilldown}
+            onClearColumn={ordersColFilter.clearColumnFilter}
+            onClearAll={ordersColFilter.clearAllColumnFilters}
+          />
           <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-xs">
               <thead className={`border-b ${isDark ? 'border-slate-800 bg-slate-900/80 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
                 <tr>
-                  <th className="p-3.5 font-bold">{isAr ? 'رقم الأمر' : 'Order #'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'المركبة' : 'Vehicle'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'النوع' : 'Type'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الأولوية' : 'Priority'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الوصف' : 'Description'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'قطع الغيار (ر.س)' : 'Parts (SAR)'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'العمالة (ر.س)' : 'Labor (SAR)'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الحالة' : 'Status'}</th>
+                  <OxenColumnHeader columnKey="order_number" label={isAr ? 'رقم الأمر' : 'Order #'} filterState={ordersColFilter.filters.order_number} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="vehicle" label={isAr ? 'المركبة' : 'Vehicle'} filterState={ordersColFilter.filters.vehicle} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="order_type" label={isAr ? 'النوع' : 'Type'} filterState={ordersColFilter.filters.order_type} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="priority" label={isAr ? 'الأولوية' : 'Priority'} filterState={ordersColFilter.filters.priority} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="description" label={isAr ? 'الوصف' : 'Description'} filterState={ordersColFilter.filters.description} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="parts_cost" label={isAr ? 'قطع الغيار (ر.س)' : 'Parts (SAR)'} filterState={ordersColFilter.filters.parts_cost} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="labor_cost" label={isAr ? 'العمالة (ر.س)' : 'Labor (SAR)'} filterState={ordersColFilter.filters.labor_cost} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="total_cost" label={isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'} filterState={ordersColFilter.filters.total_cost} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="status" label={isAr ? 'الحالة' : 'Status'} filterState={ordersColFilter.filters.status} onOpen={ordersColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {orders.length === 0 ? (
+                {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="p-8 text-center text-slate-400">
                       {isAr ? 'لا توجد أوامر صيانة مسجلة حتى الآن' : 'No maintenance orders found.'}
                     </td>
                   </tr>
                 ) : (
-                  orders.map((o) => {
+                  filteredOrders.map((o) => {
                     const veh = vehicleMap.get(o.vehicle_id);
                     return (
                       <tr key={o.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50">
@@ -533,15 +730,23 @@ export const FleetMaintenanceView: React.FC = () => {
                           {Number(o.total_cost).toLocaleString('en-US', { minimumFractionDigits: 2 })}
                         </span></td>
                         <td className="p-3.5">
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
-                            o.status === 'completed'
-                              ? 'bg-emerald-500/10 text-emerald-500'
-                              : o.status === 'in_progress'
-                              ? 'bg-amber-500/10 text-amber-500'
-                              : 'bg-slate-500/10 text-slate-400'
-                          }`}>
-                            {o.status}
-                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
+                              o.status === 'completed'
+                                ? 'bg-emerald-500/10 text-emerald-500'
+                                : o.status === 'in_progress'
+                                ? 'bg-amber-500/10 text-amber-500'
+                                : 'bg-slate-500/10 text-slate-400'
+                            }`}>
+                              {o.status}
+                            </span>
+                            <InlineApprovalActionBadge
+                              documentType="FLEET_WORK_ORDER"
+                              documentId={o.id}
+                              compact
+                              onStatusChanged={() => fetchData()}
+                            />
+                          </div>
                         </td>
                       </tr>
                     );
@@ -550,6 +755,24 @@ export const FleetMaintenanceView: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <ColumnDrilldownModal
+            isOpen={Boolean(ordersColFilter.activeColumn)}
+            column={ordersColFilter.activeColumn}
+            rows={orders}
+            isAr={isAr}
+            currentFilter={ordersColFilter.activeColumnKey ? ordersColFilter.filters[ordersColFilter.activeColumnKey] : undefined}
+            onApply={(state) => {
+              if (ordersColFilter.activeColumnKey) {
+                ordersColFilter.applyColumnFilter(ordersColFilter.activeColumnKey, state);
+              }
+            }}
+            onClear={() => {
+              if (ordersColFilter.activeColumnKey) {
+                ordersColFilter.clearColumnFilter(ordersColFilter.activeColumnKey);
+              }
+            }}
+            onClose={ordersColFilter.closeColumnDrilldown}
+          />
         </div>
       )}
 
@@ -558,29 +781,37 @@ export const FleetMaintenanceView: React.FC = () => {
         <div className={`rounded-3xl border p-6 shadow-xs ${
           isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200 bg-white'
         }`}>
+          <OxenActiveFiltersBar
+            columns={fuelColumns}
+            filters={fuelColFilter.filters}
+            isAr={isAr}
+            onOpenColumn={fuelColFilter.openColumnDrilldown}
+            onClearColumn={fuelColFilter.clearColumnFilter}
+            onClearAll={fuelColFilter.clearAllColumnFilters}
+          />
           <div className="w-full overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800">
             <table className="w-full text-left text-xs">
               <thead className={`border-b ${isDark ? 'border-slate-800 bg-slate-900/80 text-slate-400' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
                 <tr>
-                  <th className="p-3.5 font-bold">{isAr ? 'رقم الإيصال' : 'Tx #'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'المركبة' : 'Vehicle'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الرحلة المرتبطة' : 'Linked Trip'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الكمية (لتر)' : 'Liters'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'سعر اللتر' : 'Price / L'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'العداد (كم)' : 'Odometer (km)'}</th>
-                  <th className="p-3.5 font-bold">{isAr ? 'محطة الوقود' : 'Fuel Station'}</th>
+                  <OxenColumnHeader columnKey="transaction_number" label={isAr ? 'رقم الإيصال' : 'Tx #'} filterState={fuelColFilter.filters.transaction_number} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="vehicle" label={isAr ? 'المركبة' : 'Vehicle'} filterState={fuelColFilter.filters.vehicle} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="linked_trip" label={isAr ? 'الرحلة المرتبطة' : 'Linked Trip'} filterState={fuelColFilter.filters.linked_trip} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="liters" label={isAr ? 'الكمية (لتر)' : 'Liters'} filterState={fuelColFilter.filters.liters} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="price_per_liter" label={isAr ? 'سعر اللتر' : 'Price / L'} filterState={fuelColFilter.filters.price_per_liter} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="total_amount" label={isAr ? 'الإجمالي (ر.س)' : 'Total (SAR)'} filterState={fuelColFilter.filters.total_amount} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="odometer_reading" label={isAr ? 'العداد (كم)' : 'Odometer (km)'} filterState={fuelColFilter.filters.odometer_reading} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
+                  <OxenColumnHeader columnKey="fuel_station" label={isAr ? 'محطة الوقود' : 'Fuel Station'} filterState={fuelColFilter.filters.fuel_station} onOpen={fuelColFilter.openColumnDrilldown} className="p-3.5 font-bold" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {fuelLogs.length === 0 ? (
+                {filteredFuelLogs.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-slate-400">
                       {isAr ? 'لا توجد حركات وقود مسجلة حتى الآن' : 'No fuel transactions recorded.'}
                     </td>
                   </tr>
                 ) : (
-                  fuelLogs.map((f) => {
+                  filteredFuelLogs.map((f) => {
                     const veh = vehicleMap.get(f.vehicle_id);
                     const trp = f.trip_id ? tripMap.get(f.trip_id) : null;
                     return (
@@ -615,6 +846,24 @@ export const FleetMaintenanceView: React.FC = () => {
               </tbody>
             </table>
           </div>
+          <ColumnDrilldownModal
+            isOpen={Boolean(fuelColFilter.activeColumn)}
+            column={fuelColFilter.activeColumn}
+            rows={fuelLogs}
+            isAr={isAr}
+            currentFilter={fuelColFilter.activeColumnKey ? fuelColFilter.filters[fuelColFilter.activeColumnKey] : undefined}
+            onApply={(state) => {
+              if (fuelColFilter.activeColumnKey) {
+                fuelColFilter.applyColumnFilter(fuelColFilter.activeColumnKey, state);
+              }
+            }}
+            onClear={() => {
+              if (fuelColFilter.activeColumnKey) {
+                fuelColFilter.clearColumnFilter(fuelColFilter.activeColumnKey);
+              }
+            }}
+            onClose={fuelColFilter.closeColumnDrilldown}
+          />
         </div>
       )}
 
@@ -789,6 +1038,20 @@ export const FleetMaintenanceView: React.FC = () => {
               </div>
             </div>
 
+            <div>
+              <label htmlFor="maintenance-scheduled-date-input" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {isAr ? 'تاريخ الصيانة المجدول' : 'Scheduled Date'}
+              </label>
+              <input
+                id="maintenance-scheduled-date-input"
+                type="date"
+                placeholder="YYYY-MM-DD"
+                value={orderForm.scheduled_date || ''}
+                onChange={(e) => setOrderForm({ ...orderForm, scheduled_date: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs outline-none font-mono"
+              />
+            </div>
+
             <div className="pt-2 flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
               <button
                 type="button"
@@ -917,6 +1180,20 @@ export const FleetMaintenanceView: React.FC = () => {
                   className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs outline-none"
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="fuel-transaction-date-input" className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                {isAr ? 'تاريخ التعبئة' : 'Transaction Date'}
+              </label>
+              <input
+                id="fuel-transaction-date-input"
+                type="date"
+                placeholder="YYYY-MM-DD"
+                value={fuelForm.transaction_date || ''}
+                onChange={(e) => setFuelForm({ ...fuelForm, transaction_date: e.target.value })}
+                className="mt-1 w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs outline-none font-mono"
+              />
             </div>
 
             <div className="rounded-xl bg-blue-500/10 p-3 flex justify-between items-center text-xs">

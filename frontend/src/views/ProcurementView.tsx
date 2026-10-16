@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ShoppingCart,
   Boxes,
@@ -40,9 +40,17 @@ import { HoverIcon } from '../components/common/HoverIcon';
 import { erpApi, ApiProcurementBill, ApiProcurementTender, ApiProcurementBid } from '../services/api';
 import { useBulkSelection } from '../hooks/useBulkSelection';
 import { BulkActionBar, BulkActionItem } from '../components/platform/BulkActionBar';
+import { InlineApprovalActionBadge } from '../components/approvals/InlineApprovalActionBadge';
+import {
+  ColumnDrilldownModal,
+  OxenActiveFiltersBar,
+  OxenColumnDef,
+  OxenColumnHeader,
+  useOxenColumnFilter,
+} from '../components/common/ColumnDrilldownModal';
 
 export const ProcurementView: React.FC = () => {
-  const { language, themeMode, currentCompany } = useApp();
+  const { language, themeMode, currentCompany, evaluateTransactionApproval } = useApp();
   const isAr = language === 'ar';
   const isDark = themeMode === 'dark';
 
@@ -276,24 +284,174 @@ export const ProcurementView: React.FC = () => {
     }
   };
 
-  const filteredOrders = purchaseOrders.filter((po) => {
-    if (!po) return false;
-    const q = (searchTerm || '').trim().toLowerCase();
-    return (
-      (po.poNumber || '').toLowerCase().includes(q) ||
-      (po.vendorName || '').toLowerCase().includes(q)
-    );
-  });
+  const searchFilteredOrders = useMemo(
+    () =>
+      purchaseOrders.filter((po) => {
+        if (!po) return false;
+        const q = (searchTerm || '').trim().toLowerCase();
+        return (
+          (po.poNumber || '').toLowerCase().includes(q) ||
+          (po.vendorName || '').toLowerCase().includes(q)
+        );
+      }),
+    [purchaseOrders, searchTerm]
+  );
 
-  const filteredBills = procurementBills.filter((bill) => {
-    if (!bill) return false;
-    const q = (searchTerm || '').trim().toLowerCase();
-    return (
-      (bill.invoice_number || '').toLowerCase().includes(q) ||
-      (bill.vendor_name || '').toLowerCase().includes(q) ||
-      (bill.purchase_order_number || '').toLowerCase().includes(q)
-    );
-  });
+  const poColumns = useMemo<OxenColumnDef<PurchaseOrderRecord>[]>(
+    () => [
+      {
+        key: 'poNumber',
+        labelEn: 'PO Number',
+        labelAr: 'رقم أمر الشراء',
+        type: 'categorical',
+        getStringValue: (po) => po.poNumber || '',
+        getCurrencyValue: (po) => Number(po.totalAmount) || 0,
+      },
+      {
+        key: 'vendorName',
+        labelEn: 'Vendor',
+        labelAr: 'المورد',
+        type: 'categorical',
+        getStringValue: (po) => po.vendorName || '',
+        getCurrencyValue: (po) => Number(po.totalAmount) || 0,
+      },
+      {
+        key: 'category',
+        labelEn: 'Category',
+        labelAr: 'التصنيف',
+        type: 'categorical',
+        getStringValue: (po) => po.category || '',
+        getCurrencyValue: (po) => Number(po.totalAmount) || 0,
+      },
+      {
+        key: 'totalAmount',
+        labelEn: 'Total Amount',
+        labelAr: 'القيمة الإجمالية',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (po) => Number(po.totalAmount) || 0,
+      },
+      {
+        key: 'issueDate',
+        labelEn: 'Issue Date',
+        labelAr: 'تاريخ الإصدار',
+        type: 'date',
+        getDateValue: (po) => (po.issueDate || '').slice(0, 10),
+        getCurrencyValue: (po) => Number(po.totalAmount) || 0,
+      },
+      {
+        key: 'status',
+        labelEn: 'Status',
+        labelAr: 'حالة المطابقة',
+        type: 'categorical',
+        getStringValue: (po) => po.status || '',
+        getCurrencyValue: (po) => Number(po.totalAmount) || 0,
+      },
+    ],
+    []
+  );
+
+  const poColFilter = useOxenColumnFilter(searchFilteredOrders, poColumns);
+  const filteredOrders = poColFilter.filteredRows;
+
+  const searchFilteredBills = useMemo(
+    () =>
+      procurementBills.filter((bill) => {
+        if (!bill) return false;
+        const q = (searchTerm || '').trim().toLowerCase();
+        return (
+          (bill.invoice_number || '').toLowerCase().includes(q) ||
+          (bill.vendor_name || '').toLowerCase().includes(q) ||
+          (bill.purchase_order_number || '').toLowerCase().includes(q)
+        );
+      }),
+    [procurementBills, searchTerm]
+  );
+
+  const billColumns = useMemo<OxenColumnDef<ApiProcurementBill>[]>(
+    () => [
+      {
+        key: 'invoice_number',
+        labelEn: 'Invoice Number',
+        labelAr: 'رقم الفاتورة',
+        type: 'categorical',
+        getStringValue: (b) => b.invoice_number || '',
+        getCurrencyValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'vendor_name',
+        labelEn: 'Vendor',
+        labelAr: 'المورد',
+        type: 'categorical',
+        getStringValue: (b) => b.vendor_name || 'Authorized Vendor',
+        getCurrencyValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'purchase_order_number',
+        labelEn: 'PO Reference',
+        labelAr: 'مرجع أمر الشراء',
+        type: 'categorical',
+        getStringValue: (b) => b.purchase_order_number || 'PO-2026-0089',
+        getCurrencyValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'amount',
+        labelEn: 'Subtotal',
+        labelAr: 'المبلغ الصافي',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (b) => Number(b.amount) || 0,
+      },
+      {
+        key: 'tax_amount',
+        labelEn: 'Tax (VAT)',
+        labelAr: 'الضريبة (15%)',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (b) => Number(b.tax_amount) || 0,
+      },
+      {
+        key: 'total_billed',
+        labelEn: 'Total Billed',
+        labelAr: 'الإجمالي المستحق',
+        type: 'numeric',
+        unit: 'SAR',
+        decimals: 2,
+        getNumericValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'match_status',
+        labelEn: '3-Way Match',
+        labelAr: 'المطابقة الثلاثية',
+        type: 'categorical',
+        getStringValue: (b) => b.match_status || 'MATCHED',
+        getCurrencyValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'ledger_status',
+        labelEn: 'Ledger Status',
+        labelAr: 'دفتر الأستاذ (GL)',
+        type: 'categorical',
+        getStringValue: (b) => (b.is_posted ? 'POSTED' : 'UNPOSTED'),
+        getCurrencyValue: (b) => Number(b.total_billed) || 0,
+      },
+      {
+        key: 'actions',
+        labelEn: 'Ledger Action',
+        labelAr: 'الإجراء المالي',
+        type: 'actions',
+        hasAttachment: (b) => Boolean(b.journal_entry_id),
+        getActionState: (b) => (b.is_posted ? 'Posted to GL' : 'Unposted / Ready to Post'),
+      },
+    ],
+    []
+  );
+
+  const billsColFilter = useOxenColumnFilter(searchFilteredBills, billColumns);
+  const filteredBills = billsColFilter.filteredRows;
 
   const billsBulk = useBulkSelection(filteredBills);
 
@@ -652,6 +810,17 @@ export const ProcurementView: React.FC = () => {
             </button>
           </div>
 
+          <div className="px-4 pt-3">
+            <OxenActiveFiltersBar
+              columns={billColumns}
+              filters={billsColFilter.filters}
+              isAr={isAr}
+              onOpenColumn={billsColFilter.openColumnDrilldown}
+              onClearColumn={billsColFilter.clearColumnFilter}
+              onClearAll={billsColFilter.clearAllColumnFilters}
+            />
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-right text-xs">
               <thead>
@@ -674,15 +843,15 @@ export const ProcurementView: React.FC = () => {
                       className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                   </th>
-                  <th className="py-3 px-4">{isAr ? 'رقم الفاتورة' : 'Invoice Number'}</th>
-                  <th className="py-3 px-4">{isAr ? 'المورد' : 'Vendor'}</th>
-                  <th className="py-3 px-4">{isAr ? 'مرجع أمر الشراء' : 'PO Reference'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'المبلغ الصافي' : 'Subtotal'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'الضريبة (15%)' : 'Tax (VAT)'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'الإجمالي المستحق' : 'Total Billed'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'المطابقة الثلاثية' : '3-Way Match'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'دفتر الأستاذ (GL)' : 'Ledger Status'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'الإجراء المالي' : 'Ledger Action'}</th>
+                  <OxenColumnHeader columnKey="invoice_number" label={isAr ? 'رقم الفاتورة' : 'Invoice Number'} filterState={billsColFilter.filters.invoice_number} onOpen={billsColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="vendor_name" label={isAr ? 'المورد' : 'Vendor'} filterState={billsColFilter.filters.vendor_name} onOpen={billsColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="purchase_order_number" label={isAr ? 'مرجع أمر الشراء' : 'PO Reference'} filterState={billsColFilter.filters.purchase_order_number} onOpen={billsColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="amount" label={isAr ? 'المبلغ الصافي' : 'Subtotal'} filterState={billsColFilter.filters.amount} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="tax_amount" label={isAr ? 'الضريبة (15%)' : 'Tax (VAT)'} filterState={billsColFilter.filters.tax_amount} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="total_billed" label={isAr ? 'الإجمالي المستحق' : 'Total Billed'} filterState={billsColFilter.filters.total_billed} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="match_status" label={isAr ? 'المطابقة الثلاثية' : '3-Way Match'} filterState={billsColFilter.filters.match_status} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="ledger_status" label={isAr ? 'دفتر الأستاذ (GL)' : 'Ledger Status'} filterState={billsColFilter.filters.ledger_status} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="actions" label={isAr ? 'الإجراء المالي' : 'Ledger Action'} filterState={billsColFilter.filters.actions} onOpen={billsColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -776,36 +945,46 @@ export const ProcurementView: React.FC = () => {
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-center">
-                        {bill.is_posted ? (
-                          <span
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0"
-                            title={bill.journal_entry_id ? `Journal Entry ID: ${bill.journal_entry_id}` : 'Posted'}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                            <span>{isAr ? 'مرحل بنجاح' : 'Posted to GL'}</span>
-                          </span>
-                        ) : (
-                          <button
-                            id={`post-ledger-btn-${bill.id}`}
-                            type="button"
-                            onClick={() => handlePostToLedger(bill.id)}
-                            disabled={postingBillId === bill.id}
-                            className="group inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-colors disabled:opacity-50"
-                          >
-                            <HoverIcon className="h-3.5 w-3.5">
-                              <BookOpen className="h-full w-full" />
-                            </HoverIcon>
-                            <span>
-                              {postingBillId === bill.id
-                                ? isAr
-                                  ? 'جاري الترحيل...'
-                                  : 'Posting...'
-                                : isAr
-                                ? 'ترحيل لدفتر الأستاذ'
-                                : 'Post to Ledger'}
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
+                          <InlineApprovalActionBadge
+                            documentId={bill.id}
+                            approvalStatus={bill.match_status}
+                          />
+                          {bill.is_posted ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap shrink-0"
+                              title={bill.journal_entry_id ? `Journal Entry ID: ${bill.journal_entry_id}` : 'Posted'}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                              <span>{isAr ? 'مرحل بنجاح' : 'Posted to GL'}</span>
                             </span>
-                          </button>
-                        )}
+                          ) : (
+                            <button
+                              id={`post-ledger-btn-${bill.id}`}
+                              type="button"
+                              onClick={() => handlePostToLedger(bill.id)}
+                              disabled={
+                                postingBillId === bill.id ||
+                                bill.match_status === 'PENDING_APPROVAL' ||
+                                bill.match_status === 'REJECTED'
+                              }
+                              className="group inline-flex items-center gap-1.5 rounded-xl bg-orange-600 hover:bg-orange-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs transition-colors disabled:opacity-50"
+                            >
+                              <HoverIcon className="h-3.5 w-3.5">
+                                <BookOpen className="h-full w-full" />
+                              </HoverIcon>
+                              <span>
+                                {postingBillId === bill.id
+                                  ? isAr
+                                    ? 'جاري الترحيل...'
+                                    : 'Posting...'
+                                  : isAr
+                                  ? 'ترحيل لدفتر الأستاذ'
+                                  : 'Post to Ledger'}
+                              </span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -813,6 +992,25 @@ export const ProcurementView: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+          <ColumnDrilldownModal
+            isOpen={Boolean(billsColFilter.activeColumn)}
+            column={billsColFilter.activeColumn}
+            rows={searchFilteredBills}
+            isAr={isAr}
+            currentFilter={billsColFilter.activeColumnKey ? billsColFilter.filters[billsColFilter.activeColumnKey] : undefined}
+            onApply={(state) => {
+              if (billsColFilter.activeColumnKey) {
+                billsColFilter.applyColumnFilter(billsColFilter.activeColumnKey, state);
+              }
+            }}
+            onClear={() => {
+              if (billsColFilter.activeColumnKey) {
+                billsColFilter.clearColumnFilter(billsColFilter.activeColumnKey);
+              }
+            }}
+            onClose={billsColFilter.closeColumnDrilldown}
+          />
 
           {/* Floating Bulk Action Bar for Vendor Bills */}
           <BulkActionBar
@@ -830,6 +1028,16 @@ export const ProcurementView: React.FC = () => {
             isDark ? 'border-slate-800 bg-slate-900' : 'border-slate-200/80 bg-white'
           }`}
         >
+          <div className="px-4 pt-3">
+            <OxenActiveFiltersBar
+              columns={poColumns}
+              filters={poColFilter.filters}
+              isAr={isAr}
+              onOpenColumn={poColFilter.openColumnDrilldown}
+              onClearColumn={poColFilter.clearColumnFilter}
+              onClearAll={poColFilter.clearAllColumnFilters}
+            />
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-right text-xs">
               <thead>
@@ -840,12 +1048,12 @@ export const ProcurementView: React.FC = () => {
                       : 'border-slate-200 bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <th className="py-3 px-4">{isAr ? 'رقم أمر الشراء' : 'PO Number'}</th>
-                  <th className="py-3 px-4">{isAr ? 'المورد' : 'Vendor'}</th>
-                  <th className="py-3 px-4">{isAr ? 'التصنيف' : 'Category'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'القيمة الإجمالية' : 'Total Amount'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'تاريخ الإصدار' : 'Issue Date'}</th>
-                  <th className="py-3 px-4 text-center">{isAr ? 'حالة المطابقة' : 'Status'}</th>
+                  <OxenColumnHeader columnKey="poNumber" label={isAr ? 'رقم أمر الشراء' : 'PO Number'} filterState={poColFilter.filters.poNumber} onOpen={poColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="vendorName" label={isAr ? 'المورد' : 'Vendor'} filterState={poColFilter.filters.vendorName} onOpen={poColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="category" label={isAr ? 'التصنيف' : 'Category'} filterState={poColFilter.filters.category} onOpen={poColFilter.openColumnDrilldown} className="py-3 px-4" />
+                  <OxenColumnHeader columnKey="totalAmount" label={isAr ? 'القيمة الإجمالية' : 'Total Amount'} filterState={poColFilter.filters.totalAmount} onOpen={poColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="issueDate" label={isAr ? 'تاريخ الإصدار' : 'Issue Date'} filterState={poColFilter.filters.issueDate} onOpen={poColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
+                  <OxenColumnHeader columnKey="status" label={isAr ? 'حالة المطابقة' : 'Status'} filterState={poColFilter.filters.status} onOpen={poColFilter.openColumnDrilldown} align="center" className="py-3 px-4 text-center" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -868,25 +1076,49 @@ export const ProcurementView: React.FC = () => {
                       <span dir="ltr" className="inline-block unicode-bidi-isolate">{po.issueDate}</span>
                     </td>
                     <td className="py-3.5 px-4 text-center">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
-                          po.status === 'MATCHED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
-                            : po.status === 'APPROVED'
-                            ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
-                        }`}
-                      >
-                        {po.status === 'MATCHED' && <CheckCircle2 className="h-3 w-3 shrink-0" />}
-                        {po.status === 'PENDING' && <AlertCircle className="h-3 w-3 shrink-0" />}
-                        {po.status}
-                      </span>
+                      <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold whitespace-nowrap shrink-0 ${
+                            po.status === 'MATCHED'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400'
+                              : po.status === 'APPROVED'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400'
+                              : 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-400'
+                          }`}
+                        >
+                          {po.status === 'MATCHED' && <CheckCircle2 className="h-3 w-3 shrink-0" />}
+                          {po.status === 'PENDING' && <AlertCircle className="h-3 w-3 shrink-0" />}
+                          {po.status}
+                        </span>
+                        <InlineApprovalActionBadge
+                          documentId={po.id}
+                          approvalStatus={po.status === 'PENDING' ? 'PENDING_APPROVAL' : po.status}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          <ColumnDrilldownModal
+            isOpen={Boolean(poColFilter.activeColumn)}
+            column={poColFilter.activeColumn}
+            rows={searchFilteredOrders}
+            isAr={isAr}
+            currentFilter={poColFilter.activeColumnKey ? poColFilter.filters[poColFilter.activeColumnKey] : undefined}
+            onApply={(state) => {
+              if (poColFilter.activeColumnKey) {
+                poColFilter.applyColumnFilter(poColFilter.activeColumnKey, state);
+              }
+            }}
+            onClear={() => {
+              if (poColFilter.activeColumnKey) {
+                poColFilter.clearColumnFilter(poColFilter.activeColumnKey);
+              }
+            }}
+            onClose={poColFilter.closeColumnDrilldown}
+          />
         </div>
       )}
 
@@ -1410,7 +1642,19 @@ export const ProcurementView: React.FC = () => {
         isOpen={isNewPoOpen}
         onClose={() => setIsNewPoOpen(false)}
         onPurchaseOrderCreated={(newPo) => {
-          setPurchaseOrders((prev) => [newPo, ...prev]);
+          const evalRes = evaluateTransactionApproval(
+            'PURCHASE_ORDER',
+            newPo.id,
+            newPo.poNumber,
+            Number(newPo.totalAmount || 0),
+            `Purchase Order ${newPo.poNumber} — ${newPo.vendorName}`,
+            'Procurement & P2P'
+          );
+          const resolvedPo: PurchaseOrderRecord = {
+            ...newPo,
+            status: evalRes.requiresApproval ? 'PENDING' : newPo.status || 'APPROVED',
+          };
+          setPurchaseOrders((prev) => [resolvedPo, ...prev]);
         }}
       />
       {isNewPrOpen && (

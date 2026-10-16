@@ -91,6 +91,7 @@ export const DynamicFieldRenderer: React.FC<DynamicFieldRendererProps> = ({ enti
                 id={id}
                 type={f.data_type === 'number' ? 'number' : f.data_type === 'date' ? 'date' : 'text'}
                 required={f.is_required}
+                placeholder={f.data_type === 'date' ? 'YYYY-MM-DD' : undefined}
                 value={value ?? ''}
                 onChange={(e) =>
                   setValue(f.field_key, f.data_type === 'number' && e.target.value !== '' ? Number(e.target.value) : e.target.value)

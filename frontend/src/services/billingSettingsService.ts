@@ -251,3 +251,32 @@ export async function rejectPendingInvoice(
   return res.json();
 }
 
+export interface PublicPaymentGatewayView {
+  is_stripe_enabled: boolean;
+  stripe_mode: 'live' | 'test' | null;
+  stripe_publishable_key: string | null;
+  is_moyasar_enabled: boolean;
+  moyasar_mode: 'live' | 'test' | null;
+  moyasar_publishable_key: string | null;
+  local_bank_instructions: BankAccountInstruction[];
+  digital_wallet_instructions: DigitalWalletInstruction[];
+}
+
+/**
+ * Fetch active public billing gateways (Stripe/Moyasar publishable status, bank wire & regional wallets)
+ * for tenant registration and workspace checkout flows.
+ */
+export async function fetchPublicBillingGateways(): Promise<PublicPaymentGatewayView> {
+  const res = await fetch('/api/v1/pricing/gateways', {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch public billing gateways (${res.status})`);
+  }
+
+  return res.json();
+}
+
+

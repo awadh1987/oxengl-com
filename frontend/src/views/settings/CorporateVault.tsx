@@ -1227,6 +1227,7 @@ export const CorporateVault: React.FC = () => {
                   </label>
                   <input
                     type="date"
+                    placeholder="YYYY-MM-DD"
                     value={uploadForm.issue_date || ''}
                     onChange={(e) => setUploadForm({ ...uploadForm, issue_date: e.target.value })}
                     className="w-full py-2.5 px-3 rounded-xl text-xs bg-slate-800 border border-slate-700 text-slate-200 outline-none focus:border-sky-500"
@@ -1239,6 +1240,7 @@ export const CorporateVault: React.FC = () => {
                   </label>
                   <input
                     type="date"
+                    placeholder="YYYY-MM-DD"
                     value={uploadForm.expiry_date || ''}
                     onChange={(e) => setUploadForm({ ...uploadForm, expiry_date: e.target.value })}
                     className="w-full py-2.5 px-3 rounded-xl text-xs bg-slate-800 border border-slate-700 text-slate-200 outline-none focus:border-sky-500"

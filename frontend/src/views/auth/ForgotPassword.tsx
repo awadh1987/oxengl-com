@@ -100,7 +100,9 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
   return (
     <div
       dir={isAr ? 'rtl' : 'ltr'}
-      className="min-h-dvh erp-viewport-root w-full bg-[#0a0d17] text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
+      data-theme-mode="dark"
+      data-testid="forgot-password-view"
+      className="platform-dark dark min-h-dvh erp-viewport-root w-full bg-slate-950 text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white"
     >
       {/* Background Ambience */}
       <div
@@ -129,6 +131,7 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
 
         <button
           type="button"
+          data-testid="forgot-lang-toggle"
           onClick={() => setLanguage(language === 'ar' ? 'en' : 'ar')}
           className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition shadow-sm"
         >
@@ -139,7 +142,10 @@ export const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onSuccessRedirec
 
       {/* Main Card */}
       <main className="relative z-10 mx-auto w-full max-w-md my-auto py-6">
-        <div className="relative rounded-3xl border border-slate-800/90 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-white/5">
+        <div
+          data-testid="forgot-password-card"
+          className="relative rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl overflow-hidden ring-1 ring-white/5"
+        >
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-amber-500" />
 
           {/* Header */}

@@ -202,6 +202,8 @@ export interface OperationRecord {
   created_at: string;
   updated_at: string;
   created_by?: string;
+  approval_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'AUTO_APPROVED';
+  workflow_instance_id?: string;
 }
 
 export interface CrusherPaymentEntry {
@@ -216,6 +218,8 @@ export interface CrusherPaymentEntry {
   month: number;
   year: number;
   attachments?: DocumentAttachment[];
+  approval_status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'AUTO_APPROVED';
+  workflow_instance_id?: string;
   is_deleted?: boolean;
   deleted_at?: string;
   deleted_by?: string;
@@ -858,3 +862,124 @@ export interface HrmsJournalEntry {
   status: string;
   lines?: HrmsJournalLine[];
 }
+
+// ==============================================================================
+// Phase 4: Enterprise Workflow & Governance Approvals Engine (Point 4)
+// ==============================================================================
+export type ApprovalModuleType =
+  | 'OPERATIONS'
+  | 'PURCHASE_ORDER'
+  | 'VENDOR_BILL'
+  | 'PURCHASE_REQUISITION'
+  | 'FINANCIAL_VOUCHER'
+  | 'CRUSHER_PAYMENT'
+  | 'FLEET_WORK_ORDER'
+  | 'HRMS';
+
+export interface TenantApprovalRule {
+  id: string;
+  tenant_id?: string;
+  name?: string;
+  rule_name?: string;
+  document_type: ApprovalModuleType;
+  department?: string;
+  cost_center_id?: string | null;
+  min_amount: number;
+  max_amount: number | null;
+  currency?: string;
+  step_order: number;
+  sequence_order: number;
+  required_role: string;
+  required_role_code?: string;
+  required_user_id?: string | null;
+  approver_user_id?: string | null;
+  is_active: boolean;
+  created_at?: string;
+}
+
+export interface WorkflowApprovalStep {
+  id: string;
+  step_id: string;
+  step_order: number;
+  sequence_order: number;
+  required_role: string;
+  assigned_role_code?: string;
+  required_user_id?: string | null;
+  status: 'PENDING' | 'WAITING' | 'APPROVED' | 'REJECTED' | 'ESCALATED';
+  rule_name?: string;
+  min_amount?: number;
+  max_amount?: number | null;
+  approved_by_name?: string;
+  approved_by_user_id?: string;
+  approved_at?: string;
+  comments?: string;
+  rejection_reason?: string;
+  escalated_to_role?: string;
+  actioned_by?: string | null;
+  actioned_at?: string | null;
+  remarks?: string | null;
+}
+
+export interface WorkflowApprovalRequest {
+  id: string;
+  instance_id: string;
+  step_id: string;
+  tenant_id?: string;
+  document_type: ApprovalModuleType;
+  document_id: string;
+  document_ref: string;
+  title: string;
+  department: string;
+  amount: number;
+  total_amount: number;
+  currency: string;
+  step_order: number;
+  sequence_order: number;
+  required_role: string;
+  assigned_role?: string;
+  required_user_id?: string | null;
+  current_step_order: number;
+  current_step_sequence: number;
+  current_step?: number;
+  total_steps: number;
+  requested_by: string;
+  requester_name: string;
+  requested_by_role: string;
+  status: 'PENDING_APPROVAL' | 'IN_PROGRESS' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'ESCALATED';
+  workflow_status?: 'PENDING' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'ESCALATED';
+  step_status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ESCALATED';
+  actioned_by?: string | null;
+  actioned_at?: string | null;
+  remarks?: string | null;
+  created_at: string;
+  completed_at?: string;
+  updated_at?: string | null;
+  steps: WorkflowApprovalStep[];
+}
+
+export interface ApprovalAuditEntry {
+  id: string;
+  instance_id: string;
+  step_id: string;
+  document_type: ApprovalModuleType | string;
+  document_id: string;
+  document_ref: string;
+  step_order: number;
+  sequence_order: number;
+  step_sequence: number;
+  action: 'INITIALIZED' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'ESCALATED' | string;
+  required_role: string;
+  assigned_role?: string;
+  actor_name: string;
+  actor_id: string;
+  actor_role: string;
+  remarks?: string | null;
+  escalated_to_role?: string | null;
+  total_amount?: number;
+  timestamp: string;
+  status?: string;
+  actioned_by?: string | null;
+  actioned_at?: string | null;
+}
+
+

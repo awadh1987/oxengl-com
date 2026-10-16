@@ -298,9 +298,9 @@ export const MasterControlPanel: React.FC = () => {
   };
 
   return (
-    <div className="platform-dark min-h-dvh erp-viewport-root bg-slate-950 text-slate-100 font-sans pb-16 pt-safe pb-safe px-safe">
+    <div className="platform-dark dark min-h-full erp-viewport-root bg-slate-950 text-slate-100 font-sans pb-16 pt-safe pb-safe px-safe overflow-x-hidden">
       {/* 1. Persistent Top Telemetry Status Banner */}
-      <div className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-4 md:px-6 py-2.5">
+      <div className="sticky top-0 z-10 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-3 sm:px-4 md:px-6 py-2.5">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 md:gap-4 text-xs font-mono">
           <div className="flex flex-wrap items-center gap-2 md:gap-3">
             <span className="flex h-2.5 w-2.5 relative shrink-0">
@@ -339,12 +339,12 @@ export const MasterControlPanel: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 pt-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 pt-6">
         {/* Header with Cmd+K and New Tenant button */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
-              <Server className="w-7 h-7 text-indigo-500" />
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
+              <Server className="w-7 h-7 text-indigo-500 shrink-0" />
               <span>Master DevOps Platform HUD</span>
             </h1>
             <p className="text-sm text-slate-400 mt-1">
@@ -352,30 +352,30 @@ export const MasterControlPanel: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
             <a
               href="/compliance/vault"
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-inner"
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-inner whitespace-nowrap"
               title="Corporate Compliance Vault"
             >
-              <FileCheck2 className="w-4 h-4 text-emerald-400" />
+              <FileCheck2 className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Corporate Compliance Vault</span>
             </a>
 
             <button
               onClick={() => setSearchOpen(true)}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 rounded-xl text-xs font-mono flex items-center gap-3 transition-all shadow-inner"
+              className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200 rounded-xl text-xs font-mono flex items-center gap-2.5 transition-all shadow-inner whitespace-nowrap cursor-pointer"
             >
-              <Search className="w-4 h-4 text-slate-400" />
+              <Search className="w-4 h-4 text-slate-400 shrink-0" />
               <span>بحث شامل بالمنصة...</span>
               <kbd className="px-2 py-0.5 bg-slate-950 border border-slate-800 rounded text-[10px] text-slate-400">⌘K</kbd>
             </button>
 
             <button
               onClick={() => setShowProvisionModal(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 shrink-0" />
               <span>إنشاء مساحة منشأة جديدة (Provision)</span>
             </button>
           </div>

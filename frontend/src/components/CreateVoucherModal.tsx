@@ -66,7 +66,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
   const [partyName, setPartyName] = useState<string>(initialPartyName);
   const [partyTaxNumber, setPartyTaxNumber] = useState<string>('');
   const [amount, setAmount] = useState<number | string>(initialAmount || '');
-  const [date, setDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Cash' | 'Cheque' | 'Credit Memo'>('Bank Transfer');
   const [bankName, setBankName] = useState<string>(brandConfig.bankNameAr || 'مصرف الراجحي');
   const [transferRefNumber, setTransferRefNumber] = useState<string>('');
@@ -87,6 +87,7 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
       setPartyId(initialPartyId);
       setPartyName(initialPartyName);
       setAmount(initialAmount ? String(initialAmount) : '');
+      setDate('');
       setLinkedReferenceNo(initialLinkedRef);
       setPurpose(initialPurpose);
       setAutoApprove(isAdmin);
@@ -157,6 +158,10 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = typeof amount === 'number' ? amount : parseFloat(String(amount));
+    if (!date) {
+      showToast(isAr ? 'يرجى تحديد تاريخ المعاملة' : 'Please select a posting date', 'warning');
+      return;
+    }
     if (!partyName.trim()) {
       showToast(isAr ? 'يرجى إدخال اسم المستفيد / المستلم منه' : 'Please provide party name', 'warning');
       return;
@@ -340,7 +345,9 @@ export const CreateVoucherModal: React.FC<CreateVoucherModalProps> = ({
                 </label>
                 <input
                   type="date"
-                  value={date}
+                  required
+                  placeholder="YYYY-MM-DD"
+                  value={date || ''}
                   onChange={(e) => setDate(e.target.value)}
                   className="w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2.5 text-xs font-bold text-slate-900 dark:text-slate-100 focus:border-orange-500 focus:outline-hidden"
                 />

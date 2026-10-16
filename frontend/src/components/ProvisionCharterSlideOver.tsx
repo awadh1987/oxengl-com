@@ -38,14 +38,11 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
   const { language, showToast } = useApp();
   const isAr = language === 'ar';
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const defaultEndStr = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
   const [projectName, setProjectName] = useState('');
   const [managerName, setManagerName] = useState('');
   const [totalBudget, setTotalBudget] = useState('1500000');
-  const [startDate, setStartDate] = useState(todayStr);
-  const [endDate, setEndDate] = useState(defaultEndStr);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [scopeText, setScopeText] = useState('');
   const [onTimeKpi, setOnTimeKpi] = useState('98.5');
   const [costEfficiencyKpi, setCostEfficiencyKpi] = useState('1.05');
@@ -54,13 +51,13 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
     {
       id: 'm-1',
       goal: isAr ? 'استكمال مسوحات الموقع وتجهيز سلاسل الإمداد اللوجستية' : 'Site surveys & logistics cold-chain readiness',
-      target_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      target_date: '',
       status: 'IN_PROGRESS',
     },
     {
       id: 'm-2',
       goal: isAr ? 'بدء عمليات الصب ومراقبة الجودة التكتيكية عبر رادار التتبع' : 'Pouring operations & tactical telemetry monitoring',
-      target_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      target_date: '',
       status: 'PENDING',
     },
   ]);
@@ -77,7 +74,7 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
       {
         id: newId,
         goal: '',
-        target_date: endDate,
+        target_date: '',
         status: 'PENDING',
       },
     ]);
@@ -99,6 +96,10 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
 
     if (!projectName.trim()) {
       setError(isAr ? 'يرجى إدخال اسم المشروع / الميثاق' : 'Charter / Project Name is required');
+      return;
+    }
+    if (!startDate || !endDate) {
+      setError(isAr ? 'يرجى تحديد تاريخ الانطلاق وتاريخ التسليم النهائي' : 'Start date and target completion date are required');
       return;
     }
     if (new Date(endDate) < new Date(startDate)) {
@@ -262,7 +263,9 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
                 </label>
                 <input
                   type="date"
-                  value={startDate}
+                  required
+                  placeholder="YYYY-MM-DD"
+                  value={startDate || ''}
                   onChange={(e) => setStartDate(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono text-white focus:border-indigo-500 outline-hidden"
                 />
@@ -274,7 +277,9 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
                 </label>
                 <input
                   type="date"
-                  value={endDate}
+                  required
+                  placeholder="YYYY-MM-DD"
+                  value={endDate || ''}
                   onChange={(e) => setEndDate(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-mono text-white focus:border-indigo-500 outline-hidden"
                 />
@@ -346,7 +351,8 @@ export const ProvisionCharterSlideOver: React.FC<ProvisionCharterSlideOverProps>
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="date"
-                      value={m.target_date}
+                      placeholder="YYYY-MM-DD"
+                      value={m.target_date || ''}
                       onChange={(e) => handleUpdateMilestone(m.id, 'target_date', e.target.value)}
                       className="w-full rounded-lg border border-slate-800 bg-slate-900 px-2 py-1 text-[11px] font-mono text-slate-300 outline-hidden"
                     />

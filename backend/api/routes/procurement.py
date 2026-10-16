@@ -161,19 +161,68 @@ class ProcurementBillResponse(BaseModel):
 # Helper / Seed Utilities
 # ==============================================================================
 
+def _ensure_default_po_and_grn(db: Session, company_id: uuid.UUID) -> tuple[uuid.UUID, uuid.UUID]:
+    """Ensure a valid PurchaseOrder and GoodsReceipt exist for company_id to satisfy FK constraints."""
+    try:
+        from backend.models import ResPartner
+    except ImportError:
+        from models import ResPartner
+
+    po = db.query(PurchaseOrder).filter(PurchaseOrder.company_id == company_id).first()
+    if not po:
+        partner = db.query(ResPartner).filter(ResPartner.company_id == company_id).first()
+        if not partner:
+            partner = ResPartner(
+                id=uuid.uuid4(),
+                company_id=company_id,
+                name="Default Procurement Supplier",
+                partner_type="supplier",
+                is_active=True,
+            )
+            db.add(partner)
+            db.flush()
+        po = PurchaseOrder(
+            id=uuid.uuid4(),
+            company_id=company_id,
+            po_number=f"PO-AUTO-{uuid.uuid4().hex[:6].upper()}",
+            partner_id=partner.id,
+            status="received",
+            currency="SAR",
+            subtotal=Decimal("0"),
+            tax_amount=Decimal("0"),
+            total_amount=Decimal("0"),
+        )
+        db.add(po)
+        db.flush()
+
+    gr = db.query(GoodsReceipt).filter(GoodsReceipt.company_id == company_id).first()
+    if not gr:
+        gr = GoodsReceipt(
+            id=uuid.uuid4(),
+            company_id=company_id,
+            gr_number=f"GR-AUTO-{uuid.uuid4().hex[:6].upper()}",
+            purchase_order_id=po.id,
+            status="accepted",
+        )
+        db.add(gr)
+        db.flush()
+
+    return po.id, gr.id
+
+
 def _seed_initial_procurement_data_if_needed(db: Session, tenant_id: uuid.UUID, company_id: uuid.UUID):
     """Seed initial sample vendor and bills if the table is empty for instant testing."""
-    existing_bill = db.query(VendorBill).first()
+    existing_bill = db.query(VendorBill).filter(VendorBill.tenant_id == tenant_id).first()
     if existing_bill:
         return
 
     # Check or create vendor
-    vendor = db.query(Vendor).first()
+    vendor = db.query(Vendor).filter(Vendor.tenant_id == tenant_id).first()
     if not vendor:
         vendor = Vendor(
             id=uuid.uuid4(),
             tenant_id=tenant_id,
-            vendor_code="VND-2026-001",
+            vendor_code=f"VND-2026-{uuid.uuid4().hex[:4].upper()}",
             name="Arabian Aggregates Co.",
             commercial_registration="1010892345",
             vat_number="300987654300003",
@@ -187,19 +236,7 @@ def _seed_initial_procurement_data_if_needed(db: Session, tenant_id: uuid.UUID, 
         db.add(vendor)
         db.flush()
 
-    # Check or create Purchase Order
-    po = db.query(PurchaseOrder).first()
-    po_id = po.id if po else None
-
-    # Check or create Goods Receipt
-    gr = db.query(GoodsReceipt).first()
-    gr_id = gr.id if gr else None
-
-    # If no PO exists, create dummy PO reference ID
-    if not po_id:
-        po_id = uuid.uuid4()
-    if not gr_id:
-        gr_id = uuid.uuid4()
+    po_id, gr_id = _ensure_default_po_and_grn(db, company_id)
 
     sample_bills = [
         VendorBill(
@@ -440,14 +477,21 @@ def create_procurement_bill(
             detail=f"Invariance Failure: Subtotal ({payload.amount}) + Tax ({payload.tax_amount}) != Total Billed ({total_billed}).",
         )
 
+    po_id = payload.purchase_order_id
+    gr_id = payload.goods_receipt_id
+    if not po_id or not gr_id:
+        default_po_id, default_gr_id = _ensure_default_po_and_grn(db, effective_company_id)
+        po_id = po_id or default_po_id
+        gr_id = gr_id or default_gr_id
+
     bill = VendorBill(
         id=uuid.uuid4(),
         tenant_id=effective_tenant_id,
         company_id=effective_company_id,
         invoice_number=payload.invoice_number,
         vendor_id=payload.vendor_id,
-        purchase_order_id=payload.purchase_order_id or uuid.uuid4(),
-        goods_receipt_id=payload.goods_receipt_id or uuid.uuid4(),
+        purchase_order_id=po_id,
+        goods_receipt_id=gr_id,
         invoice_date=payload.invoice_date or datetime.now(timezone.utc),
         due_date=payload.due_date,
         currency=payload.currency,
@@ -460,6 +504,22 @@ def create_procurement_bill(
     db.add(bill)
     db.commit()
     db.refresh(bill)
+
+    try:
+        from backend.app.services.workflow_service import WorkflowEngineService
+        wf_result = WorkflowEngineService.initialize_document_workflow(
+            db=db,
+            tenant_id=effective_tenant_id,
+            doc_type="VENDOR_BILL",
+            doc_id=bill.id,
+            total_amount=float(total_billed),
+        )
+        if wf_result != "AUTO_APPROVED":
+            bill.match_status = "PENDING_APPROVAL"
+            db.commit()
+            db.refresh(bill)
+    except Exception:
+        pass
 
     vendor_name = None
     if bill.vendor_id:
@@ -518,6 +578,15 @@ def post_procurement_bill_to_ledger(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Multi-tenant isolation violation: Access to procurement bill forbidden.",
+        )
+
+    from backend.app.services.workflow_service import WorkflowEngineService
+    if bill.match_status in ("PENDING_APPROVAL", "REJECTED") or WorkflowEngineService.is_document_pending_approval(
+        db, bill.tenant_id, "VENDOR_BILL", bill.id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"GL Posting Blocked: Procurement bill '{bill.invoice_number}' is {bill.match_status} and must be approved before posting to the General Ledger.",
         )
 
     if bill.is_posted:

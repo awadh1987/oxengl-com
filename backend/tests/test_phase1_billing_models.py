@@ -9,10 +9,11 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import select
 
-from backend.database import SessionLocal
+from backend.database import PlatformSessionLocal as SessionLocal
 from backend.models import MasterTenant, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (
+    DEFAULT_TIER_PLANS,
     seed_default_subscription_plans,
     get_plan_by_name,
     get_or_create_tenant_subscription,
@@ -26,6 +27,12 @@ from backend.app.services.billing_service import (
 def db():
     """Provides a dedicated database session for Phase 1 testing."""
     session = SessionLocal()
+    for p_def in DEFAULT_TIER_PLANS:
+        existing = get_plan_by_name(session, p_def["name"])
+        if existing:
+            existing.monthly_price = p_def["monthly_price"]
+            existing.annual_price = p_def["annual_price"]
+    session.commit()
     yield session
     session.close()
 

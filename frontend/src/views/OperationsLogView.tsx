@@ -34,6 +34,14 @@ import { BulkImportModal } from '../components/BulkImportModal';
 import { ImportSystemResourceModal } from '../components/ImportSystemResourceModal';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { ActionsMenu } from '../components/ActionsMenu';
+import { InlineApprovalActionBadge } from '../components/approvals/InlineApprovalActionBadge';
+import {
+  ColumnDrilldownModal,
+  OxenActiveFiltersBar,
+  OxenColumnDef,
+  OxenColumnHeader,
+  useOxenColumnFilter,
+} from '../components/common/ColumnDrilldownModal';
 
 export const OperationsLogView: React.FC = () => {
   const {
@@ -82,6 +90,7 @@ export const OperationsLogView: React.FC = () => {
   const [selectedCrusher, setSelectedCrusher] = useState('');
   const [selectedTransporter, setSelectedTransporter] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState('');
+  const [selectedDate, setSelectedDate] = useState('');
   const [filterExcessLoss, setFilterExcessLoss] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
 
@@ -111,8 +120,8 @@ export const OperationsLogView: React.FC = () => {
     return months;
   }, [accessibleOperations]);
 
-  // Filtered dataset
-  const filteredOperations = useMemo(() => {
+  // Base filtered dataset (toolbar filters)
+  const baseFilteredOperations = useMemo(() => {
     return accessibleOperations.filter((op) => {
       if (!op) return false;
 
@@ -141,6 +150,7 @@ export const OperationsLogView: React.FC = () => {
       if (selectedCrusher && !(op.loading_source || '').includes(selectedCrusher)) return false;
       if (selectedTransporter && !(op.transporter_name || '').includes(selectedTransporter)) return false;
       if (selectedMaterial && (op.material_type || '') !== selectedMaterial) return false;
+      if (selectedDate && (op.loading_date || '').slice(0, 10) !== selectedDate) return false;
       if (selectedMonth !== 'ALL' && op.operation_month !== Number(selectedMonth)) return false;
       if (filterExcessLoss && (op.wastage_percentage || 0) <= 2.0) return false;
 
@@ -153,9 +163,179 @@ export const OperationsLogView: React.FC = () => {
     selectedCrusher,
     selectedTransporter,
     selectedMaterial,
+    selectedDate,
     selectedMonth,
     filterExcessLoss,
   ]);
+
+  const formatDisplayTripId = (op: OperationRecord) =>
+    op.id.startsWith('TRP-')
+      ? op.id
+      : `TRP-${op.id.replace(/[^0-9]/g, '').slice(-4) || '1001'}`;
+
+  const operationColumns = useMemo<OxenColumnDef<OperationRecord>[]>(
+    () => [
+      {
+        key: 'trip_id',
+        label: isAr ? 'رقم الرحلة' : 'Trip ID',
+        type: 'categorical',
+        getValue: (op) => formatDisplayTripId(op),
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'date',
+        label: isAr ? 'تاريخ التحميل' : 'Date',
+        type: 'date',
+        getValue: (op) => (op.loading_date || '').slice(0, 10),
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'truck_no',
+        label: isAr ? 'رقم الشاحنة' : 'Truck #',
+        type: 'categorical',
+        getValue: (op) => op.truck_no,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'service_supplier',
+        label: isAr ? 'مزود الخدمة اللوجستية' : 'Service Supplier',
+        type: 'categorical',
+        getValue: (op) => op.transporter_name,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'origin',
+        label: isAr ? 'منشأة الإرسال' : 'Origin / Dispatch Facility',
+        type: 'categorical',
+        getValue: (op) => op.loading_source,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'destination',
+        label: isAr ? 'العميل المستلم' : 'Destination Client',
+        type: 'categorical',
+        getValue: (op) => op.destination_customer,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'material',
+        label: isAr ? 'نوع المادة' : 'Material',
+        type: 'categorical',
+        getValue: (op) => op.material_type,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'loaded_qty',
+        label: isAr ? 'الكمية المحملة' : 'Loaded Qty',
+        type: 'numeric',
+        align: 'center',
+        unit: 'MT',
+        getValue: (op) => op.qty_loaded,
+        getNumericValue: (op) => Number(op.qty_loaded || 0),
+      },
+      {
+        key: 'delivered_qty',
+        label: isAr ? 'الكمية المستلمة' : 'Delivered Qty',
+        type: 'numeric',
+        align: 'center',
+        unit: 'MT',
+        getValue: (op) => op.qty_delivered,
+        getNumericValue: (op) => Number(op.qty_delivered || 0),
+      },
+      {
+        key: 'wastage_pct',
+        label: isAr ? 'الفاقد / الهدر (%)' : 'Wastage (%)',
+        type: 'numeric',
+        align: 'center',
+        unit: '%',
+        getValue: (op) => op.wastage_percentage,
+        getNumericValue: (op) => Number(op.wastage_percentage || 0),
+      },
+      {
+        key: 'sales_excl_vat',
+        label: isAr ? 'المبيعات بدون ضريبة' : 'Sales Excl. VAT',
+        type: 'numeric',
+        unit: 'SAR',
+        getValue: (op) => op.sales_amount,
+        getNumericValue: (op) => Number(op.sales_amount || 0),
+      },
+      {
+        key: 'purchase_cost',
+        label: isAr ? 'تكلفة الشراء' : 'Purchase Cost',
+        type: 'numeric',
+        unit: 'SAR',
+        getValue: (op) => op.purchases_cost,
+        getNumericValue: (op) => Number(op.purchases_cost || 0),
+      },
+      {
+        key: 'paid_to_supplier',
+        label: isAr ? 'المسدد لمورد المواد الخام' : 'Paid to Raw Materials Supplier',
+        type: 'numeric',
+        unit: 'SAR',
+        getValue: (op) => op.crusher_payment ?? 0,
+        getNumericValue: (op) => Number(op.crusher_payment ?? 0),
+      },
+      {
+        key: 'net_profit',
+        label: isAr ? 'صافي الربح' : 'Net Profit',
+        type: 'numeric',
+        unit: 'SAR',
+        getValue: (op) => op.net_profit,
+        getNumericValue: (op) => Number(op.net_profit || 0),
+      },
+      {
+        key: 'scale_ticket',
+        label: isAr ? 'تذكرة الميزان' : 'Scale Ticket',
+        type: 'categorical',
+        align: 'center',
+        getValue: (op) => op.scale_ticket_no,
+        getTonnage: (op) => op.qty_delivered || 0,
+        getRevenue: (op) => op.sales_amount || 0,
+      },
+      {
+        key: 'actions',
+        label: isAr ? 'إجراءات' : 'Actions',
+        type: 'actions',
+        align: 'center',
+        getValue: (op) => op.id,
+        getActionFlags: (op) => ({
+          hasAttachment: Boolean(
+            (op.attachments && op.attachments.length > 0) || op.scale_ticket_no
+          ),
+          recordState:
+            (op.wastage_percentage || 0) > 2.0 ? 'High Loss (>2%)' : 'Within Tolerance',
+          approvalStatus:
+            op.approval_status === 'PENDING_APPROVAL'
+              ? 'Pending Approval'
+              : op.approval_status === 'REJECTED'
+              ? 'Rejected'
+              : (op.crusher_payment ?? 0) > 0
+              ? 'Supplier Settled'
+              : 'Pending Settlement',
+        }),
+      },
+    ],
+    [isAr]
+  );
+
+  const {
+    columnFilters,
+    filteredData: filteredOperations,
+    activeDrilldownColumn,
+    openDrilldown,
+    closeDrilldown,
+    setColumnFilter,
+    clearAllColumnFilters,
+    isColumnFiltered,
+    getColumnDef,
+  } = useOxenColumnFilter(baseFilteredOperations, operationColumns, () => setCurrentPage(1));
 
   const totalPages = Math.ceil(filteredOperations.length / pageSize) || 1;
   const paginatedOperations = filteredOperations.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -192,7 +372,7 @@ export const OperationsLogView: React.FC = () => {
   return (
     <div className="space-y-5 px-3 sm:px-4 md:px-6 w-full max-w-7xl mx-auto" id="operations-log-view">
       {/* Top Header & Actions */}
-      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-800 bg-[#090f1c] p-5 shadow-lg sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-lg sm:flex-row sm:items-center">
         <div>
           <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
             <h1 className="text-xl font-black text-slate-100">
@@ -289,7 +469,7 @@ export const OperationsLogView: React.FC = () => {
       </div>
 
       {/* Summary KPI Mini-Banner */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 rounded-2xl border border-slate-800 bg-[#0e1424] p-4 shadow-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg">
         <div>
           <span className="text-[11px] font-semibold text-slate-400">{isAr ? 'عدد الرحلات المفلترة' : 'Filtered Trips'}</span>
           <p className="text-lg font-black text-slate-100"><span dir="ltr" className="inline-block unicode-bidi-isolate">{filteredOperations.length}</span> {isAr ? 'رحلة' : 'trips'}</p>
@@ -309,7 +489,7 @@ export const OperationsLogView: React.FC = () => {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="rounded-2xl border border-slate-800 bg-[#090f1c] p-4 shadow-lg">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-lg">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
           {/* Search Box */}
           <div className="relative lg:col-span-2">
@@ -388,24 +568,55 @@ export const OperationsLogView: React.FC = () => {
           </div>
         </div>
 
-        {/* Second row filters: Month & Excess Wastage Toggle */}
+        {/* Second row filters: Month, Operational Date & Excess Wastage Toggle */}
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-800 pt-3 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-400 whitespace-nowrap">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
-            <div className="flex flex-wrap gap-1">
-              {availableMonths.map((m) => (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-slate-400 whitespace-nowrap">{isAr ? 'الشهر المالي:' : 'Month:'}</span>
+              <div className="flex flex-wrap gap-1">
+                {availableMonths.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSelectedMonth(m)}
+                    className={`rounded-lg px-2.5 py-1 text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
+                      selectedMonth === m
+                        ? 'bg-orange-600 text-white'
+                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}
+                  >
+                    {m === 'ALL' ? (isAr ? 'الكل' : 'All') : `${m}/${new Date().getFullYear()}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label htmlFor="operations-date-filter" className="font-semibold text-slate-400 whitespace-nowrap">
+                {isAr ? 'تاريخ العملية:' : 'Operation Date:'}
+              </label>
+              <input
+                id="operations-date-filter"
+                type="date"
+                placeholder="YYYY-MM-DD"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-1 text-[11px] font-bold text-slate-100 focus:border-orange-500 focus:outline-none"
+              />
+              {selectedDate && (
                 <button
-                  key={m}
-                  onClick={() => setSelectedMonth(m)}
-                  className={`rounded-lg px-2.5 py-1 text-[11px] font-bold whitespace-nowrap shrink-0 transition-colors ${
-                    selectedMonth === m
-                      ? 'bg-orange-600 text-white'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                  }`}
+                  type="button"
+                  onClick={() => {
+                    setSelectedDate('');
+                    setCurrentPage(1);
+                  }}
+                  className="rounded-lg bg-slate-800 px-2 py-1 text-[10px] font-bold text-slate-400 hover:bg-slate-700 hover:text-white transition-colors"
                 >
-                  {m === 'ALL' ? (isAr ? 'الكل' : 'All') : `${m}/${new Date().getFullYear()}`}
+                  {isAr ? 'مسح' : 'Clear'}
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
@@ -422,32 +633,144 @@ export const OperationsLogView: React.FC = () => {
         </div>
       </div>
 
+      {/* Active Column Filters Bar */}
+      <OxenActiveFiltersBar
+        columns={operationColumns}
+        columnFilters={columnFilters}
+        onOpenColumn={openDrilldown}
+        onClearColumn={(key) => setColumnFilter(key, null)}
+        onClearAll={clearAllColumnFilters}
+        totalCount={baseFilteredOperations.length}
+        filteredCount={filteredOperations.length}
+      />
+
       {/* Main Operations Table */}
-      <div className="rounded-2xl border border-slate-800 bg-[#090f1c] shadow-lg overflow-hidden">
+      <div className="rounded-2xl border border-slate-800 bg-slate-900 shadow-lg overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-right text-xs">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950 text-white font-bold">
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'رقم الرحلة' : 'Trip ID'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'تاريخ التحميل' : 'Date'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'رقم الشاحنة' : 'Truck #'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'مزود الخدمة اللوجستية' : 'Service Supplier'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'منشأة الإرسال' : 'Origin / Dispatch Facility'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'العميل المستلم' : 'Destination Client'}</th>
-                <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'نوع المادة' : 'Material'}</th>
-                <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'الكمية المحملة' : 'Loaded Qty'}</th>
-                <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'الكمية المستلمة' : 'Delivered Qty'}</th>
-                <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'الفاقد / الهدر (%)' : 'Wastage (%)'}</th>
+                <OxenColumnHeader
+                  column={getColumnDef('trip_id')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('trip_id')}
+                  onOpen={() => openDrilldown('trip_id')}
+                  onClear={() => setColumnFilter('trip_id', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('date')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('date')}
+                  onOpen={() => openDrilldown('date')}
+                  onClear={() => setColumnFilter('date', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('truck_no')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('truck_no')}
+                  onOpen={() => openDrilldown('truck_no')}
+                  onClear={() => setColumnFilter('truck_no', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('service_supplier')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('service_supplier')}
+                  onOpen={() => openDrilldown('service_supplier')}
+                  onClear={() => setColumnFilter('service_supplier', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('origin')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('origin')}
+                  onOpen={() => openDrilldown('origin')}
+                  onClear={() => setColumnFilter('origin', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('destination')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('destination')}
+                  onOpen={() => openDrilldown('destination')}
+                  onClear={() => setColumnFilter('destination', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('material')}
+                  className="py-3.5 px-3 whitespace-nowrap"
+                  isFiltered={isColumnFiltered('material')}
+                  onOpen={() => openDrilldown('material')}
+                  onClear={() => setColumnFilter('material', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('loaded_qty')}
+                  align="center"
+                  className="py-3.5 px-3 text-center whitespace-nowrap"
+                  isFiltered={isColumnFiltered('loaded_qty')}
+                  onOpen={() => openDrilldown('loaded_qty')}
+                  onClear={() => setColumnFilter('loaded_qty', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('delivered_qty')}
+                  align="center"
+                  className="py-3.5 px-3 text-center whitespace-nowrap"
+                  isFiltered={isColumnFiltered('delivered_qty')}
+                  onOpen={() => openDrilldown('delivered_qty')}
+                  onClear={() => setColumnFilter('delivered_qty', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('wastage_pct')}
+                  align="center"
+                  className="py-3.5 px-3 text-center whitespace-nowrap"
+                  isFiltered={isColumnFiltered('wastage_pct')}
+                  onOpen={() => openDrilldown('wastage_pct')}
+                  onClear={() => setColumnFilter('wastage_pct', null)}
+                />
                 {canAccessFinancials && (
                   <>
-                    <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'المبيعات بدون ضريبة' : 'Sales Excl. VAT'}</th>
-                    <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'تكلفة الشراء' : 'Purchase Cost'}</th>
-                    <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'المسدد لمورد المواد الخام' : 'Paid to Raw Materials Supplier'}</th>
-                    <th className="py-3.5 px-3 whitespace-nowrap">{isAr ? 'صافي الربح' : 'Net Profit'}</th>
+                    <OxenColumnHeader
+                      column={getColumnDef('sales_excl_vat')}
+                      className="py-3.5 px-3 whitespace-nowrap"
+                      isFiltered={isColumnFiltered('sales_excl_vat')}
+                      onOpen={() => openDrilldown('sales_excl_vat')}
+                      onClear={() => setColumnFilter('sales_excl_vat', null)}
+                    />
+                    <OxenColumnHeader
+                      column={getColumnDef('purchase_cost')}
+                      className="py-3.5 px-3 whitespace-nowrap"
+                      isFiltered={isColumnFiltered('purchase_cost')}
+                      onOpen={() => openDrilldown('purchase_cost')}
+                      onClear={() => setColumnFilter('purchase_cost', null)}
+                    />
+                    <OxenColumnHeader
+                      column={getColumnDef('paid_to_supplier')}
+                      className="py-3.5 px-3 whitespace-nowrap"
+                      isFiltered={isColumnFiltered('paid_to_supplier')}
+                      onOpen={() => openDrilldown('paid_to_supplier')}
+                      onClear={() => setColumnFilter('paid_to_supplier', null)}
+                    />
+                    <OxenColumnHeader
+                      column={getColumnDef('net_profit')}
+                      className="py-3.5 px-3 whitespace-nowrap"
+                      isFiltered={isColumnFiltered('net_profit')}
+                      onOpen={() => openDrilldown('net_profit')}
+                      onClear={() => setColumnFilter('net_profit', null)}
+                    />
                   </>
                 )}
-                <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'تذكرة الميزان' : 'Scale Ticket'}</th>
-                <th className="py-3.5 px-3 text-center whitespace-nowrap">{isAr ? 'إجراءات' : 'Actions'}</th>
+                <OxenColumnHeader
+                  column={getColumnDef('scale_ticket')}
+                  align="center"
+                  className="py-3.5 px-3 text-center whitespace-nowrap"
+                  isFiltered={isColumnFiltered('scale_ticket')}
+                  onOpen={() => openDrilldown('scale_ticket')}
+                  onClear={() => setColumnFilter('scale_ticket', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('actions')}
+                  align="center"
+                  className="py-3.5 px-3 text-center whitespace-nowrap"
+                  isFiltered={isColumnFiltered('actions')}
+                  onOpen={() => openDrilldown('actions')}
+                  onClear={() => setColumnFilter('actions', null)}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
@@ -545,6 +868,11 @@ export const OperationsLogView: React.FC = () => {
                       </td>
                       <td className="py-3 px-3 text-center">
                         <div className="flex flex-wrap items-center justify-center gap-1">
+                          <InlineApprovalActionBadge
+                            documentId={op.id}
+                            workflowInstanceId={op.workflow_instance_id}
+                            approvalStatus={op.approval_status}
+                          />
                           <button
                             onClick={() => setAttachmentViewingOp(op)}
                             className="group relative rounded-lg p-1 text-slate-400 hover:bg-slate-800 hover:text-orange-400 transition-colors"
@@ -669,6 +997,18 @@ export const OperationsLogView: React.FC = () => {
       <ImportSystemResourceModal
         isOpen={isLegacyImportOpen}
         onClose={() => setIsLegacyImportOpen(false)}
+      />
+
+      {/* Interactive Column Drill-Down & Analytics Modal (Phase 3) */}
+      <ColumnDrilldownModal
+        isOpen={Boolean(activeDrilldownColumn)}
+        column={activeDrilldownColumn}
+        data={baseFilteredOperations}
+        currentFilter={
+          activeDrilldownColumn ? columnFilters[activeDrilldownColumn.key] : null
+        }
+        onApply={setColumnFilter}
+        onClose={closeDrilldown}
       />
     </div>
   );

@@ -57,6 +57,11 @@ from backend.app.services.billing.payment_strategy import (
     PaymentMethod,
     get_payment_gateway,
 )
+from backend.app.services.payment_gateway_settings import (
+    PaymentGatewayPublicView,
+    build_public_gateway_view,
+    get_settings_row,
+)
 
 logger = logging.getLogger("oxengl.billing.api")
 
@@ -201,6 +206,22 @@ def list_available_subscription_plans(
     return [_public_plan_dict(plan) for plan in list_catalog_plans(db)]
 
 
+@pricing_router.get("/gateways", response_model=PaymentGatewayPublicView)
+@pricing_router.get("/payment-methods", response_model=PaymentGatewayPublicView)
+@tenant_billing_router.get("/gateways", response_model=PaymentGatewayPublicView)
+@tenant_billing_router.get("/payment-methods", response_model=PaymentGatewayPublicView)
+def get_available_payment_gateways(
+    db: Session = Depends(get_db),
+) -> PaymentGatewayPublicView:
+    """
+    Returns public-safe payment gateway configuration (Stripe/Moyasar status & publishable keys,
+    active receiving bank wire accounts, and active regional digital wallets) for the
+    New Tenant Registration flow (/register) and Tenant Billing workspace (/settings/billing).
+    """
+    row = get_settings_row(db)
+    return build_public_gateway_view(row)
+
+
 @tenant_billing_router.get("/subscription")
 def get_tenant_active_subscription(
     current_user: Any = Depends(get_authenticated_user),
@@ -210,9 +231,9 @@ def get_tenant_active_subscription(
     Retrieves the active commercial contract for the authenticated tenant,
     including live usage meters (seats, vehicles, storage) and capability entitlements.
     """
-    tenant_uuid = resolve_billing_tenant(db, current_user).id
+    tenant = resolve_billing_tenant(db, current_user)
+    tenant_uuid = tenant.id
 
-    tenant = db.get(MasterTenant, tenant_uuid)
     sub = db.scalar(select(TenantSubscription).where(TenantSubscription.tenant_id == tenant_uuid))
     if not sub:
         tier_default = tenant.subscription_tier if tenant else "FREE"

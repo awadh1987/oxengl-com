@@ -25,10 +25,11 @@ from sqlalchemy import select
 
 from backend.app.main import app
 from backend.tests.auth_helpers import platform_superadmin_headers, tenant_admin_headers
-from backend.database import SessionLocal
-from backend.models import MasterTenant, SaaSInvoice
+from backend.database import PlatformSessionLocal as SessionLocal
+from backend.models import MasterTenant, ResCompany, SaaSInvoice
 from backend.app.domains.saas.models import SubscriptionPlan, TenantSubscription
 from backend.app.services.billing_service import (
+    DEFAULT_TIER_PLANS,
     get_plan_by_name,
     seed_default_subscription_plans,
     verify_tenant_entitlement,
@@ -45,6 +46,12 @@ def client():
 def db_session():
     db = SessionLocal()
     seed_default_subscription_plans(db)
+    for p_def in DEFAULT_TIER_PLANS:
+        existing = get_plan_by_name(db, p_def["name"])
+        if existing:
+            existing.monthly_price = p_def["monthly_price"]
+            existing.annual_price = p_def["annual_price"]
+    db.commit()
     try:
         yield db
     finally:
@@ -418,3 +425,76 @@ def test_08_invoice_history_and_detail_endpoints(client: TestClient, db_session)
     assert detail["id"] == str(inv1.id)
     assert detail["amount_sar"] == 185.0
     assert detail["status"] == "paid"
+
+
+def test_09_lazy_master_tenant_provisioning_from_res_company(client: TestClient, db_session):
+    """
+    Verifies Point 2: Legacy/seeded ResCompany workspaces lacking a MasterTenant row
+    are lazily auto-provisioned on GET /api/v1/tenant/billing/subscription and POST /api/v1/tenant/billing/checkout
+    so they never fail with HTTP 403 'This account has no billable tenant workspace'.
+    """
+    legacy_company_id = uuid.uuid4()
+    slug_val = f"legacy-myon-{uuid.uuid4().hex[:6]}"
+    company = ResCompany(
+        id=legacy_company_id,
+        name=f"Myon Contract Cloud ({slug_val})",
+        slug=slug_val,
+        subscription_tier="professional",
+        is_active=True,
+    )
+    db_session.add(company)
+    db_session.commit()
+
+    try:
+        # Confirm no MasterTenant exists initially
+        assert db_session.get(MasterTenant, legacy_company_id) is None
+
+        headers = tenant_admin_headers(db_session, legacy_company_id)
+
+        # 1. GET /api/v1/tenant/billing/subscription lazily provisions MasterTenant + TenantSubscription
+        sub_resp = client.get("/api/v1/tenant/billing/subscription", headers=headers)
+        assert sub_resp.status_code == 200, sub_resp.text
+        sub_data = sub_resp.json()
+        assert sub_data["tenant_id"] == str(legacy_company_id)
+        assert sub_data["tenant_slug"] == slug_val
+        assert sub_data["plan"]["name"] == "PROFESSIONAL"
+
+        # 2. POST /api/v1/tenant/billing/checkout succeeds without 403
+        checkout_resp = client.post(
+            "/api/v1/tenant/billing/checkout",
+            headers=headers,
+            json={"plan_name": "ENTERPRISE", "billing_cycle": "monthly"},
+        )
+        assert checkout_resp.status_code == 200, checkout_resp.text
+        assert "checkout_url" in checkout_resp.json()
+    finally:
+        db_session.rollback()
+        db_session.query(TenantSubscription).filter(TenantSubscription.tenant_id == legacy_company_id).delete()
+        db_session.query(MasterTenant).filter(MasterTenant.id == legacy_company_id).delete()
+        db_session.query(ResCompany).filter(ResCompany.id == legacy_company_id).delete()
+        db_session.commit()
+
+
+def test_10_public_and_tenant_billing_gateways_endpoint(client: TestClient, db_session):
+    """
+    Verifies Point 6: GET /api/v1/pricing/gateways (public) and GET /api/v1/tenant/billing/gateways (authenticated)
+    expose active payment gateway status, publishable keys, bank wire accounts, and digital wallets without secrets.
+    """
+    pub_resp = client.get("/api/v1/pricing/gateways")
+    assert pub_resp.status_code == 200, pub_resp.text
+    pub_data = pub_resp.json()
+
+    assert "is_stripe_enabled" in pub_data
+    assert "is_moyasar_enabled" in pub_data
+    assert isinstance(pub_data["local_bank_instructions"], list)
+    assert len(pub_data["local_bank_instructions"]) >= 1
+    assert isinstance(pub_data["digital_wallet_instructions"], list)
+    # Must never expose secret keys
+    assert "stripe_secret_key" not in pub_data
+    assert "moyasar_api_key" not in pub_data
+
+    tenant = create_test_master_tenant(db_session, tier="free")
+    auth_resp = client.get("/api/v1/tenant/billing/gateways", headers=tenant_admin_headers(db_session, tenant.id))
+    assert auth_resp.status_code == 200, auth_resp.text
+    assert auth_resp.json()["local_bank_instructions"] == pub_data["local_bank_instructions"]
+

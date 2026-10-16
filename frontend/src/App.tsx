@@ -171,6 +171,7 @@ export const ROUTE_TAB_MAP: Record<string, ActiveTab> = {
   '/customs': 'customs',
   '/invoicing': 'invoicing',
   '/vouchers': 'vouchers',
+  '/approvals': 'approvals',
   '/dashboard': 'operations',
 };
 
@@ -244,6 +245,7 @@ export const getTabFromPath = (path: string): ActiveTab => {
   if (cleanPath.startsWith('/analytics/data-observability') || cleanPath.startsWith('/data-observability')) return 'data-observability';
 
   if (cleanPath.startsWith('/settings/approvals')) return 'executive-admin';
+  if (cleanPath.startsWith('/approvals')) return 'approvals';
   if (cleanPath.startsWith('/settings/billing')) return 'billing';
   if (cleanPath.startsWith('/settings/master-data')) return 'master-data';
   if (cleanPath.startsWith('/settings/tenant')) return 'tenant-settings';

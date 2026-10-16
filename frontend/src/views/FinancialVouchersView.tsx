@@ -32,6 +32,14 @@ import {
 import { BulkImportModal } from '../components/BulkImportModal';
 import { HoverIcon } from '../components/common/HoverIcon';
 import { ActionsMenu } from '../components/ActionsMenu';
+import { InlineApprovalActionBadge } from '../components/approvals/InlineApprovalActionBadge';
+import {
+  ColumnDrilldownModal,
+  OxenActiveFiltersBar,
+  OxenColumnDef,
+  OxenColumnHeader,
+  useOxenColumnFilter,
+} from '../components/common/ColumnDrilldownModal';
 
 export const FinancialVouchersView: React.FC = () => {
   const {
@@ -143,8 +151,8 @@ export const FinancialVouchersView: React.FC = () => {
     };
   }, [vouchers]);
 
-  // Filtered Vouchers
-  const filteredVouchers = useMemo(() => {
+  // Base Filtered Vouchers
+  const baseFilteredVouchers = useMemo(() => {
     return vouchers.filter((v) => {
       if (typeFilter !== 'ALL' && v.type !== typeFilter) return false;
       if (categoryFilter !== 'ALL' && v.category !== categoryFilter) return false;
@@ -174,6 +182,93 @@ export const FinancialVouchersView: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
+
+  const voucherColumns = useMemo<OxenColumnDef<FinancialVoucher>[]>(
+    () => [
+      {
+        key: 'voucher_no',
+        label: isAr ? 'رقم السند' : 'Voucher No',
+        type: 'categorical',
+        getValue: (v) => v.voucherNumber,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'type_category',
+        label: isAr ? 'النوع / التصنيف' : 'Type / Category',
+        type: 'categorical',
+        getValue: (v) => `${v.type} - ${v.category}`,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'date',
+        label: isAr ? 'التاريخ' : 'Date',
+        type: 'date',
+        getValue: (v) => (v.date || '').slice(0, 10),
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'party',
+        label: isAr ? 'المستفيد / الدافع' : 'Beneficiary / Payer',
+        type: 'categorical',
+        getValue: (v) => v.partyName,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'amount',
+        label: isAr ? 'المبلغ بالريال' : 'Amount (SAR)',
+        type: 'numeric',
+        unit: 'SAR',
+        getValue: (v) => v.amount,
+        getNumericValue: (v) => Number(v.amount || 0),
+      },
+      {
+        key: 'method',
+        label: isAr ? 'طريقة السداد' : 'Method',
+        type: 'categorical',
+        getValue: (v) => v.paymentMethod,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'purpose',
+        label: isAr ? 'الغرض والمرجع' : 'Purpose & Ref',
+        type: 'categorical',
+        getValue: (v) => v.linkedReferenceNo || v.purpose,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'status',
+        label: isAr ? 'الحالة والاعتماد' : 'Status',
+        type: 'categorical',
+        getValue: (v) => v.status,
+        getRevenue: (v) => v.amount,
+      },
+      {
+        key: 'actions',
+        label: isAr ? 'الإجراءات' : 'Actions',
+        type: 'actions',
+        align: 'center',
+        getValue: (v) => v.id,
+        getActionFlags: (v) => ({
+          hasAttachment: Boolean(v.linkedReferenceNo || v.transferRefNumber),
+          recordState: v.type,
+          approvalStatus: v.status,
+        }),
+      },
+    ],
+    [isAr]
+  );
+
+  const {
+    columnFilters,
+    filteredData: filteredVouchers,
+    activeDrilldownColumn,
+    openDrilldown,
+    closeDrilldown,
+    setColumnFilter,
+    clearAllColumnFilters,
+    isColumnFiltered,
+    getColumnDef,
+  } = useOxenColumnFilter(baseFilteredVouchers, voucherColumns, () => setCurrentPage(1));
 
   const totalPages = Math.ceil(filteredVouchers.length / pageSize) || 1;
   const paginatedVouchers = useMemo(() => {
@@ -502,21 +597,87 @@ export const FinancialVouchersView: React.FC = () => {
         </div>
       </div>
 
+      {/* Active Column Filters Bar */}
+      <OxenActiveFiltersBar
+        columns={voucherColumns}
+        columnFilters={columnFilters}
+        onOpenColumn={openDrilldown}
+        onClearColumn={(key) => setColumnFilter(key, null)}
+        onClearAll={clearAllColumnFilters}
+        totalCount={baseFilteredVouchers.length}
+        filteredCount={filteredVouchers.length}
+      />
+
       {/* Vouchers Data Table */}
       <div className="overflow-hidden rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-right text-xs">
             <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/80 text-[11px] font-black uppercase text-slate-600 dark:text-slate-300">
               <tr>
-                <th className="px-4 py-3.5">{isAr ? 'رقم السند' : 'Voucher No'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'النوع / التصنيف' : 'Type / Category'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'التاريخ' : 'Date'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'المستفيد / الدافع' : 'Beneficiary / Payer'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'المبلغ بالريال' : 'Amount (SAR)'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'طريقة السداد' : 'Method'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'الغرض والمرجع' : 'Purpose & Ref'}</th>
-                <th className="px-4 py-3.5">{isAr ? 'الحالة والاعتماد' : 'Status'}</th>
-                <th className="px-4 py-3.5 text-center">{isAr ? 'الإجراءات' : 'Actions'}</th>
+                <OxenColumnHeader
+                  column={getColumnDef('voucher_no')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('voucher_no')}
+                  onOpen={() => openDrilldown('voucher_no')}
+                  onClear={() => setColumnFilter('voucher_no', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('type_category')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('type_category')}
+                  onOpen={() => openDrilldown('type_category')}
+                  onClear={() => setColumnFilter('type_category', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('date')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('date')}
+                  onOpen={() => openDrilldown('date')}
+                  onClear={() => setColumnFilter('date', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('party')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('party')}
+                  onOpen={() => openDrilldown('party')}
+                  onClear={() => setColumnFilter('party', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('amount')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('amount')}
+                  onOpen={() => openDrilldown('amount')}
+                  onClear={() => setColumnFilter('amount', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('method')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('method')}
+                  onOpen={() => openDrilldown('method')}
+                  onClear={() => setColumnFilter('method', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('purpose')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('purpose')}
+                  onOpen={() => openDrilldown('purpose')}
+                  onClear={() => setColumnFilter('purpose', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('status')}
+                  className="px-4 py-3.5"
+                  isFiltered={isColumnFiltered('status')}
+                  onOpen={() => openDrilldown('status')}
+                  onClear={() => setColumnFilter('status', null)}
+                />
+                <OxenColumnHeader
+                  column={getColumnDef('actions')}
+                  align="center"
+                  className="px-4 py-3.5 text-center"
+                  isFiltered={isColumnFiltered('actions')}
+                  onOpen={() => openDrilldown('actions')}
+                  onClear={() => setColumnFilter('actions', null)}
+                />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-800 dark:text-slate-200">
@@ -647,6 +808,10 @@ export const FinancialVouchersView: React.FC = () => {
                       {/* Actions */}
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1.5">
+                          <InlineApprovalActionBadge
+                            documentId={vch.id}
+                            approvalStatus={vch.status}
+                          />
                           {/* View & Print Document */}
                           <button
                             onClick={() => setSelectedVoucherForView(vch)}
@@ -769,6 +934,18 @@ export const FinancialVouchersView: React.FC = () => {
         isOpen={isBulkImportOpen}
         onClose={() => setIsBulkImportOpen(false)}
         defaultCategory="operations"
+      />
+
+      {/* Interactive Column Drill-Down & Analytics Modal (Phase 3) */}
+      <ColumnDrilldownModal
+        isOpen={Boolean(activeDrilldownColumn)}
+        column={activeDrilldownColumn}
+        data={baseFilteredVouchers}
+        currentFilter={
+          activeDrilldownColumn ? columnFilters[activeDrilldownColumn.key] : null
+        }
+        onApply={setColumnFilter}
+        onClose={closeDrilldown}
       />
     </div>
   );

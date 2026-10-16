@@ -49,11 +49,7 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
   const [category, setCategory] = useState(isAr ? 'مواد أولية وكسارات' : 'Raw Materials & Aggregates');
   const [totalAmount, setTotalAmount] = useState('25000');
   const [currency] = useState('SAR');
-  const [deliveryDate, setDeliveryDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d.toISOString().split('T')[0];
-  });
+  const [deliveryDate, setDeliveryDate] = useState('');
   const [notes, setNotes] = useState('');
   const [customAttributes, setCustomAttributes] = useState<Record<string, any>>({});
 
@@ -68,6 +64,11 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
 
     if (!vendorName.trim()) {
       setError(isAr ? 'يرجى إدخال اسم المورد أو الشريك التجاري' : 'Vendor / Partner name is required');
+      return;
+    }
+
+    if (!deliveryDate) {
+      setError(isAr ? 'يرجى تحديد تاريخ التوريد المتوقع' : 'Expected delivery date is required');
       return;
     }
 
@@ -297,7 +298,8 @@ export const NewPurchaseOrderModal: React.FC<NewPurchaseOrderModalProps> = ({
                 name="delivery_date"
                 type="date"
                 required
-                value={deliveryDate}
+                placeholder="YYYY-MM-DD"
+                value={deliveryDate || ''}
                 onChange={(e) => setDeliveryDate(e.target.value)}
                 className={`w-full rounded-xl border px-3.5 py-2.5 text-xs font-medium focus:outline-hidden focus:ring-2 focus:ring-[#F05627] ${
                   isDark

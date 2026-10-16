@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminTopbar } from './AdminTopbar';
 import { getActiveBroadcasts } from '../../services/governanceService';
+import { useApp } from '../../context/AppContext';
 
 interface AdminLayoutProps {
   currentPath: string;
@@ -16,6 +17,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   onLogout,
   children,
 }) => {
+  const { language } = useApp();
+  const isAr = language === 'ar' || language?.startsWith('ar');
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('oxengl_admin_sidebar_collapsed') === 'true';
   });
@@ -37,7 +40,11 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
   }, [currentPath]);
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-slate-100 dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 antialiased">
+    <div
+      dir={isAr ? 'rtl' : 'ltr'}
+      data-theme-mode="dark"
+      className="platform-dark dark flex h-dvh w-full overflow-hidden bg-slate-950 font-sans text-slate-100 antialiased"
+    >
       {/* Sidebar */}
       <AdminSidebar
         currentPath={currentPath}
@@ -50,7 +57,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
       />
 
       {/* Main Content Area */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0 bg-slate-950 text-slate-100">
         <AdminTopbar
           currentPath={currentPath}
           onNavigate={onNavigate}
@@ -59,7 +66,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
           activeBroadcastCount={activeBroadcastCount}
         />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>
